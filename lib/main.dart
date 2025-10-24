@@ -1,5 +1,3 @@
-import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:silvercare/screens/signin_screen.dart';
 import 'package:silvercare/screens/signup_screen.dart';
@@ -7,54 +5,13 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
 void main() async {
-  // Catch errors in the zone
-  runZonedGuarded(() async {
-    WidgetsFlutterBinding.ensureInitialized();
-    
-    // Filter out annoying DebugService errors from Flutter framework
-    FlutterError.onError = (FlutterErrorDetails details) {
-      final errorString = details.exception.toString();
-      if (!errorString.contains('DebugService') && 
-          !errorString.contains('Unsupported operation: Cannot send Null') &&
-          !errorString.contains('Error serving requests')) {
-        FlutterError.presentError(details);
-      }
-    };
-    
-    // Also override debugPrint to filter console output
-    if (kDebugMode) {
-      final originalDebugPrint = debugPrint;
-      debugPrint = (String? message, {int? wrapWidth}) {
-        if (message != null && 
-            !message.contains('DebugService') && 
-            !message.contains('Unsupported operation: Cannot send Null') &&
-            !message.contains('Error serving requests')) {
-          originalDebugPrint(message, wrapWidth: wrapWidth);
-        }
-      };
-    }
-    
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    
-    // Test Firebase connection
-    debugPrint('🔥 Firebase initialized successfully!');
-    debugPrint('📱 Platform: ${DefaultFirebaseOptions.currentPlatform.projectId}');
-    
-    runApp(const FigmaToCodeApp());
-  }, (error, stack) {
-    // Handle errors gracefully - ignore DebugService errors
-    final errorString = error.toString();
-    if (!errorString.contains('DebugService') && 
-        !errorString.contains('Unsupported operation: Cannot send Null') &&
-        !errorString.contains('Error serving requests')) {
-      debugPrint('⚠️ Error: $error');
-      if (kDebugMode) {
-        debugPrint('Stack trace: $stack');
-      }
-    }
-  });
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
+  runApp(const FigmaToCodeApp());
 }
 
 class FigmaToCodeApp extends StatelessWidget {
