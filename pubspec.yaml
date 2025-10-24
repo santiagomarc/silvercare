@@ -1,0 +1,56 @@
+name: silvercare
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # Firebase packages
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.3
+  
+  # Calendar & Reminders
+  device_calendar: ^4.3.2
+  flutter_local_notifications: ^17.2.3
+  timezone: ^0.9.4
+  permission_handler: ^11.3.1
+  
+  # Location for SOS feature
+  geolocator: ^13.0.2
+  geocoding: ^3.0.0
+  
+  # UI & Data Visualization
+  fl_chart: ^0.69.2  # For health data charts
+  intl: ^0.19.0  # For date/time formatting
+  
+  # Health & Wellness
+  shared_preferences: ^2.3.3  # For local data storage
+  url_launcher: ^6.3.1  # For emergency contacts
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Add assets directory
+  assets:
+    - assets/imgs/
+
+  # Add fonts
+  fonts:
+    - family: Montserrat
+      fonts:
+        - asset: assets/fonts/Montserrat-Regular.ttf
+        - asset: assets/fonts/Montserrat-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Montserrat-ExtraBold.ttf
+          weight: 800
