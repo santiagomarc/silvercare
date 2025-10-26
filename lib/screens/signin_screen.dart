@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'home_screen.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -12,6 +14,9 @@ class _SignInScreenState extends State<SignInScreen> {
   final TextEditingController _passwordController = TextEditingController();
 
   bool _isPasswordVisible = false;
+  bool _isLoading = false;
+  
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   @override
   void dispose() {
@@ -294,7 +299,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: _handleSignIn,
+                          onPressed: _isLoading ? null : _handleSignIn,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF2C2C2C),
                             padding: const EdgeInsets.symmetric(vertical: 14),
@@ -303,15 +308,24 @@ class _SignInScreenState extends State<SignInScreen> {
                             ),
                             elevation: 2,
                           ),
-                          child: const Text(
-                            'Sign In',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
+                          child: _isLoading 
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Sign In',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
                         ),
                       ),
 
@@ -339,25 +353,326 @@ class _SignInScreenState extends State<SignInScreen> {
               );
   }
 
-  void _handleSignIn() {
+  Future<void> _handleSignIn() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    // TODO: Connect to Firebase Authentication later
+    // Basic validation
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in both fields.')),
+        const SnackBar(
+          content: Text('Please fill in both fields.'),
+          backgroundColor: Colors.orange,
+        ),
       );
-    } else {
+      return;
+    }
+
+    // Email format validation
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Attempting sign in for $email...')),
+        const SnackBar(
+          content: Text('Please enter a valid email address.'),
+          backgroundColor: Colors.orange,
+        ),
       );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      print('🔥 Attempting sign in for: $email');
+      
+      // Sign in with Firebase Auth
+      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Connection timeout. Please check your internet connection.');
+        },
+      );
+
+      print('🔥 Sign in successful: ${userCredential.user!.uid}');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🎉 Welcome back to SilverCare!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+        // Navigate to home screen
+        await Future.delayed(const Duration(seconds: 1));
+        
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = 'Sign in failed. Please try again.';
+      
+      switch (e.code) {
+        case 'user-not-found':
+          errorMessage = 'No account found with this email. Please sign up first.';
+          break;
+        case 'wrong-password':
+          errorMessage = 'Incorrect password. Please try again or reset your password.';
+          break;
+        case 'user-disabled':
+          errorMessage = 'This account has been disabled. Please contact support.';
+          break;
+        case 'too-many-requests':
+          errorMessage = 'Too many failed attempts. Please try again later.';
+          break;
+        case 'invalid-email':
+          errorMessage = 'Please enter a valid email address.';
+          break;
+        case 'invalid-credential':
+          errorMessage = 'Invalid email or password. Please check and try again.';
+          break;
+      }
+
+      print('🔥 Firebase Auth Error: ${e.code} - ${e.message}');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      print('🔥 General Sign In Error: ${e.toString()}');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Unexpected error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  void _handleForgotPassword() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Forgot password tapped!')),
+  Future<void> _handleForgotPassword() async {
+    final email = _emailController.text.trim();
+    
+    // Check if email is entered
+    if (email.isEmpty) {
+      _showForgotPasswordDialog();
+      return;
+    }
+
+    // Email format validation
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid email address in the email field above.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    await _sendPasswordResetEmail(email);
+  }
+
+  void _showForgotPasswordDialog() {
+    final TextEditingController emailDialogController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          title: const Text(
+            'Reset Password',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w600,
+              fontSize: 18,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Enter your email address to receive password reset instructions.',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  color: Color(0xFF666666),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: emailDialogController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  hintText: 'Enter your email',
+                  hintStyle: const TextStyle(
+                    color: Color.fromARGB(255, 117, 117, 117),
+                    fontSize: 16,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w400,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(
+                      width: 1,
+                      color: Color(0xFF383838),
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(
+                      width: 1,
+                      color: Color(0xFF383838),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(
+                      width: 2,
+                      color: Color(0xFF2C2C2C),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Color(0xFF666666),
+                  fontFamily: 'Inter',
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final email = emailDialogController.text.trim();
+                Navigator.of(context).pop();
+                
+                if (email.isNotEmpty) {
+                  await _sendPasswordResetEmail(email);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2C2C2C),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Send Reset Email',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontFamily: 'Inter',
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
+  }
+
+  Future<void> _sendPasswordResetEmail(String email) async {
+    // Email format validation
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid email address.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    try {
+      print('🔥 Sending password reset email to: $email');
+      
+      await _auth.sendPasswordResetEmail(email: email);
+      
+      print('🔥 Password reset email sent successfully');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '📧 Password reset email sent to $email\n\n💡 Please check your spam/junk folder if you don\'t see it within 5 minutes.',
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 6),
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = 'Failed to send reset email. Please try again.';
+      
+      switch (e.code) {
+        case 'user-not-found':
+          errorMessage = 'No account found with this email address.';
+          break;
+        case 'invalid-email':
+          errorMessage = 'Please enter a valid email address.';
+          break;
+        case 'too-many-requests':
+          errorMessage = 'Too many requests. Please wait before trying again.';
+          break;
+      }
+
+      print('🔥 Password Reset Error: ${e.code} - ${e.message}');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      print('🔥 General Password Reset Error: ${e.toString()}');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Unexpected error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:silvercare/screens/signin_screen.dart';
 import 'package:silvercare/screens/signup_screen.dart';
+import 'package:silvercare/screens/home_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
@@ -24,6 +25,11 @@ class FigmaToCodeApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color.fromARGB(255, 18, 32, 47),
       ),
       home: const SilverCareApp(),
+      routes: {
+        '/signin': (context) => const SignInScreen(),
+        '/signup': (context) => const SignUpScreen(),
+        '/home': (context) => const HomeScreen(),
+      },
     );
   }
 }
