@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:silvercare/screens/signin_screen.dart';
 import 'package:silvercare/screens/signup_screen.dart';
 import 'package:silvercare/screens/home_screen.dart';
+import 'package:silvercare/screens/heart_rate_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:silvercare/config/firebase_options.dart';
 
@@ -29,6 +30,7 @@ class FigmaToCodeApp extends StatelessWidget {
         '/signin': (context) => const SignInScreen(),
         '/signup': (context) => const SignUpScreen(),
         '/home': (context) => const HomeScreen(),
+        '/heart_rate': (context) => const HeartRateScreen(),
       },
     );
   }

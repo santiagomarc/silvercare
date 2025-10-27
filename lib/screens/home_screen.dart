@@ -264,8 +264,10 @@ class _HomeScreenState extends State<HomeScreen> {
           // Mock action buttons
           _buildActionButton(
             icon: Icons.favorite_outline,
-            label: 'Health Tracking',
-            onTap: () => _showComingSoonDialog('Health Tracking'),
+            label: 'Heart Rate Monitor',
+            onTap: () {
+              Navigator.pushNamed(context, '/heart_rate');
+            },
           ),
           
           const SizedBox(height: 12),
