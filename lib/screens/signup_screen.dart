@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/models.dart';
+import 'profile_completion_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -819,20 +820,30 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ),
               content: Text(
                 caregiverId != null 
-                  ? 'Your account has been created successfully!\n\n📧 Your caregiver has been notified and will receive setup instructions via email.\n\n💡 You can now sign in to start using SilverCare!'
-                  : 'Your account has been created successfully!\n\n💡 You can now sign in to start using SilverCare!',
+                  ? 'Your account has been created successfully!\n\n📧 Your caregiver has been notified and will receive setup instructions via email.\n\n✨ Let\'s complete your profile to personalize your care experience!'
+                  : 'Your account has been created successfully!\n\n✨ Let\'s complete your profile to personalize your care experience!',
               ),
               actions: [
                 ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pop(); // Close dialog
-                    Navigator.of(context).pop(); // Go back to signin screen
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (context) => ProfileCompletionScreen(
+                          caregiverData: _addCaregiver ? {
+                            'name': _caregiverNameController.text.trim(),
+                            'email': _caregiverEmailController.text.trim(),
+                            'relationship': _selectedRelationship ?? 'Professional Caregiver',
+                          } : null,
+                        ),
+                      ),
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('Continue to Sign In'),
+                  child: const Text('Complete Profile'),
                 ),
               ],
             );
