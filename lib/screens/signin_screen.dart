@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'home_screen.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -384,10 +383,8 @@ class _SignInScreenState extends State<SignInScreen> {
     });
 
     try {
-      print('🔥 Attempting sign in for: $email');
-      
-      // Sign in with Firebase Auth
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+      // Sign in with Firebase Auth directly
+      await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       ).timeout(
@@ -396,8 +393,6 @@ class _SignInScreenState extends State<SignInScreen> {
           throw Exception('Connection timeout. Please check your internet connection.');
         },
       );
-
-      print('🔥 Sign in successful: ${userCredential.user!.uid}');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -439,8 +434,6 @@ class _SignInScreenState extends State<SignInScreen> {
           break;
       }
 
-      print('🔥 Firebase Auth Error: ${e.code} - ${e.message}');
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -451,8 +444,6 @@ class _SignInScreenState extends State<SignInScreen> {
         );
       }
     } catch (e) {
-      print('🔥 General Sign In Error: ${e.toString()}');
-      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -618,11 +609,7 @@ class _SignInScreenState extends State<SignInScreen> {
     }
 
     try {
-      print('🔥 Sending password reset email to: $email');
-      
       await _auth.sendPasswordResetEmail(email: email);
-      
-      print('🔥 Password reset email sent successfully');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -650,7 +637,7 @@ class _SignInScreenState extends State<SignInScreen> {
           break;
       }
 
-      print('🔥 Password Reset Error: ${e.code} - ${e.message}');
+
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -662,8 +649,6 @@ class _SignInScreenState extends State<SignInScreen> {
         );
       }
     } catch (e) {
-      print('🔥 General Password Reset Error: ${e.toString()}');
-      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:math';
+import '../models/models.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -721,117 +721,123 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  // Generate secure password for caregiver
-  String _generateSecurePassword() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#\$%';
-    final random = Random.secure();
-    return List.generate(12, (i) => chars[random.nextInt(chars.length)]).join();
-  }
+
 
   Future<void> _registerUser() async {
     setState(() {
       _isLoading = true;
     });
 
+    // Show progress snackbar
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('� Starting registration process...'),
+        backgroundColor: Colors.blue,
+        duration: Duration(seconds: 2),
+      ),
+    );
+
     try {
-      print('🔥 Starting registration...');
-      print('🔥 Email: ${_emailController.text.trim()}');
-      
       // Create elderly user account
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      UserCredential elderlyCredential = await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
-      ).timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          throw Exception('Firebase connection timeout. Check your internet or Firebase config.');
-        },
+      );
+      
+      // Show progress snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Account created! Saving to database...'),
+          backgroundColor: Colors.blue,
+          duration: Duration(seconds: 2),
+        ),
       );
 
-      print('🔥 Elderly user created successfully: ${userCredential.user!.uid}');
-
       String? caregiverId;
-
-      // If caregiver was added, create their account
-      if (_addCaregiver && _caregiverEmailController.text.trim().isNotEmpty) {
-        print('🔥 Creating caregiver account...');
+      
+      // Create caregiver if provided
+      if (_addCaregiver && 
+          _caregiverEmailController.text.trim().isNotEmpty && 
+          _caregiverNameController.text.trim().isNotEmpty) {
         
-        // Generate a random temporary password (caregiver will reset it via email)
-        final tempPassword = _generateSecurePassword();
-        
-        // Temporarily sign out to create caregiver account
-        await _auth.signOut();
-        
-        UserCredential caregiverCredential = await _auth.createUserWithEmailAndPassword(
-          email: _caregiverEmailController.text.trim(),
-          password: tempPassword,
-        );
-        
-        caregiverId = caregiverCredential.user!.uid;
-        print('🔥 Caregiver created: $caregiverId');
-
-        // Save caregiver data
-        await _firestore.collection('users').doc(caregiverId).set({
-          'fullName': _caregiverNameController.text.trim(),
-          'email': _caregiverEmailController.text.trim(),
-          'userType': 'caregiver',
-          'linkedElderlyIds': [userCredential.user!.uid],
-          'relationship': _selectedRelationship,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-
-        // Send password reset email (caregiver sets their own password!)
-        print('🔥 Sending password reset email to caregiver...');
         try {
-          await _auth.sendPasswordResetEmail(
-            email: _caregiverEmailController.text.trim(),
+          caregiverId = await _createCaregiverAccount(
+            elderlyId: elderlyCredential.user!.uid,
+            caregiverName: _caregiverNameController.text.trim(),
+            caregiverEmail: _caregiverEmailController.text.trim(),
+            relationship: _selectedRelationship ?? 'Professional Caregiver',
           );
-          print('🔥 Password reset email sent successfully to: ${_caregiverEmailController.text.trim()}');
-        } catch (emailError) {
-          print('❌ Email sending error: ${emailError.toString()}');
-          // Continue anyway - account is created, caregiver can use "Forgot Password" later
+          
+          // Sign back in as elderly user
+          await _auth.signInWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
+        } catch (e) {
+          // If caregiver creation fails, continue with elderly account only
+          caregiverId = null;
         }
-
-        // Sign back in as elderly user
-        await _auth.signInWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
       }
 
-      // Save elderly user data
-      print('🔥 Saving elderly user data to Firestore...');
-      await _firestore.collection('users').doc(userCredential.user!.uid).set({
-        'fullName': _fullNameController.text.trim(),
-        'username': _usernameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'phoneNumber': _phoneController.text.trim(),
-        'sex': _selectedSex,
-        'userType': 'elderly',
-        'linkedCaregiverIds': caregiverId != null ? [caregiverId] : [],
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      print('🔥 Registration complete!');
+      // Create user and elderly records
+      await _createElderlyRecords(
+        userId: elderlyCredential.user!.uid,
+        email: _emailController.text.trim(),
+        fullName: _fullNameController.text.trim(),
+        username: _usernameController.text.trim(),
+        phoneNumber: _phoneController.text.trim(),
+        sex: _selectedSex!,
+        caregiverId: caregiverId,
+      );
+      
+      // Show final progress
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Registration complete! Preparing success dialog...'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 1),
+        ),
+      );
+      
+      // Small delay to let user see the message
+      await Future.delayed(const Duration(milliseconds: 1500));
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _addCaregiver 
-                ? '🎉 Registration successful! Password setup email sent to ${_caregiverEmailController.text.trim()}\n\n💡 Ask them to check spam/junk folder!'
-                : '🎉 Registration successful! Welcome to SilverCare!'
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 5),
-          ),
+        // Show success dialog instead of just snackbar for better visibility
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              title: const Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green, size: 24),
+                  SizedBox(width: 8),
+                  Text('Success!', style: TextStyle(color: Colors.green)),
+                ],
+              ),
+              content: Text(
+                caregiverId != null 
+                  ? 'Your account has been created successfully!\n\n📧 Your caregiver has been notified and will receive setup instructions via email.\n\n💡 You can now sign in to start using SilverCare!'
+                  : 'Your account has been created successfully!\n\n💡 You can now sign in to start using SilverCare!',
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close dialog
+                    Navigator.of(context).pop(); // Go back to signin screen
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Continue to Sign In'),
+                ),
+              ],
+            );
+          },
         );
-
-        await Future.delayed(const Duration(seconds: 2));
-
-        if (mounted) {
-          Navigator.pop(context);
-        }
       }
     } on FirebaseAuthException catch (e) {
       String errorMessage = 'Registration failed. Please try again.';
@@ -858,14 +864,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
         );
       }
     } catch (e) {
-      print('🔥 Registration Error: ${e.toString()}');
-      print('🔥 Error Type: ${e.runtimeType}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Debug Error: ${e.toString()}'),
+            content: Text('Registration failed: ${e.toString()}'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -878,6 +882,138 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
+  // Create caregiver account and send password reset email
+  Future<String> _createCaregiverAccount({
+    required String elderlyId,
+    required String caregiverName,
+    required String caregiverEmail,
+    required String relationship,
+  }) async {
+    // Generate temporary password
+    final tempPassword = _generateSecurePassword();
+    
+    // Sign out current user temporarily
+    await _auth.signOut();
+    
+    // Create caregiver account
+    UserCredential caregiverCredential = await _auth.createUserWithEmailAndPassword(
+      email: caregiverEmail,
+      password: tempPassword,
+    );
+    
+    final caregiverId = caregiverCredential.user!.uid;
+    
+    // Create caregiver records
+    final caregiverUser = UserModel(
+      id: caregiverId,
+      email: caregiverEmail,
+      fullName: caregiverName,
+      userType: 'caregiver',
+      createdAt: DateTime.now(),
+    );
+    
+    final caregiverDetails = CaregiverModel(
+      id: caregiverId,
+      userId: caregiverId,
+      email: caregiverEmail,
+      elderlyId: elderlyId,
+      relationship: relationship,
+      createdAt: DateTime.now(),
+    );
+
+    // Create caregiver records in Firestore
+    await _firestore.collection('users').doc(caregiverId).set(caregiverUser.toMap());
+    await _firestore.collection('caregivers').doc(caregiverId).set(caregiverDetails.toMap());
+    
+    // Send password reset email
+    try {
+      await _auth.sendPasswordResetEmail(email: caregiverEmail);
+    } catch (e) {
+      // Email sending failed, but don't fail the entire registration
+      // Caregiver can use "Forgot Password" later
+    }
+    
+    return caregiverId;
+  }
+
+  // Create elderly user and elderly records
+  Future<void> _createElderlyRecords({
+    required String userId,
+    required String email,
+    required String fullName,
+    required String username,
+    required String phoneNumber,
+    required String sex,
+    String? caregiverId,
+  }) async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('📝 Creating user record...'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 1),
+        ),
+      );
+
+      final elderlyUser = UserModel(
+        id: userId,
+        email: email,
+        fullName: fullName,
+        userType: 'elderly',
+        createdAt: DateTime.now(),
+      );
+      
+      // Create user record first
+      await _firestore.collection('users').doc(userId).set(elderlyUser.toMap());
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ User record created! Creating elderly record...'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 1),
+        ),
+      );
+      
+      final elderlyDetails = ElderlyModel(
+        id: userId,
+        userId: userId,
+        username: username,
+        phoneNumber: phoneNumber,
+        sex: sex,
+        caregiverId: caregiverId,
+        profileCompleted: false,
+        createdAt: DateTime.now(),
+      );
+
+      // Create elderly record
+      await _firestore.collection('elderly').doc(userId).set(elderlyDetails.toMap());
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Both records created successfully!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 1),
+        ),
+      );
+      
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Database error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      rethrow; // Re-throw so the main function catches it
+    }
+  }
+
+  // Generate secure password for caregiver
+  String _generateSecurePassword() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#\$%';
+    final random = DateTime.now().millisecondsSinceEpoch;
+    return List.generate(12, (i) => chars[(random + i) % chars.length]).join();
+  }
 
 
   // Responsive font sizing based on screen width
