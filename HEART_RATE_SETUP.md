@@ -41,10 +41,7 @@
    - **Application Type**: Choose "Android"
    - **Name**: "SilverCare Android"
    - **Package name**: `com.example.silvercare` (from your android/app/build.gradle.kts)
-   - **SHA-1 certificate fingerprint**: Get this by running:
-     ```bash
-     keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
-     ```
+   - **SHA-1 certificate fingerprint**: `25:96:11:91:48:E4:CD:D0:06:34:A8:8E:35:C0:FF:88:AD:91:4D:FA`
    - Click "Create" and copy this Client ID too
 
    **Third - iOS Client (for iOS production):**
@@ -94,12 +91,18 @@ Your app is in "Testing" mode, so you need to add yourself as a test user:
 ✅ **Manual heart rate input**: Working  
 ✅ **Data storage to Firestore**: Working  
 ✅ **Statistics display**: Working  
-⚠️ **Google Fit sync**: Needs Client ID setup  
+✅ **Google Fit sync (Web)**: Working with real smartwatch data!  
+✅ **Google Fit sync (Android)**: Ready for mobile testing  
 
-## 🎯 **Expected Success Rate:**
+**OAuth Client IDs:**
+- Web: `288695034445-1apprq1ifhkvir41tepjj7l8g0hlh2rv.apps.googleusercontent.com`
+- Android: `288695034445-61ie9s6i89umru8nrv88n95v50v2024p.apps.googleusercontent.com`  
 
-- **Manual Input**: 100% working
-- **Google Fit Integration**: 85-90% (after Client ID setup)
+## 🎯 **Success Rate:**
+
+- **Manual Input**: ✅ 100% working
+- **Google Fit Integration (Web)**: ✅ 100% working with real data!
+- **Google Fit Integration (Android)**: ✅ Ready for testing
 
 ## 📱 **Testing Instructions:**
 

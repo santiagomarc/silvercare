@@ -403,11 +403,11 @@ class _SignInScreenState extends State<SignInScreen> {
           ),
         );
 
-        // Navigate to home screen
+        // Navigate to main screen (with navbar)
         await Future.delayed(const Duration(seconds: 1));
         
         if (mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
+          Navigator.pushReplacementNamed(context, '/main');
         }
       }
     } on FirebaseAuthException catch (e) {
