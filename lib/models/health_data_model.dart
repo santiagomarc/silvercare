@@ -7,6 +7,7 @@ class HealthDataModel {
   final double value; // The measurement value
   final DateTime measuredAt; // When the measurement was taken
   final DateTime createdAt; // When the record was created
+  final String source; // "manual" | "google_fit" | "device" - data source
 
   HealthDataModel({
     required this.id,
@@ -15,6 +16,7 @@ class HealthDataModel {
     required this.value,
     required this.measuredAt,
     required this.createdAt,
+    required this.source,
   });
 
   // Convert to Map for saving to Firestore
@@ -25,6 +27,7 @@ class HealthDataModel {
       'value': value,
       'measuredAt': Timestamp.fromDate(measuredAt),
       'createdAt': Timestamp.fromDate(createdAt),
+      'source': source,
     };
   }
 
@@ -38,6 +41,7 @@ class HealthDataModel {
       value: (data['value'] ?? 0).toDouble(),
       measuredAt: (data['measuredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      source: data['source'] ?? 'manual',
     );
   }
 
@@ -50,6 +54,7 @@ class HealthDataModel {
       value: (map['value'] ?? 0).toDouble(),
       measuredAt: (map['measuredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      source: map['source'] ?? 'manual',
     );
   }
 
@@ -61,6 +66,7 @@ class HealthDataModel {
     double? value,
     DateTime? measuredAt,
     DateTime? createdAt,
+    String? source,
   }) {
     return HealthDataModel(
       id: id ?? this.id,
@@ -69,6 +75,7 @@ class HealthDataModel {
       value: value ?? this.value,
       measuredAt: measuredAt ?? this.measuredAt,
       createdAt: createdAt ?? this.createdAt,
+      source: source ?? this.source,
     );
   }
 

@@ -51,6 +51,48 @@ class AuthService {
     }
   }
 
+  // Check if user is signed in
+  static bool get isSignedIn => _auth.currentUser != null;
+
+  // Sign in anonymously for demo purposes
+  static Future<User?> signInAnonymously() async {
+    try {
+      final UserCredential result = await _auth.signInAnonymously();
+      print('✅ Signed in anonymously: ${result.user?.uid}');
+      return result.user;
+    } on FirebaseAuthException catch (e) {
+      print('❌ Firebase auth error: ${e.code} - ${e.message}');
+      throw Exception('Authentication failed: ${e.message}');
+    } catch (error) {
+      print('❌ Error signing in anonymously: $error');
+      throw Exception('Authentication failed: $error');
+    }
+  }
+
+  // Ensure user is authenticated (sign in anonymously if not)
+  static Future<User> ensureAuthenticated() async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      return user;
+    }
+    
+    // Sign in anonymously if not authenticated
+    final newUser = await signInAnonymously();
+    if (newUser == null) {
+      throw Exception('Failed to authenticate user');
+    }
+    return newUser;
+  }
+
+  // Get user ID or throw error
+  static String get userId {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    return user.uid;
+  }
+
   // Sign out
   static Future<void> signOut() async {
     try {

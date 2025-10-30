@@ -106,58 +106,188 @@ class GoogleFitService {
       final DateTime endTime = DateTime.now();
       final DateTime startTime = endTime.subtract(Duration(days: days));
       
-      // Simplified request body for Google Fit API
-      final Map<String, dynamic> requestBody = {
-        'aggregateBy': [
-          {
-            'dataTypeName': 'com.google.heart_rate.bpm'
-          }
-        ],
-        'bucketByTime': {
-          'durationMillis': 86400000, // 24 hour buckets (1 day)
-        },
-        'startTimeMillis': startTime.millisecondsSinceEpoch,
-        'endTimeMillis': endTime.millisecondsSinceEpoch,
-      };
-
-      print('🔄 Sending Google Fit API request...');
+      print('🔄 Fetching raw heart rate data from Google Fit...');
       print('📅 Time range: ${startTime.toString()} to ${endTime.toString()}');
 
-      // Make API request
-      final response = await http.post(
-        Uri.parse(_fitnessApiUrl),
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: json.encode(requestBody),
-      );
-
-      print('📡 Google Fit API Response: ${response.statusCode}');
+      // Try both aggregated approach and direct dataset approach
+      List<HeartRateData> allData = [];
       
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        print('📊 Response data keys: ${data.keys.toList()}');
-        return _parseHeartRateResponse(data);
-      } else {
-        print('❌ Google Fit API Error: ${response.statusCode}');
-        print('📝 Response body: ${response.body}');
+      // Method 1: Try aggregated data first
+      try {
+        final aggregatedData = await _fetchAggregatedHeartRateData(accessToken, startTime, endTime);
+        allData.addAll(aggregatedData);
+        print('📊 Got ${aggregatedData.length} readings from aggregated data');
+      } catch (e) {
+        print('⚠️ Aggregated data fetch failed: $e');
+      }
+      
+      // Method 2: Try direct dataset query for more recent data
+      try {
+        final directData = await _fetchDirectHeartRateData(accessToken, startTime, endTime);
+        allData.addAll(directData);
+        print('� Got ${directData.length} readings from direct data sources');
+      } catch (e) {
+        print('⚠️ Direct data fetch failed: $e');
+      }
+
+      // Remove duplicates based on timestamp (within 1 minute)
+      final Set<DateTime> seenTimestamps = <DateTime>{};
+      final List<HeartRateData> uniqueData = [];
+      
+      for (final data in allData) {
+        final roundedTime = DateTime(
+          data.timestamp.year,
+          data.timestamp.month,
+          data.timestamp.day,
+          data.timestamp.hour,
+          data.timestamp.minute,
+        );
         
-        // Provide more specific error messages
-        if (response.statusCode == 400) {
-          throw Exception('Bad request - please check Google Fit permissions and data availability');
-        } else if (response.statusCode == 401) {
-          throw Exception('Authentication failed - please sign in again');
-        } else if (response.statusCode == 403) {
-          throw Exception('Access denied - please enable Google Fit API and grant permissions');
-        } else {
-          throw Exception('Google Fit API error (${response.statusCode}): ${response.body}');
+        if (!seenTimestamps.contains(roundedTime)) {
+          seenTimestamps.add(roundedTime);
+          uniqueData.add(data);
         }
       }
+      
+      // Sort by timestamp (newest first)
+      uniqueData.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      
+      print('✅ Total unique heart rate readings: ${uniqueData.length}');
+      return uniqueData;
     } catch (error) {
       print('❌ Error fetching heart rate data: $error');
       rethrow;
+    }
+  }
+
+  /// Fetch aggregated heart rate data
+  static Future<List<HeartRateData>> _fetchAggregatedHeartRateData(
+    String accessToken, 
+    DateTime startTime, 
+    DateTime endTime
+  ) async {
+    final Map<String, dynamic> requestBody = {
+      'aggregateBy': [
+        {
+          'dataTypeName': 'com.google.heart_rate.bpm'
+        }
+      ],
+      'bucketByTime': {
+        'durationMillis': 3600000, // 1 hour buckets
+      },
+      'startTimeMillis': startTime.millisecondsSinceEpoch,
+      'endTimeMillis': endTime.millisecondsSinceEpoch,
+    };
+
+    final response = await http.post(
+      Uri.parse('https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate'),
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: json.encode(requestBody),
+    );
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = json.decode(response.body);
+      return _parseHeartRateResponse(data);
+    } else {
+      throw Exception('Aggregated data API error: ${response.statusCode} - ${response.body}');
+    }
+  }
+
+  /// Fetch direct heart rate data from data sources
+  static Future<List<HeartRateData>> _fetchDirectHeartRateData(
+    String accessToken, 
+    DateTime startTime, 
+    DateTime endTime
+  ) async {
+    try {
+      // First, get available data sources
+      final sourcesResponse = await http.get(
+        Uri.parse('https://www.googleapis.com/fitness/v1/users/me/dataSources'),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (sourcesResponse.statusCode != 200) {
+        throw Exception('Failed to get data sources: ${sourcesResponse.statusCode}');
+      }
+
+      final sourcesData = json.decode(sourcesResponse.body);
+      final dataSources = sourcesData['dataSource'] as List<dynamic>? ?? [];
+      
+      List<HeartRateData> allData = [];
+
+      // Look for heart rate data sources
+      for (final source in dataSources) {
+        final dataType = source['dataType'];
+        if (dataType != null && dataType['name'] == 'com.google.heart_rate.bpm') {
+          final dataSourceId = source['dataStreamId'];
+          if (dataSourceId != null) {
+            print('📡 Fetching from data source: $dataSourceId');
+            
+            // Fetch data from this specific source
+            final datasetId = '${startTime.millisecondsSinceEpoch * 1000000}-${endTime.millisecondsSinceEpoch * 1000000}';
+            final dataUrl = 'https://www.googleapis.com/fitness/v1/users/me/dataSources/$dataSourceId/datasets/$datasetId';
+            
+            final dataResponse = await http.get(
+              Uri.parse(dataUrl),
+              headers: {
+                'Authorization': 'Bearer $accessToken',
+                'Content-Type': 'application/json',
+              },
+            );
+
+            if (dataResponse.statusCode == 200) {
+              final datasetData = json.decode(dataResponse.body);
+              final points = datasetData['point'] as List<dynamic>? ?? [];
+              
+              for (final point in points) {
+                try {
+                  final String startTimeNanos = point['startTimeNanos']?.toString() ?? '0';
+                  final List<dynamic> values = point['value'] ?? [];
+                  
+                  if (values.isNotEmpty && values[0] != null) {
+                    double heartRate = 0.0;
+                    final valueData = values[0];
+                    
+                    if (valueData['fpVal'] != null) {
+                      heartRate = (valueData['fpVal']).toDouble();
+                    } else if (valueData['intVal'] != null) {
+                      heartRate = (valueData['intVal']).toDouble();
+                    }
+                    
+                    if (heartRate > 0 && heartRate < 300) {
+                      final DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(
+                        int.parse(startTimeNanos) ~/ 1000000
+                      );
+                      
+                      allData.add(HeartRateData(
+                        bpm: heartRate,
+                        timestamp: timestamp,
+                        source: 'google_fit',
+                      ));
+                      print('💓 Direct data: ${heartRate.toInt()} bpm at $timestamp');
+                    }
+                  }
+                } catch (e) {
+                  print('⚠️ Error parsing direct data point: $e');
+                  continue;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      return allData;
+    } catch (e) {
+      print('⚠️ Error fetching direct data: $e');
+      return [];
     }
   }
 

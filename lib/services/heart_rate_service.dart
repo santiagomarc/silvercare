@@ -16,10 +16,10 @@ class HeartRateService {
     try {
       final User? user = _auth.currentUser;
       if (user == null) {
-        throw Exception('User not authenticated');
+        throw Exception('User not authenticated. Please sign in first.');
       }
 
-      // Get elderly ID (assuming current user is elderly, or you might need to get it differently)
+      // Get elderly ID (assuming current user is elderly, or you might need to get it differently)  
       final String elderlyId = user.uid;
 
       final HealthDataModel heartRateData = HealthDataModel(
@@ -29,6 +29,7 @@ class HeartRateService {
         value: bpm,
         measuredAt: measuredAt,
         createdAt: DateTime.now(),
+        source: source,
       );
 
       // Save to Firestore
@@ -38,9 +39,12 @@ class HeartRateService {
 
       print('✅ Heart rate saved: ${bpm.toInt()} bpm (source: $source)');
       return docRef.id;
+    } on FirebaseException catch (e) {
+      print('❌ Firebase error saving heart rate data: ${e.code} - ${e.message}');
+      throw Exception('Failed to save heart rate: ${e.message}');
     } catch (error) {
       print('❌ Error saving heart rate data: $error');
-      rethrow;
+      throw Exception('Failed to save heart rate: $error');
     }
   }
 
@@ -91,6 +95,7 @@ class HeartRateService {
             value: heartRate.bpm,
             measuredAt: heartRate.timestamp,
             createdAt: DateTime.now(),
+            source: 'google_fit',
           ));
         } catch (error) {
           print('⚠️ Failed to save heart rate reading: $error');
@@ -110,7 +115,8 @@ class HeartRateService {
     try {
       final User? user = _auth.currentUser;
       if (user == null) {
-        throw Exception('User not authenticated');
+        print('⚠️ User not authenticated, returning empty list');
+        return [];
       }
 
       final String elderlyId = user.uid;
@@ -137,6 +143,9 @@ class HeartRateService {
       
       print('✅ Found ${filteredData.length} heart rate readings (last $days days)');
       return filteredData;
+    } on FirebaseException catch (e) {
+      print('❌ Firebase error fetching heart rate data: ${e.code} - ${e.message}');
+      return [];
     } catch (error) {
       print('❌ Error fetching heart rate data: $error');
       
