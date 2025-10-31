@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../widgets/nav_bar.dart';
+import '../widgets/nav_bar_svg.dart';
 import 'home_screen.dart';
 
 class MainScreen extends StatefulWidget {

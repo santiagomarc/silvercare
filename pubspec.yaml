@@ -37,6 +37,9 @@ dependencies:
   google_sign_in: ^6.2.1  # For Google OAuth
   http: ^1.2.0  # For REST API calls
   googleapis: ^13.1.0  # For Google APIs
+  
+  # SVG Support for custom icons
+  flutter_svg: ^2.0.10
 
 dev_dependencies:
   flutter_test:
@@ -49,6 +52,7 @@ flutter:
   # Add assets directory
   assets:
     - assets/imgs/
+    - assets/icons/
 
   # Add fonts
   fonts:
