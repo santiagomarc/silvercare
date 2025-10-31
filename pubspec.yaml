@@ -49,6 +49,7 @@ flutter:
   # Add assets directory
   assets:
     - assets/imgs/
+    - assets/icons/
 
   # Add fonts
   fonts:

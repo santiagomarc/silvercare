@@ -1,27 +1,40 @@
+
+
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart'; // <--- NEW
+import 'package:silvercare/config/firebase_options.dart'; // <--- NEW
 
-// Import all your groupmates' screens here
-import 'screens/login_screen.dart';
-import 'screens/dashboard_screen.dart';
-import 'screens/register_screen.dart';
+// Import your screens
+import 'screens/profile_screen.dart';
 
-void main() {
+// --- IMPORTANT: INITIALIZE FIREBASE HERE ---
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // You need this block to satisfy ProfileScreen's Firebase dependency
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  // ------------------------------------------
+
   runApp(
     MaterialApp(
       debugShowCheckedModeBanner: false,
       home: TestScreen(), // 👈 Change this line to test a different screen
+      // Add a sign-in route for sign-out navigation to work
+      routes: {
+        '/signin': (context) => const Center(child: Text('Sign In Screen Placeholder')),
+      },
     ),
   );
 }
 
 /// Change this to whatever you want to test
 Widget TestScreen() {
-  // Example: return LoginScreen();
-  // Example: return RegisterScreen();
-  // Example: return DashboardScreen();
-  
-  return DashboardScreen(); // 👈 currently testing dashboard
+  // We wrap ProfileScreen in a Builder to ensure it can access the new '/signin' route.
+  return Builder(
+    builder: (context) {
+      return const ProfileScreen(); 
+    }
+  );
 }
-
-// how to run on chrome:
-//flutter run -d chrome -t lib/main_test.dart
