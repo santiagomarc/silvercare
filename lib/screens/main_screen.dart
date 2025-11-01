@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../widgets/nav_bar_svg.dart';
 import 'home_screen.dart';
+import 'profile_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -18,13 +19,12 @@ class _MainScreenState extends State<MainScreen> {
   // - Calendar: replace with CalendarScreen()
   // - Analytics: replace with AnalyticsScreen() 
   // - Health: replace with HealthScreen()
-  // - Profile: replace with ProfileScreen()
   final List<Widget> _screens = [
     const HomeScreenContent(), // Home
     const PlaceholderScreen(title: 'Calendar', color: Color(0xFF4CAF50)), // Calendar
     const PlaceholderScreen(title: 'Analytics', color: Color(0xFFFFB300)), // Analytics  
     const PlaceholderScreen(title: 'Health', color: Color(0xFF9C27B0)), // Health
-    const PlaceholderScreen(title: 'Profile', color: Color(0xFF2196F3)), // Profile
+    const ProfileScreen(), // Profile - Now using the actual ProfileScreen
   ];
 
   void _onNavTap(int index) {
