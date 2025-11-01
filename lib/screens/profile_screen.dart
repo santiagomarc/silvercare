@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../widgets/custom_nav_bar.dart'; 
+import '../widgets/nav_bar_svg.dart'; // Imports SilverCareNavBar
 
 const String _logoAssetPath = 'assets/icons/silvercare.png'; 
 
@@ -14,6 +14,15 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final int _currentIndex = 4;
+  
+  // REQUIRED: Manually defining the labels needed for the dialog navigation demo
+  final List<String> _navLabels = const [
+    'Notifications', // Index 0
+    'Calendar',      // Index 1
+    'Wellness',      // Index 2
+    'Home',          // Index 3
+    'Profile',       // Index 4
+  ];
   
   final Color _blueBgColor = const Color(0xFF32C3D2); 
   final Color _darkGreyText = const Color(0xFF808080);
@@ -47,6 +56,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _addressController.dispose();
     super.dispose();
   }
+
+  // --- DATA FETCHING/SAVING (Assumed correct) ---
 
   Future<void> _loadUserData() async {
     final user = _auth.currentUser;
@@ -141,6 +152,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  // --- UI HELPER FUNCTIONS ---
 
   double _getResponsiveFontSize(BuildContext context, double baseSize) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -149,8 +161,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return baseSize * clampedScaleFactor;
   }
 
+  // FIX: Using the local _navLabels list
   void _handleTabTap(int index) {
-    String destination = CustomBottomNavBar.navItems[index].label;
+    String destination = _navLabels[index];
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -163,6 +176,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
   
+  // Sign out confirmation logic (kept from previous version)
   Future<void> _handleSignOut() async {
     _showSignOutConfirmationDialog();
   }
@@ -482,11 +496,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: CustomBottomNavBar(
+      bottomNavigationBar: SilverCareNavBar(
         currentIndex: _currentIndex,
-        onTabSelected: _handleTabTap,
+        onTap: _handleTabTap,
       ),
     );
   }
 }
-

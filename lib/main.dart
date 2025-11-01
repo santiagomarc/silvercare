@@ -8,7 +8,6 @@ import 'package:silvercare/screens/main_screen.dart';
 import 'package:silvercare/screens/heart_rate_screen.dart';
 
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -41,6 +40,7 @@ class SilverCareApp extends StatelessWidget {
         '/signup': (context) => const SignUpScreen(),
         '/main': (context) => const MainScreen(), // Main app with navbar
         '/heart_rate': (context) => const HeartRateScreen(),
+        
       },
       // Handle unknown routes
       onUnknownRoute: (settings) {

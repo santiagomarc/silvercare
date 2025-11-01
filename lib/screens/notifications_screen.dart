@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../widgets/custom_nav_bar.dart';
+// FIX: Using the correct file name
+import '../widgets/nav_bar_svg.dart'; 
 
 const String _logoAssetPath = 'assets/icons/silvercare.png'; 
 
@@ -12,6 +13,14 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   final int _currentIndex = 0; 
+  
+  final List<String> _navLabels = const [
+    'Notifications',
+    'Calendar',     
+    'Wellness',      
+    'Home',          
+    'Profile',       
+  ];
   
   final Color _missedMedColor = const Color(0xFFCD5C5C);
   final Color _checklistColor = const Color(0xFF008000);
@@ -26,8 +35,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return baseSize * clampedScaleFactor;
   }
 
+  // FIX: Using the local _navLabels list
   void _handleTabTap(int index) {
-    String destination = CustomBottomNavBar.navItems[index].label;
+    String destination = _navLabels[index];
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -250,9 +260,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: CustomBottomNavBar(
+      bottomNavigationBar: SilverCareNavBar(
         currentIndex: _currentIndex,
-        onTabSelected: _handleTabTap,
+        onTap: _handleTabTap,
       ),
     );
   }
