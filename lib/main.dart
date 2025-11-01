@@ -7,6 +7,8 @@ import 'package:silvercare/screens/signup_screen.dart';
 import 'package:silvercare/screens/main_screen.dart';
 import 'package:silvercare/screens/heart_rate_screen.dart';
 
+
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
