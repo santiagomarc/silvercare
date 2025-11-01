@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -14,14 +15,56 @@ class _SignInScreenState extends State<SignInScreen> {
 
   bool _isPasswordVisible = false;
   bool _isLoading = false;
+  bool _rememberMe = false;
   
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+  
+  Future<void> _loadSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedEmail = prefs.getString('saved_email') ?? '';
+    final savedPassword = prefs.getString('saved_password') ?? '';
+    final rememberMe = prefs.getBool('remember_me') ?? false;
+
+    if (rememberMe && savedEmail.isNotEmpty && savedPassword.isNotEmpty) {
+      setState(() {
+        _emailController.text = savedEmail;
+        _passwordController.text = savedPassword;
+        _rememberMe = true;
+      });
+    }
+  }
+
+  Future<void> _saveCredentials(String email, String password) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_rememberMe) {
+      await prefs.setString('saved_email', email);
+      await prefs.setString('saved_password', password);
+      await prefs.setBool('remember_me', true);
+    } else {
+      await prefs.remove('saved_email');
+      await prefs.remove('saved_password');
+      await prefs.setBool('remember_me', false);
+    }
+  }
+
+  Future<void> _clearSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('saved_email');
+    await prefs.remove('saved_password');
+    await prefs.setBool('remember_me', false);
   }
 
   double _getResponsiveFontSize(BuildContext context, double baseSize) {
@@ -292,7 +335,47 @@ class _SignInScreenState extends State<SignInScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 16),
+
+                      // Remember Me Checkbox
+                      Row(
+                        children: [
+                          SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: Checkbox(
+                              value: _rememberMe,
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  _rememberMe = value ?? false;
+                                });
+                                // Clear saved credentials if unchecked
+                                if (!_rememberMe) {
+                                  _clearSavedCredentials();
+                                }
+                              },
+                              activeColor: const Color(0xFF2C2C2C),
+                              checkColor: Colors.white,
+                              side: const BorderSide(
+                                color: Color(0xFF383838),
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Remember me',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w400,
+                              color: Color(0xFF1E1E1E),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
 
                       // Sign In Button
                       SizedBox(
@@ -393,6 +476,9 @@ class _SignInScreenState extends State<SignInScreen> {
           throw Exception('Connection timeout. Please check your internet connection.');
         },
       );
+
+      // Save credentials if Remember Me is checked
+      await _saveCredentials(email, password);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

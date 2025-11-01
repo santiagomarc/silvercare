@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class SilverCareNavBar extends StatefulWidget {
   final int currentIndex;
@@ -15,7 +16,6 @@ class SilverCareNavBar extends StatefulWidget {
 }
 
 class _SilverCareNavBarState extends State<SilverCareNavBar> {
-  // Define colors for each screen
   final List<Color> _navColors = [
     Colors.black87,                    // Home - Black (bold when active)
     const Color(0xFF4CAF50),          // Calendar - Green
@@ -24,8 +24,16 @@ class _SilverCareNavBarState extends State<SilverCareNavBar> {
     const Color(0xFF2196F3),          // Profile - Blue
   ];
 
-  // Define icons for each nav item
-  final List<IconData> _navIcons = [
+  final List<String> _svgIcons = [
+    'assets/icons/home.svg',
+    'assets/icons/calendar.svg',
+    'assets/icons/analytics.svg',
+    'assets/icons/health.svg',
+    'assets/icons/profile.svg',
+  ];
+
+  // Fallback regular icons (in case SVG doesn't load)
+  final List<IconData> _fallbackIcons = [
     Icons.home_rounded,
     Icons.calendar_today_rounded,
     Icons.analytics_rounded,
@@ -33,7 +41,6 @@ class _SilverCareNavBarState extends State<SilverCareNavBar> {
     Icons.person_rounded,
   ];
 
-  // Define labels for accessibility
   final List<String> _navLabels = [
     'Home',
     'Calendar', 
@@ -47,10 +54,9 @@ class _SilverCareNavBarState extends State<SilverCareNavBar> {
     final screenWidth = MediaQuery.of(context).size.width;
     final inactiveColor = Colors.black54;
     
-    // Responsive sizing - Made icons bigger for elderly users
-    final double navHeight = screenWidth > 600 ? 75 : 65;
-    final double iconSize = screenWidth > 600 ? 32 : 28;
-    final double containerPadding = screenWidth > 600 ? 12 : 8;
+    final double navHeight = screenWidth > 600 ? 80 : 70;
+    final double iconSize = screenWidth > 600 ? 36 : 32; // Bigger icons
+    final double containerPadding = screenWidth > 600 ? 14 : 10;
 
     return Container(
       margin: EdgeInsets.symmetric(
@@ -63,15 +69,27 @@ class _SilverCareNavBarState extends State<SilverCareNavBar> {
         borderRadius: BorderRadius.circular(35),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-            spreadRadius: 2,
+            color: Colors.black.withOpacity(0.25),
+            blurRadius: 20,
+            offset: const Offset(0, -12), // Negative offset for upward shadow
+            spreadRadius: 4,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+            spreadRadius: 3,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+            spreadRadius: 1,
           ),
         ],
         border: Border.all(
-          color: Colors.grey.withOpacity(0.2),
-          width: 1,
+          color: Colors.grey.withOpacity(0.15),
+          width: 0.5,
         ),
       ),
       child: Padding(
@@ -80,10 +98,11 @@ class _SilverCareNavBarState extends State<SilverCareNavBar> {
           horizontal: containerPadding
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly, // Better spacing
           children: List.generate(5, (index) => 
             _buildNavItem(
-              _navIcons[index], 
+              _svgIcons[index],
+              _fallbackIcons[index],
               index, 
               _navColors[index], 
               inactiveColor, 
@@ -97,7 +116,8 @@ class _SilverCareNavBarState extends State<SilverCareNavBar> {
   }
 
   Widget _buildNavItem(
-    IconData icon,
+    String svgPath,
+    IconData fallbackIcon,
     int index,
     Color activeColor,
     Color inactiveColor,
@@ -112,7 +132,6 @@ class _SilverCareNavBarState extends State<SilverCareNavBar> {
       button: true,
       child: GestureDetector(
         onTap: () {
-          // Add haptic feedback
           if (widget.currentIndex != index) {
             widget.onTap(index);
           }
@@ -120,8 +139,8 @@ class _SilverCareNavBarState extends State<SilverCareNavBar> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeInOut,
-          width: screenWidth > 600 ? 56 : 48,
-          height: screenWidth > 600 ? 56 : 48,
+          width: screenWidth > 600 ? 60 : 52, // Slightly bigger touch targets
+          height: screenWidth > 600 ? 60 : 52,
           decoration: BoxDecoration(
             color: isActive 
               ? activeColor.withOpacity(0.12) 
@@ -129,30 +148,49 @@ class _SilverCareNavBarState extends State<SilverCareNavBar> {
             shape: BoxShape.circle,
             border: isActive 
               ? Border.all(
-                  color: Colors.black87, // Changed to black outline
-                  width: 2
+                  color: activeColor, // Use icon color for better consistency
+                  width: 2.5, // Slightly thicker for better visibility
                 ) 
               : null,
           ),
           child: Center(
             child: AnimatedScale(
-              scale: isActive ? 1.1 : 1.0,
+              scale: isActive ? 1.15 : 1.0, // Slightly more scale for better feedback
               duration: const Duration(milliseconds: 200),
-              child: Icon(
-                icon,
-                size: iconSize,
-                color: isActive ? activeColor : inactiveColor,
-                // Make home icon appear bolder with shadow when active
-                shadows: (index == 0 && isActive) ? [
-                  Shadow(
-                    color: activeColor.withOpacity(0.6),
-                    blurRadius: 2,
-                  ),
-                ] : null,
+              child: _buildIcon(
+                svgPath,
+                fallbackIcon,
+                iconSize,
+                isActive ? activeColor : inactiveColor,
+                false,
+                activeColor,
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildIcon(
+    String svgPath,
+    IconData fallbackIcon,
+    double iconSize,
+    Color color,
+    bool addShadow,
+    Color shadowColor,
+  ) {
+    return SvgPicture.asset(
+      svgPath,
+      width: iconSize,
+      height: iconSize,
+      // This is the key: colorFilter changes the SVG color dynamically!
+      colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+      // Fallback to regular icon if SVG fails to load
+      placeholderBuilder: (BuildContext context) => Icon(
+        fallbackIcon,
+        size: iconSize,
+        color: color,
       ),
     );
   }
