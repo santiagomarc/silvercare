@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../widgets/custom_nav_bar.dart';
 
 const String _logoAssetPath = 'assets/icons/silvercare.png'; 
 
@@ -11,8 +10,6 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  final int _currentIndex = 0; 
-  
   final Color _missedMedColor = const Color(0xFFCD5C5C);
   final Color _checklistColor = const Color(0xFF008000);
   final Color _upcomingsColor = const Color(0xFF000080);
@@ -24,20 +21,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final scaleFactor = screenWidth / 375;
     final clampedScaleFactor = scaleFactor.clamp(0.8, 1.4);
     return baseSize * clampedScaleFactor;
-  }
-
-  void _handleTabTap(int index) {
-    String destination = CustomBottomNavBar.navItems[index].label;
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Navigation Demo"),
-          content: Text("You would navigate to the '$destination' screen now."),
-          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("Close"))],
-        );
-      },
-    );
   }
 
   void _showComingSoonDialog(BuildContext context, String feature) {
@@ -75,18 +58,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Container(
-            width: 55,
-            height: 55,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.blueGrey,
-              border: Border.all(color: Colors.white, width: 3),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5, offset: const Offset(0, 3)),
-              ],
+          // Back button
+          GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Container(
+              width: 55,
+              height: 55,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+                border: Border.all(color: Colors.grey.withOpacity(0.3), width: 2),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5, offset: const Offset(0, 3)),
+                ],
+              ),
+              child: const Icon(Icons.arrow_back, color: Color(0xFF2C2C2C), size: 30),
             ),
-            child: const Icon(Icons.person_outline, color: Colors.white, size: 30),
           ),
 
           Row(
@@ -250,10 +237,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: CustomBottomNavBar(
-        currentIndex: _currentIndex,
-        onTabSelected: _handleTabTap,
-      ),
+
     );
   }
 }

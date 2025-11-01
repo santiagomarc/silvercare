@@ -168,10 +168,13 @@ class _SugarLevelScreenState extends State<SugarLevelScreen> {
 
                 // Title
                 Row(
-                  children: const [
-                    Icon(Icons.arrow_back, size: 28),
-                    SizedBox(width: 10),
-                    Text(
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: const Icon(Icons.arrow_back, size: 28),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
                       'SUGAR LEVEL',
                       style: TextStyle(
                         fontFamily: 'Montserrat',
@@ -182,8 +185,8 @@ class _SugarLevelScreenState extends State<SugarLevelScreen> {
                         ],
                       ),
                     ),
-                    Spacer(),
-                    CircleAvatar(
+                    const Spacer(),
+                    const CircleAvatar(
                       radius: 20,
                       backgroundColor: Colors.white,
                       child: Icon(Icons.water_drop, color: Colors.teal),

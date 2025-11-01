@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../widgets/custom_nav_bar.dart'; 
+import 'package:cloud_firestore/cloud_firestore.dart'; 
 
 const String _logoAssetPath = 'assets/icons/silvercare.png'; 
 
@@ -13,8 +12,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final int _currentIndex = 4;
-  
   final Color _blueBgColor = const Color(0xFF32C3D2); 
   final Color _darkGreyText = const Color(0xFF808080);
   final Color _redLogout = const Color(0xFFCD5C5C); 
@@ -141,26 +138,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-
   double _getResponsiveFontSize(BuildContext context, double baseSize) {
     final screenWidth = MediaQuery.of(context).size.width;
     final scaleFactor = screenWidth / 375;
     final clampedScaleFactor = scaleFactor.clamp(0.8, 1.4);
     return baseSize * clampedScaleFactor;
-  }
-
-  void _handleTabTap(int index) {
-    String destination = CustomBottomNavBar.navItems[index].label;
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Navigation Demo"),
-          content: Text("You would navigate to the '$destination' screen now."),
-          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("Close"))],
-        );
-      },
-    );
   }
   
   Future<void> _handleSignOut() async {
@@ -482,10 +464,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: CustomBottomNavBar(
-        currentIndex: _currentIndex,
-        onTabSelected: _handleTabTap,
-      ),
+
     );
   }
 }
