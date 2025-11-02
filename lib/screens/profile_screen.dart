@@ -22,6 +22,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   
   final Color _blueBgColor = const Color(0xFF32C3D2); 
   final Color _darkGreyText = const Color(0xFF808080);
+
+  // FIX: Added missing color constants
   final Color _redLogout = const Color(0xFFCD5C5C); 
   static const Color _shadowColor25Percent = Color(0x40000000); 
 
@@ -93,6 +95,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
 
       if (elderlyDoc.exists) {
+        // NOTE: Assuming ElderlyModel, EmergencyContact, and MedicalInfo are accessible via import
         final model = ElderlyModel.fromDoc(elderlyDoc);
         _elderlyModel = model;
         
@@ -102,12 +105,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _weightController.text = model.weight?.toString() ?? '';
         _heightController.text = model.height?.toString() ?? '';
         
-        _selectedSex = model.sex;
+        _selectedSex = model.sex; // Loaded Sex
         
+        // Load Emergency Contact details
         _ecNameController.text = model.emergencyContact?.name ?? '';
         _ecPhoneController.text = model.emergencyContact?.phone ?? '';
-        _ecRelationship = model.emergencyContact?.relationship;
+        _ecRelationship = model.emergencyContact?.relationship; // Loaded Relationship
 
+        // Load Medical Info display text (read-only summary)
         final conditions = model.medicalInfo?.conditions.join(', ') ?? 'None';
         final medications = model.medicalInfo?.medications.join(', ') ?? 'None';
         final allergies = model.medicalInfo?.allergies.join(', ') ?? 'None';
@@ -143,6 +148,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
     
+    // Construct Emergency Contact object
     final EmergencyContact? updatedEmergencyContact = (_ecNameController.text.isNotEmpty && _ecPhoneController.text.isNotEmpty)
       ? EmergencyContact(
           name: _ecNameController.text.trim(),
@@ -192,7 +198,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     }
   }
-
 
 
   double _getResponsiveFontSize(BuildContext context, double baseSize) {
@@ -398,6 +403,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             setState(() {
               _isEditing = !_isEditing;
             });
+            // If exiting without saving, reload data to discard changes
             if (!_isEditing) {
               _loadUserData();
             }
@@ -415,6 +421,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // NEW: Dropdown for Sex
   Widget _buildSexDropdown() {
     final bool readOnly = !_isEditing;
 
@@ -566,6 +573,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         const SizedBox(height: 15),
 
+        // EC Name and Phone (side by side)
         Row(
           children: [
             Expanded(child: _buildProfileDetailRow(context: context, label: 'EC Name:', controller: _ecNameController)),
@@ -574,6 +582,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
 
+        // EC Relationship Dropdown
         Padding(
           padding: const EdgeInsets.only(bottom: 20.0),
           child: Container(
@@ -675,10 +684,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _buildEditProfileControl(),
                           const SizedBox(height: 25),
   
+                          // --- CORE PERSONAL INFO ---
                           _buildProfileDetailRow(context: context, label: 'Full Name:', controller: _nameController),
                           _buildProfileDetailRow(context: context, label: 'Username:', controller: _usernameController),
                           _buildProfileDetailRow(context: context, label: 'Email:', controller: _emailController, isReadOnly: true),
                           
+                          // --- PHYSICAL STATS ROW ---
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -690,16 +701,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ],
                           ),
                           
+                          // --- SEX DROPDOWN ---
                           _buildSexDropdown(),
 
+                          // --- CONTACT INFO ---
                           _buildProfileDetailRow(context: context, label: 'Phone Number:', controller: _phoneController, keyboardType: TextInputType.phone),
                           _buildProfileDetailRow(context: context, label: 'Address:', controller: _addressController),
                           
+                          // --- EMERGENCY CONTACT (NEW ROW) ---
                           _buildEmergencyContactRow(),
                           
+                          // --- MEDICAL INFO (READ ONLY) ---
                           _buildProfileDetailRow(
                             context: context, 
-                            label: 'Medical Info:', 
+                            label: 'Medical Info (Read Only):', 
                             controller: _medicalController, 
                             isReadOnly: true,
                           ),
@@ -709,6 +724,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
+                              // SAVE BUTTON (Only enabled if editing is true)
                               ElevatedButton.icon(
                                 onPressed: (_isSaving || !_isEditing) ? null : _handleSaveProfile,
                                 icon: _isSaving 
@@ -731,6 +747,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                               
+                              // LOG OUT BUTTON
                               TextButton(
                                 onPressed: _handleSignOut,
                                 style: TextButton.styleFrom(

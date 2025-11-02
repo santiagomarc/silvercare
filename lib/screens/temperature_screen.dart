@@ -178,10 +178,13 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
                 const SizedBox(height: 20),
 
                 Row(
-                  children: const [
-                    Icon(Icons.arrow_back, size: 28),
-                    SizedBox(width: 10),
-                    Text(
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: const Icon(Icons.arrow_back, size: 28),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
                       'TEMPERATURE',
                       style: TextStyle(
                         fontFamily: 'Montserrat',
@@ -192,8 +195,8 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
                         ],
                       ),
                     ),
-                    Spacer(),
-                    CircleAvatar(
+                    const Spacer(),
+                    const CircleAvatar(
                       radius: 20,
                       backgroundColor: Colors.white,
                       child: Icon(Icons.thermostat, color: Colors.red),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// FIX: Using the correct file name
 import '../widgets/nav_bar_svg.dart'; 
 
 const String _logoAssetPath = 'assets/icons/silvercare.png'; 
@@ -12,19 +11,22 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
+
   final int _currentIndex = 0; 
-  
   final List<String> _navLabels = const [
     'Notifications',
-    'Calendar',     
-    'Wellness',      
-    'Home',          
-    'Profile',       
+    'Calendar',
+    'Wellness',
+    'Home',
+    'Profile',
   ];
   
-  final Color _missedMedColor = const Color(0xFFCD5C5C);
-  final Color _checklistColor = const Color(0xFF008000);
-  final Color _upcomingsColor = const Color(0xFF000080);
+  // FIX: Added missing color constants
+  final Color _missedMedColor = const Color(0xFFCD5C5C); // Red
+  final Color _checklistColor = const Color(0xFF008000); // Green (for Checklist)
+  final Color _upcomingsColor = const Color(0xFF000080); // Dark Blue (for Upcomings)
+  // End of FIX
+  
   final Color _titleTextColor = const Color(0xFF808080);
   final Color _bronzeBgColor = const Color(0xFFCD7F32); 
 
@@ -35,7 +37,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return baseSize * clampedScaleFactor;
   }
 
-  // FIX: Using the local _navLabels list
+
   void _handleTabTap(int index) {
     String destination = _navLabels[index];
     showDialog(
@@ -49,6 +51,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       },
     );
   }
+
 
   void _showComingSoonDialog(BuildContext context, String feature) {
     showDialog(
@@ -85,18 +88,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Container(
-            width: 55,
-            height: 55,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.blueGrey,
-              border: Border.all(color: Colors.white, width: 3),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5, offset: const Offset(0, 3)),
-              ],
+          // Back button logic added (since the Profile Screen used an avatar placeholder here)
+          GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Container(
+              width: 55,
+              height: 55,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+                border: Border.all(color: Colors.grey.withOpacity(0.3), width: 2),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5, offset: const Offset(0, 3)),
+                ],
+              ),
+              child: const Icon(Icons.arrow_back, color: Color(0xFF2C2C2C), size: 30),
             ),
-            child: const Icon(Icons.person_outline, color: Colors.white, size: 30),
           ),
 
           Row(
@@ -105,12 +112,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               SizedBox(
                 width: 55,
                 height: 55, 
-                child: Image.asset(
-                  _logoAssetPath,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(Icons.shield, color: Colors.grey, size: 30); 
-                  },
+                child: Opacity(
+                  opacity: 0.0,
+                  child: Image.asset(
+                    _logoAssetPath,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(); 
+                    },
+                  ),
                 ),
               ),
               const SizedBox(width: 15),
