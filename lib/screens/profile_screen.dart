@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../widgets/nav_bar_svg.dart'; // Imports SilverCareNavBar
+import '../widgets/nav_bar_svg.dart'; 
+import '../models/elderly_model.dart'; 
 
 const String _logoAssetPath = 'assets/icons/silvercare.png'; 
 
@@ -15,13 +16,8 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final int _currentIndex = 4;
   
-  // REQUIRED: Manually defining the labels needed for the dialog navigation demo
   final List<String> _navLabels = const [
-    'Notifications', // Index 0
-    'Calendar',      // Index 1
-    'Wellness',      // Index 2
-    'Home',          // Index 3
-    'Profile',       // Index 4
+    'Notifications', 'Calendar', 'Wellness', 'Home', 'Profile',
   ];
   
   final Color _blueBgColor = const Color(0xFF32C3D2); 
@@ -34,12 +30,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _ageController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
+  final _weightController = TextEditingController();
+  final _heightController = TextEditingController();
+  final _medicalController = TextEditingController(); 
+
+  final _ecNameController = TextEditingController();
+  final _ecPhoneController = TextEditingController();
+  String? _ecRelationship; 
+
+  String? _selectedSex; 
   
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isEditing = false; 
+  
+  ElderlyModel? _elderlyModel; 
 
   @override
   void initState() {
@@ -51,13 +60,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _usernameController.dispose();
     _ageController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
+    _weightController.dispose();
+    _heightController.dispose();
+    _medicalController.dispose();
+    _ecNameController.dispose();
+    _ecPhoneController.dispose();
     super.dispose();
   }
-
-  // --- DATA FETCHING/SAVING (Assumed correct) ---
 
   Future<void> _loadUserData() async {
     final user = _auth.currentUser;
@@ -72,22 +85,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _emailController.text = user.email ?? 'No Email Provided';
     
     try {
-      final userDocRef = _firestore.collection('users').doc(user.uid);
-      final elderlyDocRef = _firestore.collection('elderly').doc(user.uid);
-
-      final userDoc = await userDocRef.get();
-      final elderlyDoc = await elderlyDocRef.get();
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      final elderlyDoc = await _firestore.collection('elderly').doc(user.uid).get();
 
       if (userDoc.exists) {
         _nameController.text = userDoc.get('fullName') ?? 'N/A';
-      } else {
-        _nameController.text = 'User Data Missing';
       }
 
       if (elderlyDoc.exists) {
-        _ageController.text = elderlyDoc.get('age')?.toString() ?? '';
-        _phoneController.text = elderlyDoc.get('phoneNumber') ?? '';
-        _addressController.text = elderlyDoc.get('address') ?? ''; 
+        final model = ElderlyModel.fromDoc(elderlyDoc);
+        _elderlyModel = model;
+        
+        _usernameController.text = model.username;
+        _ageController.text = model.age?.toString() ?? '';
+        _phoneController.text = model.phoneNumber;
+        _weightController.text = model.weight?.toString() ?? '';
+        _heightController.text = model.height?.toString() ?? '';
+        
+        _selectedSex = model.sex;
+        
+        _ecNameController.text = model.emergencyContact?.name ?? '';
+        _ecPhoneController.text = model.emergencyContact?.phone ?? '';
+        _ecRelationship = model.emergencyContact?.relationship;
+
+        final conditions = model.medicalInfo?.conditions.join(', ') ?? 'None';
+        final medications = model.medicalInfo?.medications.join(', ') ?? 'None';
+        final allergies = model.medicalInfo?.allergies.join(', ') ?? 'None';
+        
+        _medicalController.text = 'Conditions: $conditions\nMedications: $medications\nAllergies: $allergies';
       }
       
     } catch (e) {
@@ -106,7 +131,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _handleSaveProfile() async {
-    if (_isLoading) return;
+    if (_isLoading || !_isEditing) return;
     
     setState(() {
       _isSaving = true;
@@ -117,6 +142,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _isSaving = false;
       return;
     }
+    
+    final EmergencyContact? updatedEmergencyContact = (_ecNameController.text.isNotEmpty && _ecPhoneController.text.isNotEmpty)
+      ? EmergencyContact(
+          name: _ecNameController.text.trim(),
+          phone: _ecPhoneController.text.trim(),
+          relationship: _ecRelationship ?? 'Other',
+        )
+      : null;
 
     try {
       await _firestore.collection('users').doc(user.uid).update({
@@ -124,9 +157,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
 
       final elderlyUpdateData = {
+        'username': _usernameController.text.trim(),
+        'sex': _selectedSex,
         'age': int.tryParse(_ageController.text.trim()),
         'phoneNumber': _phoneController.text.trim(),
         'address': _addressController.text.trim(),
+        'weight': double.tryParse(_weightController.text.trim()),
+        'height': double.tryParse(_heightController.text.trim()),
+        'emergencyContact': updatedEmergencyContact?.toMap(),
       };
       
       await _firestore.collection('elderly').doc(user.uid).update(elderlyUpdateData);
@@ -135,6 +173,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('✅ Profile saved successfully!'), backgroundColor: Colors.green),
         );
+        setState(() {
+          _isEditing = false;
+        });
       }
       
     } catch (e) {
@@ -152,7 +193,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // --- UI HELPER FUNCTIONS ---
+
 
   double _getResponsiveFontSize(BuildContext context, double baseSize) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -161,7 +202,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return baseSize * clampedScaleFactor;
   }
 
-  // FIX: Using the local _navLabels list
   void _handleTabTap(int index) {
     String destination = _navLabels[index];
     showDialog(
@@ -176,7 +216,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
   
-  // Sign out confirmation logic (kept from previous version)
   Future<void> _handleSignOut() async {
     _showSignOutConfirmationDialog();
   }
@@ -214,6 +253,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: const Text('Sign Out', style: TextStyle(color: Colors.white)),
             ),
           ],
+        );
+      },
+    );
+  }
+  
+  void _showComingSoonDialog(BuildContext context, String feature) {
+     showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return const AlertDialog(
+          title: Text("Feature Coming Soon"),
+          content: Text("This feature is under development."),
         );
       },
     );
@@ -267,7 +318,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           
           InkWell(
-            onTap: () => showDialog(context: context, builder: (ctx) => const AlertDialog(title: Text('Settings Coming Soon'))),
+            onTap: () => _showComingSoonDialog(context, 'Settings'),
             child: Container(
               width: 48,
               height: 48,
@@ -320,23 +371,116 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildEditProfileHeader(BuildContext context) {
+  Widget _buildEditProfileControl() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Icon(Icons.person_pin, size: 24, color: Colors.black),
-        const SizedBox(width: 8),
-        Text(
-          'Edit Your Profile',
-          style: TextStyle(
-            color: const Color(0xFF000000), 
-            fontSize: _getResponsiveFontSize(context, 20), 
-            fontFamily: 'Montserrat', 
-            fontWeight: FontWeight.w600, 
-            shadows: [Shadow(offset: const Offset(0, 4), blurRadius: 4, color: _shadowColor25Percent)],
+        Row(
+          children: [
+            const Icon(Icons.person_pin, size: 24, color: Colors.black),
+            const SizedBox(width: 8),
+            Text(
+              _isEditing ? 'Editing Profile' : 'View Profile Details',
+              style: TextStyle(
+                color: const Color(0xFF000000), 
+                fontSize: _getResponsiveFontSize(context, 20), 
+                fontFamily: 'Montserrat', 
+                fontWeight: FontWeight.w600, 
+                shadows: [Shadow(offset: const Offset(0, 4), blurRadius: 4, color: _shadowColor25Percent)],
+              ),
+            ),
+          ],
+        ),
+
+        // EDIT/CANCEL BUTTON TOGGLE
+        ElevatedButton.icon(
+          onPressed: _isLoading ? null : () {
+            setState(() {
+              _isEditing = !_isEditing;
+            });
+            if (!_isEditing) {
+              _loadUserData();
+            }
+          },
+          icon: Icon(_isEditing ? Icons.close : Icons.edit, size: 18),
+          label: Text(_isEditing ? 'Cancel Edit' : 'Edit Details'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _isEditing ? _redLogout.withOpacity(0.8) : const Color(0xFFFFB300), // Amber for Edit, Red for Cancel
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            elevation: 4,
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSexDropdown() {
+    final bool readOnly = !_isEditing;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20.0),
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: readOnly ? Colors.white.withOpacity(0.8) : Colors.white,
+          borderRadius: BorderRadius.circular(15), 
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.30), blurRadius: 4, offset: const Offset(0, 2))],
+          border: Border.all(
+            color: readOnly ? Colors.transparent : _darkGreyText, 
+            width: readOnly ? 0 : 1,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Sex:',
+                style: TextStyle(
+                  color: _darkGreyText.withOpacity(0.9),
+                  fontSize: _getResponsiveFontSize(context, 14),
+                  fontFamily: 'Montserrat', 
+                  fontWeight: FontWeight.w700, 
+                ),
+              ),
+              IgnorePointer(
+                ignoring: readOnly,
+                child: DropdownButtonFormField<String>(
+                  value: _selectedSex,
+                  isExpanded: true,
+                  dropdownColor: Colors.white,
+                  style: TextStyle(
+                    color: readOnly ? Colors.black54 : const Color(0xFF000000),
+                    fontSize: _getResponsiveFontSize(context, 16),
+                    fontFamily: 'Inter', 
+                    fontWeight: readOnly ? FontWeight.w500 : FontWeight.w600,
+                  ),
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                    border: InputBorder.none,
+                    filled: false,
+                  ),
+                  items: ['Male', 'Female', 'Other'].map((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _selectedSex = newValue;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -347,17 +491,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     bool isReadOnly = false,
     TextInputType keyboardType = TextInputType.text,
   }) {
+    final bool readOnly = isReadOnly || !_isEditing;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 25.0),
+      padding: const EdgeInsets.only(bottom: 20.0),
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(25),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.50), blurRadius: 8, offset: const Offset(0, 4))],
+          color: readOnly ? Colors.white.withOpacity(0.8) : Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.30), blurRadius: 4, offset: const Offset(0, 2))],
+          border: Border.all(
+            color: readOnly ? Colors.transparent : _darkGreyText, 
+            width: readOnly ? 0 : 1,
+          ),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -365,29 +515,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Text(
                 label,
                 style: TextStyle(
-                  color: const Color(0xFF000000),
-                  fontSize: _getResponsiveFontSize(context, 16),
+                  color: _darkGreyText.withOpacity(0.9),
+                  fontSize: _getResponsiveFontSize(context, 14),
                   fontFamily: 'Montserrat', 
-                  fontWeight: FontWeight.w800, 
-                  shadows: [Shadow(offset: const Offset(0, 2), blurRadius: 4, color: Colors.black.withOpacity(0.15))],
+                  fontWeight: FontWeight.w700, 
                 ),
               ),
-              const SizedBox(height: 4),
               TextFormField(
                 controller: controller,
-                readOnly: isReadOnly,
+                readOnly: readOnly,
                 keyboardType: keyboardType,
+                maxLines: label.contains('Medical') ? 5 : 1,
                 style: TextStyle(
-                  color: isReadOnly ? Colors.grey.shade700 : const Color(0xFF000000),
-                  fontSize: _getResponsiveFontSize(context, 18),
+                  color: readOnly ? Colors.black54 : const Color(0xFF000000),
+                  fontSize: _getResponsiveFontSize(context, 16),
                   fontFamily: 'Inter', 
-                  fontWeight: isReadOnly ? FontWeight.w400 : FontWeight.w600,
+                  fontWeight: readOnly ? FontWeight.w500 : FontWeight.w600,
                 ),
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   isDense: true,
                   contentPadding: EdgeInsets.zero,
                   border: InputBorder.none,
-                  filled: false,
                 ),
               ),
             ],
@@ -396,6 +544,104 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+  
+  Widget _buildEmergencyContactRow() {
+    final bool readOnly = !_isEditing;
+    final List<String> relationships = ['Spouse', 'Child', 'Professional Caregiver', 'Other'];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 8.0, left: 4),
+          child: Text(
+            'EMERGENCY CONTACT DETAILS:',
+            style: TextStyle(
+              color: Colors.black, 
+              fontSize: _getResponsiveFontSize(context, 18), 
+              fontFamily: 'Montserrat', 
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        const SizedBox(height: 15),
+
+        Row(
+          children: [
+            Expanded(child: _buildProfileDetailRow(context: context, label: 'EC Name:', controller: _ecNameController)),
+            const SizedBox(width: 15),
+            Expanded(child: _buildProfileDetailRow(context: context, label: 'EC Phone:', controller: _ecPhoneController, keyboardType: TextInputType.phone)),
+          ],
+        ),
+
+        Padding(
+          padding: const EdgeInsets.only(bottom: 20.0),
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: readOnly ? Colors.white.withOpacity(0.8) : Colors.white,
+              borderRadius: BorderRadius.circular(15), 
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.30), blurRadius: 4, offset: const Offset(0, 2))],
+              border: Border.all(
+                color: readOnly ? Colors.transparent : _darkGreyText, 
+                width: readOnly ? 0 : 1,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'EC Relationship:',
+                    style: TextStyle(
+                      color: _darkGreyText.withOpacity(0.9),
+                      fontSize: _getResponsiveFontSize(context, 14),
+                      fontFamily: 'Montserrat', 
+                      fontWeight: FontWeight.w700, 
+                    ),
+                  ),
+                  IgnorePointer(
+                    ignoring: readOnly,
+                    child: DropdownButtonFormField<String>(
+                      value: _ecRelationship,
+                      isExpanded: true,
+                      dropdownColor: Colors.white,
+                      style: TextStyle(
+                        color: readOnly ? Colors.black54 : const Color(0xFF000000),
+                        fontSize: _getResponsiveFontSize(context, 16),
+                        fontFamily: 'Inter', 
+                        fontWeight: readOnly ? FontWeight.w500 : FontWeight.w600,
+                      ),
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                        border: InputBorder.none,
+                        filled: false,
+                      ),
+                      items: relationships.map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _ecRelationship = newValue;
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -422,18 +668,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: _isLoading 
                   ? const Center(child: CircularProgressIndicator(color: Colors.white))
                   : SingleChildScrollView( 
-                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          _buildEditProfileHeader(context),
-                          const SizedBox(height: 30),
+                          _buildEditProfileControl(),
+                          const SizedBox(height: 25),
   
                           _buildProfileDetailRow(context: context, label: 'Full Name:', controller: _nameController),
+                          _buildProfileDetailRow(context: context, label: 'Username:', controller: _usernameController),
                           _buildProfileDetailRow(context: context, label: 'Email:', controller: _emailController, isReadOnly: true),
-                          _buildProfileDetailRow(context: context, label: 'Age:', controller: _ageController, keyboardType: TextInputType.number),
+                          
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: _buildProfileDetailRow(context: context, label: 'Age:', controller: _ageController, keyboardType: TextInputType.number)),
+                              const SizedBox(width: 15),
+                              Expanded(child: _buildProfileDetailRow(context: context, label: 'Weight (kg):', controller: _weightController, keyboardType: TextInputType.number)),
+                              const SizedBox(width: 15),
+                              Expanded(child: _buildProfileDetailRow(context: context, label: 'Height (cm):', controller: _heightController, keyboardType: TextInputType.number)),
+                            ],
+                          ),
+                          
+                          _buildSexDropdown(),
+
                           _buildProfileDetailRow(context: context, label: 'Phone Number:', controller: _phoneController, keyboardType: TextInputType.phone),
                           _buildProfileDetailRow(context: context, label: 'Address:', controller: _addressController),
+                          
+                          _buildEmergencyContactRow(),
+                          
+                          _buildProfileDetailRow(
+                            context: context, 
+                            label: 'Medical Info:', 
+                            controller: _medicalController, 
+                            isReadOnly: true,
+                          ),
                           
                           const SizedBox(height: 20),
 
@@ -441,7 +710,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               ElevatedButton.icon(
-                                onPressed: _isSaving ? null : _handleSaveProfile,
+                                onPressed: (_isSaving || !_isEditing) ? null : _handleSaveProfile,
                                 icon: _isSaving 
                                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                                   : const Icon(Icons.save, size: 20, color: Colors.white),
@@ -455,7 +724,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                 ),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF008000),
+                                  backgroundColor: const Color(0xFF008000), // Green for save
                                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                   elevation: 5,
