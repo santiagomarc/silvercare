@@ -50,7 +50,7 @@ class _BloodPressureScreenState extends State<BloodPressureScreen> {
   Future<void> _loadBPData() async {
     setState(() => _isLoading = true);
     try {
-      final data = await BloodPressureService.getBloodPressureData(days: 7);
+      final data = await BloodPressureService.getBloodPressureData(days: 30);
       setState(() {
         // Convert HealthDataModel to BloodPressureRecord
         // For now, we'll use some sample data since the conversion is complex
@@ -584,19 +584,22 @@ class _BloodPressureScreenState extends State<BloodPressureScreen> {
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: statusColor, width: 1),
-                ),
-                child: Text(
-                  status,
-                  style: TextStyle(
-                    fontSize: _getResponsiveFontSize(context, 12),
-                    fontWeight: FontWeight.w600,
-                    color: statusColor,
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: statusColor, width: 1),
+                  ),
+                  child: Text(
+                    status,
+                    style: TextStyle(
+                      fontSize: _getResponsiveFontSize(context, 10),
+                      fontWeight: FontWeight.w600,
+                      color: statusColor,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),

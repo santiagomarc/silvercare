@@ -59,7 +59,6 @@ class _MoodTrackerCardState extends State<MoodTrackerCard> {
             .get();
         
         if (!elderDoc.exists) {
-          // Try 'elderly' collection as fallback
           elderDoc = await FirebaseFirestore.instance
               .collection('elderly')
               .doc(user.uid)

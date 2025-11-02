@@ -1,17 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // <-- for date formatting
-
-class SugarRecord {
-  final double value;
-  final String status;
-  final DateTime dateTime;
-
-  SugarRecord({
-    required this.value,
-    required this.status,
-    required this.dateTime,
-  });
-}
+import 'package:intl/intl.dart';
+import '../models/health_data_model.dart';
+import '../services/sugar_level_service.dart';
 
 class SugarLevelScreen extends StatefulWidget {
   const SugarLevelScreen({super.key});
@@ -21,378 +11,558 @@ class SugarLevelScreen extends StatefulWidget {
 }
 
 class _SugarLevelScreenState extends State<SugarLevelScreen> {
-  final TextEditingController glucoseController = TextEditingController();
-  DateTime? selectedDate;
-  TimeOfDay? selectedTime;
-  List<SugarRecord> records = [];
+  final TextEditingController _sugarController = TextEditingController();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  DateTime _selectedDate = DateTime.now();
+  TimeOfDay _selectedTime = TimeOfDay.now();
 
-  // --- Sugar level evaluator ---
-  String _evaluateSugar(double value) {
-    if (value < 70) return "Low";
-    if (value >= 70 && value <= 140) return "Normal";
-    if (value > 140 && value <= 199) return "Prediabetic";
-    if (value >= 200) return "High";
-    return "Unknown";
+  bool _isLoading = false;
+  List<HealthDataModel> _sugarData = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSugarData();
   }
 
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'Low':
-        return Colors.blue;
-      case 'Normal':
-        return Colors.green;
-      case 'Prediabetic':
-        return Colors.orange;
-      case 'High':
-        return Colors.red;
-      default:
-        return Colors.grey;
+  @override
+  void dispose() {
+    _sugarController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadSugarData() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await SugarLevelService.getSugarLevelData(days: 30);
+      setState(() {
+        _sugarData = data;
+      });
+    } catch (error) {
+      _showErrorSnackBar('Failed to load sugar data: $error');
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
-  // --- Date & Time pickers ---
-  Future<void> _pickDate(BuildContext context) async {
+  double _getResponsiveFontSize(BuildContext context, double baseSize) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final scaleFactor = screenWidth / 375;
+    final clamped = scaleFactor.clamp(0.8, 1.4);
+    return baseSize * clamped;
+  }
+
+  Future<void> _selectDate() async {
     final picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Colors.orange, // 🟠 Orange
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
-    if (picked != null) setState(() => selectedDate = picked);
+    if (picked != null) setState(() => _selectedDate = picked);
   }
 
-  Future<void> _pickTime(BuildContext context) async {
+  Future<void> _selectTime() async {
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Colors.orange,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
-    if (picked != null) setState(() => selectedTime = picked);
+    if (picked != null) setState(() => _selectedTime = picked);
   }
 
-  // --- Save record ---
-  void _saveRecord() {
-    if (glucoseController.text.isEmpty || selectedDate == null || selectedTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')),
-      );
-      return;
-    }
+  Future<void> _saveSugarLevelData() async {
+    if (!_formKey.currentState!.validate()) return;
 
-    final value = double.tryParse(glucoseController.text);
-    if (value == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid sugar level')),
-      );
-      return;
-    }
+    setState(() => _isLoading = true);
 
-    final status = _evaluateSugar(value);
-    final dateTime = DateTime(
-      selectedDate!.year,
-      selectedDate!.month,
-      selectedDate!.day,
-      selectedTime!.hour,
-      selectedTime!.minute,
+    try {
+      final DateTime measurementDateTime = DateTime(
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
+        _selectedTime.hour,
+        _selectedTime.minute,
+      );
+
+      final double sugarValue = double.parse(_sugarController.text);
+
+      final newSugar = HealthDataModel(
+        id: '',
+        elderlyId: 'tempUser', // replace with _auth.currentUser!.uid later
+        type: 'sugar_level',
+        measuredAt: measurementDateTime,
+        createdAt: DateTime.now(),
+        source: 'manual',
+        value: sugarValue, 
+      );
+
+      setState(() {
+        _sugarData.insert(0, newSugar);
+      });
+
+      _sugarController.clear();
+      _selectedDate = DateTime.now();
+      _selectedTime = TimeOfDay.now();
+
+      SugarLevelService.saveSugarLevelData(
+        value: sugarValue,
+        measuredAt: measurementDateTime,
+      );
+
+      _showSuccessSnackBar('Sugar level saved!');
+    } catch (error) {
+      _showErrorSnackBar('Failed to save sugar data: $error');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _showSuccessSnackBar(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
+  }
 
-    setState(() {
-      records.insert(0, SugarRecord(value: value, status: status, dateTime: dateTime));
-    });
-
-    glucoseController.clear();
-    selectedDate = null;
-    selectedTime = null;
+  void _showErrorSnackBar(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFB0B0B0),
-      body: Center(
-        child: Container(
-          width: 390,
-          height: 844,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: const Color(0xFFDEDEDE),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black38,
-                blurRadius: 10,
-                offset: Offset(0, 5),
-              ),
-            ],
-          ),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      backgroundColor: const Color(0xFFF5E6D3),
+      body: SafeArea(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: screenWidth * 0.06,
+                  vertical: screenHeight * 0.03,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
+                    // Header
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Container(
-                          width: 55,
-                          height: 55,
-                          decoration: const BoxDecoration(
-                            image: DecorationImage(
-                              image: NetworkImage("https://via.placeholder.com/55x55.png"),
-                              fit: BoxFit.cover,
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).pop(),
+                          child: Container(
+                            width: screenWidth * 0.12,
+                            height: screenWidth * 0.12,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 2,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back,
+                              color: Colors.black54,
+                              size: 20,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        const Text(
-                          'SILVER CARE',
+                        Text(
+                          'SUGAR LEVEL',
                           style: TextStyle(
+                            fontSize: _getResponsiveFontSize(context, 24),
                             fontFamily: 'Montserrat',
                             fontWeight: FontWeight.w800,
-                            fontSize: 20,
                             color: Colors.black,
                             shadows: [
-                              Shadow(offset: Offset(0, 4), blurRadius: 4, color: Colors.black26),
+                              Shadow(
+                                offset: const Offset(0, 3),
+                                blurRadius: 4,
+                                color: Colors.black.withOpacity(0.4),
+                              ),
                             ],
+                          ),
+                        ),
+                        Container(
+                          width: screenWidth * 0.12,
+                          height: screenWidth * 0.12,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.stacked_bar_chart,
+                            color: Colors.greenAccent,
+                            size: 20,
                           ),
                         ),
                       ],
                     ),
-                    const Icon(Icons.settings, size: 28, color: Colors.black),
-                  ],
-                ),
 
-                const SizedBox(height: 20),
+                    SizedBox(height: screenHeight * 0.06),
 
-                // Title
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: const Icon(Icons.arrow_back, size: 28),
-                    ),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'SUGAR LEVEL',
-                      style: TextStyle(
-                        fontFamily: 'Montserrat',
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        shadows: [
-                          Shadow(offset: Offset(0, 4), blurRadius: 4, color: Colors.black26),
-                        ],
-                      ),
-                    ),
-                    const Spacer(),
-                    const CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Colors.white,
-                      child: Icon(Icons.water_drop, color: Colors.teal),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-
-                // Green Input Panel
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF70E5AC),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "GLUCOSE VALUE",
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(30),
-                                boxShadow: const [
-                                  BoxShadow(color: Colors.black26, offset: Offset(0, 4), blurRadius: 4),
-                                ],
-                              ),
-                              child: TextField(
-                                controller: glucoseController,
-                                textAlign: TextAlign.center,
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  border: InputBorder.none,
-                                  hintText: "Enter value",
-                                ),
-                              ),
+                    // Input Card
+                    Form(
+                      key: _formKey,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 24),
+                        decoration: BoxDecoration(
+                          color: Colors.greenAccent, // 🟠 Orange card
+                          borderRadius: BorderRadius.circular(25),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.5),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                          const Text(
-                            "mg/dL",
-                            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 25),
-
-                      // DATE & TIME
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                                elevation: 6,
-                              ),
-                              onPressed: () => _pickDate(context),
-                              icon: const Icon(Icons.calendar_today, color: Colors.black),
-                              label: Text(
-                                selectedDate == null
-                                    ? "DATE"
-                                    : "${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}",
-                                style: const TextStyle(color: Colors.black),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                                elevation: 6,
-                              ),
-                              onPressed: () => _pickTime(context),
-                              icon: const Icon(Icons.access_time, color: Colors.black),
-                              label: Text(
-                                selectedTime == null ? "TIME" : selectedTime!.format(context),
-                                style: const TextStyle(color: Colors.black),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 25),
-
-                      // SAVE BUTTON
-                      Center(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFD9D9D9),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            elevation: 8,
-                            padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 15),
-                          ),
-                          onPressed: _saveRecord,
-                          child: const Text(
-                            "SAVE",
-                            style: TextStyle(
-                              fontFamily: 'Montserrat',
-                              fontWeight: FontWeight.w900,
-                              fontSize: 18,
-                              color: Colors.black,
-                            ),
-                          ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-
-                // Records Section
-                const Text(
-                  "RECORDS:",
-                  style: TextStyle(
-                    fontFamily: 'Montserrat',
-                    fontWeight: FontWeight.w900,
-                    fontSize: 26,
-                  ),
-                ),
-                const SizedBox(height: 15),
-
-                Column(
-                  children: records.map((record) {
-                    final formattedDate =
-                        DateFormat('EEE, dd MMM yyyy • hh:mm a').format(record.dateTime);
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(25),
-                        boxShadow: const [
-                          BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 4)),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            formattedDate,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.black54,
-                              fontWeight: FontWeight.w500,
+                        child: Column(
+                          children: [
+                            Text(
+                              'GLUCOSE VALUE:',
+                              style: TextStyle(
+                                fontSize: _getResponsiveFontSize(context, 28),
+                                fontWeight: FontWeight.w800,
+                                color: Colors.black,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(Icons.water_drop, color: Colors.teal, size: 24),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    "${record.value.toStringAsFixed(1)} mg/dL",
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                    ),
+                            const SizedBox(height: 20),
+
+                            _sugarInput(context, _sugarController, 'mg/dL'),
+                            const SizedBox(height: 30),
+
+                            // Date and Time
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _picker(context, 'DATE',
+                                    DateFormat('dd MMM yyyy').format(_selectedDate).toUpperCase(),
+                                    Icons.calendar_today, _selectDate),
+                                _picker(context, 'TIME',
+                                    _selectedTime.format(context).toUpperCase(),
+                                    Icons.access_time, _selectTime),
+                              ],
+                            ),
+                            const SizedBox(height: 32),
+
+                            // Save button
+                            Container(
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(25),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.3),
+                                    blurRadius: 3,
+                                    offset: const Offset(0, 7),
                                   ),
                                 ],
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: _statusColor(record.status).withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: _statusColor(record.status), width: 1.5),
+                              child: ElevatedButton(
+                                onPressed: _saveSugarLevelData,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: Colors.black,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                    horizontal: 40,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(25),
+                                  ),
                                 ),
                                 child: Text(
-                                  record.status,
+                                  'SAVE',
                                   style: TextStyle(
-                                    color: _statusColor(record.status),
-                                    fontWeight: FontWeight.bold,
+                                    fontSize: _getResponsiveFontSize(context, 18),
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
-                        ],
+                            ),
+                          ],
+                        ),
                       ),
-                    );
-                  }).toList(),
+                    ),
+
+                    SizedBox(height: screenHeight * 0.05),
+
+                    // Records
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'RECORDS:',
+                        style: TextStyle(
+                          fontSize: _getResponsiveFontSize(context, 28),
+                          fontFamily: 'Montserrat',
+                          fontWeight: FontWeight.w800,
+                          color: Colors.black,
+                          shadows: [
+                            Shadow(
+                              offset: const Offset(0, 3),
+                              blurRadius: 4,
+                              color: Colors.black.withOpacity(0.25),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    ..._buildSugarRecords(context),
+                  ],
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _sugarInput(BuildContext context, TextEditingController controller, String unit) {
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    crossAxisAlignment: CrossAxisAlignment.center,
+    children: [
+      Container(
+        width: 160,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(25),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 3,
+              offset: const Offset(0, 7),
+            ),
+          ],
+        ),
+        child: TextFormField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: _getResponsiveFontSize(context, 22),
+            fontWeight: FontWeight.w800,
+            color: Colors.black,
+          ),
+          decoration: InputDecoration(
+            hintText: 'Enter value',
+            hintStyle: TextStyle(color: Colors.black38, fontSize: _getResponsiveFontSize(context, 18)),
+            border: InputBorder.none,
+          ),
+          validator: (value) {
+            if (value == null || value.isEmpty) return 'Required';
+            final double? val = double.tryParse(value);
+            if (val == null || val < 40 || val > 400) return 'Invalid';
+            return null;
+          },
+        ),
+      ),
+      const SizedBox(width: 10),
+      Text(
+        unit,
+        style: TextStyle(
+          fontSize: _getResponsiveFontSize(context, 18),
+          fontWeight: FontWeight.w700,
+          color: Colors.black,
+        ),
+      ),
+    ],
+  );
+}
+
+  Widget _picker(BuildContext context, String label, String value, IconData icon, Function() onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Text(label,
+              style: TextStyle(
+                fontSize: _getResponsiveFontSize(context, 18),
+                fontWeight: FontWeight.w700,
+              )),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 3,
+                  offset: const Offset(0, 7),
                 ),
               ],
             ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: _getResponsiveFontSize(context, 14),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(icon, size: 16, color: Colors.black54),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
+  }
+
+  List<Widget> _buildSugarRecords(BuildContext context) {
+    if (_sugarData.isEmpty) {
+      return [
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(25),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: const Text('No sugar level records yet.'),
+        ),
+      ];
+    }
+
+    return _sugarData.take(10).map((data) {
+      final value = data.value?.toInt() ?? 0;
+      String status = 'Normal';
+      Color statusColor = Colors.green;
+
+      if (value >= 180) {
+        status = 'Very High';
+        statusColor = Colors.red;
+      } else if (value >= 140) {
+        status = 'High';
+        statusColor = Colors.orange;
+      } else if (value < 70) {
+        status = 'Low';
+        statusColor = Colors.blue;
+      }
+
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(25),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    DateFormat('EEE, dd MMM yyyy, hh:mm a').format(data.measuredAt),
+                    style: TextStyle(
+                      fontSize: _getResponsiveFontSize(context, 14),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '$value mg/dL',
+                    style: TextStyle(
+                      fontSize: _getResponsiveFontSize(context, 20),
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black,
+                    ),
+                  ),
+                ],
+              ),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: statusColor, width: 1),
+                  ),
+                  child: Text(
+                    status,
+                    style: TextStyle(
+                      fontSize: _getResponsiveFontSize(context, 10),
+                      fontWeight: FontWeight.w600,
+                      color: statusColor,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }).toList();
   }
 }
