@@ -24,7 +24,7 @@ class _MainScreenState extends State<MainScreen> {
     const PlaceholderScreen(title: 'Calendar', color: Color(0xFF4CAF50)), // Calendar
     const PlaceholderScreen(title: 'Analytics', color: Color(0xFFFFB300)), // Analytics  
     const PlaceholderScreen(title: 'Health', color: Color(0xFF9C27B0)), // Health
-    const ProfileScreen(), // Profile - Now using the actual ProfileScreen
+    const ProfileScreenContent(), // Profile - Now connected to the actual ProfileScreen
   ];
 
   void _onNavTap(int index) {
@@ -52,7 +52,6 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-// Placeholder screen for tabs that don't have screens yet
 class PlaceholderScreen extends StatelessWidget {
   final String title;
   final Color color;
@@ -148,7 +147,7 @@ class PlaceholderScreen extends StatelessWidget {
                     style: TextStyle(
                       color: color,
                       fontSize: 20,
-                      fontFamily: 'Inter',
+                      fontFamily: 'Montserrat',
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -161,7 +160,7 @@ class PlaceholderScreen extends StatelessWidget {
                     style: const TextStyle(
                       color: Color(0xFF666666),
                       fontSize: 16,
-                      fontFamily: 'Inter',
+                      fontFamily: 'Montserrat',
                       fontWeight: FontWeight.w400,
                     ),
                   ),
@@ -201,5 +200,15 @@ class HomeScreenContent extends StatelessWidget {
     // Later, when you want to remove the navbar from HomeScreen itself,
     // you can extract just the content part here
     return const HomeScreen();
+  }
+}
+
+// Extract the profile screen content without the Scaffold wrapper
+class ProfileScreenContent extends StatelessWidget {
+  const ProfileScreenContent({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const ProfileScreen();
   }
 }

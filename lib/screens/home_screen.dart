@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../widgets/mood_tracker_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,34 +31,30 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFDEDEDE),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Header Section
-              _buildHeader(),
-              
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Header Section
+                _buildHeader(),
+                
               const SizedBox(height: 30),
               
-              // Welcome Message
-              _buildWelcomeSection(),
+              // Mood Tracker Card
+              const MoodTrackerCard(),
+    
+              const SizedBox(height: 30),
               
-              const SizedBox(height: 40),
-              
-              // User Info Card
-              _buildUserInfoCard(),
-              
-              const SizedBox(height: 40),
-              
-              // Quick Actions (Mock)
               _buildQuickActions(),
-              
-              const Spacer(),
-              
+
+              const SizedBox(height: 40),
+
               // Sign Out Button
               _buildSignOutButton(),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -67,28 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildHeader() {
     return Row(
       children: [
-        // Logo
-        Expanded(
-          child: Text(
-            'SILVERCARE',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: _getResponsiveFontSize(context, 24),
-              fontFamily: 'Montserrat',
-              fontWeight: FontWeight.w800,
-              shadows: [
-                Shadow(
-                  offset: const Offset(0, 2),
-                  blurRadius: 4,
-                  color: Colors.black.withValues(alpha: 0.50),
-                ),
-              ],
-            ),
-          ),
-        ),
-        
-        // Profile Icon (Mock)
+        // Profile Icon (left side)
         Container(
           width: 48,
           height: 48,
@@ -109,127 +85,58 @@ class _HomeScreenState extends State<HomeScreen> {
             size: 24,
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildWelcomeSection() {
-    return Column(
-      children: [
-        Text(
-          'Welcome Home! 🏠',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: _getResponsiveFontSize(context, 32),
-            fontFamily: 'Montserrat',
-            fontWeight: FontWeight.w800,
-          ),
-        ),
         
-        const SizedBox(height: 12),
-        
-        Text(
-          'Hope you\'re having a wonderful day',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: const Color(0xFF666666),
-            fontSize: _getResponsiveFontSize(context, 16),
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildUserInfoCard() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFF383838), width: 1),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.account_circle,
-                color: Color(0xFF2C2C2C),
-                size: 32,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Your Account',
-                style: TextStyle(
-                  color: const Color(0xFF1E1E1E),
-                  fontSize: _getResponsiveFontSize(context, 20),
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 20),
-          
-          // User Email
-          _buildInfoRow('Email:', _currentUser?.email ?? 'Not available'),
-          
-          const SizedBox(height: 12),
-          
-          // User ID (first 8 characters)
-          _buildInfoRow('User ID:', _currentUser?.uid.substring(0, 8) ?? 'N/A'),
-          
-          const SizedBox(height: 12),
-          
-          // Sign In Time
-          _buildInfoRow('Signed In:', _formatDateTime(DateTime.now())),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 80,
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFF666666),
-              fontSize: 14,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
+        // Logo (center)
         Expanded(
           child: Text(
-            value,
-            style: const TextStyle(
-              color: Color(0xFF1E1E1E),
-              fontSize: 14,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w400,
+            'SILVERCARE',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: _getResponsiveFontSize(context, 24),
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w800,
+              shadows: [
+                Shadow(
+                  offset: const Offset(0, 2),
+                  blurRadius: 4,
+                  color: Colors.black.withValues(alpha: 0.50),
+                ),
+              ],
+            ),
+          ),
+        ),
+        
+        // Notification Bell Icon (right side)
+        GestureDetector(
+          onTap: () {
+            Navigator.pushNamed(context, '/notifications');
+          },
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.notifications,
+              color: Color(0xFF2C2C2C),
+              size: 24,
             ),
           ),
         ),
       ],
     );
   }
+
 
   Widget _buildQuickActions() {
     return Container(
@@ -250,88 +157,209 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Quick Actions',
+            'Health Vitals Monitor',
             style: TextStyle(
               color: const Color(0xFF1E1E1E),
               fontSize: _getResponsiveFontSize(context, 18),
-              fontFamily: 'Inter',
+              fontFamily: 'Montserrat',
               fontWeight: FontWeight.w600,
             ),
           ),
           
           const SizedBox(height: 20),
           
-          // Mock action buttons
-          _buildActionButton(
-            icon: Icons.favorite_outline,
-            label: 'Heart Rate Monitor',
-            onTap: () {
-              Navigator.pushNamed(context, '/heart_rate');
-            },
+          // 2x2 Grid for the first 4 vital measurements
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 16,
+            childAspectRatio: 1.0,
+            children: [
+              _buildVitalCard(
+                icon: Icons.bloodtype,
+                label: 'Blood Pressure',
+                color: const Color(0xFFFF9800),
+                onTap: () => Navigator.pushNamed(context, '/blood_pressure'),
+              ),
+              _buildVitalCard(
+                icon: Icons.water_drop,
+                label: 'Sugar Level',
+                color: const Color(0xFF4CAF50),
+                onTap: () => Navigator.pushNamed(context, '/sugar_level'),
+              ),
+              _buildVitalCard(
+                icon: Icons.thermostat,
+                label: 'Temperature',
+                color: const Color(0xFF2196F3),
+                onTap: () => Navigator.pushNamed(context, '/temperature'),
+              ),
+              _buildVitalCard(
+                icon: Icons.favorite,
+                label: 'Heart Rate',
+                color: const Color(0xFFFF73CB),
+                onTap: () => Navigator.pushNamed(context, '/heart_rate'),
+              ),
+            ],
           ),
           
-          const SizedBox(height: 12),
+          const SizedBox(height: 20),
           
-          _buildActionButton(
-            icon: Icons.medication_outlined,
-            label: 'Medications',
-            onTap: () => _showComingSoonDialog('Medications'),
-          ),
-          
-          const SizedBox(height: 12),
-          
-          _buildActionButton(
-            icon: Icons.people_outline,
-            label: 'Caregiver Chat',
-            onTap: () => _showComingSoonDialog('Caregiver Chat'),
+          // Centered Emergency SOS button
+          Center(
+            child: SizedBox(
+              width: (MediaQuery.of(context).size.width - 48 - 48 - 16) / 2, // Match grid card width
+              child: _buildVitalCard(
+                icon: Icons.warning,
+                label: 'Emergency SOS',
+                color: Colors.red.shade600,
+                onTap: () => _showEmergencySosDialog(),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildActionButton({
+  Widget _buildVitalCard({
     required IconData icon,
     required String label,
+    required Color color,
     required VoidCallback onTap,
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F5F5),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFE0E0E0)),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: const Color(0xFF2C2C2C),
-              size: 24,
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3), width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(
-                  color: Color(0xFF1E1E1E),
-                  fontSize: 16,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w500,
-                ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 24,
               ),
             ),
-            const Icon(
-              Icons.chevron_right,
-              color: Color(0xFF666666),
-              size: 20,
+            const SizedBox(height: 12),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: color,
+                fontSize: _getResponsiveFontSize(context, 14),
+                fontFamily: 'Montserrat',
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  void _showEmergencySosDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.red.shade700,
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Emergency SOS',
+                style: TextStyle(
+                  fontFamily: 'Montserrat',
+                  fontWeight: FontWeight.w600,
+                  fontSize: _getResponsiveFontSize(context, 18),
+                  color: Colors.red.shade700,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'This feature will send an emergency alert to your emergency contacts and local emergency services.',
+            style: TextStyle(
+              fontFamily: 'Montserrat',
+              fontSize: _getResponsiveFontSize(context, 14),
+              color: const Color(0xFF666666),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Color(0xFF666666),
+                  fontFamily: 'Montserrat',
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('🚨 Emergency SOS feature coming soon!'),
+                    backgroundColor: Colors.red.shade600,
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade600,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Activate SOS',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontFamily: 'Montserrat',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -351,7 +379,7 @@ class _HomeScreenState extends State<HomeScreen> {
         'Sign Out',
         style: TextStyle(
           fontSize: 16,
-          fontFamily: 'Inter',
+          fontFamily: 'Montserrat',
           fontWeight: FontWeight.w500,
         ),
       ),
@@ -362,47 +390,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')} - ${dateTime.day}/${dateTime.month}/${dateTime.year}';
   }
 
-  void _showComingSoonDialog(String feature) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          title: Text(
-            'Coming Soon! 🚀',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w600,
-              fontSize: _getResponsiveFontSize(context, 18),
-            ),
-          ),
-          content: Text(
-            '$feature feature is currently under development. Stay tuned for updates!',
-            style: const TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14,
-              color: Color(0xFF666666),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                'Got it!',
-                style: TextStyle(
-                  color: Color(0xFF2C2C2C),
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
+
 
   Future<void> _handleSignOut() async {
     showDialog(
@@ -415,7 +403,7 @@ class _HomeScreenState extends State<HomeScreen> {
           title: const Text(
             'Sign Out',
             style: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'Montserrat',
               fontWeight: FontWeight.w600,
               fontSize: 18,
             ),
@@ -423,7 +411,7 @@ class _HomeScreenState extends State<HomeScreen> {
           content: const Text(
             'Are you sure you want to sign out?',
             style: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'Montserrat',
               fontSize: 14,
               color: Color(0xFF666666),
             ),
@@ -435,7 +423,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 'Cancel',
                 style: TextStyle(
                   color: Color(0xFF666666),
-                  fontFamily: 'Inter',
+                  fontFamily: 'Montserrat',
                 ),
               ),
             ),
@@ -479,7 +467,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 'Sign Out',
                 style: TextStyle(
                   color: Colors.white,
-                  fontFamily: 'Inter',
+                  fontFamily: 'Montserrat',
                 ),
               ),
             ),

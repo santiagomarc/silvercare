@@ -6,8 +6,12 @@ import 'package:silvercare/screens/signin_screen.dart';
 import 'package:silvercare/screens/signup_screen.dart';
 import 'package:silvercare/screens/main_screen.dart';
 import 'package:silvercare/screens/heart_rate_screen.dart';
-import 'package:silvercare/screens/profile_screen.dart';
-import 'package:silvercare/screens/profile_completion_screen.dart';
+import 'package:silvercare/screens/blood_pressure_screen.dart';
+import 'package:silvercare/screens/temperature_screen.dart';
+import 'package:silvercare/screens/sugar_level_screen.dart';
+import 'package:silvercare/screens/notifications_screen.dart';
+
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,8 +45,10 @@ class SilverCareApp extends StatelessWidget {
         '/signup': (context) => const SignUpScreen(),
         '/main': (context) => const MainScreen(), // Main app with navbar
         '/heart_rate': (context) => const HeartRateScreen(),
-        '/profile': (context) => const ProfileScreen(),
-        '/profile_completion': (context) => const ProfileCompletionScreen(),
+        '/blood_pressure': (context) => const BloodPressureScreen(),
+        '/temperature': (context) => const TemperatureScreen(),
+        '/sugar_level': (context) => const SugarLevelScreen(),
+        '/notifications': (context) => const NotificationsScreen(),
       },
       // Handle unknown routes
       onUnknownRoute: (settings) {
