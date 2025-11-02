@@ -95,7 +95,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
 
       if (elderlyDoc.exists) {
-        // NOTE: Assuming ElderlyModel, EmergencyContact, and MedicalInfo are accessible via import
         final model = ElderlyModel.fromDoc(elderlyDoc);
         _elderlyModel = model;
         
@@ -105,14 +104,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _weightController.text = model.weight?.toString() ?? '';
         _heightController.text = model.height?.toString() ?? '';
         
-        _selectedSex = model.sex; // Loaded Sex
+        _selectedSex = model.sex; 
         
-        // Load Emergency Contact details
         _ecNameController.text = model.emergencyContact?.name ?? '';
         _ecPhoneController.text = model.emergencyContact?.phone ?? '';
-        _ecRelationship = model.emergencyContact?.relationship; // Loaded Relationship
+        _ecRelationship = model.emergencyContact?.relationship; 
 
-        // Load Medical Info display text (read-only summary)
         final conditions = model.medicalInfo?.conditions.join(', ') ?? 'None';
         final medications = model.medicalInfo?.medications.join(', ') ?? 'None';
         final allergies = model.medicalInfo?.allergies.join(', ') ?? 'None';
@@ -148,7 +145,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
     
-    // Construct Emergency Contact object
     final EmergencyContact? updatedEmergencyContact = (_ecNameController.text.isNotEmpty && _ecPhoneController.text.isNotEmpty)
       ? EmergencyContact(
           name: _ecNameController.text.trim(),
@@ -397,13 +393,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
 
-        // EDIT/CANCEL BUTTON TOGGLE
         ElevatedButton.icon(
           onPressed: _isLoading ? null : () {
             setState(() {
               _isEditing = !_isEditing;
             });
-            // If exiting without saving, reload data to discard changes
             if (!_isEditing) {
               _loadUserData();
             }
@@ -421,7 +415,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // NEW: Dropdown for Sex
   Widget _buildSexDropdown() {
     final bool readOnly = !_isEditing;
 
@@ -573,7 +566,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         const SizedBox(height: 15),
 
-        // EC Name and Phone (side by side)
         Row(
           children: [
             Expanded(child: _buildProfileDetailRow(context: context, label: 'EC Name:', controller: _ecNameController)),
@@ -582,7 +574,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
 
-        // EC Relationship Dropdown
         Padding(
           padding: const EdgeInsets.only(bottom: 20.0),
           child: Container(
@@ -701,17 +692,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ],
                           ),
                           
-                          // --- SEX DROPDOWN ---
                           _buildSexDropdown(),
 
-                          // --- CONTACT INFO ---
                           _buildProfileDetailRow(context: context, label: 'Phone Number:', controller: _phoneController, keyboardType: TextInputType.phone),
                           _buildProfileDetailRow(context: context, label: 'Address:', controller: _addressController),
                           
-                          // --- EMERGENCY CONTACT (NEW ROW) ---
                           _buildEmergencyContactRow(),
                           
-                          // --- MEDICAL INFO (READ ONLY) ---
                           _buildProfileDetailRow(
                             context: context, 
                             label: 'Medical Info (Read Only):', 
@@ -724,7 +711,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              // SAVE BUTTON (Only enabled if editing is true)
                               ElevatedButton.icon(
                                 onPressed: (_isSaving || !_isEditing) ? null : _handleSaveProfile,
                                 icon: _isSaving 
@@ -747,7 +733,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                               
-                              // LOG OUT BUTTON
                               TextButton(
                                 onPressed: _handleSignOut,
                                 style: TextButton.styleFrom(
