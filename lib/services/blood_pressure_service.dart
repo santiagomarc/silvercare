@@ -35,22 +35,24 @@ class BloodPressureService {
   }
 
   /// Get blood pressure data from Firestore
-  static Future<List<HealthDataModel>> getBloodPressureData({int days = 7}) async {
+  static Future<List<HealthDataModel>> getBloodPressureData({int days = 30}) async {
     try {
       final user = _auth.currentUser;
-      if (user == null) throw Exception('User not authenticated');
+      if (user == null) {
+        print('⚠️ User not authenticated, returning empty list');
+        return [];
+      }
 
       final DateTime cutoffDate = DateTime.now().subtract(Duration(days: days));
 
+      // Use simple query to avoid index requirements like heart rate service
       final querySnapshot = await _firestore
           .collection('health_data')
           .where('elderlyId', isEqualTo: user.uid)
           .where('type', isEqualTo: 'blood_pressure')
-          .where('measuredAt', isGreaterThanOrEqualTo: Timestamp.fromDate(cutoffDate))
-          .orderBy('measuredAt', descending: true)
-          .get();
+          .get(); // No orderBy to avoid compound index requirement
 
-      return querySnapshot.docs.map((doc) {
+      final List<HealthDataModel> allData = querySnapshot.docs.map((doc) {
         final data = doc.data();
         return HealthDataModel(
           id: doc.id,
@@ -62,6 +64,20 @@ class BloodPressureService {
           source: data['source'] ?? 'manual',
         );
       }).toList();
+
+      // Filter by date and sort in memory
+      final filteredData = allData
+          .where((data) => data.measuredAt.isAfter(cutoffDate))
+          .toList();
+      
+      // Sort by measuredAt (newest first)
+      filteredData.sort((a, b) => b.measuredAt.compareTo(a.measuredAt));
+
+      print('✅ Found ${filteredData.length} blood pressure readings (last $days days)');
+      return filteredData;
+    } on FirebaseException catch (e) {
+      print('❌ Firebase error fetching blood pressure data: ${e.code} - ${e.message}');
+      return [];
     } catch (e) {
       print('❌ Error fetching blood pressure data: $e');
       return [];
