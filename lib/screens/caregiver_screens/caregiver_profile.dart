@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 
 
@@ -125,21 +126,34 @@ class CaregiverProfile extends StatelessWidget {
                               final confirmed = await showDialog<bool>(
                                 context: context,
                                 builder: (ctx) => AlertDialog(
-                                  title: const Text('Log out'),
-                                  content: const Text('This is a mock logout. Continue?'),
+                                  title: const Text('Sign Out'),
+                                  content: const Text('Are you sure you want to sign out?'),
                                   actions: [
                                     TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
-                                    TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Log out')),
+                                    TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Sign Out')),
                                   ],
                                 ),
                               );
                               if (confirmed == true) {
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Logged out (mock)')));
-                                // In a real app you'd call your auth signOut and navigate to login
+                                try {
+                                  await FirebaseAuth.instance.signOut();
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('👋 Signed out successfully!'), backgroundColor: Colors.green)
+                                    );
+                                    // The AuthWrapper will automatically handle navigation
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error signing out: ${e.toString()}'), backgroundColor: Colors.red)
+                                    );
+                                  }
+                                }
                               }
                             },
                             icon: const Icon(Icons.logout),
-                            label: const Text('Logout'),
+                            label: const Text('Sign Out'),
                           ),
                         ],
                       ),

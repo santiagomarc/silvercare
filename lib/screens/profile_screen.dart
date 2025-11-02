@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 
-const String _logoAssetPath = 'assets/icons/silvercare.png'; 
-
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -12,10 +10,12 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final Color _blueBgColor = const Color(0xFF32C3D2); 
-  final Color _darkGreyText = const Color(0xFF808080);
-  final Color _redLogout = const Color(0xFFCD5C5C); 
-  static const Color _shadowColor25Percent = Color(0x40000000); 
+  static const Color _primaryColor = Color(0xFF6C63FF);
+  static const Color _backgroundColor = Color(0xFFF8F9FA);
+  static const Color _cardColor = Colors.white;
+  static const Color _textPrimary = Color(0xFF2D3748);
+  static const Color _textSecondary = Color(0xFF718096);
+  static const Color _successColor = Color(0xFF48BB78); 
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -25,9 +25,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _ageController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
+  final _heightController = TextEditingController();
+  final _weightController = TextEditingController();
+  final _sexController = TextEditingController();
+  
+  // Medical info controllers
+  final _conditionsController = TextEditingController();
+  final _medicationsController = TextEditingController();
+  final _allergiesController = TextEditingController();
+  
+  // Emergency contact controllers
+  final _emergencyNameController = TextEditingController();
+  final _emergencyPhoneController = TextEditingController();
+  final _emergencyRelationshipController = TextEditingController();
+  final _caregiverEmailController = TextEditingController();
   
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isEditMode = false;
 
   @override
   void initState() {
@@ -42,6 +57,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _ageController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
+    _heightController.dispose();
+    _weightController.dispose();
+    _sexController.dispose();
+    _conditionsController.dispose();
+    _medicationsController.dispose();
+    _allergiesController.dispose();
+    _emergencyNameController.dispose();
+    _emergencyPhoneController.dispose();
+    _emergencyRelationshipController.dispose();
+    _caregiverEmailController.dispose();
     super.dispose();
   }
 
@@ -71,9 +96,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
 
       if (elderlyDoc.exists) {
-        _ageController.text = elderlyDoc.get('age')?.toString() ?? '';
-        _phoneController.text = elderlyDoc.get('phoneNumber') ?? '';
-        _addressController.text = elderlyDoc.get('address') ?? ''; 
+        final data = elderlyDoc.data() as Map<String, dynamic>;
+        _ageController.text = data['age']?.toString() ?? '';
+        _phoneController.text = data['phoneNumber'] ?? '';
+        _addressController.text = data['address'] ?? '';
+        _heightController.text = data['height']?.toString() ?? '';
+        _weightController.text = data['weight']?.toString() ?? '';
+        _sexController.text = data['sex'] ?? '';
+        
+        // Load medical info
+        final medicalInfo = data['medicalInfo'] as Map<String, dynamic>?;
+        if (medicalInfo != null) {
+          _conditionsController.text = (medicalInfo['conditions'] as List<dynamic>?)?.join(', ') ?? '';
+          _medicationsController.text = (medicalInfo['medications'] as List<dynamic>?)?.join(', ') ?? '';
+          _allergiesController.text = (medicalInfo['allergies'] as List<dynamic>?)?.join(', ') ?? '';
+        }
+        
+        // Load emergency contact
+        final emergencyContact = data['emergencyContact'] as Map<String, dynamic>?;
+        if (emergencyContact != null) {
+          _emergencyNameController.text = emergencyContact['name'] ?? '';
+          _emergencyPhoneController.text = emergencyContact['phone'] ?? '';
+          _emergencyRelationshipController.text = emergencyContact['relationship'] ?? '';
+        }
+        
+        // Load caregiver email
+        final caregiverId = data['caregiverId'] as String?;
+        if (caregiverId != null && caregiverId.isNotEmpty) {
+          _loadCaregiverEmail(caregiverId);
+        }
       }
       
     } catch (e) {
@@ -88,6 +139,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _loadCaregiverEmail(String caregiverId) async {
+    try {
+      final caregiverDoc = await _firestore.collection('caregivers').doc(caregiverId).get();
+      if (caregiverDoc.exists) {
+        final data = caregiverDoc.data() as Map<String, dynamic>;
+        _caregiverEmailController.text = data['email'] ?? '';
+      }
+    } catch (e) {
+      print('Error loading caregiver email: $e');
     }
   }
 
@@ -109,10 +172,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'fullName': _nameController.text.trim(),
       });
 
+      // Prepare medical info
+      final medicalInfo = {
+        'conditions': _conditionsController.text.trim().split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
+        'medications': _medicationsController.text.trim().split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
+        'allergies': _allergiesController.text.trim().split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
+      };
+
+      // Prepare emergency contact
+      final emergencyContact = {
+        'name': _emergencyNameController.text.trim(),
+        'phone': _emergencyPhoneController.text.trim(),
+        'relationship': _emergencyRelationshipController.text.trim(),
+      };
+
       final elderlyUpdateData = {
         'age': int.tryParse(_ageController.text.trim()),
         'phoneNumber': _phoneController.text.trim(),
         'address': _addressController.text.trim(),
+        'height': double.tryParse(_heightController.text.trim()),
+        'weight': double.tryParse(_weightController.text.trim()),
+        'sex': _sexController.text.trim(),
+        'medicalInfo': medicalInfo,
+        'emergencyContact': emergencyContact,
       };
       
       await _firestore.collection('elderly').doc(user.uid).update(elderlyUpdateData);
@@ -188,123 +270,88 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 20, bottom: 20, left: 20, right: 20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            width: 55,
-            height: 55,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.blueGrey,
-              border: Border.all(color: Colors.white, width: 3),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5, offset: const Offset(0, 3))],
-            ),
-            child: const Icon(Icons.person_outline, color: Colors.white, size: 30),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+      child: Center(
+        child: Text(
+          'SILVER CARE',
+          style: TextStyle(
+            color: _textPrimary,
+            fontSize: _getResponsiveFontSize(context, 28),
+            fontFamily: 'Montserrat',
+            fontWeight: FontWeight.w900,
+            letterSpacing: 2.0,
           ),
-
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 55, 
-                height: 55, 
-                child: Opacity(
-                  opacity: 0.0,
-                  child: Image.asset(
-                    _logoAssetPath,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => Container(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 15),
-              Text(
-                'SILVER CARE',
-                style: TextStyle(
-                  color: const Color(0xFF000000), 
-                  fontSize: _getResponsiveFontSize(context, 21), 
-                  fontFamily: 'Montserrat', 
-                  fontWeight: FontWeight.w800, 
-                  shadows: [Shadow(offset: const Offset(0, 3), blurRadius: 4, color: Colors.black.withOpacity(0.5))],
-                ),
-              ),
-            ],
-          ),
-          
-          InkWell(
-            onTap: () => showDialog(context: context, builder: (ctx) => const AlertDialog(title: Text('Settings Coming Soon'))),
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.8),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2))],
-              ),
-              child: const Icon(Icons.settings_outlined, color: Color(0xFF2C2C2C), size: 24),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _ScreenHeaderButton(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(25, 10, 25, 10),
-      child: Container(
-        width: double.infinity,
-        height: 65,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.50), blurRadius: 4, offset: const Offset(0, 4))],
-          border: Border.all(color: Colors.black, width: 2),
-        ),
-        child: Center(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.person_outline, size: 30, color: _darkGreyText),
-              const SizedBox(width: 10),
-              Text(
-                'PROFILE',
-                style: TextStyle(
-                  color: _darkGreyText,
-                  fontSize: _getResponsiveFontSize(context, 32),
-                  fontFamily: 'Montserrat', 
-                  fontWeight: FontWeight.w800, 
-                  shadows: const [Shadow(offset: Offset(0, 3), blurRadius: 4, color: _shadowColor25Percent)],
-                  letterSpacing: 1.5,
-                ),
-              ),
-            ],
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+      height: 80,
+      decoration: BoxDecoration(
+        color: _cardColor,
+        borderRadius: BorderRadius.circular(40),
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromRGBO(0, 0, 0, 0.15),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
+        ],
+        border: Border.all(color: const Color.fromRGBO(108, 99, 255, 0.2), width: 2),
+      ),
+      child: Center(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.person_outline, size: 28, color: _primaryColor),
+            const SizedBox(width: 12),
+            Text(
+              'PROFILE',
+              style: TextStyle(
+                color: _textPrimary,
+                fontSize: _getResponsiveFontSize(context, 24),
+                fontFamily: 'Montserrat',
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildEditProfileHeader(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Icon(Icons.person_pin, size: 24, color: Colors.black),
-        const SizedBox(width: 8),
-        Text(
-          'Edit Your Profile',
-          style: TextStyle(
-            color: const Color(0xFF000000), 
-            fontSize: _getResponsiveFontSize(context, 20), 
-            fontFamily: 'Montserrat', 
-            fontWeight: FontWeight.w600, 
-            shadows: [Shadow(offset: const Offset(0, 4), blurRadius: 4, color: _shadowColor25Percent)],
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            _isEditMode ? 'Edit Profile' : 'Personal Information',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: _getResponsiveFontSize(context, 22),
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+            ),
           ),
-        ),
-      ],
+          if (!_isEditMode)
+            IconButton(
+              onPressed: () => setState(() => _isEditMode = true),
+              icon: const Icon(Icons.edit, color: Colors.white, size: 24),
+              style: IconButton.styleFrom(
+                backgroundColor: const Color.fromRGBO(255, 255, 255, 0.2),
+                shape: const CircleBorder(),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -314,53 +361,228 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required TextEditingController controller,
     bool isReadOnly = false,
     TextInputType keyboardType = TextInputType.text,
+    int maxLines = 1,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 25.0),
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(25),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.50), blurRadius: 8, offset: const Offset(0, 4))],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  color: const Color(0xFF000000),
-                  fontSize: _getResponsiveFontSize(context, 16),
-                  fontFamily: 'Montserrat', 
-                  fontWeight: FontWeight.w800, 
-                  shadows: [Shadow(offset: const Offset(0, 2), blurRadius: 4, color: Colors.black.withOpacity(0.15))],
-                ),
-              ),
-              const SizedBox(height: 4),
-              TextFormField(
-                controller: controller,
-                readOnly: isReadOnly,
-                keyboardType: keyboardType,
-                style: TextStyle(
-                  color: isReadOnly ? Colors.grey.shade700 : const Color(0xFF000000),
-                  fontSize: _getResponsiveFontSize(context, 18),
-                  fontFamily: 'Inter', 
-                  fontWeight: isReadOnly ? FontWeight.w400 : FontWeight.w600,
-                ),
-                decoration: InputDecoration(
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
-                  border: InputBorder.none,
-                  filled: false,
-                ),
-              ),
-            ],
+    final bool effectiveReadOnly = isReadOnly || !_isEditMode;
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromRGBO(0, 0, 0, 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
-        ),
+        ],
+        border: _isEditMode && !isReadOnly 
+          ? Border.all(color: const Color.fromRGBO(108, 99, 255, 0.3), width: 1)
+          : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: _textSecondary,
+              fontSize: _getResponsiveFontSize(context, 13),
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: controller,
+            readOnly: effectiveReadOnly,
+            keyboardType: keyboardType,
+            maxLines: maxLines,
+            style: TextStyle(
+              color: effectiveReadOnly ? _textSecondary : _textPrimary,
+              fontSize: _getResponsiveFontSize(context, 16),
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w500,
+            ),
+            decoration: InputDecoration(
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+              border: InputBorder.none,
+              hintText: effectiveReadOnly ? null : 'Enter $label',
+              hintStyle: TextStyle(
+                color: const Color.fromRGBO(113, 128, 150, 0.6),
+                fontSize: _getResponsiveFontSize(context, 16),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMedicalInfoSection(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromRGBO(0, 0, 0, 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: _isEditMode 
+          ? Border.all(color: const Color.fromRGBO(108, 99, 255, 0.3), width: 1)
+          : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Medical Information',
+            style: TextStyle(
+              color: _textPrimary,
+              fontSize: _getResponsiveFontSize(context, 16),
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildMedicalField(context, 'Medical Conditions', _conditionsController),
+          _buildMedicalField(context, 'Current Medications', _medicationsController),
+          _buildMedicalField(context, 'Allergies', _allergiesController),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMedicalField(BuildContext context, String label, TextEditingController controller) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: _textSecondary,
+              fontSize: _getResponsiveFontSize(context, 13),
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          TextFormField(
+            controller: controller,
+            readOnly: !_isEditMode,
+            maxLines: 2,
+            style: TextStyle(
+              color: !_isEditMode ? _textSecondary : _textPrimary,
+              fontSize: _getResponsiveFontSize(context, 14),
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w500,
+            ),
+            decoration: InputDecoration(
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+              border: InputBorder.none,
+              hintText: _isEditMode ? 'Separate multiple items with commas' : null,
+              hintStyle: TextStyle(
+                color: const Color.fromRGBO(113, 128, 150, 0.6),
+                fontSize: _getResponsiveFontSize(context, 12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmergencyContactSection(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromRGBO(0, 0, 0, 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: _isEditMode 
+          ? Border.all(color: const Color.fromRGBO(108, 99, 255, 0.3), width: 1)
+          : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Emergency Contact',
+            style: TextStyle(
+              color: _textPrimary,
+              fontSize: _getResponsiveFontSize(context, 16),
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildEmergencyField(context, 'Contact Name', _emergencyNameController),
+          _buildEmergencyField(context, 'Phone Number', _emergencyPhoneController, TextInputType.phone),
+          _buildEmergencyField(context, 'Relationship', _emergencyRelationshipController),
+          if (_caregiverEmailController.text.isNotEmpty)
+            _buildEmergencyField(context, 'Caregiver Email', _caregiverEmailController, TextInputType.emailAddress, true),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmergencyField(BuildContext context, String label, TextEditingController controller, [TextInputType keyboardType = TextInputType.text, bool isReadOnly = false]) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: _textSecondary,
+              fontSize: _getResponsiveFontSize(context, 13),
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          TextFormField(
+            controller: controller,
+            readOnly: isReadOnly || !_isEditMode,
+            keyboardType: keyboardType,
+            style: TextStyle(
+              color: (isReadOnly || !_isEditMode) ? _textSecondary : _textPrimary,
+              fontSize: _getResponsiveFontSize(context, 14),
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w500,
+            ),
+            decoration: InputDecoration(
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+              border: InputBorder.none,
+              hintText: (_isEditMode && !isReadOnly) ? 'Enter $label' : null,
+              hintStyle: TextStyle(
+                color: const Color.fromRGBO(113, 128, 150, 0.6),
+                fontSize: _getResponsiveFontSize(context, 14),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -368,7 +590,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFDEDEDE),
+      backgroundColor: _backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -377,85 +599,145 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _ScreenHeaderButton(context),
             
             Expanded(
-              child: Container(
+                child: Container(
                 width: double.infinity,
+                margin: const EdgeInsets.symmetric(horizontal: 20),
                 decoration: BoxDecoration(
-                  color: _blueBgColor,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(30),
-                    topRight: Radius.circular(30),
-                  ),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, -5))],
+                  color: _primaryColor,
+                  borderRadius: const BorderRadius.all(Radius.circular(25)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color.fromRGBO(0, 0, 0, 0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
                 child: _isLoading 
                   ? const Center(child: CircularProgressIndicator(color: Colors.white))
                   : SingleChildScrollView( 
-                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+                      padding: const EdgeInsets.all(30),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           _buildEditProfileHeader(context),
-                          const SizedBox(height: 30),
+                          const SizedBox(height: 25),
   
-                          _buildProfileDetailRow(context: context, label: 'Full Name:', controller: _nameController),
-                          _buildProfileDetailRow(context: context, label: 'Email:', controller: _emailController, isReadOnly: true),
-                          _buildProfileDetailRow(context: context, label: 'Age:', controller: _ageController, keyboardType: TextInputType.number),
-                          _buildProfileDetailRow(context: context, label: 'Phone Number:', controller: _phoneController, keyboardType: TextInputType.phone),
-                          _buildProfileDetailRow(context: context, label: 'Address:', controller: _addressController),
+                          // Basic Information Card
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: const Color.fromRGBO(255, 255, 255, 0.1),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: const Color.fromRGBO(255, 255, 255, 0.2), width: 1),
+                            ),
+                            child: Column(
+                              children: [
+                                _buildProfileDetailRow(context: context, label: 'Full Name', controller: _nameController),
+                                _buildProfileDetailRow(context: context, label: 'Email', controller: _emailController, isReadOnly: true),
+                                _buildProfileDetailRow(context: context, label: 'Age', controller: _ageController, keyboardType: TextInputType.number),
+                                _buildProfileDetailRow(context: context, label: 'Sex', controller: _sexController),
+                                _buildProfileDetailRow(context: context, label: 'Phone Number', controller: _phoneController, keyboardType: TextInputType.phone),
+                                _buildProfileDetailRow(context: context, label: 'Address', controller: _addressController),
+                                _buildProfileDetailRow(context: context, label: 'Height (cm)', controller: _heightController, keyboardType: TextInputType.number),
+                                _buildProfileDetailRow(context: context, label: 'Weight (kg)', controller: _weightController, keyboardType: TextInputType.number),
+                              ],
+                            ),
+                          ),
                           
                           const SizedBox(height: 20),
+                          _buildMedicalInfoSection(context),
+                          _buildEmergencyContactSection(context),
+                          
+                          const SizedBox(height: 30),
 
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              ElevatedButton.icon(
-                                onPressed: _isSaving ? null : _handleSaveProfile,
-                                icon: _isSaving 
-                                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                  : const Icon(Icons.save, size: 20, color: Colors.white),
+                          // Edit mode buttons
+                          if (_isEditMode) ...[
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextButton.icon(
+                                    onPressed: () => setState(() => _isEditMode = false),
+                                    icon: const Icon(Icons.close, size: 20, color: Colors.white),
+                                    label: Text(
+                                      'Cancel',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: _getResponsiveFontSize(context, 16),
+                                        fontFamily: 'Montserrat',
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      backgroundColor: const Color.fromRGBO(255, 255, 255, 0.2),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                        side: const BorderSide(color: Color.fromRGBO(255, 255, 255, 0.3), width: 1),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 15),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: _isSaving ? null : () async {
+                                      await _handleSaveProfile();
+                                      if (mounted && !_isSaving) {
+                                        setState(() => _isEditMode = false);
+                                      }
+                                    },
+                                    icon: _isSaving 
+                                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                      : const Icon(Icons.save_outlined, size: 22, color: Colors.white),
+                                    label: Text(
+                                      _isSaving ? 'Saving...' : 'Save',
+                                      style: TextStyle(
+                                        fontSize: _getResponsiveFontSize(context, 16),
+                                        fontFamily: 'Montserrat',
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: _successColor,
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                      elevation: 2,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ] else ...[
+                            // Logout button - when not in edit mode
+                            SizedBox(
+                              width: double.infinity,
+                              child: TextButton.icon(
+                                onPressed: _handleSignOut,
+                                icon: const Icon(Icons.logout, size: 20, color: Colors.white),
                                 label: Text(
-                                  _isSaving ? 'Saving...' : 'Save Changes',
+                                  'Sign Out',
                                   style: TextStyle(
+                                    color: Colors.white,
                                     fontSize: _getResponsiveFontSize(context, 16),
                                     fontFamily: 'Montserrat',
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF008000),
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  elevation: 5,
-                                ),
-                              ),
-                              
-                              TextButton(
-                                onPressed: _handleSignOut,
                                 style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                  backgroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  backgroundColor: const Color.fromRGBO(255, 255, 255, 0.2),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    side: BorderSide(color: _redLogout, width: 2),
-                                  ),
-                                  shadowColor: Colors.black.withOpacity(0.5),
-                                  elevation: 5,
-                                ),
-                                child: Text(
-                                  'Log Out',
-                                  style: TextStyle(
-                                    color: _redLogout,
-                                    fontSize: _getResponsiveFontSize(context, 16), 
-                                    fontFamily: 'Montserrat',
-                                    fontWeight: FontWeight.w800,
-                                    shadows: [Shadow(offset: const Offset(0, 2), blurRadius: 4, color: Colors.black.withOpacity(0.5))],
+                                    borderRadius: BorderRadius.circular(15),
+                                    side: const BorderSide(color: Color.fromRGBO(255, 255, 255, 0.3), width: 1),
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 40), 
+                            ),
+                          ],
+                          
+                          const SizedBox(height: 30), 
                         ],
                       ),
                     ),
@@ -468,4 +750,3 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
-

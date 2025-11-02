@@ -190,10 +190,10 @@ class _MoodTrackerCardState extends State<MoodTrackerCard> {
           // Username greeting - centered
           Center(
             child: Text(
-              'Hello, $_username! 👋',
+              'Hello, $_username!',
               style: TextStyle(
-                color: Colors.white, // White text on dark background
-                fontSize: _getResponsiveFontSize(context, 20),
+                color: const Color.fromARGB(255, 0, 0, 0), // White text on dark background
+                fontSize: _getResponsiveFontSize(context, 35),
                 fontFamily: 'Montserrat',
                 fontWeight: FontWeight.w700,
               ),
@@ -201,23 +201,19 @@ class _MoodTrackerCardState extends State<MoodTrackerCard> {
           ),
           
           const SizedBox(height: 16),
-          
-          // How are you feeling question - centered
           Center(
             child: Text(
               'How are you feeling today?',
               style: TextStyle(
                 color: const Color.fromARGB(255, 0, 0, 0), // Black text
-                fontSize: _getResponsiveFontSize(context, 16),
+                fontSize: _getResponsiveFontSize(context, 20),
                 fontFamily: 'Montserrat',
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ),
           
           const SizedBox(height: 20),
-          
-          // Emoji faces row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: List.generate(5, (index) {
@@ -235,7 +231,7 @@ class _MoodTrackerCardState extends State<MoodTrackerCard> {
                 child: Text(
                   _emojis[index],
                   style: TextStyle(
-                    fontSize: isSelected ? 32 : 24,
+                    fontSize: isSelected ? 54 : 40,
                     shadows: isSelected ? [
                       Shadow(
                         offset: const Offset(0, 2),
@@ -250,8 +246,6 @@ class _MoodTrackerCardState extends State<MoodTrackerCard> {
           ),
           
           const SizedBox(height: 20),
-          
-          // Custom slider with mood colors
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
               activeTrackColor: currentColor,
@@ -273,7 +267,6 @@ class _MoodTrackerCardState extends State<MoodTrackerCard> {
                 setState(() {
                   _sliderValue = value;
                 });
-                // Use debounced save to avoid too many Firebase calls
                 _debouncedSave(value);
               },
             ),
@@ -281,19 +274,44 @@ class _MoodTrackerCardState extends State<MoodTrackerCard> {
           
           const SizedBox(height: 12),
           
-          // Current mood text
           Center(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
-              child: Text(
-                _moods[currentMoodIndex],
+              child: Stack(
                 key: ValueKey(currentMoodIndex),
-                style: TextStyle(
-                  color: currentColor,
-                  fontSize: _getResponsiveFontSize(context, 16),
-                  fontFamily: 'Montserrat',
-                  fontWeight: FontWeight.w600,
-                ),
+                alignment: Alignment.center,
+                children: [
+                  // Outline (stroke) layer
+                  Text(
+                    _moods[currentMoodIndex],
+                    style: TextStyle(
+                      fontSize: _getResponsiveFontSize(context, 20), // increased size
+                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.w600,
+                      shadows: [
+                        Shadow(
+                          offset: const Offset(0, 2),
+                          blurRadius: 4,
+                          color: Colors.black.withOpacity(0.5),
+                        ),
+                      ],
+                      foreground: Paint()
+                        ..style = PaintingStyle.stroke
+                        ..strokeWidth = 3.5
+                        ..color = Colors.black, // outline color
+                    ),
+                  ),
+                  // Fill (main color) layer
+                  Text(
+                    _moods[currentMoodIndex],
+                    style: TextStyle(
+                      color: currentColor,
+                      fontSize: _getResponsiveFontSize(context, 20),
+                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

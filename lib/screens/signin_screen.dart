@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/user_service.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -489,11 +490,16 @@ class _SignInScreenState extends State<SignInScreen> {
           ),
         );
 
-        // Navigate to main screen (with navbar)
+        // Determine user type and navigate to appropriate screen
         await Future.delayed(const Duration(seconds: 1));
         
         if (mounted) {
-          Navigator.pushReplacementNamed(context, '/main');
+          final userType = await UserService.getUserType();
+          final homeRoute = await UserService.getUserHomeRoute();
+          
+          print('SignIn: User type detected: $userType, navigating to: $homeRoute');
+          
+          Navigator.pushReplacementNamed(context, homeRoute);
         }
       }
     } on FirebaseAuthException catch (e) {

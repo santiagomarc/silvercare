@@ -156,16 +156,18 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Health Vitals Monitor',
-            style: TextStyle(
-              color: const Color(0xFF1E1E1E),
-              fontSize: _getResponsiveFontSize(context, 18),
-              fontFamily: 'Montserrat',
-              fontWeight: FontWeight.w600,
+          Center(
+            child: Text(
+              'Health Vitals Monitor',
+              style: TextStyle(
+                color: const Color(0xFF1E1E1E),
+                fontSize: _getResponsiveFontSize(context, 22),
+                fontFamily: 'Montserrat',
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-          
+
           const SizedBox(height: 20),
           
           // 2x2 Grid for the first 4 vital measurements
@@ -180,25 +182,25 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildVitalCard(
                 icon: Icons.bloodtype,
                 label: 'Blood Pressure',
-                color: const Color(0xFFFF9800),
+                color: Colors.orange.shade900,
                 onTap: () => Navigator.pushNamed(context, '/blood_pressure'),
               ),
               _buildVitalCard(
                 icon: Icons.water_drop,
                 label: 'Sugar Level',
-                color: const Color(0xFF4CAF50),
+                color: Colors.green.shade900,
                 onTap: () => Navigator.pushNamed(context, '/sugar_level'),
               ),
               _buildVitalCard(
                 icon: Icons.thermostat,
                 label: 'Temperature',
-                color: const Color(0xFF2196F3),
+                color: Colors.lightBlue.shade900,
                 onTap: () => Navigator.pushNamed(context, '/temperature'),
               ),
               _buildVitalCard(
                 icon: Icons.favorite,
                 label: 'Heart Rate',
-                color: const Color(0xFFFF73CB),
+                color: Colors.pink.shade900,
                 onTap: () => Navigator.pushNamed(context, '/heart_rate'),
               ),
             ],
@@ -209,11 +211,12 @@ class _HomeScreenState extends State<HomeScreen> {
           // Centered Emergency SOS button
           Center(
             child: SizedBox(
+              height: 100,
               width: (MediaQuery.of(context).size.width - 48 - 48 - 16) / 2, // Match grid card width
               child: _buildVitalCard(
                 icon: Icons.warning,
                 label: 'Emergency SOS',
-                color: Colors.red.shade600,
+                color: Colors.red.shade900,
                 onTap: () => _showEmergencySosDialog(),
               ),
             ),
@@ -234,9 +237,9 @@ class _HomeScreenState extends State<HomeScreen> {
       borderRadius: BorderRadius.circular(12),
       child: Container(
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withOpacity(0.2),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3), width: 2),
+          border: Border.all(color: color.withOpacity(1), width: 2),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.1),
@@ -256,9 +259,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 15,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
