@@ -153,7 +153,7 @@ class _MoodTrackerCardState extends State<MoodTrackerCard> {
           border: Border.all(color: const Color(0xFF4A4A4A), width: 2), // Gray outline
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
+              color: Colors.black.withOpacity(0.2),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -178,7 +178,7 @@ class _MoodTrackerCardState extends State<MoodTrackerCard> {
         border: Border.all(color: const Color(0xFF4A4A4A), width: 2), // Gray outline
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
+            color: Colors.black.withOpacity(0.2),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -204,9 +204,10 @@ class _MoodTrackerCardState extends State<MoodTrackerCard> {
           Center(
             child: Text(
               'How are you feeling today?',
+              textAlign: TextAlign.center,
               style: TextStyle(
                 color: const Color.fromARGB(255, 0, 0, 0), // Black text
-                fontSize: _getResponsiveFontSize(context, 20),
+                fontSize: _getResponsiveFontSize(context, 18),
                 fontFamily: 'Montserrat',
                 fontWeight: FontWeight.w800,
               ),
@@ -218,6 +219,7 @@ class _MoodTrackerCardState extends State<MoodTrackerCard> {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: List.generate(5, (index) {
               final isSelected = index == currentMoodIndex;
+              final double emojiSize = MediaQuery.of(context).size.width < 250 ? 30 : (isSelected ? 40 : 30);
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 padding: const EdgeInsets.all(8),
@@ -231,12 +233,12 @@ class _MoodTrackerCardState extends State<MoodTrackerCard> {
                 child: Text(
                   _emojis[index],
                   style: TextStyle(
-                    fontSize: isSelected ? 54 : 40,
+                    fontSize: emojiSize,
                     shadows: isSelected ? [
                       Shadow(
                         offset: const Offset(0, 2),
                         blurRadius: 4,
-                        color: Colors.black.withValues(alpha: 0.2),
+                        color: Colors.black.withOpacity(0.2),
                       ),
                     ] : null,
                   ),

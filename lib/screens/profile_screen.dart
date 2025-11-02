@@ -335,7 +335,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _isEditMode ? 'Edit Profile' : 'Personal Information',
             style: TextStyle(
               color: Colors.white,
-              fontSize: _getResponsiveFontSize(context, 22),
+              fontSize: _getResponsiveFontSize(context, 20), // Reduced size
               fontFamily: 'Montserrat',
               fontWeight: FontWeight.w700,
               letterSpacing: 0.5,
@@ -344,7 +344,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (!_isEditMode)
             IconButton(
               onPressed: () => setState(() => _isEditMode = true),
-              icon: const Icon(Icons.edit, color: Colors.white, size: 24),
+              icon: const Icon(Icons.edit, color: Colors.white, size: 20), // Adjusted size
               style: IconButton.styleFrom(
                 backgroundColor: const Color.fromRGBO(255, 255, 255, 0.2),
                 shape: const CircleBorder(),

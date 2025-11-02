@@ -85,7 +85,7 @@ class UserService {
       return null;
     }
   }
-
+  // todo: incomplete profiles are routed to a profile-completion flow.
   /// Check if the current user has completed their profile
   static Future<bool> isProfileCompleted([String? userId]) async {
     try {
