@@ -62,14 +62,20 @@ class ChecklistService {
     return _firestore
         .collection(_checklistCollection)
         .where('elderlyId', isEqualTo: _elderlyId)
-        .where('dueDate', isGreaterThanOrEqualTo: startOfDay)
         .snapshots()
         .map((snapshot) {
           final tasks = snapshot.docs
               .map((doc) => ChecklistItemModel.fromDoc(doc))
               .toList();
           tasks.sort((a, b) => a.dueDate.compareTo(b.dueDate));
-          return tasks;
+          
+          final pendingTasks = tasks.where((task) {
+            return task.dueDate.isAfter(startOfDay) ||
+                   task.dueDate.isAtSameMomentAs(startOfDay);
+          }).toList();
+
+          pendingTasks.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+          return pendingTasks;
         });
   }
 
