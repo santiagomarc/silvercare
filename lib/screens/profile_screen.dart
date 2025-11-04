@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../widgets/nav_bar_svg.dart'; 
-import '../models/elderly_model.dart'; 
-
-const String _logoAssetPath = 'assets/icons/silvercare.png'; 
+import 'package:cloud_firestore/cloud_firestore.dart'; 
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -14,43 +10,39 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final int _currentIndex = 4;
-  
-  final List<String> _navLabels = const [
-    'Notifications', 'Calendar', 'Wellness', 'Home', 'Profile',
-  ];
-  
-  final Color _blueBgColor = const Color(0xFF32C3D2); 
-  final Color _darkGreyText = const Color(0xFF808080);
-
-  // FIX: Added missing color constants
-  final Color _redLogout = const Color(0xFFCD5C5C); 
-  static const Color _shadowColor25Percent = Color(0x40000000); 
+  static const Color _primaryColor = Color(0xFF6C63FF);
+  static const Color _backgroundColor = Color(0xFFF8F9FA);
+  static const Color _cardColor = Colors.white;
+  static const Color _textPrimary = Color(0xFF2D3748);
+  static const Color _textSecondary = Color(0xFF718096);
+  static const Color _successColor = Color(0xFF48BB78); 
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _usernameController = TextEditingController();
   final _ageController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
-  final _weightController = TextEditingController();
   final _heightController = TextEditingController();
-  final _medicalController = TextEditingController(); 
-
-  final _ecNameController = TextEditingController();
-  final _ecPhoneController = TextEditingController();
-  String? _ecRelationship; 
-
-  String? _selectedSex; 
+  final _weightController = TextEditingController();
+  final _sexController = TextEditingController();
+  
+  // Medical info controllers
+  final _conditionsController = TextEditingController();
+  final _medicationsController = TextEditingController();
+  final _allergiesController = TextEditingController();
+  
+  // Emergency contact controllers
+  final _emergencyNameController = TextEditingController();
+  final _emergencyPhoneController = TextEditingController();
+  final _emergencyRelationshipController = TextEditingController();
+  final _caregiverEmailController = TextEditingController();
   
   bool _isLoading = true;
   bool _isSaving = false;
-  bool _isEditing = false; 
-  
-  ElderlyModel? _elderlyModel; 
+  bool _isEditMode = false;
 
   @override
   void initState() {
@@ -62,15 +54,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _usernameController.dispose();
     _ageController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
-    _weightController.dispose();
     _heightController.dispose();
-    _medicalController.dispose();
-    _ecNameController.dispose();
-    _ecPhoneController.dispose();
+    _weightController.dispose();
+    _sexController.dispose();
+    _conditionsController.dispose();
+    _medicationsController.dispose();
+    _allergiesController.dispose();
+    _emergencyNameController.dispose();
+    _emergencyPhoneController.dispose();
+    _emergencyRelationshipController.dispose();
+    _caregiverEmailController.dispose();
     super.dispose();
   }
 
@@ -87,34 +83,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _emailController.text = user.email ?? 'No Email Provided';
     
     try {
-      final userDoc = await _firestore.collection('users').doc(user.uid).get();
-      final elderlyDoc = await _firestore.collection('elderly').doc(user.uid).get();
+      final userDocRef = _firestore.collection('users').doc(user.uid);
+      final elderlyDocRef = _firestore.collection('elderly').doc(user.uid);
+
+      final userDoc = await userDocRef.get();
+      final elderlyDoc = await elderlyDocRef.get();
 
       if (userDoc.exists) {
         _nameController.text = userDoc.get('fullName') ?? 'N/A';
+      } else {
+        _nameController.text = 'User Data Missing';
       }
 
       if (elderlyDoc.exists) {
-        final model = ElderlyModel.fromDoc(elderlyDoc);
-        _elderlyModel = model;
+        final data = elderlyDoc.data() as Map<String, dynamic>;
+        _ageController.text = data['age']?.toString() ?? '';
+        _phoneController.text = data['phoneNumber'] ?? '';
+        _addressController.text = data['address'] ?? '';
+        _heightController.text = data['height']?.toString() ?? '';
+        _weightController.text = data['weight']?.toString() ?? '';
+        _sexController.text = data['sex'] ?? '';
         
-        _usernameController.text = model.username;
-        _ageController.text = model.age?.toString() ?? '';
-        _phoneController.text = model.phoneNumber;
-        _weightController.text = model.weight?.toString() ?? '';
-        _heightController.text = model.height?.toString() ?? '';
+        // Load medical info
+        final medicalInfo = data['medicalInfo'] as Map<String, dynamic>?;
+        if (medicalInfo != null) {
+          _conditionsController.text = (medicalInfo['conditions'] as List<dynamic>?)?.join(', ') ?? '';
+          _medicationsController.text = (medicalInfo['medications'] as List<dynamic>?)?.join(', ') ?? '';
+          _allergiesController.text = (medicalInfo['allergies'] as List<dynamic>?)?.join(', ') ?? '';
+        }
         
-        _selectedSex = model.sex; 
+        // Load emergency contact
+        final emergencyContact = data['emergencyContact'] as Map<String, dynamic>?;
+        if (emergencyContact != null) {
+          _emergencyNameController.text = emergencyContact['name'] ?? '';
+          _emergencyPhoneController.text = emergencyContact['phone'] ?? '';
+          _emergencyRelationshipController.text = emergencyContact['relationship'] ?? '';
+        }
         
-        _ecNameController.text = model.emergencyContact?.name ?? '';
-        _ecPhoneController.text = model.emergencyContact?.phone ?? '';
-        _ecRelationship = model.emergencyContact?.relationship; 
-
-        final conditions = model.medicalInfo?.conditions.join(', ') ?? 'None';
-        final medications = model.medicalInfo?.medications.join(', ') ?? 'None';
-        final allergies = model.medicalInfo?.allergies.join(', ') ?? 'None';
-        
-        _medicalController.text = 'Conditions: $conditions\nMedications: $medications\nAllergies: $allergies';
+        // Load caregiver email
+        final caregiverId = data['caregiverId'] as String?;
+        if (caregiverId != null && caregiverId.isNotEmpty) {
+          _loadCaregiverEmail(caregiverId);
+        }
       }
       
     } catch (e) {
@@ -145,7 +155,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _handleSaveProfile() async {
-    if (_isLoading || !_isEditing) return;
+    if (_isLoading) return;
     
     setState(() {
       _isSaving = true;
@@ -156,14 +166,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _isSaving = false;
       return;
     }
-    
-    final EmergencyContact? updatedEmergencyContact = (_ecNameController.text.isNotEmpty && _ecPhoneController.text.isNotEmpty)
-      ? EmergencyContact(
-          name: _ecNameController.text.trim(),
-          phone: _ecPhoneController.text.trim(),
-          relationship: _ecRelationship ?? 'Other',
-        )
-      : null;
 
     try {
       await _firestore.collection('users').doc(user.uid).update({
@@ -185,14 +187,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       };
 
       final elderlyUpdateData = {
-        'username': _usernameController.text.trim(),
-        'sex': _selectedSex,
         'age': int.tryParse(_ageController.text.trim()),
         'phoneNumber': _phoneController.text.trim(),
         'address': _addressController.text.trim(),
-        'weight': double.tryParse(_weightController.text.trim()),
         'height': double.tryParse(_heightController.text.trim()),
-        'emergencyContact': updatedEmergencyContact?.toMap(),
+        'weight': double.tryParse(_weightController.text.trim()),
+        'sex': _sexController.text.trim(),
+        'medicalInfo': medicalInfo,
+        'emergencyContact': emergencyContact,
       };
       
       await _firestore.collection('elderly').doc(user.uid).update(elderlyUpdateData);
@@ -201,9 +203,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('✅ Profile saved successfully!'), backgroundColor: Colors.green),
         );
-        setState(() {
-          _isEditing = false;
-        });
       }
       
     } catch (e) {
@@ -221,26 +220,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-
   double _getResponsiveFontSize(BuildContext context, double baseSize) {
     final screenWidth = MediaQuery.of(context).size.width;
     final scaleFactor = screenWidth / 375;
     final clampedScaleFactor = scaleFactor.clamp(0.8, 1.4);
     return baseSize * clampedScaleFactor;
-  }
-
-  void _handleTabTap(int index) {
-    String destination = _navLabels[index];
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Navigation Demo"),
-          content: Text("You would navigate to the '$destination' screen now."),
-          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("Close"))],
-        );
-      },
-    );
   }
   
   Future<void> _handleSignOut() async {
@@ -284,80 +268,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
   }
-  
-  void _showComingSoonDialog(BuildContext context, String feature) {
-     showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return const AlertDialog(
-          title: Text("Feature Coming Soon"),
-          content: Text("This feature is under development."),
-        );
-      },
-    );
-  }
 
   Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 20, bottom: 20, left: 20, right: 20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            width: 55,
-            height: 55,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.blueGrey,
-              border: Border.all(color: Colors.white, width: 3),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5, offset: const Offset(0, 3))],
-            ),
-            child: const Icon(Icons.person_outline, color: Colors.white, size: 30),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+      child: Center(
+        child: Text(
+          'SILVER CARE',
+          style: TextStyle(
+            color: _textPrimary,
+            fontSize: _getResponsiveFontSize(context, 28),
+            fontFamily: 'Montserrat',
+            fontWeight: FontWeight.w900,
+            letterSpacing: 2.0,
           ),
-
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 55, 
-                height: 55, 
-                child: Opacity(
-                  opacity: 0.0,
-                  child: Image.asset(
-                    _logoAssetPath,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => Container(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 15),
-              Text(
-                'SILVER CARE',
-                style: TextStyle(
-                  color: const Color(0xFF000000), 
-                  fontSize: _getResponsiveFontSize(context, 21), 
-                  fontFamily: 'Montserrat', 
-                  fontWeight: FontWeight.w800, 
-                  shadows: [Shadow(offset: const Offset(0, 3), blurRadius: 4, color: Colors.black.withOpacity(0.5))],
-                ),
-              ),
-            ],
-          ),
-          
-          InkWell(
-            onTap: () => _showComingSoonDialog(context, 'Settings'),
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.8),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2))],
-              ),
-              child: const Icon(Icons.settings_outlined, color: Color(0xFF2C2C2C), size: 24),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -400,114 +325,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildEditProfileControl() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            const Icon(Icons.person_pin, size: 24, color: Colors.black),
-            const SizedBox(width: 8),
-            Text(
-              _isEditing ? 'Editing Profile' : 'View Profile Details',
-              style: TextStyle(
-                color: const Color(0xFF000000), 
-                fontSize: _getResponsiveFontSize(context, 20), 
-                fontFamily: 'Montserrat', 
-                fontWeight: FontWeight.w600, 
-                shadows: [Shadow(offset: const Offset(0, 4), blurRadius: 4, color: _shadowColor25Percent)],
+  Widget _buildEditProfileHeader(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            _isEditMode ? 'Edit Profile' : 'Personal Information',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: _getResponsiveFontSize(context, 20), // Reduced size
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+            ),
+          ),
+          if (!_isEditMode)
+            IconButton(
+              onPressed: () => setState(() => _isEditMode = true),
+              icon: const Icon(Icons.edit, color: Colors.white, size: 20), // Adjusted size
+              style: IconButton.styleFrom(
+                backgroundColor: const Color.fromRGBO(255, 255, 255, 0.2),
+                shape: const CircleBorder(),
               ),
             ),
-          ],
-        ),
-
-        ElevatedButton.icon(
-          onPressed: _isLoading ? null : () {
-            setState(() {
-              _isEditing = !_isEditing;
-            });
-            if (!_isEditing) {
-              _loadUserData();
-            }
-          },
-          icon: Icon(_isEditing ? Icons.close : Icons.edit, size: 18),
-          label: Text(_isEditing ? 'Cancel Edit' : 'Edit Details'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _isEditing ? _redLogout.withOpacity(0.8) : const Color(0xFFFFB300), // Amber for Edit, Red for Cancel
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            elevation: 4,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSexDropdown() {
-    final bool readOnly = !_isEditing;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20.0),
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: readOnly ? Colors.white.withOpacity(0.8) : Colors.white,
-          borderRadius: BorderRadius.circular(15), 
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.30), blurRadius: 4, offset: const Offset(0, 2))],
-          border: Border.all(
-            color: readOnly ? Colors.transparent : _darkGreyText, 
-            width: readOnly ? 0 : 1,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Sex:',
-                style: TextStyle(
-                  color: _darkGreyText.withOpacity(0.9),
-                  fontSize: _getResponsiveFontSize(context, 14),
-                  fontFamily: 'Montserrat', 
-                  fontWeight: FontWeight.w700, 
-                ),
-              ),
-              IgnorePointer(
-                ignoring: readOnly,
-                child: DropdownButtonFormField<String>(
-                  value: _selectedSex,
-                  isExpanded: true,
-                  dropdownColor: Colors.white,
-                  style: TextStyle(
-                    color: readOnly ? Colors.black54 : const Color(0xFF000000),
-                    fontSize: _getResponsiveFontSize(context, 16),
-                    fontFamily: 'Inter', 
-                    fontWeight: readOnly ? FontWeight.w500 : FontWeight.w600,
-                  ),
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                    border: InputBorder.none,
-                    filled: false,
-                  ),
-                  items: ['Male', 'Female', 'Other'].map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      _selectedSex = newValue;
-                    });
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }
@@ -520,52 +363,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
   }) {
-    final bool readOnly = isReadOnly || !_isEditing;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20.0),
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: readOnly ? Colors.white.withOpacity(0.8) : Colors.white,
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.30), blurRadius: 4, offset: const Offset(0, 2))],
-          border: Border.all(
-            color: readOnly ? Colors.transparent : _darkGreyText, 
-            width: readOnly ? 0 : 1,
+    final bool effectiveReadOnly = isReadOnly || !_isEditMode;
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromRGBO(0, 0, 0, 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  color: _darkGreyText.withOpacity(0.9),
-                  fontSize: _getResponsiveFontSize(context, 14),
-                  fontFamily: 'Montserrat', 
-                  fontWeight: FontWeight.w700, 
-                ),
-              ),
-              TextFormField(
-                controller: controller,
-                readOnly: readOnly,
-                keyboardType: keyboardType,
-                maxLines: label.contains('Medical') ? 5 : 1,
-                style: TextStyle(
-                  color: readOnly ? Colors.black54 : const Color(0xFF000000),
-                  fontSize: _getResponsiveFontSize(context, 16),
-                  fontFamily: 'Inter', 
-                  fontWeight: readOnly ? FontWeight.w500 : FontWeight.w600,
-                ),
-                decoration: const InputDecoration(
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
-                  border: InputBorder.none,
-                ),
+        ],
+        border: _isEditMode && !isReadOnly 
+          ? Border.all(color: const Color.fromRGBO(108, 99, 255, 0.3), width: 1)
+          : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: _textSecondary,
+              fontSize: _getResponsiveFontSize(context, 13),
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: controller,
+            readOnly: effectiveReadOnly,
+            keyboardType: keyboardType,
+            maxLines: maxLines,
+            style: TextStyle(
+              color: effectiveReadOnly ? _textSecondary : _textPrimary,
+              fontSize: _getResponsiveFontSize(context, 16),
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w500,
+            ),
+            decoration: InputDecoration(
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+              border: InputBorder.none,
+              hintText: effectiveReadOnly ? null : 'Enter $label',
+              hintStyle: TextStyle(
+                color: const Color.fromRGBO(113, 128, 150, 0.6),
+                fontSize: _getResponsiveFontSize(context, 16),
               ),
             ),
           ),
@@ -573,104 +422,170 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-  
-  Widget _buildEmergencyContactRow() {
-    final bool readOnly = !_isEditing;
-    final List<String> relationships = ['Spouse', 'Child', 'Professional Caregiver', 'Other'];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 8.0, left: 4),
-          child: Text(
-            'EMERGENCY CONTACT DETAILS:',
+  Widget _buildMedicalInfoSection(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromRGBO(0, 0, 0, 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: _isEditMode 
+          ? Border.all(color: const Color.fromRGBO(108, 99, 255, 0.3), width: 1)
+          : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Medical Information',
             style: TextStyle(
-              color: Colors.black, 
-              fontSize: _getResponsiveFontSize(context, 18), 
-              fontFamily: 'Montserrat', 
-              fontWeight: FontWeight.w800,
+              color: _textPrimary,
+              fontSize: _getResponsiveFontSize(context, 16),
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w700,
             ),
           ),
-        ),
-        const SizedBox(height: 15),
-
-        Row(
-          children: [
-            Expanded(child: _buildProfileDetailRow(context: context, label: 'EC Name:', controller: _ecNameController)),
-            const SizedBox(width: 15),
-            Expanded(child: _buildProfileDetailRow(context: context, label: 'EC Phone:', controller: _ecPhoneController, keyboardType: TextInputType.phone)),
-          ],
-        ),
-
-        Padding(
-          padding: const EdgeInsets.only(bottom: 20.0),
-          child: Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: readOnly ? Colors.white.withOpacity(0.8) : Colors.white,
-              borderRadius: BorderRadius.circular(15), 
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.30), blurRadius: 4, offset: const Offset(0, 2))],
-              border: Border.all(
-                color: readOnly ? Colors.transparent : _darkGreyText, 
-                width: readOnly ? 0 : 1,
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'EC Relationship:',
-                    style: TextStyle(
-                      color: _darkGreyText.withOpacity(0.9),
-                      fontSize: _getResponsiveFontSize(context, 14),
-                      fontFamily: 'Montserrat', 
-                      fontWeight: FontWeight.w700, 
-                    ),
-                  ),
-                  IgnorePointer(
-                    ignoring: readOnly,
-                    child: DropdownButtonFormField<String>(
-                      value: _ecRelationship,
-                      isExpanded: true,
-                      dropdownColor: Colors.white,
-                      style: TextStyle(
-                        color: readOnly ? Colors.black54 : const Color(0xFF000000),
-                        fontSize: _getResponsiveFontSize(context, 16),
-                        fontFamily: 'Inter', 
-                        fontWeight: readOnly ? FontWeight.w500 : FontWeight.w600,
-                      ),
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                        border: InputBorder.none,
-                        filled: false,
-                      ),
-                      items: relationships.map((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          _ecRelationship = newValue;
-                        });
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
+          const SizedBox(height: 16),
+          _buildMedicalField(context, 'Medical Conditions', _conditionsController),
+          _buildMedicalField(context, 'Current Medications', _medicationsController),
+          _buildMedicalField(context, 'Allergies', _allergiesController),
+        ],
+      ),
     );
   }
 
+  Widget _buildMedicalField(BuildContext context, String label, TextEditingController controller) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: _textSecondary,
+              fontSize: _getResponsiveFontSize(context, 13),
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          TextFormField(
+            controller: controller,
+            readOnly: !_isEditMode,
+            maxLines: 2,
+            style: TextStyle(
+              color: !_isEditMode ? _textSecondary : _textPrimary,
+              fontSize: _getResponsiveFontSize(context, 14),
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w500,
+            ),
+            decoration: InputDecoration(
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+              border: InputBorder.none,
+              hintText: _isEditMode ? 'Separate multiple items with commas' : null,
+              hintStyle: TextStyle(
+                color: const Color.fromRGBO(113, 128, 150, 0.6),
+                fontSize: _getResponsiveFontSize(context, 12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmergencyContactSection(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromRGBO(0, 0, 0, 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: _isEditMode 
+          ? Border.all(color: const Color.fromRGBO(108, 99, 255, 0.3), width: 1)
+          : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Emergency Contact',
+            style: TextStyle(
+              color: _textPrimary,
+              fontSize: _getResponsiveFontSize(context, 16),
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildEmergencyField(context, 'Contact Name', _emergencyNameController),
+          _buildEmergencyField(context, 'Phone Number', _emergencyPhoneController, TextInputType.phone),
+          _buildEmergencyField(context, 'Relationship', _emergencyRelationshipController),
+          if (_caregiverEmailController.text.isNotEmpty)
+            _buildEmergencyField(context, 'Caregiver Email', _caregiverEmailController, TextInputType.emailAddress, true),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmergencyField(BuildContext context, String label, TextEditingController controller, [TextInputType keyboardType = TextInputType.text, bool isReadOnly = false]) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: _textSecondary,
+              fontSize: _getResponsiveFontSize(context, 13),
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          TextFormField(
+            controller: controller,
+            readOnly: isReadOnly || !_isEditMode,
+            keyboardType: keyboardType,
+            style: TextStyle(
+              color: (isReadOnly || !_isEditMode) ? _textSecondary : _textPrimary,
+              fontSize: _getResponsiveFontSize(context, 14),
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w500,
+            ),
+            decoration: InputDecoration(
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+              border: InputBorder.none,
+              hintText: (_isEditMode && !isReadOnly) ? 'Enter $label' : null,
+              hintStyle: TextStyle(
+                color: const Color.fromRGBO(113, 128, 150, 0.6),
+                fontSize: _getResponsiveFontSize(context, 14),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -701,54 +616,106 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: _isLoading 
                   ? const Center(child: CircularProgressIndicator(color: Colors.white))
                   : SingleChildScrollView( 
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                      padding: const EdgeInsets.all(30),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          _buildEditProfileControl(),
+                          _buildEditProfileHeader(context),
                           const SizedBox(height: 25),
   
-                          // --- CORE PERSONAL INFO ---
-                          _buildProfileDetailRow(context: context, label: 'Full Name:', controller: _nameController),
-                          _buildProfileDetailRow(context: context, label: 'Username:', controller: _usernameController),
-                          _buildProfileDetailRow(context: context, label: 'Email:', controller: _emailController, isReadOnly: true),
-                          
-                          // --- PHYSICAL STATS ROW ---
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(child: _buildProfileDetailRow(context: context, label: 'Age:', controller: _ageController, keyboardType: TextInputType.number)),
-                              const SizedBox(width: 15),
-                              Expanded(child: _buildProfileDetailRow(context: context, label: 'Weight (kg):', controller: _weightController, keyboardType: TextInputType.number)),
-                              const SizedBox(width: 15),
-                              Expanded(child: _buildProfileDetailRow(context: context, label: 'Height (cm):', controller: _heightController, keyboardType: TextInputType.number)),
-                            ],
-                          ),
-                          
-                          _buildSexDropdown(),
-
-                          _buildProfileDetailRow(context: context, label: 'Phone Number:', controller: _phoneController, keyboardType: TextInputType.phone),
-                          _buildProfileDetailRow(context: context, label: 'Address:', controller: _addressController),
-                          
-                          _buildEmergencyContactRow(),
-                          
-                          _buildProfileDetailRow(
-                            context: context, 
-                            label: 'Medical Info (Read Only):', 
-                            controller: _medicalController, 
-                            isReadOnly: true,
+                          // Basic Information Card
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: const Color.fromRGBO(255, 255, 255, 0.1),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: const Color.fromRGBO(255, 255, 255, 0.2), width: 1),
+                            ),
+                            child: Column(
+                              children: [
+                                _buildProfileDetailRow(context: context, label: 'Full Name', controller: _nameController),
+                                _buildProfileDetailRow(context: context, label: 'Email', controller: _emailController, isReadOnly: true),
+                                _buildProfileDetailRow(context: context, label: 'Age', controller: _ageController, keyboardType: TextInputType.number),
+                                _buildProfileDetailRow(context: context, label: 'Sex', controller: _sexController),
+                                _buildProfileDetailRow(context: context, label: 'Phone Number', controller: _phoneController, keyboardType: TextInputType.phone),
+                                _buildProfileDetailRow(context: context, label: 'Address', controller: _addressController),
+                                _buildProfileDetailRow(context: context, label: 'Height (cm)', controller: _heightController, keyboardType: TextInputType.number),
+                                _buildProfileDetailRow(context: context, label: 'Weight (kg)', controller: _weightController, keyboardType: TextInputType.number),
+                              ],
+                            ),
                           ),
                           
                           const SizedBox(height: 20),
+                          _buildMedicalInfoSection(context),
+                          _buildEmergencyContactSection(context),
+                          
+                          const SizedBox(height: 30),
 
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              ElevatedButton.icon(
-                                onPressed: (_isSaving || !_isEditing) ? null : _handleSaveProfile,
-                                icon: _isSaving 
-                                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                  : const Icon(Icons.save, size: 20, color: Colors.white),
+                          // Edit mode buttons
+                          if (_isEditMode) ...[
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextButton.icon(
+                                    onPressed: () => setState(() => _isEditMode = false),
+                                    icon: const Icon(Icons.close, size: 20, color: Colors.white),
+                                    label: Text(
+                                      'Cancel',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: _getResponsiveFontSize(context, 16),
+                                        fontFamily: 'Montserrat',
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      backgroundColor: const Color.fromRGBO(255, 255, 255, 0.2),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                        side: const BorderSide(color: Color.fromRGBO(255, 255, 255, 0.3), width: 1),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 15),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: _isSaving ? null : () async {
+                                      await _handleSaveProfile();
+                                      if (mounted && !_isSaving) {
+                                        setState(() => _isEditMode = false);
+                                      }
+                                    },
+                                    icon: _isSaving 
+                                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                      : const Icon(Icons.save_outlined, size: 22, color: Colors.white),
+                                    label: Text(
+                                      _isSaving ? 'Saving...' : 'Save',
+                                      style: TextStyle(
+                                        fontSize: _getResponsiveFontSize(context, 16),
+                                        fontFamily: 'Montserrat',
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: _successColor,
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                      elevation: 2,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ] else ...[
+                            // Logout button - when not in edit mode
+                            SizedBox(
+                              width: double.infinity,
+                              child: TextButton.icon(
+                                onPressed: _handleSignOut,
+                                icon: const Icon(Icons.logout, size: 20, color: Colors.white),
                                 label: Text(
                                   'Sign Out',
                                   style: TextStyle(
@@ -758,16 +725,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF008000), // Green for save
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  elevation: 5,
-                                ),
-                              ),
-                              
-                              TextButton(
-                                onPressed: _handleSignOut,
                                 style: TextButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 16),
                                   backgroundColor: const Color.fromRGBO(255, 255, 255, 0.2),
@@ -789,10 +746,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: SilverCareNavBar(
-        currentIndex: _currentIndex,
-        onTap: _handleTabTap,
-      ),
+
     );
   }
 }
