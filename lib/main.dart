@@ -17,7 +17,6 @@ import 'package:silvercare/services/notification_service.dart';
 
 
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -56,8 +55,7 @@ class SilverCareApp extends StatelessWidget {
         '/blood_pressure': (context) => const BloodPressureScreen(),
         '/temperature': (context) => const TemperatureScreen(),
         '/sugar_level': (context) => const SugarLevelScreen(),
-        '/notifications': (context) => const NotificationsScreen(),
-      },
+        '/notifications': (context) => const NotificationsScreen(),      },
       // Handle unknown routes
       onUnknownRoute: (settings) {
         return MaterialPageRoute(

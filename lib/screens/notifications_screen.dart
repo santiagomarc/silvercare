@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/nav_bar_svg.dart'; 
 
 const String _logoAssetPath = 'assets/icons/silvercare.png'; 
 
@@ -10,9 +11,22 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  final Color _missedMedColor = const Color(0xFFCD5C5C);
-  final Color _checklistColor = const Color(0xFF008000);
-  final Color _upcomingsColor = const Color(0xFF000080);
+
+  final int _currentIndex = 0; 
+  final List<String> _navLabels = const [
+    'Notifications',
+    'Calendar',
+    'Wellness',
+    'Home',
+    'Profile',
+  ];
+  
+  // FIX: Added missing color constants
+  final Color _missedMedColor = const Color(0xFFCD5C5C); // Red
+  final Color _checklistColor = const Color(0xFF008000); // Green (for Checklist)
+  final Color _upcomingsColor = const Color(0xFF000080); // Dark Blue (for Upcomings)
+  // End of FIX
+  
   final Color _titleTextColor = const Color(0xFF808080);
   final Color _bronzeBgColor = const Color(0xFFCD7F32); 
 
@@ -22,6 +36,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final clampedScaleFactor = scaleFactor.clamp(0.8, 1.4);
     return baseSize * clampedScaleFactor;
   }
+
+
+  void _handleTabTap(int index) {
+    String destination = _navLabels[index];
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Navigation Demo"),
+          content: Text("You would navigate to the '$destination' screen now."),
+          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("Close"))],
+        );
+      },
+    );
+  }
+
 
   void _showComingSoonDialog(BuildContext context, String feature) {
     showDialog(
@@ -58,7 +88,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Back button
+          // Back button logic added (since the Profile Screen used an avatar placeholder here)
           GestureDetector(
             onTap: () => Navigator.of(context).pop(),
             child: Container(
@@ -82,12 +112,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               SizedBox(
                 width: 55,
                 height: 55, 
-                child: Image.asset(
-                  _logoAssetPath,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(Icons.shield, color: Colors.grey, size: 30); 
-                  },
+                child: Opacity(
+                  opacity: 0.0,
+                  child: Image.asset(
+                    _logoAssetPath,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(); 
+                    },
+                  ),
                 ),
               ),
               const SizedBox(width: 15),
@@ -237,7 +270,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ],
         ),
       ),
-
+      bottomNavigationBar: SilverCareNavBar(
+        currentIndex: _currentIndex,
+        onTap: _handleTabTap,
+      ),
     );
   }
 }
