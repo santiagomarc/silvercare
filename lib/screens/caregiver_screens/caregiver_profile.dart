@@ -130,30 +130,46 @@ class CaregiverProfile extends StatelessWidget {
                                   content: const Text('Are you sure you want to sign out?'),
                                   actions: [
                                     TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
-                                    TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Sign Out')),
+                                    TextButton(
+                                      onPressed: () => Navigator.of(ctx).pop(true), 
+                                      child: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+                                    ),
                                   ],
                                 ),
                               );
-                              if (confirmed == true) {
+                              if (confirmed == true && context.mounted) {
                                 try {
                                   await FirebaseAuth.instance.signOut();
                                   if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('👋 Signed out successfully!'), backgroundColor: Colors.green)
+                                    // Navigate to welcome screen and clear all routes
+                                    Navigator.of(context).pushNamedAndRemoveUntil(
+                                      '/welcome',
+                                      (route) => false,
                                     );
-                                    // The AuthWrapper will automatically handle navigation
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('👋 Signed out successfully!'), 
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
                                   }
                                 } catch (e) {
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Error signing out: ${e.toString()}'), backgroundColor: Colors.red)
+                                      SnackBar(
+                                        content: Text('Error signing out: ${e.toString()}'), 
+                                        backgroundColor: Colors.red,
+                                      ),
                                     );
                                   }
                                 }
                               }
                             },
-                            icon: const Icon(Icons.logout),
-                            label: const Text('Sign Out'),
+                            icon: const Icon(Icons.logout, color: Colors.red),
+                            label: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.red),
+                            ),
                           ),
                         ],
                       ),

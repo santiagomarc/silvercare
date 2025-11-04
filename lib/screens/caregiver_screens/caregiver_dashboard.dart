@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:silvercare/models/elderly_model.dart'; // Import ElderlyModel
 import 'package:silvercare/services/user_service.dart';
-import 'add_medication_screen.dart'; // Import the new screen
+import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
+import 'add_medication_screen.dart'; // Import the medication screen
+import 'add_checklist_screen.dart'; // Import the checklist screen
 
 class CaregiverDashboard extends StatefulWidget {
   const CaregiverDashboard({super.key});
@@ -13,6 +16,8 @@ class CaregiverDashboard extends StatefulWidget {
 class _CaregiverDashboardState extends State<CaregiverDashboard> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   Map<String, dynamic>? _caregiverProfile;
+  ElderlyModel? _linkedElderly; // Store the full elderly model
+  String? _managingElderlyId;
   bool _isLoading = true;
 
   @override
@@ -22,10 +27,38 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
   }
 
   Future<void> _fetchCaregiverData() async {
+    // 1. Fetch the caregiver's profile
     final profile = await UserService.getUserProfile(_auth.currentUser?.uid);
-    if (mounted) {
+    if (!mounted) return;
+
+    if (profile != null) {
+      // 2. CRITICAL FIX: Get the correct field 'elderlyId' from your model
+      final String? elderlyId = profile['elderlyId'];
+      ElderlyModel? elderlyModel;
+
+      // 3. If an elderlyId exists, fetch that elderly's profile
+      if (elderlyId != null && elderlyId.isNotEmpty) {
+        try {
+          final elderlyDoc = await FirebaseFirestore.instance
+              .collection('elderly')
+              .doc(elderlyId)
+              .get();
+          if (elderlyDoc.exists) {
+            elderlyModel = ElderlyModel.fromDoc(elderlyDoc);
+          }
+        } catch (e) {
+          print("Error fetching elderly profile: $e");
+        }
+      }
+
       setState(() {
         _caregiverProfile = profile;
+        _managingElderlyId = elderlyId; // Store the ID
+        _linkedElderly = elderlyModel; // Store the full profile
+        _isLoading = false;
+      });
+    } else {
+      setState(() {
         _isLoading = false;
       });
     }
@@ -94,6 +127,9 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    // Get the elderly's name, or a default
+    final String elderlyName = _linkedElderly?.username ?? "Your Patient";
+
     return Scaffold(
       backgroundColor: Colors.grey[200],
       body: _isLoading
@@ -105,7 +141,7 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
                 children: [
                   _buildHeader(),
                   const SizedBox(height: 24),
-                  
+
                   // --- NEW: Elder Management Panel ---
                   _buildSectionTitle(context, "Elder Management"),
                   const SizedBox(height: 16),
@@ -113,7 +149,8 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
                   // --- End New Panel ---
 
                   const SizedBox(height: 24),
-                  _buildSectionTitle(context, "Lola's Vitals Overview"),
+                  // Use the dynamically loaded name
+                  _buildSectionTitle(context, "$elderlyName's Vitals Overview"),
                   const SizedBox(height: 16),
                   _buildHealthGrid(),
                   const SizedBox(height: 24),
@@ -142,7 +179,7 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
 
   Widget _buildHeader() {
     String caregiverName = _caregiverProfile?['fullName'] ?? 'Caregiver';
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8.0),
       child: Column(
@@ -183,11 +220,22 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
           icon: Icons.medication_rounded,
           color: Colors.blue.shade700,
           onTap: () {
-            // This is the navigation you requested
+            // --- CRITICAL FIX: Add guard clause ---
+            if (_managingElderlyId == null || _managingElderlyId!.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('No elderly patient assigned. Please update your profile.'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              return;
+            }
+            
+            // If check passes, navigate
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const AddMedicationScreen(),
+                builder: (context) => AddMedicationScreen(elderlyId: _managingElderlyId!),
               ),
             );
           },
@@ -197,9 +245,20 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
           icon: Icons.checklist_rounded,
           color: Colors.green.shade700,
           onTap: () {
-            // TODO: Create and navigate to AddChecklistScreen
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Manage Checklist coming soon!')),
+            // Check if we have an elderly to manage
+            if (_managingElderlyId == null || _managingElderlyId!.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('⚠️ No elderly assigned to manage.')),
+              );
+              return;
+            }
+            
+            // Navigate to Add Checklist Screen
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AddChecklistScreen(elderlyId: _managingElderlyId!),
+              ),
             );
           },
         ),
@@ -364,3 +423,4 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
     );
   }
 }
+

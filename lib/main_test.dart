@@ -1,9 +1,6 @@
-
-
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart'; // <--- NEW
-import 'package:silvercare/config/firebase_options.dart'; // <--- NEW
-import 'package:silvercare/screens/HealthCheckInScreen.dart';
+import 'package:firebase_core/firebase_core.dart'; // REQUIRED
+import 'package:silvercare/config/firebase_options.dart'; // REQUIRED
 
 // Import your screens
 import 'screens/profile_screen.dart';
@@ -21,21 +18,24 @@ void main() async {
   runApp(
     MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: HealthCheckInApp(), // 👈 Change this line to test a different screen
-      // Add a sign-in route for sign-out navigation to work
+      // 1. We START the app on the '/profile' route.
+      initialRoute: '/profile', 
+      
+      // 2. Define all necessary routes for the ProfileScreen's navigation.
       routes: {
-        '/signin': (context) => const Center(child: Text('Sign In Screen Placeholder')),
+        // The ProfileScreen itself is now defined here as the target of '/profile'
+        '/profile': (context) => const ProfileScreen(), 
+        
+        // This is the placeholder destination for the "Log Out" button
+        '/signin': (context) => const Center(
+          child: Text(
+            '--- Sign In Screen Placeholder ---',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+        ),
       },
     ),
   );
 }
 
-/// Change this to whatever you want to test
-Widget TestScreen() {
-  // We wrap ProfileScreen in a Builder to ensure it can access the new '/signin' route.
-  return Builder(
-    builder: (context) {
-      return const ProfileScreen(); 
-    }
-  );
-}
+// NOTE: The separate TestScreen() and Builder() are no longer needed.

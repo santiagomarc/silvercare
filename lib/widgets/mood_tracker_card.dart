@@ -149,7 +149,7 @@ class _MoodTrackerCardState extends State<MoodTrackerCard> {
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: const Color.fromARGB(255, 187, 187, 187), // Dark gray background
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(30),
           border: Border.all(color: const Color(0xFF4A4A4A), width: 2), // Gray outline
           boxShadow: [
             BoxShadow(
@@ -174,7 +174,7 @@ class _MoodTrackerCardState extends State<MoodTrackerCard> {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: const Color.fromARGB(96, 204, 204, 204), // Dark gray background
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(30),
         border: Border.all(color: const Color(0xFF4A4A4A), width: 2), // Gray outline
         boxShadow: [
           BoxShadow(

@@ -3,9 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:silvercare/models/medication_model.dart';
 import 'package:silvercare/services/medication_service.dart';
+import 'package:silvercare/services/notification_service.dart';
 
 class AddMedicationScreen extends StatefulWidget {
-  const AddMedicationScreen({super.key});
+  final String elderlyId;
+  const AddMedicationScreen({super.key, required this.elderlyId});
 
   @override
   State<AddMedicationScreen> createState() => _AddMedicationScreenState();
@@ -14,9 +16,8 @@ class AddMedicationScreen extends StatefulWidget {
 class _AddMedicationScreenState extends State<AddMedicationScreen> {
   final _formKey = GlobalKey<FormState>();
   final MedicationService _medicationService = MedicationService();
+  final NotificationService _notificationService = NotificationService();
   final String _caregiverId = FirebaseAuth.instance.currentUser?.uid ?? 'unknown';
-  // Note: In a production app, the elderly ID would be passed in arguments
-  final String _elderlyId = FirebaseAuth.instance.currentUser?.uid ?? 'test-elder-id'; // TEMPORARY: Assuming caregiver is setting for themselves or a linked elder
 
   // Form Fields
   String _name = '';
@@ -79,7 +80,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
     // Create the model
     final newMedication = MedicationModel(
       id: '', // Firestore will assign this
-      elderlyId: _elderlyId,
+      elderlyId: widget.elderlyId,
       caregiverId: _caregiverId,
       name: _name,
       dosage: _dosage,
@@ -89,17 +90,22 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       startDate: _startDate,
     );
 
+    // Log elderlyId for debugging
+    print('Debugging: Elderly ID for new medication: ${widget.elderlyId}');
+
     // Save the model
     try {
       final docId = await _medicationService.addMedicationSchedule(newMedication);
       
       if (docId != null) {
+        // Schedule notifications for all medication times
+        await _scheduleMedicationNotifications(docId, newMedication);
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('✅ Schedule for $_name saved!')),
           );
           Navigator.pop(context);
-          // TODO: Important! After success, schedule the local notifications immediately.
         }
       }
     } catch (e) {
@@ -107,6 +113,53 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('❌ Failed to save: $e')),
         );
+      }
+    }
+  }
+
+  /// Schedules notifications for all medication times for the next 7 days
+  Future<void> _scheduleMedicationNotifications(String medicationId, MedicationModel medication) async {
+    final now = DateTime.now();
+    
+    // Schedule notifications for the next 7 days
+    for (int dayOffset = 0; dayOffset < 7; dayOffset++) {
+      final targetDate = now.add(Duration(days: dayOffset));
+      final dayName = DateFormat('EEEE').format(targetDate);
+      
+      // Check if this day is in the selected days
+      if (!medication.daysOfWeek.contains(dayName)) {
+        continue;
+      }
+      
+      // Schedule notification for each time slot on this day
+      for (final timeString in medication.timesOfDay) {
+        final timeParts = timeString.split(':');
+        final hour = int.parse(timeParts[0]);
+        final minute = int.parse(timeParts[1]);
+        
+        final scheduledDateTime = DateTime(
+          targetDate.year,
+          targetDate.month,
+          targetDate.day,
+          hour,
+          minute,
+        );
+        
+        // Only schedule if time is in the future
+        if (scheduledDateTime.isAfter(now)) {
+          // Create unique notification ID
+          final notificationId = '${medicationId}_${targetDate.toIso8601String().substring(0, 10)}_${timeString.replaceAll(':', '')}'.hashCode;
+          
+          await _notificationService.scheduleNotification(
+            id: notificationId,
+            title: '💊 Medication Reminder',
+            body: 'Time to take ${medication.name} (${medication.dosage})',
+            scheduledDate: scheduledDateTime,
+            payload: 'medication_${medicationId}_${timeString}',
+          );
+          
+          print('✅ Scheduled notification for ${medication.name} on $dayName at $timeString');
+        }
       }
     }
   }

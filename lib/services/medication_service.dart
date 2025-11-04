@@ -19,7 +19,6 @@ class MedicationService {
 
   /// Adds a new recurring medication schedule.
   Future<String?> addMedicationSchedule(MedicationModel model) async {
-    if (_elderlyId.isEmpty) return null;
     try {
       final docRef = await _firestore
           .collection(_scheduleCollection)
