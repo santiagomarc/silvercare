@@ -28,7 +28,7 @@ class _SilverCareNavBarState extends State<SilverCareNavBar> {
     'assets/icons/home.svg',
     'assets/icons/calendar.svg',
     'assets/icons/analytics.svg',
-    'assets/icons/health.svg',
+    'assets/icons/wellness.svg',
     'assets/icons/profile.svg',
   ];
 
@@ -45,7 +45,7 @@ class _SilverCareNavBarState extends State<SilverCareNavBar> {
     'Home',
     'Calendar', 
     'Analytics',
-    'Health',
+    'Wellness',
     'Profile',
   ];
 

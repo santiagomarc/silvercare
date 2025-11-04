@@ -17,13 +17,13 @@ class _MainScreenState extends State<MainScreen> {
   // This is the main navigation container that holds all app screens
   // Replace PlaceholderScreens with actual screens when you develop them:
   // - Calendar: replace with CalendarScreen()
-  // - Analytics: replace with AnalyticsScreen() 
-  // - Health: replace with HealthScreen()
+  // - Analytics: replace with AnalyticsScreen()
+  // - Wellness: replace with WellnessScreen()
   final List<Widget> _screens = [
     const HomeScreenContent(), // Home
     const PlaceholderScreen(title: 'Calendar', color: Color(0xFF4CAF50)), // Calendar
-    const PlaceholderScreen(title: 'Analytics', color: Color(0xFFFFB300)), // Analytics  
-    const PlaceholderScreen(title: 'Health', color: Color(0xFF9C27B0)), // Health
+    const PlaceholderScreen(title: 'Analytics', color: Color(0xFFFFB300)), // Analytics
+    const PlaceholderScreen(title: 'Wellness', color: Color(0xFF9C27B0)), // Wellness
     const ProfileScreenContent(), // Profile - Now connected to the actual ProfileScreen
   ];
 
@@ -181,7 +181,7 @@ class PlaceholderScreen extends StatelessWidget {
         return Icons.analytics_rounded;
       case 'Health':
         return Icons.favorite_rounded;
-      case 'Profile':
+      case 'Wellness':
         return Icons.person_rounded;
       default:
         return Icons.help_outline;

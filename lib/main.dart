@@ -12,6 +12,9 @@ import 'package:silvercare/screens/blood_pressure_screen.dart';
 import 'package:silvercare/screens/temperature_screen.dart';
 import 'package:silvercare/screens/sugar_level_screen.dart';
 import 'package:silvercare/screens/notifications_screen.dart';
+import 'package:silvercare/services/notification_service.dart';
+
+
 
 
 
@@ -21,6 +24,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  NotificationService().initialize();
   
   runApp(const SilverCareApp());
 }

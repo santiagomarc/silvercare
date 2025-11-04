@@ -1,6 +1,10 @@
 # Firestore Index Configuration
 
-Create this index in Firebase Console → Firestore Database → Indexes → Composite:
+Create these indexes in Firebase Console → Firestore Database → Indexes → Composite:
+
+---
+
+### Health Data Index
 
 Collection ID: `health_data`
 Fields:
@@ -8,13 +12,24 @@ Fields:
 2. `type` (Ascending) 
 3. `measuredAt` (Descending)
 
-## How to create the index:
+---
+
+### Elderly Checklist Index
+
+Collection ID: `elderly_checklists`
+Fields:
+1. `elderlyId` (Ascending)
+2. `dueDate` (Ascending)
+
+---
+
+## How to create the indexes:
 
 1. Go to [Firebase Console](https://console.firebase.google.com/)
 2. Select your project
 3. Navigate to Firestore Database
 4. Click on "Indexes" tab
-5. Click "Create Index"
+5. Click "Create Index" for each index defined above
 6. Add the fields as shown above
 7. Click "Create"
 
@@ -39,6 +54,20 @@ Fields:
         {
           "fieldPath": "measuredAt",
           "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "elderly_checklists",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "elderlyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dueDate",
+          "order": "ASCENDING"
         }
       ]
     }

@@ -9,7 +9,6 @@ class GoogleFitService {
   // Google Sign In instance with fitness scope
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: [_fitnessReadScope],
-    // Force account picker to allow different Google account than Firebase auth
     forceCodeForRefreshToken: true,
     // Web client ID for testing in Chrome
     clientId: '288695034445-1apprq1ifhkvir41tepjj7l8g0hlh2rv.apps.googleusercontent.com',

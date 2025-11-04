@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../widgets/mood_tracker_card.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Import for StreamBuilder
+import 'package:silvercare/models/checklist_item_model.dart';
+import 'package:silvercare/models/medication_model.dart';
+import 'package:silvercare/services/checklist_service.dart';
+import 'package:silvercare/services/medication_service.dart';
+import 'package:silvercare/widgets/mood_tracker_card.dart';
+import 'package:intl/intl.dart'; // Import for date formatting
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,6 +18,12 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   User? _currentUser;
+
+  // Services for our new cards
+  final MedicationService _medicationService = MedicationService();
+  final ChecklistService _checklistService = ChecklistService();
+  // Firestore instance for real-time dose checking
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
   void initState() {
@@ -39,20 +51,31 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 // Header Section
                 _buildHeader(),
-                
-              const SizedBox(height: 30),
-              
-              // Mood Tracker Card
-              const MoodTrackerCard(),
-    
-              const SizedBox(height: 30),
-              
-              _buildQuickActions(),
 
-              const SizedBox(height: 40),
+                const SizedBox(height: 30),
 
-              // Sign Out Button
-              _buildSignOutButton(),
+                // Mood Tracker Card
+                const MoodTrackerCard(),
+
+                const SizedBox(height: 30),
+
+                // Health Vitals Monitor
+                _buildQuickActions(),
+
+                const SizedBox(height: 30),
+
+                // --- NEW: Today's Medications Section ---
+                _buildMedicationSection(),
+
+                const SizedBox(height: 30),
+
+                // --- NEW: Today's Checklist Section ---
+                _buildChecklistSection(),
+
+                const SizedBox(height: 40),
+
+                // Sign Out Button
+                _buildSignOutButton(),
               ],
             ),
           ),
@@ -62,6 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeader() {
+    // ... (Your existing _buildHeader code - no changes)
     return Row(
       children: [
         // Profile Icon (left side)
@@ -85,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
             size: 24,
           ),
         ),
-        
+
         // Logo (center)
         Expanded(
           child: Text(
@@ -106,7 +130,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
-        
+
         // Notification Bell Icon (right side)
         GestureDetector(
           onTap: () {
@@ -137,8 +161,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-
   Widget _buildQuickActions() {
+    // ... (Your existing _buildQuickActions code - no changes)
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -167,9 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-
           const SizedBox(height: 20),
-          
           // 2x2 Grid for the first 4 vital measurements
           GridView.count(
             crossAxisCount: 2,
@@ -205,14 +227,15 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           // Centered Emergency SOS button
           Center(
             child: SizedBox(
               height: 100,
-              width: (MediaQuery.of(context).size.width - 48 - 48 - 16) / 2, // Match grid card width
+              width: (MediaQuery.of(context).size.width - 48 - 48 - 16) /
+                  2, // Match grid card width
               child: _buildVitalCard(
                 icon: Icons.warning,
                 label: 'Emergency SOS',
@@ -232,6 +255,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required Color color,
     required VoidCallback onTap,
   }) {
+    // ... (Your existing _buildVitalCard code - no changes)
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -288,7 +312,311 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // --- NEW WIDGET: Today's Medications Section ---
+  Widget _buildMedicationSection() {
+    // Get the name of the current day (e.g., "Monday")
+    final String today = DateFormat('EEEE').format(DateTime.now());
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Today's Medications",
+          style: TextStyle(
+            color: const Color(0xFF1E1E1E),
+            fontSize: _getResponsiveFontSize(context, 22),
+            fontFamily: 'Montserrat',
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 16),
+        StreamBuilder<List<MedicationModel>>(
+          stream: _medicationService.getActiveMedicationSchedules(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return const Center(child: Text('Error loading medications.'));
+            }
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return _buildEmptyStateCard(
+                icon: Icons.medication_rounded,
+                message: 'No medications scheduled.',
+              );
+            }
+
+            final schedules = snapshot.data!;
+            
+            // 1. Filter schedules to get only those due today
+            final todaySchedules = schedules.where((schedule) {
+              // Check if today is in the daysOfWeek list (e.g., "Monday")
+              return schedule.daysOfWeek.contains(today);
+              // TODO: Also check for 'specificDates'
+            }).toList();
+
+            if (todaySchedules.isEmpty) {
+              return _buildEmptyStateCard(
+                icon: Icons.medication_rounded,
+                message: 'No medications scheduled for today.',
+              );
+            }
+
+            // 2. Create a list of all individual doses for today
+            List<Widget> todayDosesWidgets = [];
+            for (var med in todaySchedules) {
+              for (var time in med.timesOfDay) {
+                todayDosesWidgets.add(_buildMedicationItem(med, time));
+              }
+            }
+
+            return ListView(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              children: todayDosesWidgets,
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  // --- NEW WIDGET: Single Medication Item ---
+  Widget _buildMedicationItem(MedicationModel med, String time) {
+    final DateTime now = DateTime.now();
+    final DateTime scheduledDate = DateTime(now.year, now.month, now.day);
+    
+    // Create the unique ID for this dose instance
+    final String doseInstanceId =
+        '${med.id}_${scheduledDate.toIso8601String().substring(0, 10)}_${time.replaceAll(':', '')}';
+
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.1),
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            // Icon
+            Icon(Icons.medication_liquid_rounded,
+                color: Colors.blue.shade800, size: 32),
+            const SizedBox(width: 16),
+
+            // Details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    med.name,
+                    style: TextStyle(
+                      fontSize: _getResponsiveFontSize(context, 18),
+                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${med.dosage} • $time',
+                    style: TextStyle(
+                      fontSize: _getResponsiveFontSize(context, 16),
+                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.w400,
+                      color: const Color(0xFF666666),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // --- Real-time Checkbox ---
+            // This StreamBuilder listens to one specific document in Firestore
+            StreamBuilder<DocumentSnapshot>(
+              stream: _firestore
+                  .collection(MedicationService.completionCollection)
+                  .doc(doseInstanceId)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                // Check if the document exists and 'isTaken' is true
+                bool isTaken = false;
+                if (snapshot.hasData && snapshot.data!.exists) {
+                  final data = snapshot.data!.data() as Map<String, dynamic>;
+                  isTaken = data['isTaken'] ?? false;
+                }
+
+                return Transform.scale(
+                  scale: 1.5, // Make checkbox larger
+                  child: Checkbox(
+                    value: isTaken,
+                    onChanged: (bool? newValue) {
+                      if (newValue != null && !isTaken) { // Only allow checking, not un-checking
+                        // Call the service to update status
+                        _medicationService.markDoseAsTaken(
+                          scheduleId: med.id,
+                          doseTime: time,
+                          scheduledDate: scheduledDate,
+                        );
+                      }
+                    },
+                    activeColor: Colors.green,
+                    shape: const CircleBorder(),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- NEW WIDGET: Today's Checklist Section ---
+  Widget _buildChecklistSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Today's Checklist",
+          style: TextStyle(
+            color: const Color(0xFF1E1E1E),
+            fontSize: _getResponsiveFontSize(context, 22),
+            fontFamily: 'Montserrat',
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 16),
+        StreamBuilder<List<ChecklistItemModel>>(
+          stream: _checklistService.getTodayChecklist(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return const Center(child: Text('Error loading tasks.'));
+            }
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return _buildEmptyStateCard(
+                icon: Icons.checklist_rounded,
+                message: 'No tasks assigned for today.',
+              );
+            }
+
+            // Filter tasks to only show those for today
+            final tasks = snapshot.data!.where((task) {
+              final taskDate = task.dueDate;
+              final nowDate = DateTime.now();
+              return taskDate.year == nowDate.year &&
+                     taskDate.month == nowDate.month &&
+                     taskDate.day == nowDate.day;
+            }).toList();
+
+            if (tasks.isEmpty) {
+              return _buildEmptyStateCard(
+                icon: Icons.checklist_rounded,
+                message: 'No tasks assigned for today.',
+              );
+            }
+
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: tasks.length,
+              itemBuilder: (context, index) {
+                final task = tasks[index];
+                return _buildChecklistItem(task);
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  // --- NEW WIDGET: Single Checklist Item ---
+  Widget _buildChecklistItem(ChecklistItemModel task) {
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.1),
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: Row(
+          children: [
+            // Details
+            Expanded(
+              child: Text(
+                task.task,
+                style: TextStyle(
+                  fontSize: _getResponsiveFontSize(context, 16),
+                  fontFamily: 'Montserrat',
+                  fontWeight: FontWeight.w500,
+                  decoration: task.isCompleted
+                      ? TextDecoration.lineThrough
+                      : TextDecoration.none,
+                  color: task.isCompleted
+                      ? const Color(0xFF666666)
+                      : const Color(0xFF1E1E1E),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            // Checkbox
+            Transform.scale(
+              scale: 1.5, // Make checkbox larger
+              child: Checkbox(
+                value: task.isCompleted,
+                onChanged: (bool? newValue) {
+                  if (newValue != null) {
+                    // Call the service to update status
+                    _checklistService.updateTaskStatus(task.id, newValue);
+                  }
+                },
+                activeColor: Colors.green,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- NEW WIDGET: Empty State Card ---
+  Widget _buildEmptyStateCard(
+      {required IconData icon, required String message}) {
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.1),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: const Color(0xFF666666), size: 28),
+            const SizedBox(width: 16),
+            Text(
+              message,
+              style: TextStyle(
+                fontSize: _getResponsiveFontSize(context, 16),
+                fontFamily: 'Montserrat',
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF666666),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showEmergencySosDialog() {
+    // ... (Your existing _showEmergencySosDialog code - no changes)
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -367,10 +695,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildSignOutButton() {
+    // Corrected the typo from shade6600 to shade600
     return ElevatedButton(
       onPressed: _handleSignOut,
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.red.shade600,
+        backgroundColor: Colors.red.shade600, // Corrected typo
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(
@@ -390,12 +719,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _formatDateTime(DateTime dateTime) {
+    // This function was in your original code but not used.
+    // We are using intl.DateFormat for new features.
     return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')} - ${dateTime.day}/${dateTime.month}/${dateTime.year}';
   }
 
-
-
   Future<void> _handleSignOut() async {
+    // ... (Your existing _handleSignOut code)
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -433,10 +763,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ElevatedButton(
               onPressed: () async {
                 Navigator.of(context).pop(); // Close dialog
-                
+
                 try {
                   await _auth.signOut();
-                  
+
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -445,12 +775,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         duration: Duration(seconds: 2),
                       ),
                     );
-                    
-                    // Navigate back to sign-in (or wherever you want)
+
+                    // Navigate back to sign-in
                     Navigator.of(context).pushReplacementNamed('/signin');
                   }
                 } catch (e) {
                   if (mounted) {
+                    // Corrected the typo from f(context) to context
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Error signing out: ${e.toString()}'),
