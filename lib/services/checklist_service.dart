@@ -15,17 +15,14 @@ class ChecklistService {
 
   /// Adds a new checklist item.
   Future<String?> addChecklistItem(ChecklistItemModel model) async {
-    // Note: No need to check _elderlyId here since caregiver is adding for the elderly
+    if (_elderlyId.isEmpty) return null;
     try {
-      print('📋 Adding checklist item for elderlyId: ${model.elderlyId}');
-      print('📋 Task: ${model.task}, Category: ${model.category}, Due: ${model.dueDate}');
       final docRef = await _firestore
           .collection(_checklistCollection)
           .add(model.toMap());
-      print('✅ Checklist item added with ID: ${docRef.id}');
       return docRef.id;
     } catch (e) {
-      print('❌ Error adding checklist item: $e');
+      print('Error adding checklist item: $e');
       return null;
     }
   }
@@ -56,13 +53,10 @@ class ChecklistService {
 
   /// Stream of all active checklist items for today.
   Stream<List<ChecklistItemModel>> getTodayChecklist() {
-    if (_elderlyId.isEmpty) {
-      print('⚠️ Cannot fetch checklist: No elderlyId (user not logged in)');
-      return Stream.value([]);
-    }
+    if (_elderlyId.isEmpty) return Stream.value([]);
     
-    print('🔍 Fetching checklist for elderlyId: $_elderlyId');
     final DateTime now = DateTime.now();
+    // Tasks due today or in the future
     final DateTime startOfDay = DateTime(now.year, now.month, now.day); 
 
     return _firestore
@@ -70,7 +64,6 @@ class ChecklistService {
         .where('elderlyId', isEqualTo: _elderlyId)
         .snapshots()
         .map((snapshot) {
-          print('📦 Received ${snapshot.docs.length} checklist items from Firestore');
           final tasks = snapshot.docs
               .map((doc) => ChecklistItemModel.fromDoc(doc))
               .toList();
@@ -82,30 +75,7 @@ class ChecklistService {
           }).toList();
 
           pendingTasks.sort((a, b) => a.dueDate.compareTo(b.dueDate));
-          print('✅ Returning ${pendingTasks.length} tasks for today');
           return pendingTasks;
-        });
-  }
-
-  /// Stream of ALL checklist items for a specific elderly (for caregiver use).
-  /// This allows caregivers to view and manage all checklist items.
-  Stream<List<ChecklistItemModel>> getChecklistItemsForElderly(String elderlyId) {
-    if (elderlyId.isEmpty) {
-      print('⚠️ Cannot fetch checklist: elderlyId is empty');
-      return Stream.value([]);
-    }
-    
-    print('🔍 Caregiver fetching checklist for elderlyId: $elderlyId');
-    return _firestore
-        .collection(_checklistCollection)
-        .where('elderlyId', isEqualTo: elderlyId)
-        .orderBy('dueDate', descending: false)
-        .snapshots()
-        .map((snapshot) {
-          print('📦 Found ${snapshot.docs.length} checklist items for elderly $elderlyId');
-          return snapshot.docs
-              .map((doc) => ChecklistItemModel.fromDoc(doc))
-              .toList();
         });
   }
 

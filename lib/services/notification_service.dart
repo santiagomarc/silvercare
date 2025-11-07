@@ -4,18 +4,15 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/material.dart';
 
 // IMPORTANT: This class uses flutter_local_notifications for scheduling local, 
-// time-based reminders (like medication and checklist tasks).
-// For critical, instant alerts (SOS, Caregiver updates), you should integrate 
-// Firebase Cloud Messaging (FCM) separately.
+// time-based reminders (like medication).
+// For critical, instant alerts (SOS, Caregiver updates), you will need to 
+// complete the Firebase Cloud Messaging (FCM) integration separately.
 
 class NotificationService {
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin = 
       FlutterLocalNotificationsPlugin();
   
   static final NotificationService _instance = NotificationService._internal();
-  
-  // Global navigator key for routing (set this in main.dart)
-  static GlobalKey<NavigatorState>? navigatorKey;
 
   factory NotificationService() {
     return _instance;
@@ -59,22 +56,8 @@ class NotificationService {
   static void onDidReceiveNotificationResponse(NotificationResponse response) {
     if (response.payload != null) {
       print('Notification payload: ${response.payload}');
-      
-      // Handle routing based on payload
-      final payload = response.payload!;
-      
-      if (navigatorKey?.currentContext != null) {
-        if (payload.startsWith('medication_')) {
-          // Navigate to home screen (where medications are shown)
-          navigatorKey!.currentState?.pushNamed('/main');
-        } else if (payload.startsWith('checklist_')) {
-          // Navigate to home screen (where checklist is shown)
-          navigatorKey!.currentState?.pushNamed('/main');
-        } else {
-          // Default: go to notifications screen
-          navigatorKey!.currentState?.pushNamed('/notifications');
-        }
-      }
+      // TODO: Handle routing here! (e.g., navigate to Medication Detail or Home Screen)
+      // Example: Navigator.pushNamed(context, '/medication_detail', arguments: response.payload);
     }
   }
   

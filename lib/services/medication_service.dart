@@ -1,30 +1,32 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+// Assuming your models are structured as defined previously
 import 'package:silvercare/models/medication_model.dart';
 
 class MedicationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  // Collection for the recurring medication schedules (Caregiver management)
   static const String _scheduleCollection = 'medication_schedules';
+  // Collection for daily compliance records (Elder interaction)
   static const String completionCollection = 'dose_completions';
   
+  // Helper to get the current elderly user's ID
   String get _elderlyId => _auth.currentUser?.uid ?? '';
 
   // --- Caregiver CRUD Operations (Managing the Schedule) ---
 
   /// Adds a new recurring medication schedule.
   Future<String?> addMedicationSchedule(MedicationModel model) async {
+    if (_elderlyId.isEmpty) return null;
     try {
-      print('💊 Adding medication schedule for elderlyId: ${model.elderlyId}');
-      print('💊 Medication details: ${model.name}, Days: ${model.daysOfWeek}, Times: ${model.timesOfDay}');
       final docRef = await _firestore
           .collection(_scheduleCollection)
           .add(model.toMap());
-      print('✅ Medication added with ID: ${docRef.id}');
       return docRef.id;
     } catch (e) {
-      print('❌ Error adding medication schedule: $e');
+      print('Error adding medication schedule: $e');
       return null;
     }
   }
@@ -56,45 +58,17 @@ class MedicationService {
 
   /// Stream of all active medication schedules for the Elder's home screen.
   Stream<List<MedicationModel>> getActiveMedicationSchedules() {
-    if (_elderlyId.isEmpty) {
-      print('⚠️ Cannot fetch medications: No elderlyId (user not logged in)');
-      return Stream.value([]);
-    }
+    if (_elderlyId.isEmpty) return Stream.value([]);
     
-    print('🔍 Fetching medications for elderlyId: $_elderlyId');
     // This fetches the *schedule*. UI must filter to show only today's due times.
     return _firestore
         .collection(_scheduleCollection)
         .where('elderlyId', isEqualTo: _elderlyId)
         // Add logic to check for active date range if implemented
         .snapshots()
-        .map((snapshot) {
-          print('📦 Received ${snapshot.docs.length} medication schedules from Firestore');
-          return snapshot.docs
-              .map((doc) => MedicationModel.fromDoc(doc))
-              .toList();
-        });
-  }
-
-  /// Stream of all active medication schedules for a specific elderly (for caregiver use).
-  /// This allows caregivers to view all medications for their patient.
-  Stream<List<MedicationModel>> getMedicationSchedulesForElderly(String elderlyId) {
-    if (elderlyId.isEmpty) {
-      print('⚠️ Cannot fetch medications: elderlyId is empty');
-      return Stream.value([]);
-    }
-    
-    print('🔍 Caregiver fetching medications for elderlyId: $elderlyId');
-    return _firestore
-        .collection(_scheduleCollection)
-        .where('elderlyId', isEqualTo: elderlyId)
-        .snapshots()
-        .map((snapshot) {
-          print('📦 Found ${snapshot.docs.length} medication schedules for elderly $elderlyId');
-          return snapshot.docs
-              .map((doc) => MedicationModel.fromDoc(doc))
-              .toList();
-        });
+        .map((snapshot) => snapshot.docs
+            .map((doc) => MedicationModel.fromDoc(doc))
+            .toList());
   }
 
   // --- Compliance Tracking (Elder's Action) ---

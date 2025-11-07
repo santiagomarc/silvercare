@@ -24,26 +24,17 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  
-  // Initialize notification service and wait for completion
-  await NotificationService().initialize();
+  NotificationService().initialize();
   
   runApp(const SilverCareApp());
 }
 
 class SilverCareApp extends StatelessWidget {
   const SilverCareApp({super.key});
-  
-  // Global navigator key for notification routing
-  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   @override
   Widget build(BuildContext context) {
-    // Set the navigator key in NotificationService
-    NotificationService.navigatorKey = navigatorKey;
-    
     return MaterialApp(
-      navigatorKey: navigatorKey,
       title: 'SilverCare',
       theme: ThemeData(
         // Light theme for better accessibility for elderly users
