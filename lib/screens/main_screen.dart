@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import '../widgets/nav_bar_svg.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
-import 'analytics_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -23,7 +22,7 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget> _screens = [
     const HomeScreenContent(), // Home
     const PlaceholderScreen(title: 'Calendar', color: Color(0xFF4CAF50)), // Calendar
-    const AnalyticsScreenContent(), // Analytics
+    const PlaceholderScreen(title: 'Analytics', color: Color(0xFFFFB300)), // Analytics
     const PlaceholderScreen(title: 'Wellness', color: Color(0xFF9C27B0)), // Wellness
     const ProfileScreenContent(), // Profile - Now connected to the actual ProfileScreen
   ];
@@ -178,8 +177,8 @@ class PlaceholderScreen extends StatelessWidget {
     switch (title) {
       case 'Calendar':
         return Icons.calendar_today_rounded;
-      // case 'Analytics':
-      //   return Icons.analytics_rounded;
+      case 'Analytics':
+        return Icons.analytics_rounded;
       case 'Health':
         return Icons.favorite_rounded;
       case 'Wellness':
@@ -211,14 +210,5 @@ class ProfileScreenContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const ProfileScreen();
-  }
-}
-
-class AnalyticsScreenContent extends StatelessWidget {
-  const AnalyticsScreenContent({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const AnalyticsScreen();
   }
 }

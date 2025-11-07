@@ -17,6 +17,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  User? _currentUser;
 
   // Services for our new cards
   final MedicationService _medicationService = MedicationService();
@@ -27,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _currentUser = _auth.currentUser;
   }
 
   double _getResponsiveFontSize(BuildContext context, double baseSize) {
@@ -92,7 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
           height: 48,
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.8),
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.1),
@@ -139,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
             height: 48,
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.8),
-              borderRadius: BorderRadius.circular(30),
+              borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.1),
@@ -166,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: const Color(0xFF383838), width: 1),
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
@@ -256,11 +258,11 @@ class _HomeScreenState extends State<HomeScreen> {
     // ... (Your existing _buildVitalCard code - no changes)
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(30),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
         decoration: BoxDecoration(
           color: color.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: color.withOpacity(1), width: 2),
           boxShadow: [
             BoxShadow(
@@ -314,8 +316,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildMedicationSection() {
     // Get the name of the current day (e.g., "Monday")
     final String today = DateFormat('EEEE').format(DateTime.now());
-    final DateTime now = DateTime.now();
-    final DateTime todayDate = DateTime(now.year, now.month, now.day);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -366,25 +366,7 @@ class _HomeScreenState extends State<HomeScreen> {
             List<Widget> todayDosesWidgets = [];
             for (var med in todaySchedules) {
               for (var time in med.timesOfDay) {
-                // Check if this dose should still be shown (not taken or taken today)
-                final String doseInstanceId =
-                    '${med.id}_${todayDate.toIso8601String().substring(0, 10)}_${time.replaceAll(':', '')}';
-                
-                todayDosesWidgets.add(
-                  StreamBuilder<DocumentSnapshot>(
-                    stream: _firestore
-                        .collection(MedicationService.completionCollection)
-                        .doc(doseInstanceId)
-                        .snapshots(),
-                    builder: (context, completionSnapshot) {
-                      // Items will automatically appear fresh at midnight when 'todayDate' changes
-                      // since doseInstanceId includes the date
-                      // Completed items stay visible until end of day for elder to review progress
-                      
-                      return _buildMedicationItem(med, time);
-                    },
-                  ),
-                );
+                todayDosesWidgets.add(_buildMedicationItem(med, time));
               }
             }
 
@@ -404,358 +386,93 @@ class _HomeScreenState extends State<HomeScreen> {
     final DateTime now = DateTime.now();
     final DateTime scheduledDate = DateTime(now.year, now.month, now.day);
     
-    final timeParts = time.split(':');
-    final scheduledHour = int.parse(timeParts[0]);
-    final scheduledMinute = int.parse(timeParts[1]);
-    final scheduledDateTime = DateTime(
-      now.year,
-      now.month,
-      now.day,
-      scheduledHour,
-      scheduledMinute,
-    );
-    
-    // Grace period for "on time" vs "late"
-    const int graceMinutes = 15;
-    final DateTime graceDeadline = scheduledDateTime.add(Duration(minutes: graceMinutes));
-    
-    // Determine medication status BEFORE it's taken
-    final bool isPastGrace = now.isAfter(graceDeadline);
-    final bool isUpcoming = scheduledDateTime.isAfter(now) && 
-                            scheduledDateTime.difference(now).inMinutes <= 30;
-    
     // Create the unique ID for this dose instance
     final String doseInstanceId =
         '${med.id}_${scheduledDate.toIso8601String().substring(0, 10)}_${time.replaceAll(':', '')}';
 
-    // Convert to 12-hour format
-    final hour12 = scheduledHour > 12 ? scheduledHour - 12 : (scheduledHour == 0 ? 12 : scheduledHour);
-    final period = scheduledHour >= 12 ? 'PM' : 'AM';
-    final time12Hour = '${hour12.toString().padLeft(2, '0')}:${scheduledMinute.toString().padLeft(2, '0')} $period';
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.1),
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            // Icon
+            Icon(Icons.medication_liquid_rounded,
+                color: Colors.blue.shade800, size: 32),
+            const SizedBox(width: 16),
 
-    return StreamBuilder<DocumentSnapshot>(
-      stream: _firestore
-          .collection(MedicationService.completionCollection)
-          .doc(doseInstanceId)
-          .snapshots(),
-      builder: (context, snapshot) {
-        // Check if the document exists and 'isTaken' is true
-        bool isTaken = false;
-        DateTime? takenAt;
-        
-        if (snapshot.hasData && snapshot.data!.exists) {
-          final data = snapshot.data!.data() as Map<String, dynamic>;
-          isTaken = data['isTaken'] ?? false;
-          if (data['takenAt'] != null) {
-            takenAt = (data['takenAt'] as Timestamp).toDate();
-          }
-        }
-        
-        // Determine actual status
-        bool isMissed = false;
-        bool isTakenLate = false;
-        bool isTakenOnTime = false;
-        
-        if (isTaken && takenAt != null) {
-          // Check if it was taken after the grace period
-          if (takenAt.isAfter(graceDeadline)) {
-            isTakenLate = true;
-          } else {
-            isTakenOnTime = true;
-          }
-        } else if (isPastGrace) {
-          // Not taken and past grace period = missed
-          isMissed = true;
-        }
-        
-        // Can undo if taken within last 5 minutes
-        final bool canUndo = isTaken && takenAt != null && 
-                            DateTime.now().difference(takenAt).inMinutes < 5;
-        
-        // Card color based on status
-        Color cardColor = Colors.white;
-        Color borderColor = Colors.grey.shade300;
-        
-        if (isMissed) {
-          cardColor = Colors.red.shade50;
-          borderColor = Colors.red.shade300;
-        } else if (isTakenLate) {
-          cardColor = Colors.orange.shade50;
-          borderColor = Colors.orange.shade400;
-        } else if (isTakenOnTime) {
-          cardColor = Colors.green.shade50;
-          borderColor = Colors.green.shade300;
-        } else if (isUpcoming) {
-          cardColor = Colors.blue.shade50;
-          borderColor = Colors.blue.shade300;
-        }
-
-        return Card(
-          elevation: isMissed ? 4 : 2,
-          shadowColor: isMissed ? Colors.red.withOpacity(0.3) : Colors.black.withOpacity(0.1),
-          margin: const EdgeInsets.only(bottom: 12),
-          color: cardColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-            side: BorderSide(color: borderColor, width: 1.5),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                // Status Icon
-                if (isMissed)
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
+            // Details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    med.name,
+                    style: TextStyle(
+                      fontSize: _getResponsiveFontSize(context, 18),
+                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.w600,
                     ),
-                    child: const Icon(
-                      Icons.error_outline,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  )
-                else if (isTakenLate)
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.orange,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.warning_amber_rounded,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  )
-                else if (isTakenOnTime)
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.green,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.check_circle,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  )
-                else if (isUpcoming)
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.access_time,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  )
-                else
-                  Icon(
-                    Icons.medication_liquid_rounded,
-                    color: Colors.blue.shade800,
-                    size: 32,
                   ),
-                
-                const SizedBox(width: 16),
-
-                // Details
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              med.name,
-                              style: TextStyle(
-                                fontSize: _getResponsiveFontSize(context, 18),
-                                fontFamily: 'Montserrat',
-                                fontWeight: FontWeight.w600,
-                                color: isMissed ? Colors.red.shade900 : Colors.black,
-                              ),
-                            ),
-                          ),
-                          if (isMissed)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              child: const Text(
-                                'MISSED',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            )
-                          else if (isTakenLate)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.orange,
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              child: const Text(
-                                'LATE',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            )
-                          else if (isUpcoming && !isTaken)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.blue,
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              child: const Text(
-                                'SOON',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${med.dosage} • $time12Hour',
-                        style: TextStyle(
-                          fontSize: _getResponsiveFontSize(context, 16),
-                          fontFamily: 'Montserrat',
-                          fontWeight: FontWeight.w400,
-                          color: const Color(0xFF666666),
-                        ),
-                      ),
-                      if (isTaken && takenAt != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          'Taken at ${DateFormat('h:mm a').format(takenAt)}${isTakenLate ? ' (late)' : ''}',
-                          style: TextStyle(
-                            fontSize: _getResponsiveFontSize(context, 14),
-                            fontFamily: 'Montserrat',
-                            fontWeight: FontWeight.w500,
-                            color: isTakenLate ? Colors.orange.shade700 : Colors.green.shade700,
-                          ),
-                        ),
-                      ],
-                      if (med.instructions.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          med.instructions,
-                          style: TextStyle(
-                            fontSize: _getResponsiveFontSize(context, 13),
-                            fontFamily: 'Montserrat',
-                            fontStyle: FontStyle.italic,
-                            color: Colors.grey.shade600,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-
-                // Action Button
-                if (isTaken && canUndo)
-                  // Undo button
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        onPressed: () async {
-                          final confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: const Text('Undo Dose'),
-                              content: const Text('Mark this dose as not taken?'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, false),
-                                  child: const Text('Cancel'),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, true),
-                                  child: const Text('Undo', style: TextStyle(color: Colors.red)),
-                                ),
-                              ],
-                            ),
-                          );
-                          
-                          if (confirm == true) {
-                            // Delete the completion document
-                            await _firestore
-                                .collection(MedicationService.completionCollection)
-                                .doc(doseInstanceId)
-                                .delete();
-                          }
-                        },
-                        icon: const Icon(Icons.undo, color: Colors.orange),
-                        tooltip: 'Undo',
-                      ),
-                      Text(
-                        'Undo',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.orange.shade700,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  )
-                else if (!isTaken)
-                  // Checkbox to mark as taken
-                  Transform.scale(
-                    scale: 1.5,
-                    child: Checkbox(
-                      value: false,
-                      onChanged: (bool? newValue) {
-                        if (newValue == true) {
-                          _medicationService.markDoseAsTaken(
-                            scheduleId: med.id,
-                            doseTime: time,
-                            scheduledDate: scheduledDate,
-                          );
-                        }
-                      },
-                      activeColor: Colors.green,
-                      shape: const CircleBorder(),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${med.dosage} • $time',
+                    style: TextStyle(
+                      fontSize: _getResponsiveFontSize(context, 16),
+                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.w400,
+                      color: const Color(0xFF666666),
                     ),
-                  )
-                else
-                  // Already taken, show checkmark
-                  Icon(
-                    Icons.check_circle,
-                    color: isTakenLate ? Colors.orange : Colors.green,
-                    size: 32,
                   ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
-      },
+
+            // --- Real-time Checkbox ---
+            // This StreamBuilder listens to one specific document in Firestore
+            StreamBuilder<DocumentSnapshot>(
+              stream: _firestore
+                  .collection(MedicationService.completionCollection)
+                  .doc(doseInstanceId)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                // Check if the document exists and 'isTaken' is true
+                bool isTaken = false;
+                if (snapshot.hasData && snapshot.data!.exists) {
+                  final data = snapshot.data!.data() as Map<String, dynamic>;
+                  isTaken = data['isTaken'] ?? false;
+                }
+
+                return Transform.scale(
+                  scale: 1.5, // Make checkbox larger
+                  child: Checkbox(
+                    value: isTaken,
+                    onChanged: (bool? newValue) {
+                      if (newValue != null && !isTaken) { // Only allow checking, not un-checking
+                        // Call the service to update status
+                        _medicationService.markDoseAsTaken(
+                          scheduleId: med.id,
+                          doseTime: time,
+                          scheduledDate: scheduledDate,
+                        );
+                      }
+                    },
+                    activeColor: Colors.green,
+                    shape: const CircleBorder(),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
+  // --- NEW WIDGET: Today's Checklist Section ---
   Widget _buildChecklistSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -859,7 +576,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
                 activeColor: Colors.green,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(4),
                 ),
               ),
             ),
@@ -875,7 +592,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Card(
       elevation: 2,
       shadowColor: Colors.black.withOpacity(0.1),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Row(
@@ -905,7 +622,7 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(12),
           ),
           title: Row(
             children: [
@@ -959,7 +676,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade600,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
               child: const Text(
@@ -986,7 +703,7 @@ class _HomeScreenState extends State<HomeScreen> {
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(8),
         ),
         elevation: 2,
       ),
@@ -1001,6 +718,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  String _formatDateTime(DateTime dateTime) {
+    // This function was in your original code but not used.
+    // We are using intl.DateFormat for new features.
+    return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')} - ${dateTime.day}/${dateTime.month}/${dateTime.year}';
+  }
+
   Future<void> _handleSignOut() async {
     // ... (Your existing _handleSignOut code)
     showDialog(
@@ -1008,7 +731,7 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(12),
           ),
           title: const Text(
             'Sign Out',
@@ -1071,7 +794,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade600,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
               child: const Text(
