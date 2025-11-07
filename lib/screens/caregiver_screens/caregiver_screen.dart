@@ -25,18 +25,20 @@ class _CaregiverScreenState extends State<CaregiverScreen> {
         backgroundColor: Colors.white,
         elevation: 2,
         titleSpacing: 0,
+        automaticallyImplyLeading: false, // Remove back button
         title: Row(
           children: [
+            const SizedBox(width: 16), // Add left padding
             CircleAvatar(
               radius: 18,
               backgroundColor: Colors.transparent,
               child: SizedBox(
                 width: 32,
                 height: 32,
-                child: Image.asset('assets/silvercare.png', fit: BoxFit.contain),
+                child: Image.asset('assets/icons/silvercare.png', fit: BoxFit.contain),
               ),
             ),
-            
+            const SizedBox(width: 12),
             Text(
               _titles[_selectedIndex],
               overflow: TextOverflow.ellipsis,
@@ -47,7 +49,6 @@ class _CaregiverScreenState extends State<CaregiverScreen> {
             ),
           ],
         ),
-        centerTitle: true,
       ),
       body: SafeArea(child: _pages[_selectedIndex]),
       bottomNavigationBar: SafeArea(

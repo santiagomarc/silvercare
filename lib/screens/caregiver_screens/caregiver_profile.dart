@@ -2,53 +2,267 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:silvercare/models/caregiver_model.dart';
+import 'package:silvercare/models/elderly_model.dart';
 
+class CaregiverProfile extends StatefulWidget {
+  const CaregiverProfile({super.key});
 
-class Caregiver {
-  final String id; 
-  final String userId; 
-  final String email;
-  final String? elderlyId; 
-  final String relationship; 
-  final DateTime createdAt;
-
-
-  final String? fullName;
-  final String? elderlyName;
-
-  Caregiver({
-    required this.id,
-    required this.userId,
-    required this.email,
-    this.elderlyId,
-    required this.relationship,
-    required this.createdAt,
-    this.fullName,
-    this.elderlyName,
-  });
+  @override
+  State<CaregiverProfile> createState() => _CaregiverProfileState();
 }
-class CaregiverProfile extends StatelessWidget {
-  final Caregiver? caregiver;
 
-  const CaregiverProfile({super.key, this.caregiver});
+class _CaregiverProfileState extends State<CaregiverProfile> {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  
+  bool _isLoading = true;
+  CaregiverModel? _caregiverData;
+  ElderlyModel? _elderlyData;
+  Map<String, dynamic>? _userProfile;
 
-  // Mock data
-  Caregiver get _mock => Caregiver(
-        id: 'cg_12345',
-        userId: 'user_XYZ789',
-        fullName: 'Juan Dela Cruz',
-        email: 'caregiver@example.com',
-        elderlyId: 'test-user-123',
-        elderlyName: 'Lola Granny',
-        relationship: 'Spouse',
-        createdAt: DateTime.now().subtract(const Duration(days: 365)),
+  @override
+  void initState() {
+    super.initState();
+    _fetchCaregiverProfile();
+  }
+
+  Future<void> _fetchCaregiverProfile() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      final userId = _auth.currentUser?.uid;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Fetch fullName from users collection
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      if (userDoc.exists) {
+        _userProfile = userDoc.data();
+        print('User profile data: $_userProfile');
+      } else {
+        print('No user document found, creating empty profile map');
+        _userProfile = {};
+      }
+
+      // Fetch caregiver document
+      final caregiverDoc = await _firestore.collection('caregivers').doc(userId).get();
+      if (caregiverDoc.exists) {
+        _caregiverData = CaregiverModel.fromDoc(caregiverDoc);
+
+        // If caregiver has an elderly assigned, fetch elderly data
+        if (_caregiverData!.elderlyId != null && _caregiverData!.elderlyId!.isNotEmpty) {
+          final elderlyDoc = await _firestore
+              .collection('elderly')
+              .doc(_caregiverData!.elderlyId)
+              .get();
+          if (elderlyDoc.exists) {
+            _elderlyData = ElderlyModel.fromDoc(elderlyDoc);
+          }
+        }
+      }
+    } catch (e) {
+      print('Error fetching caregiver profile: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading profile: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _showEditDialog() async {
+    if (_caregiverData == null) return;
+
+    final fullNameController = TextEditingController(text: _userProfile?['fullName'] ?? '');
+    final relationshipController = TextEditingController(text: _caregiverData!.relationship);
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Profile'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: fullNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Full Name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: relationshipController,
+                decoration: const InputDecoration(
+                  labelText: 'Relationship',
+                  border: OutlineInputBorder(),
+                  hintText: 'e.g., Spouse, Child, Professional Caregiver',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      await _saveProfileChanges(
+        fullNameController.text,
+        relationshipController.text,
       );
+    }
+
+    fullNameController.dispose();
+    relationshipController.dispose();
+  }
+
+  Future<void> _saveProfileChanges(String fullName, String relationship) async {
+    try {
+      final userId = _auth.currentUser?.uid;
+      if (userId == null) {
+        print('Error: User ID is null');
+        return;
+      }
+
+      print('Saving profile changes for user: $userId');
+      print('Full Name: $fullName');
+      print('Relationship: $relationship');
+
+      // Validate input
+      if (fullName.trim().isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('❌ Full name cannot be empty'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Update users collection (use set with merge to create field if it doesn't exist)
+      print('Updating users collection...');
+      await _firestore.collection('users').doc(userId).set({
+        'fullName': fullName.trim(),
+      }, SetOptions(merge: true));
+      print('Users collection updated successfully');
+
+      // Update caregivers collection
+      print('Updating caregivers collection...');
+      await _firestore.collection('caregivers').doc(userId).update({
+        'relationship': relationship.trim(),
+      });
+      print('Caregivers collection updated successfully');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Profile updated successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      // Refresh data
+      print('Refreshing profile data...');
+      await _fetchCaregiverProfile();
+      print('Profile refresh complete');
+    } catch (e) {
+      print('Error saving profile changes: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating profile: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleSignOut() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        await FirebaseAuth.instance.signOut();
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/welcome',
+            (route) => false,
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('👋 Signed out successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error signing out: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final c = caregiver ?? _mock;
-    final created = DateFormat.yMMMMd().add_jm().format(c.createdAt.toLocal());
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_caregiverData == null) {
+      return const Center(
+        child: Text('Unable to load profile data'),
+      );
+    }
+
+    final created = DateFormat.yMMMMd().add_jm().format(_caregiverData!.createdAt.toLocal());
 
     return SafeArea(
       child: LayoutBuilder(builder: (context, constraints) {
@@ -83,7 +297,7 @@ class CaregiverProfile extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              c.fullName ?? c.email,
+                              _userProfile?['fullName'] ?? _caregiverData!.email,
                               style: TextStyle(
                                 fontSize: isNarrow ? 16 : 20,
                                 fontWeight: FontWeight.w700,
@@ -92,7 +306,7 @@ class CaregiverProfile extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              '${c.relationship} • ${c.userId}',
+                              '${_caregiverData!.relationship} • Caregiver',
                               style: TextStyle(
                                 fontSize: isNarrow ? 12 : 14,
                                 color: Colors.grey[700],
@@ -107,12 +321,7 @@ class CaregiverProfile extends StatelessWidget {
                       Column(
                         children: [
                           ElevatedButton.icon(
-                            onPressed: () {
-                              // Placeholder action
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Edit profile (mock)')),
-                              );
-                            },
+                            onPressed: _showEditDialog,
                             icon: const Icon(Icons.edit),
                             label: const Text('Edit'),
                             style: ElevatedButton.styleFrom(
@@ -120,40 +329,13 @@ class CaregiverProfile extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          // Mock Logout button
                           OutlinedButton.icon(
-                            onPressed: () async {
-                              final confirmed = await showDialog<bool>(
-                                context: context,
-                                builder: (ctx) => AlertDialog(
-                                  title: const Text('Sign Out'),
-                                  content: const Text('Are you sure you want to sign out?'),
-                                  actions: [
-                                    TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
-                                    TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Sign Out')),
-                                  ],
-                                ),
-                              );
-                              if (confirmed == true) {
-                                try {
-                                  await FirebaseAuth.instance.signOut();
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('👋 Signed out successfully!'), backgroundColor: Colors.green)
-                                    );
-                                    // The AuthWrapper will automatically handle navigation
-                                  }
-                                } catch (e) {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Error signing out: ${e.toString()}'), backgroundColor: Colors.red)
-                                    );
-                                  }
-                                }
-                              }
-                            },
-                            icon: const Icon(Icons.logout),
-                            label: const Text('Sign Out'),
+                            onPressed: _handleSignOut,
+                            icon: const Icon(Icons.logout, color: Colors.red),
+                            label: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.red),
+                            ),
                           ),
                         ],
                       ),
@@ -177,21 +359,25 @@ class CaregiverProfile extends StatelessWidget {
                           ),
                           const SizedBox(height: 12),
                           const Divider(),
-                          _buildRow(context, labelWidth: labelWidth, label: 'ID', value: c.id),
+                          _buildRow(context, labelWidth: labelWidth, label: 'Caregiver ID', value: _caregiverData!.id),
                           const Divider(),
-                          _buildRow(context, labelWidth: labelWidth, label: 'User ID', value: c.userId),
+                          _buildRow(context, labelWidth: labelWidth, label: 'User ID', value: _caregiverData!.userId),
                           const Divider(),
-                          _buildRow(context, labelWidth: labelWidth, label: 'Full Name', value: c.fullName ?? 'N/A'),
+                          _buildRow(context, labelWidth: labelWidth, label: 'Full Name', value: _userProfile?['fullName'] ?? 'N/A'),
                           const Divider(),
-                          _buildRow(context, labelWidth: labelWidth, label: 'Email', value: c.email),
+                          _buildRow(context, labelWidth: labelWidth, label: 'Email', value: _caregiverData!.email),
                           const Divider(),
-                          _buildRow(context, labelWidth: labelWidth, label: 'Elderly ID', value: c.elderlyId ?? 'Not assigned'),
-                          const Divider(),
-                          _buildRow(context, labelWidth: labelWidth, label: 'Elderly Name', value: c.elderlyName ?? 'N/A'),
-                          const Divider(),
-                          _buildRow(context, labelWidth: labelWidth, label: 'Relationship', value: c.relationship),
+                          _buildRow(context, labelWidth: labelWidth, label: 'Relationship', value: _caregiverData!.relationship),
                           const Divider(),
                           _buildRow(context, labelWidth: labelWidth, label: 'Created', value: created),
+                          const Divider(),
+                          _buildRow(context, labelWidth: labelWidth, label: 'Elderly ID', value: _caregiverData!.elderlyId ?? 'Not assigned'),
+                          if (_elderlyData != null) ...[
+                            const Divider(),
+                            _buildRow(context, labelWidth: labelWidth, label: 'Elderly Name', value: _elderlyData!.username),
+                            const Divider(),
+                            _buildRow(context, labelWidth: labelWidth, label: 'Elderly Phone', value: _elderlyData!.phoneNumber),
+                          ],
                         ],
                       ),
                     ),
