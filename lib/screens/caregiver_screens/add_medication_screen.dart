@@ -145,9 +145,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
           minute,
         );
         
-        // Only schedule if time is in the future
         if (scheduledDateTime.isAfter(now)) {
-          // Create unique notification ID
           final notificationId = '${medicationId}_${targetDate.toIso8601String().substring(0, 10)}_${timeString.replaceAll(':', '')}'.hashCode;
           
           await _notificationService.scheduleNotification(
@@ -204,7 +202,6 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
               // Dosage & Instructions Row
               Row(
                 children: [
-                  // Dosage
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

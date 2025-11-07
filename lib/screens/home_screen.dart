@@ -314,6 +314,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildMedicationSection() {
     // Get the name of the current day (e.g., "Monday")
     final String today = DateFormat('EEEE').format(DateTime.now());
+    final DateTime now = DateTime.now();
+    final DateTime todayDate = DateTime(now.year, now.month, now.day);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,7 +366,25 @@ class _HomeScreenState extends State<HomeScreen> {
             List<Widget> todayDosesWidgets = [];
             for (var med in todaySchedules) {
               for (var time in med.timesOfDay) {
-                todayDosesWidgets.add(_buildMedicationItem(med, time));
+                // Check if this dose should still be shown (not taken or taken today)
+                final String doseInstanceId =
+                    '${med.id}_${todayDate.toIso8601String().substring(0, 10)}_${time.replaceAll(':', '')}';
+                
+                todayDosesWidgets.add(
+                  StreamBuilder<DocumentSnapshot>(
+                    stream: _firestore
+                        .collection(MedicationService.completionCollection)
+                        .doc(doseInstanceId)
+                        .snapshots(),
+                    builder: (context, completionSnapshot) {
+                      // Items will automatically appear fresh at midnight when 'todayDate' changes
+                      // since doseInstanceId includes the date
+                      // Completed items stay visible until end of day for elder to review progress
+                      
+                      return _buildMedicationItem(med, time);
+                    },
+                  ),
+                );
               }
             }
 
@@ -384,7 +404,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final DateTime now = DateTime.now();
     final DateTime scheduledDate = DateTime(now.year, now.month, now.day);
     
-    // Parse the scheduled time (e.g., "09:00")
     final timeParts = time.split(':');
     final scheduledHour = int.parse(timeParts[0]);
     final scheduledMinute = int.parse(timeParts[1]);
@@ -396,8 +415,12 @@ class _HomeScreenState extends State<HomeScreen> {
       scheduledMinute,
     );
     
-    // Determine medication status
-    final bool isPast = now.isAfter(scheduledDateTime.add(const Duration(minutes: 15)));
+    // Grace period for "on time" vs "late"
+    const int graceMinutes = 15;
+    final DateTime graceDeadline = scheduledDateTime.add(Duration(minutes: graceMinutes));
+    
+    // Determine medication status BEFORE it's taken
+    final bool isPastGrace = now.isAfter(graceDeadline);
     final bool isUpcoming = scheduledDateTime.isAfter(now) && 
                             scheduledDateTime.difference(now).inMinutes <= 30;
     
@@ -428,8 +451,22 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         }
         
-        // Determine if dose is missed (past scheduled time and not taken)
-        final bool isMissed = isPast && !isTaken;
+        // Determine actual status
+        bool isMissed = false;
+        bool isTakenLate = false;
+        bool isTakenOnTime = false;
+        
+        if (isTaken && takenAt != null) {
+          // Check if it was taken after the grace period
+          if (takenAt.isAfter(graceDeadline)) {
+            isTakenLate = true;
+          } else {
+            isTakenOnTime = true;
+          }
+        } else if (isPastGrace) {
+          // Not taken and past grace period = missed
+          isMissed = true;
+        }
         
         // Can undo if taken within last 5 minutes
         final bool canUndo = isTaken && takenAt != null && 
@@ -442,12 +479,15 @@ class _HomeScreenState extends State<HomeScreen> {
         if (isMissed) {
           cardColor = Colors.red.shade50;
           borderColor = Colors.red.shade300;
-        } else if (isTaken) {
+        } else if (isTakenLate) {
+          cardColor = Colors.orange.shade50;
+          borderColor = Colors.orange.shade400;
+        } else if (isTakenOnTime) {
           cardColor = Colors.green.shade50;
           borderColor = Colors.green.shade300;
         } else if (isUpcoming) {
-          cardColor = Colors.orange.shade50;
-          borderColor = Colors.orange.shade300;
+          cardColor = Colors.blue.shade50;
+          borderColor = Colors.blue.shade300;
         }
 
         return Card(
@@ -477,7 +517,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       size: 24,
                     ),
                   )
-                else if (isTaken)
+                else if (isTakenLate)
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  )
+                else if (isTakenOnTime)
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
@@ -494,7 +547,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.orange,
+                      color: Colors.blue,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -546,11 +599,27 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                             )
-                          else if (isUpcoming)
+                          else if (isTakenLate)
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: Colors.orange,
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: const Text(
+                                'LATE',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            )
+                          else if (isUpcoming && !isTaken)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.blue,
                                 borderRadius: BorderRadius.circular(30),
                               ),
                               child: const Text(
@@ -577,12 +646,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       if (isTaken && takenAt != null) ...[
                         const SizedBox(height: 4),
                         Text(
-                          'Taken at ${DateFormat('h:mm a').format(takenAt)}',
+                          'Taken at ${DateFormat('h:mm a').format(takenAt)}${isTakenLate ? ' (late)' : ''}',
                           style: TextStyle(
                             fontSize: _getResponsiveFontSize(context, 14),
                             fontFamily: 'Montserrat',
                             fontWeight: FontWeight.w500,
-                            color: Colors.green.shade700,
+                            color: isTakenLate ? Colors.orange.shade700 : Colors.green.shade700,
                           ),
                         ),
                       ],
@@ -653,13 +722,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   )
-                else
+                else if (!isTaken)
                   // Checkbox to mark as taken
                   Transform.scale(
                     scale: 1.5,
                     child: Checkbox(
-                      value: isTaken,
-                      onChanged: isTaken ? null : (bool? newValue) {
+                      value: false,
+                      onChanged: (bool? newValue) {
                         if (newValue == true) {
                           _medicationService.markDoseAsTaken(
                             scheduleId: med.id,
@@ -671,6 +740,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       activeColor: Colors.green,
                       shape: const CircleBorder(),
                     ),
+                  )
+                else
+                  // Already taken, show checkmark
+                  Icon(
+                    Icons.check_circle,
+                    color: isTakenLate ? Colors.orange : Colors.green,
+                    size: 32,
                   ),
               ],
             ),
@@ -680,7 +756,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- NEW WIDGET: Today's Checklist Section ---
   Widget _buildChecklistSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

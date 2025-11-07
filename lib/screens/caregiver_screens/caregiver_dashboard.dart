@@ -5,6 +5,8 @@ import 'package:silvercare/services/user_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import 'add_medication_screen.dart'; // Import the medication screen
 import 'add_checklist_screen.dart'; // Import the checklist screen
+import 'manage_medications_screen.dart'; // Import the manage medications screen
+import 'manage_checklists_screen.dart'; // Import the manage checklists screen
 
 class CaregiverDashboard extends StatefulWidget {
   const CaregiverDashboard({super.key});
@@ -213,11 +215,12 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 16,
       mainAxisSpacing: 16,
-      childAspectRatio: 1.2,
+      childAspectRatio: 1.0,
       children: [
+        // Add Medication
         _buildManagementCard(
-          title: "Manage Medications",
-          icon: Icons.medication_rounded,
+          title: "Add Medication",
+          icon: Icons.add_circle,
           color: Colors.blue.shade700,
           onTap: () {
             // --- CRITICAL FIX: Add guard clause ---
@@ -240,9 +243,34 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
             );
           },
         ),
+        // View/Edit Medications
         _buildManagementCard(
-          title: "Manage Checklist",
-          icon: Icons.checklist_rounded,
+          title: "View Medications",
+          icon: Icons.medication_rounded,
+          color: Colors.blue.shade500,
+          onTap: () {
+            if (_managingElderlyId == null || _managingElderlyId!.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('No elderly patient assigned. Please update your profile.'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              return;
+            }
+            
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ManageMedicationsScreen(elderlyId: _managingElderlyId!),
+              ),
+            );
+          },
+        ),
+        // Add Checklist
+        _buildManagementCard(
+          title: "Add Task",
+          icon: Icons.add_task,
           color: Colors.green.shade700,
           onTap: () {
             // Check if we have an elderly to manage
@@ -258,6 +286,27 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
               context,
               MaterialPageRoute(
                 builder: (context) => AddChecklistScreen(elderlyId: _managingElderlyId!),
+              ),
+            );
+          },
+        ),
+        // View/Edit Checklists
+        _buildManagementCard(
+          title: "View Tasks",
+          icon: Icons.checklist_rounded,
+          color: Colors.green.shade500,
+          onTap: () {
+            if (_managingElderlyId == null || _managingElderlyId!.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('⚠️ No elderly assigned to manage.')),
+              );
+              return;
+            }
+            
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ManageChecklistsScreen(elderlyId: _managingElderlyId!),
               ),
             );
           },
