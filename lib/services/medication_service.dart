@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:silvercare/models/medication_model.dart';
+import 'package:silvercare/services/persistent_notification_service.dart';
 
 class MedicationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final PersistentNotificationService _notificationService = PersistentNotificationService();
 
   static const String _scheduleCollection = 'medication_schedules';
   static const String completionCollection = 'dose_completions';
@@ -113,23 +115,93 @@ class MedicationService {
         '${scheduleId}_${scheduledDate.toIso8601String().substring(0, 10)}_${doseTime.replaceAll(':', '')}';
 
     try {
+      final takenAt = DateTime.now();
+      final scheduledDateTime = scheduledDate.copyWith(
+        hour: int.parse(doseTime.split(':')[0]),
+        minute: int.parse(doseTime.split(':')[1]),
+        second: 0,
+        millisecond: 0,
+        microsecond: 0,
+      );
+      
+      // Get medication details for notification
+      final medDoc = await _firestore.collection(_scheduleCollection).doc(scheduleId).get();
+      if (!medDoc.exists) {
+        print('⚠️ Medication document not found: $scheduleId');
+        return;
+      }
+      
+      final med = MedicationModel.fromDoc(medDoc);
+      
+      // Determine if taken late (after 1-hour grace period)
+      final graceDeadline = scheduledDateTime.add(const Duration(hours: 1));
+      final isTakenLate = takenAt.isAfter(graceDeadline);
+      
+      print('📝 Creating notification for ${med.name}...');
+      print('   elderlyId: $_elderlyId');
+      print('   isTakenLate: $isTakenLate');
+      
+      // Create persistent notification and get its ID
+      final notificationId = await _notificationService.createMedicationTaken(
+        elderlyId: _elderlyId,
+        medicationName: med.name,
+        scheduledTime: scheduledDateTime,
+        takenAt: takenAt,
+        isTakenLate: isTakenLate,
+        medicationId: scheduleId,
+      );
+      
+      print('✅ Notification created successfully');
+      
+      // Mark dose as taken in Firestore, storing the notification ID
       await _firestore.collection(completionCollection).doc(doseInstanceId).set({
         'elderlyId': _elderlyId,
         'scheduleId': scheduleId,
-        'scheduledTime': Timestamp.fromDate(scheduledDate.copyWith(
-            hour: int.parse(doseTime.split(':')[0]),
-            minute: int.parse(doseTime.split(':')[1]),
-            second: 0,
-            millisecond: 0,
-            microsecond: 0,
-        )),
+        'scheduledTime': Timestamp.fromDate(scheduledDateTime),
         'isTaken': true,
-        'takenAt': Timestamp.fromDate(DateTime.now()),
+        'takenAt': Timestamp.fromDate(takenAt),
+        'notificationId': notificationId, // Store for undo functionality
       }, SetOptions(merge: true));
 
       print('✅ Dose instance $doseInstanceId marked as taken.');
     } catch (e) {
-      print('Error marking dose as taken: $e');
+      print('❌ Error marking dose as taken: $e');
+      print('Stack trace: ${StackTrace.current}');
+    }
+  }
+  
+  /// Elder undoes marking a dose as taken (removes the completion record and deletes the notification)
+  Future<void> undoDoseTaken({
+    required String scheduleId,
+    required String doseTime,
+    required DateTime scheduledDate,
+  }) async {
+    if (_elderlyId.isEmpty) return;
+    
+    final String doseInstanceId = 
+        '${scheduleId}_${scheduledDate.toIso8601String().substring(0, 10)}_${doseTime.replaceAll(':', '')}';
+
+    try {
+      // Get the dose completion record to find the notification ID
+      final doseDoc = await _firestore.collection(completionCollection).doc(doseInstanceId).get();
+      
+      if (doseDoc.exists) {
+        final data = doseDoc.data();
+        final notificationId = data?['notificationId'] as String?;
+        
+        // Delete the notification if it exists
+        if (notificationId != null) {
+          await _notificationService.deleteNotification(notificationId);
+          print('🗑️ Deleted notification for undone dose');
+        }
+      }
+      
+      // Delete the dose completion record
+      await _firestore.collection(completionCollection).doc(doseInstanceId).delete();
+      print('✅ Dose instance $doseInstanceId unmarked (undone).');
+    } catch (e) {
+      print('❌ Error undoing dose: $e');
+      print('Stack trace: ${StackTrace.current}');
     }
   }
 }

@@ -115,8 +115,6 @@ class HealthDataModel {
   String get formattedValue {
     switch (type) {
       case 'blood_pressure':
-        // For blood pressure, we might need to handle systolic/diastolic differently
-        // For now, we'll just show the value
         return '${value.toInt()} $unit';
       case 'heart_rate':
         return '${value.toInt()} $unit';
