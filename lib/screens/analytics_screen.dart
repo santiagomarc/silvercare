@@ -24,6 +24,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
   // Firestore listener subscription
   StreamSubscription<QuerySnapshot>? _healthDataSubscription;
+  // Last snapshot cache for local recomputation on filter change
+  QuerySnapshot? _lastHealthSnapshot;
+  
+  // Timer to update the "time since" text
+  Timer? _updateTimer;
 
   // Filter
   String _selectedFilter = 'Week'; // Day, Week, Month
@@ -55,6 +60,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   };
   String _trendInsight = '';
   List<String> _insights = [];
+  DateTime? _lastUpdated;
   // Stores filtered BP records for chart
   List<Map<String, dynamic>> _bpChartRecords = [];
 
@@ -91,11 +97,21 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   void initState() {
     super.initState();
     _fetchAnalyticsData();
+    
+    // Start timer to update "time since" text every minute
+    _updateTimer = Timer.periodic(Duration(minutes: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          // Just trigger rebuild to update the time text
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
     _healthDataSubscription?.cancel();
+    _updateTimer?.cancel();
     super.dispose();
   }
 
@@ -104,28 +120,209 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     // Cancel existing first
     _healthDataSubscription?.cancel();
 
-    final startDate = _getFilterStartDate();
-
-    Query query = FirebaseFirestore.instance
+    // Listen only by elderlyId to avoid index/missing measuredAt issues; filter by date client-side.
+    final query = FirebaseFirestore.instance
         .collection('health_data')
         .where('elderlyId', isEqualTo: elderlyId);
 
-    // Try to apply date filter; if it fails runtime (index), the listener will fallback to unfiltered if needed.
-    try {
-      query = query.where('measuredAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
-    } catch (e) {
-      // If Firestore throws about indexing or inability to use inequality, we keep query without date filter.
-      print('Could not apply measuredAt inequality to listener: $e');
-    }
-
-    _healthDataSubscription = query.snapshots().listen((snapshot) {
-      // On any snapshot change, re-run the statistics fetch to re-calculate and update charts.
-      // We call the same function which performs queries and updates state.
-      if (mounted) {
-        _fetchHealthStatistics(elderlyId);
-      }
+    _healthDataSubscription = query
+        .snapshots(includeMetadataChanges: true)
+        .listen((snapshot) {
+      if (!mounted) return;
+      _lastHealthSnapshot = snapshot;
+      // Recompute directly from snapshot to avoid an extra round-trip
+      _recomputeFromSnapshot(snapshot);
     }, onError: (error) {
       print('Health data listener error: $error');
+    });
+  }
+
+  // Recomputes all statistics from a health_data snapshot (already filtered by elderlyId and maybe by date).
+  void _recomputeFromSnapshot(QuerySnapshot snapshot) {
+    final startDate = _getFilterStartDate();
+
+    // Separate docs by type and apply date filter client side (in case query didn't include measuredAt).
+    final bpDocs = <QueryDocumentSnapshot>[];
+    final sugarDocs = <QueryDocumentSnapshot>[];
+    final tempDocs = <QueryDocumentSnapshot>[];
+    final hrDocs = <QueryDocumentSnapshot>[];
+
+    for (final doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      DateTime? measured;
+      if (data['measuredAt'] is Timestamp) {
+        measured = (data['measuredAt'] as Timestamp).toDate();
+      } else if (data['createdAt'] is Timestamp) {
+        // Fallback if measuredAt missing
+        measured = (data['createdAt'] as Timestamp).toDate();
+      }
+      // If we have a measured time enforce filter window
+      if (measured != null && measured.isBefore(startDate)) continue;
+
+      switch (data['type']) {
+        case 'blood_pressure':
+          bpDocs.add(doc);
+          break;
+        case 'sugar_level':
+          sugarDocs.add(doc);
+          break;
+        case 'temperature':
+          tempDocs.add(doc);
+          break;
+        case 'heart_rate':
+          hrDocs.add(doc);
+          break;
+      }
+    }
+
+    // Blood pressure
+    if (bpDocs.isNotEmpty) {
+      double totalSys = 0, totalDia = 0;
+      final chartRecords = <Map<String, dynamic>>[];
+      for (final d in bpDocs) {
+        final data = d.data() as Map<String, dynamic>;
+        final sys = (data['systolic'] ?? 0).toDouble();
+        final dia = (data['diastolic'] ?? 0).toDouble();
+        DateTime measured = DateTime.now();
+        if (data['measuredAt'] is Timestamp) {
+          measured = (data['measuredAt'] as Timestamp).toDate();
+        } else if (data['createdAt'] is Timestamp) {
+          measured = (data['createdAt'] as Timestamp).toDate();
+        }
+        totalSys += sys;
+        totalDia += dia;
+        chartRecords.add({
+          'systolic': sys,
+          'diastolic': dia,
+          'measuredAt': measured,
+        });
+      }
+      final avgSys = (totalSys / bpDocs.length).round();
+      final avgDia = (totalDia / bpDocs.length).round();
+      _bloodPressureData = {
+        'average': '$avgSys/$avgDia',
+        'status': _getBloodPressureStatus(avgSys, avgDia),
+        'statusColor': _getBloodPressureStatusColor(avgSys, avgDia),
+        'count': bpDocs.length,
+      };
+      _bpChartRecords = chartRecords;
+    } else {
+      _bloodPressureData = {
+        'average': '0/0',
+        'status': 'No Data',
+        'statusColor': Colors.grey,
+        'count': 0,
+      };
+      _bpChartRecords = [];
+    }
+
+    // Sugar level
+    if (sugarDocs.isNotEmpty) {
+      double total = 0;
+      final chartRecords = <Map<String, dynamic>>[];
+      for (final d in sugarDocs) {
+        final data = d.data() as Map<String, dynamic>;
+        final val = (data['value'] ?? 0).toDouble();
+        DateTime measured = DateTime.now();
+        if (data['measuredAt'] is Timestamp) {
+          measured = (data['measuredAt'] as Timestamp).toDate();
+        } else if (data['createdAt'] is Timestamp) {
+          measured = (data['createdAt'] as Timestamp).toDate();
+        }
+        total += val;
+        chartRecords.add({'value': val, 'measuredAt': measured});
+      }
+      final avg = total / sugarDocs.length;
+      _sugarLevelData = {
+        'average': avg,
+        'status': _getSugarLevelStatus(avg),
+        'statusColor': _getSugarLevelStatusColor(avg),
+        'count': sugarDocs.length,
+      };
+      _sugarChartRecords = chartRecords;
+    } else {
+      _sugarLevelData = {
+        'average': 0.0,
+        'status': 'No Data',
+        'statusColor': Colors.grey,
+        'count': 0,
+      };
+      _sugarChartRecords = [];
+    }
+
+    // Temperature
+    if (tempDocs.isNotEmpty) {
+      double total = 0;
+      final chartRecords = <Map<String, dynamic>>[];
+      for (final d in tempDocs) {
+        final data = d.data() as Map<String, dynamic>;
+        final val = (data['value'] ?? 0).toDouble();
+        DateTime measured = DateTime.now();
+        if (data['measuredAt'] is Timestamp) {
+          measured = (data['measuredAt'] as Timestamp).toDate();
+        } else if (data['createdAt'] is Timestamp) {
+          measured = (data['createdAt'] as Timestamp).toDate();
+        }
+        total += val;
+        chartRecords.add({'value': val, 'measuredAt': measured});
+      }
+      final avg = total / tempDocs.length;
+      _temperatureData = {
+        'average': avg,
+        'status': _getTemperatureStatus(avg),
+        'statusColor': _getTemperatureStatusColor(avg),
+        'count': tempDocs.length,
+      };
+      _tempChartRecords = chartRecords;
+    } else {
+      _temperatureData = {
+        'average': 0.0,
+        'status': 'No Data',
+        'statusColor': Colors.grey,
+        'count': 0,
+      };
+      _tempChartRecords = [];
+    }
+
+    // Heart rate
+    if (hrDocs.isNotEmpty) {
+      double total = 0;
+      final chartRecords = <Map<String, dynamic>>[];
+      for (final d in hrDocs) {
+        final data = d.data() as Map<String, dynamic>;
+        final val = (data['value'] ?? 0).toDouble();
+        DateTime measured = DateTime.now();
+        if (data['measuredAt'] is Timestamp) {
+          measured = (data['measuredAt'] as Timestamp).toDate();
+        } else if (data['createdAt'] is Timestamp) {
+          measured = (data['createdAt'] as Timestamp).toDate();
+        }
+        total += val;
+        chartRecords.add({'value': val, 'measuredAt': measured});
+      }
+      final avg = total / hrDocs.length;
+      _heartRateData = {
+        'average': avg,
+        'status': _getHeartRateStatus(avg),
+        'statusColor': _getHeartRateStatusColor(avg),
+        'count': hrDocs.length,
+      };
+      _hrChartRecords = chartRecords;
+    } else {
+      _heartRateData = {
+        'average': 0.0,
+        'status': 'No Data',
+        'statusColor': Colors.grey,
+        'count': 0,
+      };
+      _hrChartRecords = [];
+    }
+
+    // Analyze trends
+    _analyzeTrends(bpDocs, sugarDocs, tempDocs, hrDocs);
+
+    setState(() {
+      _lastUpdated = DateTime.now();
     });
   }
 
@@ -184,6 +381,25 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  String _getTimeSinceUpdate() {
+    if (_lastUpdated == null) return 'just now';
+    
+    final difference = DateTime.now().difference(_lastUpdated!);
+    
+    if (difference.inSeconds < 60) {
+      return 'just now';
+    } else if (difference.inMinutes < 60) {
+      final mins = difference.inMinutes;
+      return '$mins min${mins != 1 ? 's' : ''} ago';
+    } else if (difference.inHours < 24) {
+      final hours = difference.inHours;
+      return '$hours hr${hours != 1 ? 's' : ''} ago';
+    } else {
+      final days = difference.inDays;
+      return '$days day${days != 1 ? 's' : ''} ago';
     }
   }
 
@@ -496,6 +712,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
       // Analyze trends with FILTERED data
       _analyzeTrends(filteredBpDocs, filteredSugarDocs, filteredTempDocs, filteredHrDocs);
+      
+      // Update last updated timestamp
+      setState(() {
+        _lastUpdated = DateTime.now();
+      });
     } catch (e) {
       print("Error fetching health statistics: $e");
     }
@@ -791,14 +1012,45 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           setState(() {
                             _selectedFilter = newValue;
                           });
-                          // restart listener so it uses the new date filter
+                          // Use cached snapshot for immediate UI update without waiting for network
+                          if (_lastHealthSnapshot != null) {
+                            _recomputeFromSnapshot(_lastHealthSnapshot!);
+                          }
+                          // Restart listener to ensure future realtime updates respect new window
                           _startHealthDataListener(_managingElderlyId!);
-                          await _fetchHealthStatistics(_managingElderlyId!);
                         }
                       },
                     ),
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            
+            // Auto-update indicator and last updated time
+            Row(
+              children: [
+                Icon(Icons.autorenew, size: 14, color: Colors.green.shade600),
+                const SizedBox(width: 4),
+                Text(
+                  'Auto-updates',
+                  style: TextStyle(
+                    fontSize: _getResponsiveFontSize(context, 11),
+                    color: Colors.green.shade600,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (_lastUpdated != null) ...[
+                  Text(
+                    '• Updated ${_getTimeSinceUpdate()}',
+                    style: TextStyle(
+                      fontSize: _getResponsiveFontSize(context, 10),
+                      color: Colors.grey.shade500,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 8),

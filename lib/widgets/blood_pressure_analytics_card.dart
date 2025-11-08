@@ -50,6 +50,26 @@ class _BloodPressureAnalyticsCardState extends State<BloodPressureAnalyticsCard>
     setState(() {});
   }
 
+  String _getBloodPressureStatus(double systolic, double diastolic) {
+    if (systolic == 0 && diastolic == 0) return 'No Data';
+    if (systolic < 90 || diastolic < 60) return 'Low';
+    if (systolic > 140 || diastolic > 90) return 'High';
+    return 'Normal';
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'High':
+        return Colors.red;
+      case 'Low':
+        return Colors.blue;
+      case 'No Data':
+        return Colors.grey;
+      default:
+        return Colors.green;
+    }
+  }
+
   @override
   void didUpdateWidget(covariant BloodPressureAnalyticsCard oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -58,6 +78,8 @@ class _BloodPressureAnalyticsCardState extends State<BloodPressureAnalyticsCard>
 
   @override
   Widget build(BuildContext context) {
+    final status = _getBloodPressureStatus(_avgSystolic, _avgDiastolic);
+    final statusColor = _getStatusColor(status);
     return GestureDetector(
       onTap: () {
         showModalBottomSheet(
@@ -83,7 +105,7 @@ class _BloodPressureAnalyticsCardState extends State<BloodPressureAnalyticsCard>
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.bloodtype, color: Colors.red.shade700, size: 24),
+                      Icon(Icons.bloodtype, color: Colors.orange.shade700, size: 24),
                       SizedBox(width: 8),
                       Text('Blood Pressure', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     ],
@@ -107,6 +129,8 @@ class _BloodPressureAnalyticsCardState extends State<BloodPressureAnalyticsCard>
               SizedBox(height: 12),
               Text('AVG Systolic: ${_avgSystolic.toStringAsFixed(1)} mmHg', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               Text('AVG Diastolic: ${_avgDiastolic.toStringAsFixed(1)} mmHg', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              SizedBox(height: 8),
+              Text('Status: $status', style: TextStyle(fontSize: 14, color: statusColor)),
               SizedBox(height: 16),
               SizedBox(
                 height: 180,
@@ -277,7 +301,6 @@ class _BloodPressureDetailedViewState extends State<BloodPressureDetailedView> {
   String _getBloodPressureStatus(double systolic, double diastolic) {
     if (systolic < 90 || diastolic < 60) return "Low";
     if (systolic > 140 || diastolic > 90) return "High";
-    if (systolic >= 120 && systolic <= 129 && diastolic < 80) return "Elevated";
     return "Normal";
   }
 
@@ -285,8 +308,6 @@ class _BloodPressureDetailedViewState extends State<BloodPressureDetailedView> {
     switch (status) {
       case 'High':
         return Colors.red;
-      case 'Elevated':
-        return Colors.orange;
       case 'Low':
         return Colors.blue;
       default:
@@ -309,11 +330,9 @@ class _BloodPressureDetailedViewState extends State<BloodPressureDetailedView> {
     // Overall status
     String status = _getBloodPressureStatus(_avgSystolic, _avgDiastolic);
     if (status == 'High') {
-      insights.add('⚠️ Your average blood pressure is elevated. Consider reducing salt intake and increasing physical activity.');
+      insights.add('⚠️ Your average blood pressure is high. Consider reducing salt intake and increasing physical activity.');
     } else if (status == 'Low') {
       insights.add('⚠️ Your average blood pressure is low. Ensure adequate hydration and avoid sudden position changes.');
-    } else if (status == 'Elevated') {
-      insights.add('⚠️ Your blood pressure is elevated. Monitor closely and consider lifestyle modifications.');
     } else {
       insights.add('✅ Your blood pressure is within normal range. Keep up the good work!');
     }
@@ -388,7 +407,7 @@ class _BloodPressureDetailedViewState extends State<BloodPressureDetailedView> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.bloodtype, color: Colors.red.shade700, size: 24),
+                    Icon(Icons.bloodtype, color: Colors.orange.shade700, size: 24),
                     SizedBox(width: 8),
                     Text('BP Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   ],
@@ -398,7 +417,7 @@ class _BloodPressureDetailedViewState extends State<BloodPressureDetailedView> {
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.blue.shade700,
+                        color: Colors.orange.shade700,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: DropdownButtonHideUnderline(
@@ -406,7 +425,7 @@ class _BloodPressureDetailedViewState extends State<BloodPressureDetailedView> {
                           value: _selectedFilter,
                           isDense: true,
                           style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                          dropdownColor: Colors.blue.shade700,
+                          dropdownColor: Colors.orange.shade700,
                           icon: Icon(Icons.arrow_drop_down, color: Colors.white, size: 20),
                           items: ['Day', 'Week', 'Month']
                               .map((f) => DropdownMenuItem(
