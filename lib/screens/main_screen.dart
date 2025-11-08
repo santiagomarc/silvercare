@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import '../widgets/nav_bar_svg.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
+import 'analytics_screen.dart';
+import 'calendar_screen.dart'; 
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -15,16 +17,12 @@ class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
   // This is the main navigation container that holds all app screens
-  // Replace PlaceholderScreens with actual screens when you develop them:
-  // - Calendar: replace with CalendarScreen()
-  // - Analytics: replace with AnalyticsScreen()
-  // - Wellness: replace with WellnessScreen()
   final List<Widget> _screens = [
     const HomeScreenContent(), // Home
-    const PlaceholderScreen(title: 'Calendar', color: Color(0xFF4CAF50)), // Calendar
-    const PlaceholderScreen(title: 'Analytics', color: Color(0xFFFFB300)), // Analytics
+    const CalendarScreen(),    
+    const AnalyticsScreenContent(), // Analytics
     const PlaceholderScreen(title: 'Wellness', color: Color(0xFF9C27B0)), // Wellness
-    const ProfileScreenContent(), // Profile - Now connected to the actual ProfileScreen
+    const ProfileScreenContent(), // Profile
   ];
 
   void _onNavTap(int index) {
@@ -177,8 +175,6 @@ class PlaceholderScreen extends StatelessWidget {
     switch (title) {
       case 'Calendar':
         return Icons.calendar_today_rounded;
-      case 'Analytics':
-        return Icons.analytics_rounded;
       case 'Health':
         return Icons.favorite_rounded;
       case 'Wellness':
@@ -189,26 +185,29 @@ class PlaceholderScreen extends StatelessWidget {
   }
 }
 
-// Extract the home screen content without the Scaffold wrapper
-// This is just a wrapper for now - you can directly use HomeScreen content here later
 class HomeScreenContent extends StatelessWidget {
   const HomeScreenContent({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Using the existing HomeScreen for now
-    // Later, when you want to remove the navbar from HomeScreen itself,
-    // you can extract just the content part here
     return const HomeScreen();
   }
 }
 
-// Extract the profile screen content without the Scaffold wrapper
 class ProfileScreenContent extends StatelessWidget {
   const ProfileScreenContent({super.key});
 
   @override
   Widget build(BuildContext context) {
     return const ProfileScreen();
+  }
+}
+
+class AnalyticsScreenContent extends StatelessWidget {
+  const AnalyticsScreenContent({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const AnalyticsScreen();
   }
 }
