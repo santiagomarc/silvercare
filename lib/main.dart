@@ -13,27 +13,24 @@ import 'package:silvercare/screens/temperature_screen.dart';
 import 'package:silvercare/screens/sugar_level_screen.dart';
 import 'package:silvercare/screens/notifications_screen.dart';
 import 'package:silvercare/services/notification_service.dart';
-
-
-
-
+import 'package:silvercare/screens/calendar_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  
+
   // Initialize notification service and wait for completion
   await NotificationService().initialize();
-  
+
   runApp(const SilverCareApp());
 }
 
 class SilverCareApp extends StatelessWidget {
   const SilverCareApp({super.key});
-  
+
   // Global navigator key for notification routing
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -41,10 +38,11 @@ class SilverCareApp extends StatelessWidget {
   Widget build(BuildContext context) {
     // Set the navigator key in NotificationService
     NotificationService.navigatorKey = navigatorKey;
-    
+
     return MaterialApp(
       navigatorKey: navigatorKey,
       title: 'SilverCare',
+      debugShowCheckedModeBanner: false, // Optional: removes the debug banner
       theme: ThemeData(
         // Light theme for better accessibility for elderly users
         brightness: Brightness.light,
@@ -66,6 +64,8 @@ class SilverCareApp extends StatelessWidget {
         '/temperature': (context) => const TemperatureScreen(),
         '/sugar_level': (context) => const SugarLevelScreen(),
         '/notifications': (context) => const NotificationsScreen(),
+        // 2. ADD THIS ROUTE
+        '/calendar': (context) => const CalendarScreen(),
       },
       // Handle unknown routes
       onUnknownRoute: (settings) {
