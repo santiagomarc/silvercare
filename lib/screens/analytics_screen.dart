@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -15,15 +17,17 @@ class AnalyticsScreen extends StatefulWidget {
   State<AnalyticsScreen> createState() => _AnalyticsScreenState();
 }
 
-
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   String? _managingElderlyId;
   bool _isLoading = true;
-  
+
+  // Firestore listener subscription
+  StreamSubscription<QuerySnapshot>? _healthDataSubscription;
+
   // Filter
   String _selectedFilter = 'Week'; // Day, Week, Month
-  
+
   // Analytics data
   Map<String, dynamic> _bloodPressureData = {
     'average': '0/0',
@@ -54,15 +58,75 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   // Stores filtered BP records for chart
   List<Map<String, dynamic>> _bpChartRecords = [];
 
+  // Stores filtered temperature records for chart
+  List<Map<String, dynamic>> _tempChartRecords = [];
+
+  // Stores filtered heart rate records for chart
+  List<Map<String, dynamic>> _hrChartRecords = [];
+
+  // Stores filtered sugar records for chart
+  List<Map<String, dynamic>> _sugarChartRecords = [];
+
   // Returns a list of blood pressure records for the chart
   List<Map<String, dynamic>> _getBloodPressureChartData() {
     return _bpChartRecords;
+  }
+
+  // Returns a list of temperature records for the chart
+  List<Map<String, dynamic>> _getTemperatureChartData() {
+    return _tempChartRecords;
+  }
+
+  // Returns a list of heart rate records for the chart
+  List<Map<String, dynamic>> _getHeartRateChartData() {
+    return _hrChartRecords;
+  }
+
+  // Returns a list of sugar records for the chart
+  List<Map<String, dynamic>> _getSugarChartData() {
+    return _sugarChartRecords;
   }
 
   @override
   void initState() {
     super.initState();
     _fetchAnalyticsData();
+  }
+
+  @override
+  void dispose() {
+    _healthDataSubscription?.cancel();
+    super.dispose();
+  }
+
+  // Start (or restart) a realtime listener for health_data for elderlyId + current date filter.
+  void _startHealthDataListener(String elderlyId) {
+    // Cancel existing first
+    _healthDataSubscription?.cancel();
+
+    final startDate = _getFilterStartDate();
+
+    Query query = FirebaseFirestore.instance
+        .collection('health_data')
+        .where('elderlyId', isEqualTo: elderlyId);
+
+    // Try to apply date filter; if it fails runtime (index), the listener will fallback to unfiltered if needed.
+    try {
+      query = query.where('measuredAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
+    } catch (e) {
+      // If Firestore throws about indexing or inability to use inequality, we keep query without date filter.
+      print('Could not apply measuredAt inequality to listener: $e');
+    }
+
+    _healthDataSubscription = query.snapshots().listen((snapshot) {
+      // On any snapshot change, re-run the statistics fetch to re-calculate and update charts.
+      // We call the same function which performs queries and updates state.
+      if (mounted) {
+        _fetchHealthStatistics(elderlyId);
+      }
+    }, onError: (error) {
+      print('Health data listener error: $error');
+    });
   }
 
   Future<void> _fetchAnalyticsData() async {
@@ -79,7 +143,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         // Determine the ID to use based on user type
         final userType = profile['userType'] as String?;
         String? targetId;
-        
+
         if (userType == 'elderly') {
           // If elderly user, use their own ID
           targetId = profile['userId'] as String? ?? _auth.currentUser?.uid;
@@ -93,15 +157,18 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           targetId = _auth.currentUser?.uid;
           print('⚠️ Unknown user type - using current user ID: $targetId');
         }
-        
+
         print('Target ID for health data query: $targetId');
-        
+
         if (targetId != null && targetId.isNotEmpty) {
           setState(() {
             _managingElderlyId = targetId;
           });
-          
-          // Fetch health data statistics
+
+          // Start realtime listener (this will trigger updates when data changes)
+          _startHealthDataListener(targetId);
+
+          // Do an initial fetch immediately for UI responsiveness
           await _fetchHealthStatistics(targetId);
         } else {
           print('⚠️ No valid ID found to fetch health data');
@@ -137,61 +204,28 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Future<void> _fetchHealthStatistics(String elderlyId) async {
     try {
       final startDate = _getFilterStartDate();
-      
+
       print('=== FETCHING HEALTH STATISTICS ===');
       print('Fetching health data for elderly: $elderlyId');
       print('Start date: $startDate');
       print('Selected filter: $_selectedFilter');
-      
+
       // First, let's check if there's ANY data for this elderlyId
       final testQuery = await FirebaseFirestore.instance
           .collection('health_data')
           .where('elderlyId', isEqualTo: elderlyId)
           .limit(1)
           .get();
-      
+
       print('Test query found ${testQuery.docs.length} document(s)');
       if (testQuery.docs.isNotEmpty) {
         print('✅ Sample document found: ${testQuery.docs.first.data()}');
         print('Document ID: ${testQuery.docs.first.id}');
       } else {
         print('⚠️ NO DOCUMENTS FOUND for elderlyId: $elderlyId');
-        print('Let me check what data exists in health_data collection...');
-        
-        // Get ANY document to see what's in the collection
-        final anyDoc = await FirebaseFirestore.instance
-            .collection('health_data')
-            .limit(5)
-            .get();
-        
-        print('Total documents in health_data: ${anyDoc.docs.length}');
-        if (anyDoc.docs.isNotEmpty) {
-          print('Sample documents from health_data:');
-          for (var doc in anyDoc.docs) {
-            print('  - ${doc.id}: ${doc.data()}');
-          }
-        }
-        
-        // Try with current user ID as fallback
-        print('Trying alternative: checking with current user ID (${_auth.currentUser?.uid})...');
-        final altQuery = await FirebaseFirestore.instance
-            .collection('health_data')
-            .where('elderlyId', isEqualTo: _auth.currentUser?.uid)
-            .limit(1)
-            .get();
-        
-        print('Alternative query (current user) found ${altQuery.docs.length} document(s)');
-        if (altQuery.docs.isNotEmpty) {
-          print('✅ Found data with current user ID! Sample: ${altQuery.docs.first.data()}');
-          // Use current user ID instead
-          await _fetchHealthStatistics(_auth.currentUser!.uid);
-          return;
-        } else {
-          print('❌ No data found for current user either');
-        }
       }
-      
-      // Fetch Blood Pressure data - try without date filter first
+
+      // Fetch each type (try with date filter; fallback to without)
       QuerySnapshot bpSnapshot;
       try {
         bpSnapshot = await FirebaseFirestore.instance
@@ -201,20 +235,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             .where('measuredAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
             .get();
       } catch (e) {
-        print('Error with date filter, trying without: $e');
+        print('Error fetching BP with date filter (falling back): $e');
         bpSnapshot = await FirebaseFirestore.instance
             .collection('health_data')
             .where('elderlyId', isEqualTo: elderlyId)
             .where('type', isEqualTo: 'blood_pressure')
             .get();
       }
-      
-      print('Blood pressure records found: ${bpSnapshot.docs.length}');
-      if (bpSnapshot.docs.isNotEmpty) {
-        print('Sample BP data: ${bpSnapshot.docs.first.data()}');
-      }
-      
-      // Fetch Sugar Level data
+
       QuerySnapshot sugarSnapshot;
       try {
         sugarSnapshot = await FirebaseFirestore.instance
@@ -224,16 +252,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             .where('measuredAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
             .get();
       } catch (e) {
+        print('Error fetching Sugar with date filter (falling back): $e');
         sugarSnapshot = await FirebaseFirestore.instance
             .collection('health_data')
             .where('elderlyId', isEqualTo: elderlyId)
             .where('type', isEqualTo: 'sugar_level')
             .get();
       }
-      
-      print('Sugar level records found: ${sugarSnapshot.docs.length}');
-      
-      // Fetch Temperature data
+
       QuerySnapshot tempSnapshot;
       try {
         tempSnapshot = await FirebaseFirestore.instance
@@ -243,16 +269,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             .where('measuredAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
             .get();
       } catch (e) {
+        print('Error fetching Temp with date filter (falling back): $e');
         tempSnapshot = await FirebaseFirestore.instance
             .collection('health_data')
             .where('elderlyId', isEqualTo: elderlyId)
             .where('type', isEqualTo: 'temperature')
             .get();
       }
-      
-      print('Temperature records found: ${tempSnapshot.docs.length}');
-      
-      // Fetch Heart Rate data
+
       QuerySnapshot hrSnapshot;
       try {
         hrSnapshot = await FirebaseFirestore.instance
@@ -262,77 +286,55 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             .where('measuredAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
             .get();
       } catch (e) {
+        print('Error fetching HR with date filter (falling back): $e');
         hrSnapshot = await FirebaseFirestore.instance
             .collection('health_data')
             .where('elderlyId', isEqualTo: elderlyId)
             .where('type', isEqualTo: 'heart_rate')
             .get();
       }
-      
-      print('Heart rate records found: ${hrSnapshot.docs.length}');
-      
-      // Filter records by date in memory if date filter failed
+
+      // In-memory date filtering (if we had to fall back)
       List<QueryDocumentSnapshot> filterByDate(QuerySnapshot snapshot) {
-        print('Filtering ${snapshot.docs.length} docs with start date: $startDate');
         final filtered = snapshot.docs.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
           if (data['measuredAt'] is Timestamp) {
             final measuredAt = (data['measuredAt'] as Timestamp).toDate();
-            final isAfter = measuredAt.isAfter(startDate);
-            if (!isAfter) {
-              print('  Excluding: measured at $measuredAt (not after $startDate)');
-            }
-            return isAfter;
+            return measuredAt.isAfter(startDate);
           }
-          print('  Including: no timestamp field');
-          return true; // Include if no timestamp
+          return true;
         }).toList();
-        print('  Result: ${filtered.length} docs passed filter');
         return filtered;
       }
-      
+
       final filteredBpDocs = filterByDate(bpSnapshot);
       final filteredSugarDocs = filterByDate(sugarSnapshot);
       final filteredTempDocs = filterByDate(tempSnapshot);
       final filteredHrDocs = filterByDate(hrSnapshot);
-      
+
       print('FINAL COUNTS - BP: ${filteredBpDocs.length}, Sugar: ${filteredSugarDocs.length}, Temp: ${filteredTempDocs.length}, HR: ${filteredHrDocs.length}');
-      
-      if (filteredBpDocs.isEmpty && filteredSugarDocs.isEmpty && filteredTempDocs.isEmpty && filteredHrDocs.isEmpty) {
-        print('⚠️ WARNING: All data was filtered out!');
-        print('Current DateTime: ${DateTime.now()}');
-        print('Filter start date: $startDate');
-        print('Selected filter: $_selectedFilter');
-      }
-      
-      // Calculate Blood Pressure averages
+
+      // --- Blood Pressure ---
       if (filteredBpDocs.isNotEmpty) {
         double totalSystolic = 0;
         double totalDiastolic = 0;
-        
-        // Prepare chart data
         List<Map<String, dynamic>> chartRecords = [];
-        
+
         for (var doc in filteredBpDocs) {
           final data = doc.data() as Map<String, dynamic>;
           totalSystolic += (data['systolic'] ?? 0).toDouble();
           totalDiastolic += (data['diastolic'] ?? 0).toDouble();
-          
-          // Add to chart records
+
           chartRecords.add({
             'systolic': (data['systolic'] ?? 0).toDouble(),
             'diastolic': (data['diastolic'] ?? 0).toDouble(),
-            'measuredAt': data['measuredAt'] is Timestamp 
-                ? (data['measuredAt'] as Timestamp).toDate()
-                : DateTime.now(),
+            'measuredAt': data['measuredAt'] is Timestamp ? (data['measuredAt'] as Timestamp).toDate() : DateTime.now(),
           });
         }
-        
+
         final avgSystolic = (totalSystolic / filteredBpDocs.length).round();
         final avgDiastolic = (totalDiastolic / filteredBpDocs.length).round();
-        
-        print('BP averages - Systolic: $avgSystolic, Diastolic: $avgDiastolic');
-        
+
         setState(() {
           _bloodPressureData = {
             'average': '$avgSystolic/$avgDiastolic',
@@ -353,16 +355,32 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           _bpChartRecords = [];
         });
       }
-      
-      // Calculate Sugar Level average
+
+      // --- Sugar Level ---
       if (filteredSugarDocs.isNotEmpty) {
         double total = 0;
+        List<Map<String, dynamic>> sugarChart = [];
         for (var doc in filteredSugarDocs) {
           final data = doc.data() as Map<String, dynamic>;
-          total += (data['value'] ?? 0).toDouble();
+          final value = (data['value'] ?? 0).toDouble();
+          total += value;
+
+          DateTime measuredAt;
+          if (data['measuredAt'] is Timestamp) {
+            measuredAt = (data['measuredAt'] as Timestamp).toDate();
+          } else if (data['measuredAt'] is DateTime) {
+            measuredAt = data['measuredAt'] as DateTime;
+          } else {
+            measuredAt = DateTime.now();
+          }
+
+          sugarChart.add({
+            'value': value,
+            'measuredAt': measuredAt,
+          });
         }
         final avg = total / filteredSugarDocs.length;
-        
+
         setState(() {
           _sugarLevelData = {
             'average': avg,
@@ -370,6 +388,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             'statusColor': _getSugarLevelStatusColor(avg),
             'count': filteredSugarDocs.length,
           };
+          _sugarChartRecords = sugarChart;
         });
       } else {
         setState(() {
@@ -379,18 +398,35 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             'statusColor': Colors.grey,
             'count': 0,
           };
+          _sugarChartRecords = [];
         });
       }
-      
-      // Calculate Temperature average
+
+      // --- Temperature ---
       if (filteredTempDocs.isNotEmpty) {
         double total = 0;
+        List<Map<String, dynamic>> tempChart = [];
         for (var doc in filteredTempDocs) {
           final data = doc.data() as Map<String, dynamic>;
-          total += (data['value'] ?? 0).toDouble();
+          final value = (data['value'] ?? 0).toDouble();
+          total += value;
+
+          DateTime measuredAt;
+          if (data['measuredAt'] is Timestamp) {
+            measuredAt = (data['measuredAt'] as Timestamp).toDate();
+          } else if (data['measuredAt'] is DateTime) {
+            measuredAt = data['measuredAt'] as DateTime;
+          } else {
+            measuredAt = DateTime.now();
+          }
+
+          tempChart.add({
+            'value': value,
+            'measuredAt': measuredAt,
+          });
         }
         final avg = total / filteredTempDocs.length;
-        
+
         setState(() {
           _temperatureData = {
             'average': avg,
@@ -398,6 +434,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             'statusColor': _getTemperatureStatusColor(avg),
             'count': filteredTempDocs.length,
           };
+          _tempChartRecords = tempChart;
         });
       } else {
         setState(() {
@@ -407,18 +444,35 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             'statusColor': Colors.grey,
             'count': 0,
           };
+          _tempChartRecords = [];
         });
       }
-      
-      // Calculate Heart Rate average
+
+      // --- Heart Rate ---
       if (filteredHrDocs.isNotEmpty) {
         double total = 0;
+        List<Map<String, dynamic>> hrChart = [];
         for (var doc in filteredHrDocs) {
           final data = doc.data() as Map<String, dynamic>;
-          total += (data['value'] ?? 0).toDouble();
+          final value = (data['value'] ?? 0).toDouble();
+          total += value;
+
+          DateTime measuredAt;
+          if (data['measuredAt'] is Timestamp) {
+            measuredAt = (data['measuredAt'] as Timestamp).toDate();
+          } else if (data['measuredAt'] is DateTime) {
+            measuredAt = data['measuredAt'] as DateTime;
+          } else {
+            measuredAt = DateTime.now();
+          }
+
+          hrChart.add({
+            'value': value,
+            'measuredAt': measuredAt,
+          });
         }
         final avg = total / filteredHrDocs.length;
-        
+
         setState(() {
           _heartRateData = {
             'average': avg,
@@ -426,6 +480,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             'statusColor': _getHeartRateStatusColor(avg),
             'count': filteredHrDocs.length,
           };
+          _hrChartRecords = hrChart;
         });
       } else {
         setState(() {
@@ -435,12 +490,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             'statusColor': Colors.grey,
             'count': 0,
           };
+          _hrChartRecords = [];
         });
       }
-      
+
       // Analyze trends with FILTERED data
       _analyzeTrends(filteredBpDocs, filteredSugarDocs, filteredTempDocs, filteredHrDocs);
-      
     } catch (e) {
       print("Error fetching health statistics: $e");
     }
@@ -453,16 +508,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     List<QueryDocumentSnapshot> hrDocs,
   ) {
     List<String> insights = [];
-    
+
     // Total records (now using filtered lists)
-    final totalRecords = bpDocs.length + sugarDocs.length + 
-                        tempDocs.length + hrDocs.length;
-    
+    final totalRecords = bpDocs.length + sugarDocs.length + tempDocs.length + hrDocs.length;
+
     // Get filter period text for insights
-    String periodText = _selectedFilter == 'Day' ? 'today' : 
-                       _selectedFilter == 'Week' ? 'this week' : 
-                       'this month';
-    
+    String periodText = _selectedFilter == 'Day' ? 'today' : _selectedFilter == 'Week' ? 'this week' : 'this month';
+
     if (totalRecords == 0) {
       setState(() {
         _trendInsight = 'No data recorded in the selected period.';
@@ -470,14 +522,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       });
       return;
     }
-    
+
     // Count alerts
     int alerts = 0;
     if (_bloodPressureData['status'] != 'Normal' && _bloodPressureData['status'] != 'No Data') alerts++;
     if (_sugarLevelData['status'] != 'Normal' && _sugarLevelData['status'] != 'No Data') alerts++;
     if (_temperatureData['status'] != 'Normal' && _temperatureData['status'] != 'No Data') alerts++;
     if (_heartRateData['status'] != 'Normal' && _heartRateData['status'] != 'No Data') alerts++;
-    
+
     // Generate trend insight
     String trendText = '';
     if (alerts == 0) {
@@ -487,9 +539,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     } else {
       trendText = '⚠ $alerts vitals require attention';
     }
-    
+
     // Generate specific insights for each vital
-    
+
     // Blood Pressure insights
     if (_bloodPressureData['count'] > 0) {
       if (_bloodPressureData['status'] == 'High') {
@@ -502,7 +554,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     } else {
       insights.add('🩸 Blood Pressure: No data recorded $periodText.');
     }
-    
+
     // Sugar Level insights
     if (_sugarLevelData['count'] > 0) {
       if (_sugarLevelData['status'] == 'High') {
@@ -515,7 +567,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     } else {
       insights.add('🍬 Sugar Level: No data recorded $periodText.');
     }
-    
+
     // Temperature insights
     if (_temperatureData['count'] > 0) {
       if (_temperatureData['status'] == 'Fever') {
@@ -528,7 +580,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     } else {
       insights.add('🌡️ Temperature: No data recorded $periodText.');
     }
-    
+
     // Heart Rate insights
     if (_heartRateData['count'] > 0) {
       if (_heartRateData['status'] == 'High') {
@@ -541,7 +593,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     } else {
       insights.add('❤️ Heart Rate: No data recorded $periodText.');
     }
-    
+
     // Monitoring frequency insight based on selected filter
     if (_selectedFilter == 'Day') {
       if (totalRecords >= 4) {
@@ -566,7 +618,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         insights.add('You have $totalRecords readings this month. Regular tracking helps identify trends.');
       }
     }
-    
+
     setState(() {
       _trendInsight = '$trendText ($totalRecords readings $periodText)';
       _insights = insights;
@@ -739,6 +791,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           setState(() {
                             _selectedFilter = newValue;
                           });
+                          // restart listener so it uses the new date filter
+                          _startHealthDataListener(_managingElderlyId!);
                           await _fetchHealthStatistics(_managingElderlyId!);
                         }
                       },
@@ -748,7 +802,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            
+
             // Average Label
             Padding(
               padding: const EdgeInsets.only(left: 4),
@@ -762,7 +816,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // 4 Health Vitals in a Row
             Row(
               children: [
@@ -782,8 +836,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 Expanded(
                   child: _buildVitalCard(
                     title: 'Sugar Level',
-                    value: _sugarLevelData['average'] == 0.0 
-                        ? '0' 
+                    value: _sugarLevelData['average'] == 0.0
+                        ? '0'
                         : _sugarLevelData['average'].toStringAsFixed(1),
                     unit: 'mg/dL',
                     status: _sugarLevelData['status'],
@@ -797,8 +851,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 Expanded(
                   child: _buildVitalCard(
                     title: 'Temperature',
-                    value: _temperatureData['average'] == 0.0 
-                        ? '0' 
+                    value: _temperatureData['average'] == 0.0
+                        ? '0'
                         : _temperatureData['average'].toStringAsFixed(1),
                     unit: '°C',
                     status: _temperatureData['status'],
@@ -812,8 +866,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 Expanded(
                   child: _buildVitalCard(
                     title: 'Heart Rate',
-                    value: _heartRateData['average'] == 0.0 
-                        ? '0' 
+                    value: _heartRateData['average'] == 0.0
+                        ? '0'
                         : _heartRateData['average'].toStringAsFixed(0),
                     unit: 'bpm',
                     status: _heartRateData['status'],
@@ -825,11 +879,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 20),
             Divider(color: Colors.grey.shade300),
             const SizedBox(height: 16),
-            
+
             // Insights Section
             Row(
               children: [
@@ -846,7 +900,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            
+
             // Trend Summary
             Container(
               padding: const EdgeInsets.all(12),
@@ -873,7 +927,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            
+
             // Detailed Insights
             ..._insights.map((insight) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -988,7 +1042,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -1011,16 +1065,22 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Sugar Level Card
-          const SugarLevelAnalyticsCard(),
+          // Sugar Level Card - pass sugar chart records
+          SugarLevelAnalyticsCard(
+            sugarData: _getSugarChartData(),
+          ),
           const SizedBox(height: 16),
 
-          // Temperature Card
-          const TemperatureAnalyticsCard(),
+          // Temperature Card - pass the prepared temp chart records
+          TemperatureAnalyticsCard(
+            tempData: _getTemperatureChartData(),
+          ),
           const SizedBox(height: 16),
 
-          // Heart Rate Card
-          const HeartRateAnalyticsCard(),
+          // Heart Rate Card - pass the prepared hr chart records
+          HeartRateAnalyticsCard(
+            hrData: _getHeartRateChartData(),
+          ),
         ],
       ),
     );
