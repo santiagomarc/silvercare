@@ -35,6 +35,43 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _scheduleNotifications();
+    _checkHealthDataDebug(); // Debug health data
+  }
+  
+  /// Debug method to check if any health data exists
+  Future<void> _checkHealthDataDebug() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
+      
+      print('🔍 === HEALTH DATA DEBUG ===');
+      print('🔍 Checking health_data collection for elderlyId: ${user.uid}');
+      
+      // Query ALL health data for this user (no date filter)
+      final allData = await _firestore
+          .collection('health_data')
+          .where('elderlyId', isEqualTo: user.uid)
+          .limit(10)
+          .get();
+      
+      print('🔍 Total health_data documents found: ${allData.docs.length}');
+      
+      if (allData.docs.isEmpty) {
+        print('🔍 ⚠️ NO HEALTH DATA FOUND! User may need to record vitals first.');
+      } else {
+        print('🔍 Sample documents:');
+        for (var doc in allData.docs) {
+          final data = doc.data();
+          print('🔍   - ID: ${doc.id}');
+          print('🔍     type: ${data['type']}');
+          print('🔍     measuredAt: ${data['measuredAt']} (${data['measuredAt'].runtimeType})');
+          print('🔍     value: ${data['value']}');
+        }
+      }
+      print('🔍 === END DEBUG ===');
+    } catch (e) {
+      print('🔍 ❌ Error checking health data: $e');
+    }
   }
   
   /// Check and create a missed medication notification if needed
@@ -49,29 +86,36 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
     
+    final elderlyId = _auth.currentUser?.uid;
+    if (elderlyId == null) return;
+    
     // Check if a missed notification already exists in Firestore
+    // Use more specific query to avoid duplicates
     final existingNotifications = await _firestore
         .collection('notifications')
         .where('type', isEqualTo: 'medication_missed')
-        .where('elderlyId', isEqualTo: _auth.currentUser?.uid)
+        .where('elderlyId', isEqualTo: elderlyId)
         .where('metadata.medicationId', isEqualTo: med.id)
         .where('metadata.scheduledTime', isEqualTo: scheduledDateTime.toIso8601String())
+        .limit(1) // Only need to know if at least one exists
         .get();
     
     if (existingNotifications.docs.isEmpty) {
       // Create the missed notification
       await _persistentNotificationService.createMedicationMissed(
-        elderlyId: _auth.currentUser!.uid,
+        elderlyId: elderlyId,
         medicationName: med.name,
         scheduledTime: scheduledDateTime,
         medicationId: med.id,
       );
+      print('📬 Created missed notification for ${med.name} at ${DateFormat('h:mm a').format(scheduledDateTime)}');
       
       // Mark as created in our in-memory tracker
       _missedNotificationsCreated.add(doseInstanceId);
     } else {
       // Notification already exists, just mark it in our tracker
       _missedNotificationsCreated.add(doseInstanceId);
+      print('ℹ️ Missed notification already exists for ${med.name} at ${DateFormat('h:mm a').format(scheduledDateTime)}');
     }
   }
 
@@ -229,10 +273,15 @@ class _HomeScreenState extends State<HomeScreen> {
       return Container(); // Return empty if no user
     }
     
+    print('🔍 User ID: ${user.uid}');
+    
     // Get start of today for filtering (midnight)
     final now = DateTime.now();
     final startOfToday = DateTime(now.year, now.month, now.day);
     final startOfTodayTimestamp = Timestamp.fromDate(startOfToday);
+    
+    print('🔍 Start of today: $startOfToday');
+    print('🔍 Start of today timestamp: $startOfTodayTimestamp');
     
     return StreamBuilder<QuerySnapshot>(
       stream: _firestore
@@ -248,39 +297,57 @@ class _HomeScreenState extends State<HomeScreen> {
         bool hasTemp = false;
         bool hasHR = false;
         
+        // Debug logging
+        print('📊 Vital Progress Debug:');
+        print('   Connection state: ${snapshot.connectionState}');
+        print('   Has data: ${snapshot.hasData}');
+        print('   Has error: ${snapshot.hasError}');
+        if (snapshot.hasError) {
+          print('   Error: ${snapshot.error}');
+        }
+        print('   Docs count: ${snapshot.data?.docs.length ?? 0}');
+        
         if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+          print('   Documents found:');
           for (var doc in snapshot.data!.docs) {
             final data = doc.data() as Map<String, dynamic>;
             final type = data['type'] as String?;
+            final measuredAt = data['measuredAt'];
+            print('     - Type: $type, MeasuredAt: $measuredAt (${measuredAt.runtimeType})');
             
             switch (type) {
               case 'blood_pressure':
                 if (!hasBP) {
                   hasBP = true;
                   recordedCount++;
+                  print('     ✓ BP counted');
                 }
                 break;
               case 'sugar_level':
                 if (!hasSugar) {
                   hasSugar = true;
                   recordedCount++;
+                  print('     ✓ Sugar counted');
                 }
                 break;
               case 'temperature':
                 if (!hasTemp) {
                   hasTemp = true;
                   recordedCount++;
+                  print('     ✓ Temp counted');
                 }
                 break;
               case 'heart_rate':
                 if (!hasHR) {
                   hasHR = true;
                   recordedCount++;
+                  print('     ✓ HR counted');
                 }
                 break;
             }
           }
         }
+        print('   Final count: $recordedCount/4 (BP:$hasBP, Sugar:$hasSugar, Temp:$hasTemp, HR:$hasHR)');
         
         return Container(
           padding: const EdgeInsets.all(24),
@@ -621,25 +688,10 @@ class _HomeScreenState extends State<HomeScreen> {
             List<Widget> todayDosesWidgets = [];
             for (var med in todaySchedules) {
               for (var time in med.timesOfDay) {
-                // Check if this dose should still be shown (not taken or taken today)
-                final String doseInstanceId =
-                    '${med.id}_${todayDate.toIso8601String().substring(0, 10)}_${time.replaceAll(':', '')}';
-                
-                todayDosesWidgets.add(
-                  StreamBuilder<DocumentSnapshot>(
-                    stream: _firestore
-                        .collection(MedicationService.completionCollection)
-                        .doc(doseInstanceId)
-                        .snapshots(),
-                    builder: (context, completionSnapshot) {
-                      // Items will automatically appear fresh at midnight when 'todayDate' changes
-                      // since doseInstanceId includes the date
-                      // Completed items stay visible until end of day for elder to review progress
-                      
-                      return _buildMedicationItem(med, time);
-                    },
-                  ),
-                );
+                // Items will automatically appear fresh at midnight when 'todayDate' changes
+                // since doseInstanceId includes the date
+                // Completed items stay visible until end of day for elder to review progress
+                todayDosesWidgets.add(_buildMedicationItem(med, time));
               }
             }
 
@@ -1366,35 +1418,38 @@ class _HomeScreenState extends State<HomeScreen> {
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(30),
           ),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
           title: Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.warning_amber_rounded,
-                color: Colors.red.shade700,
-                size: 28,
+                color: Colors.red,
+                size: 24,
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Flexible(
                 child: Text(
                   'Emergency SOS',
                   style: TextStyle(
                     fontFamily: 'Montserrat',
                     fontWeight: FontWeight.w600,
-                    fontSize: _getResponsiveFontSize(context, 18),
+                    fontSize: _getResponsiveFontSize(context, 16),
                     color: Colors.red.shade700,
                   ),
                 ),
               ),
             ],
           ),
-          content: Text(
-            'This feature will send an emergency alert to your emergency contacts and local emergency services.',
-            style: TextStyle(
-              fontFamily: 'Montserrat',
-              fontSize: _getResponsiveFontSize(context, 14),
-              color: const Color(0xFF666666),
+          content: SingleChildScrollView(
+            child: Text(
+              'This feature will send an emergency alert to your emergency contacts and local emergency services.',
+              style: TextStyle(
+                fontFamily: 'Montserrat',
+                fontSize: _getResponsiveFontSize(context, 14),
+                color: const Color(0xFF666666),
+              ),
+              softWrap: true,
             ),
-            softWrap: true,
           ),
           actions: [
             TextButton(

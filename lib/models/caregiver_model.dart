@@ -5,6 +5,7 @@ class CaregiverModel {
   final String userId; // Reference to users collection
   final String email;
   final String? fullName; // Caregiver's full name
+  final String? phoneNumber; // Caregiver's phone number
   final String? elderlyId; // 1:1 relationship
   final String relationship; // "Spouse" | "Child" | "Professional Caregiver"
   final DateTime createdAt;
@@ -14,6 +15,7 @@ class CaregiverModel {
     required this.userId,
     required this.email,
     this.fullName,
+    this.phoneNumber,
     this.elderlyId,
     required this.relationship,
     required this.createdAt,
@@ -25,6 +27,7 @@ class CaregiverModel {
       'userId': userId,
       'email': email,
       'fullName': fullName,
+      'phoneNumber': phoneNumber,
       'elderlyId': elderlyId,
       'relationship': relationship,
       'createdAt': Timestamp.fromDate(createdAt),
@@ -39,6 +42,7 @@ class CaregiverModel {
       userId: data['userId'] ?? '',
       email: data['email'] ?? '',
       fullName: data['fullName'],
+      phoneNumber: data['phoneNumber'],
       elderlyId: data['elderlyId'],
       relationship: data['relationship'] ?? 'Professional Caregiver',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -52,6 +56,7 @@ class CaregiverModel {
       userId: map['userId'] ?? '',
       email: map['email'] ?? '',
       fullName: map['fullName'],
+      phoneNumber: map['phoneNumber'],
       elderlyId: map['elderlyId'],
       relationship: map['relationship'] ?? 'Professional Caregiver',
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -64,6 +69,7 @@ class CaregiverModel {
     String? userId,
     String? email,
     String? fullName,
+    String? phoneNumber,
     String? elderlyId,
     String? relationship,
     DateTime? createdAt,
@@ -73,6 +79,7 @@ class CaregiverModel {
       userId: userId ?? this.userId,
       email: email ?? this.email,
       fullName: fullName ?? this.fullName,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
       elderlyId: elderlyId ?? this.elderlyId,
       relationship: relationship ?? this.relationship,
       createdAt: createdAt ?? this.createdAt,

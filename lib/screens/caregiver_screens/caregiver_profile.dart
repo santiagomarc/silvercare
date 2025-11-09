@@ -87,7 +87,7 @@ class _CaregiverProfileState extends State<CaregiverProfile> {
     final nameController = TextEditingController(text: _caregiverData!.fullName ?? '');
     final emailController = TextEditingController(text: _userProfile?['email'] ?? _caregiverData!.email);
     final relationshipController = TextEditingController(text: _caregiverData!.relationship);
-    final phoneController = TextEditingController(text: _userProfile?['phoneNumber'] ?? '');
+    final phoneController = TextEditingController(text: _caregiverData!.phoneNumber ?? '');
 
     final result = await showDialog<bool>(
       context: context,
@@ -192,10 +192,11 @@ class _CaregiverProfileState extends State<CaregiverProfile> {
         'phoneNumber': phoneNumber.trim(),
       }, SetOptions(merge: true));
 
-      // Update caregivers collection
+      // Update caregivers collection (include phone number)
       await _firestore.collection('caregivers').doc(userId).update({
         'fullName': fullName.trim(),
         'email': email.trim(),
+        'phoneNumber': phoneNumber.trim(),
         'relationship': relationship.trim(),
       });
 
@@ -345,7 +346,6 @@ class _CaregiverProfileState extends State<CaregiverProfile> {
 
             const SizedBox(height: 16),
 
-            // Elder Details Card (Read-only)
             if (_elderlyData != null) _buildElderCard(),
           ],
         ),
@@ -395,7 +395,7 @@ class _CaregiverProfileState extends State<CaregiverProfile> {
             const SizedBox(height: 12),
             _buildDetailRow('Relationship', _caregiverData!.relationship),
             const SizedBox(height: 12),
-            _buildDetailRow('Phone', _userProfile?['phoneNumber'] ?? 'Not provided'),
+            _buildDetailRow('Phone', _caregiverData!.phoneNumber ?? 'Not provided'),
           ],
         ),
       ),
@@ -426,14 +426,6 @@ class _CaregiverProfileState extends State<CaregiverProfile> {
               ],
             ),
             const SizedBox(height: 8),
-            const Text(
-              '(Read-only)',
-              style: TextStyle(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-                color: Colors.grey,
-              ),
-            ),
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
