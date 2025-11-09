@@ -18,7 +18,7 @@ class SilverCareNavBar extends StatefulWidget {
 class _SilverCareNavBarState extends State<SilverCareNavBar> {
   final List<Color> _navColors = [
     Colors.black87,                    // Home - Black (bold when active)
-    const Color(0xFF4CAF50),          // Calendar - Green
+    const Color(0xFF1565C0),          // Calendar - Green
     const Color(0xFFFFB300),          // Analytics - Yellow/Amber
     const Color(0xFF9C27B0),          // Health/Heart - Purple
     const Color(0xFF2196F3),          // Profile - Blue

@@ -25,7 +25,9 @@ class CalendarEvent {
       id: doc.id,
       title: data['title'] ?? '',
       description: data['description'] ?? '',
-      eventDate: (data['eventDate'] as Timestamp).toDate(),
+      eventDate: data['eventDate'] != null
+          ? (data['eventDate'] as Timestamp).toDate()
+          : DateTime.now(),
       eventType: data['eventType'] ?? 'Reminder',
     );
   }
@@ -48,7 +50,7 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
-  static const Color _primaryColor = Color(0xFF4CAF50);
+  static const Color _primaryColor = Color(0xFF1565C0);
   static const Color _backgroundColor = Color(0xFFF8F9FA);
   static const Color _cardColor = Colors.white;
   static const Color _textPrimary = Color(0xFF2D3748);
@@ -65,9 +67,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
   late final ValueNotifier<List<CalendarEvent>> _selectedEvents;
   bool _isLoading = true;
 
+  // Dialog controllers
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   String _selectedEventType = 'Reminder';
+  TimeOfDay _selectedTime = TimeOfDay.now();
 
   @override
   void initState() {
@@ -85,14 +89,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
     super.dispose();
   }
 
+  DateTime _normalizeDay(DateTime date) {
+    return DateTime.utc(date.year, date.month, date.day);
+  }
+
   Future<void> _loadFirestoreEvents() async {
     final user = _auth.currentUser;
     if (user == null) {
       setState(() => _isLoading = false);
       return;
     }
-
-    _events = {};
 
     try {
       final snapshot = await _firestore
@@ -101,33 +107,45 @@ class _CalendarScreenState extends State<CalendarScreen> {
           .collection('calendarEvents')
           .get();
 
+      Map<DateTime, List<CalendarEvent>> newEvents = {};
+
       for (var doc in snapshot.docs) {
         final event = CalendarEvent.fromDoc(doc);
-        final day = DateTime.utc(event.eventDate.year, event.eventDate.month, event.eventDate.day);
+        final day = _normalizeDay(event.eventDate);
 
-        if (_events[day] == null) {
-          _events[day] = [];
+        if (newEvents[day] == null) {
+          newEvents[day] = [];
         }
-        _events[day]!.add(event);
+        newEvents[day]!.add(event);
       }
 
-      setState(() {
-        _isLoading = false;
-        _selectedEvents.value = _getEventsForDay(_selectedDay!);
+      newEvents.forEach((key, value) {
+        value.sort((a, b) => a.eventDate.compareTo(b.eventDate));
       });
-    } catch (e) {
-      setState(() => _isLoading = false);
+
       if (mounted) {
+        setState(() {
+          _events = newEvents;
+          _isLoading = false;
+          if (_selectedDay != null) {
+            _selectedEvents.value = _getEventsForDay(_selectedDay!);
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading events: ${e.toString()}'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Error loading: ${e.toString()}'),
+              backgroundColor: Colors.red),
         );
       }
     }
   }
 
   List<CalendarEvent> _getEventsForDay(DateTime day) {
-    final dayUtc = DateTime.utc(day.year, day.month, day.day);
-    return _events[dayUtc] ?? [];
+    return _events[_normalizeDay(day)] ?? [];
   }
 
   void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
@@ -140,18 +158,35 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
+  // --- CRUD OPERATIONS ---
+
   Future<void> _addEventToFirestore() async {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    final title = _titleController.text;
-    if (title.isEmpty) return;
+    final title = _titleController.text.trim();
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Please enter a title'),
+            backgroundColor: Colors.orange),
+      );
+      return;
+    }
+
+    final DateTime fullDateTime = DateTime(
+      _selectedDay!.year,
+      _selectedDay!.month,
+      _selectedDay!.day,
+      _selectedTime.hour,
+      _selectedTime.minute,
+    );
 
     final newEvent = CalendarEvent(
       id: '',
       title: title,
-      description: _descriptionController.text,
-      eventDate: _selectedDay!,
+      description: _descriptionController.text.trim(),
+      eventDate: fullDateTime,
       eventType: _selectedEventType,
     );
 
@@ -164,22 +199,109 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
       if (mounted) {
         Navigator.of(context).pop();
-        _titleController.clear();
-        _descriptionController.clear();
-        _selectedEventType = 'Reminder';
         _loadFirestoreEvents();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Event added successfully!'), backgroundColor: Colors.green),
+          const SnackBar(
+              content: Text('✅ Event saved!'), backgroundColor: Colors.green),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ Failed to add event: ${e.toString()}'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('❌ Failed to save: ${e.toString()}'),
+              backgroundColor: Colors.red),
         );
       }
     }
   }
+
+  Future<void> _updateEventInFirestore(String eventId) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    final title = _titleController.text.trim();
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Please enter a title'),
+            backgroundColor: Colors.orange),
+      );
+      return;
+    }
+
+    final DateTime fullDateTime = DateTime(
+      _selectedDay!.year,
+      _selectedDay!.month,
+      _selectedDay!.day,
+      _selectedTime.hour,
+      _selectedTime.minute,
+    );
+
+    try {
+      await _firestore
+          .collection('elderly')
+          .doc(user.uid)
+          .collection('calendarEvents')
+          .doc(eventId)
+          .update({
+        'title': title,
+        'description': _descriptionController.text.trim(),
+        'eventDate': Timestamp.fromDate(fullDateTime),
+        'eventType': _selectedEventType,
+      });
+
+      if (mounted) {
+        Navigator.of(context).pop();
+        _loadFirestoreEvents();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('✅ Event updated!'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('❌ Update failed: ${e.toString()}'),
+              backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteEventFromFirestore(String eventId) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      await _firestore
+          .collection('elderly')
+          .doc(user.uid)
+          .collection('calendarEvents')
+          .doc(eventId)
+          .delete();
+
+      if (mounted) {
+        Navigator.of(context).pop(); // Close edit dialog
+        _loadFirestoreEvents();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('🗑️ Event deleted'), backgroundColor: Colors.grey),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('❌ Delete failed: ${e.toString()}'),
+              backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  // --- UI ---
 
   double _getResponsiveFontSize(BuildContext context, double baseSize) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -225,7 +347,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.calendar_today_outlined, size: 28, color: _primaryColor),
+            Icon(Icons.calendar_month_rounded, size: 28, color: _primaryColor),
             const SizedBox(width: 12),
             Text(
               'CALENDAR',
@@ -261,14 +383,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   borderRadius: const BorderRadius.all(Radius.circular(25)),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color.fromRGBO(0, 0, 0, 0.1),
+                      color: _primaryColor.withOpacity(0.3),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
                     ),
                   ],
                 ),
                 child: _isLoading
-                    ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                    ? const Center(
+                        child: CircularProgressIndicator(color: Colors.white))
                     : SingleChildScrollView(
                         child: Column(
                           children: [
@@ -283,10 +406,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddEventDialog,
+        onPressed: () => _showEventDialog(), // Standard add
         backgroundColor: _primaryColor,
         foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: const Icon(Icons.add_rounded, size: 32),
       ),
     );
   }
@@ -311,33 +436,47 @@ class _CalendarScreenState extends State<CalendarScreen> {
         _loadFirestoreEvents();
       },
       calendarStyle: CalendarStyle(
-        defaultTextStyle: const TextStyle(color: Colors.white),
-        weekendTextStyle: const TextStyle(color: Colors.white70),
-        todayDecoration: const BoxDecoration(
-          color: Color.fromRGBO(255, 255, 255, 0.3),
+        defaultTextStyle:
+            const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+        weekendTextStyle:
+            const TextStyle(color: Colors.white70, fontWeight: FontWeight.w500),
+        todayDecoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.3),
           shape: BoxShape.circle,
         ),
         selectedDecoration: const BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
         ),
-        selectedTextStyle: TextStyle(color: _primaryColor, fontWeight: FontWeight.bold),
-        outsideTextStyle: const TextStyle(color: Color.fromRGBO(255, 255, 255, 0.4)),
+        selectedTextStyle:
+            TextStyle(color: _primaryColor, fontWeight: FontWeight.w800),
+        outsideTextStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
         markerDecoration: const BoxDecoration(
-          color: Colors.white70,
+          color: Colors.amberAccent,
           shape: BoxShape.circle,
         ),
+        markersMaxCount: 3,
       ),
       headerStyle: const HeaderStyle(
         formatButtonVisible: false,
         titleCentered: true,
-        titleTextStyle: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-        leftChevronIcon: Icon(Icons.chevron_left, color: Colors.white),
-        rightChevronIcon: Icon(Icons.chevron_right, color: Colors.white),
+        titleTextStyle: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            fontFamily: 'Montserrat'),
+        leftChevronIcon: Icon(Icons.chevron_left_rounded, color: Colors.white),
+        rightChevronIcon: Icon(Icons.chevron_right_rounded, color: Colors.white),
       ),
       daysOfWeekStyle: const DaysOfWeekStyle(
-        weekdayStyle: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600),
-        weekendStyle: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600),
+        weekdayStyle: TextStyle(
+            color: Colors.white70,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Montserrat'),
+        weekendStyle: TextStyle(
+            color: Colors.white70,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Montserrat'),
       ),
     );
   }
@@ -353,7 +492,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
               child: Text(
                 'No events for this day.\nTap the "+" button to add one!',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white70, fontSize: 16, fontFamily: 'Inter'),
+                style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                    fontFamily: 'Montserrat'),
               ),
             ),
           );
@@ -376,154 +518,329 @@ class _CalendarScreenState extends State<CalendarScreen> {
     Color iconColor;
 
     switch (event.eventType) {
-      case 'Medication':
-        iconData = Icons.medication_outlined;
+      case 'Appointment':
+        iconData = Icons.medical_services_rounded;
         iconColor = Colors.redAccent;
         break;
-      case 'Appointment':
-        iconData = Icons.medical_services_outlined;
-        iconColor = Colors.blueAccent;
+      case 'Event':
+        iconData = Icons.event_rounded;
+        iconColor = Colors.purpleAccent;
+        break;
+      case 'Medication':
+        iconData = Icons.medication_rounded;
+        iconColor = Colors.orangeAccent;
         break;
       default:
-        iconData = Icons.alarm_outlined;
+        iconData = Icons.notifications_active_rounded;
         iconColor = Colors.amber.shade700;
     }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color.fromRGBO(0, 0, 0, 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(iconData, color: iconColor, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _showEventDialog(event: event),
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               children: [
-                Text(
-                  event.title,
-                  style: TextStyle(
-                    color: _textPrimary,
-                    fontSize: _getResponsiveFontSize(context, 16),
-                    fontFamily: 'Montserrat',
-                    fontWeight: FontWeight.w700,
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: iconColor.withOpacity(0.1),
+                    shape: BoxShape.circle,
                   ),
+                  child: Icon(iconData, color: iconColor, size: 26),
                 ),
-                if (event.description.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    event.description,
-                    style: TextStyle(
-                      color: _textSecondary,
-                      fontSize: _getResponsiveFontSize(context, 14),
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.access_time, color: _textSecondary, size: 14),
-                    const SizedBox(width: 4),
-                    Text(
-                      DateFormat.jm().format(event.eventDate),
-                      style: TextStyle(
-                        color: _textSecondary,
-                        fontSize: _getResponsiveFontSize(context, 13),
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w600,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // TITLE - Highlighted
+                      Text(
+                        event.title,
+                        style: TextStyle(
+                          color: _primaryColor,
+                          fontSize: _getResponsiveFontSize(context, 18),
+                          fontFamily: 'Montserrat',
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                  ],
+                      if (event.description.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          event.description,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: _textSecondary,
+                            fontSize: _getResponsiveFontSize(context, 14),
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 10),
+                      // BOTTOM ROW: Time (Grey) and Type (Highlighted)
+                      Row(
+                        children: [
+                          Icon(Icons.access_time_rounded,
+                              color: _textSecondary, size: 16),
+                          const SizedBox(width: 6),
+                          Text(
+                            DateFormat.jm().format(event.eventDate),
+                            style: TextStyle(
+                              color: _textSecondary,
+                              fontSize: _getResponsiveFontSize(context, 14),
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const Spacer(),
+                          // TYPE - Highlighted
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: _primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              event.eventType,
+                              style: TextStyle(
+                                color: _primaryColor,
+                                fontSize: _getResponsiveFontSize(context, 12),
+                                fontFamily: 'Montserrat',
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  void _showAddEventDialog() {
-    _titleController.clear();
-    _descriptionController.clear();
-    _selectedEventType = 'Reminder';
+  void _showEventDialog({CalendarEvent? event}) {
+    final isEditing = event != null;
+
+    if (isEditing) {
+      _titleController.text = event.title;
+      _descriptionController.text = event.description;
+
+      const validTypes = ['Reminder', 'Appointment', 'Event'];
+      if (validTypes.contains(event.eventType)) {
+        _selectedEventType = event.eventType;
+      } else {
+        _selectedEventType = 'Event';
+      }
+
+      _selectedTime = TimeOfDay.fromDateTime(event.eventDate);
+      _selectedDay = event.eventDate;
+    } else {
+      _titleController.clear();
+      _descriptionController.clear();
+      _selectedEventType = 'Reminder';
+      _selectedTime = TimeOfDay.now();
+    }
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: _backgroundColor,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
       ),
       builder: (context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
             return Padding(
               padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-                top: 20,
-                left: 20,
-                right: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                top: 25,
+                left: 25,
+                right: 25,
               ),
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Add Event for ${DateFormat.yMMMd().format(_selectedDay!)}',
-                      style: TextStyle(
-                        color: _textPrimary,
-                        fontSize: _getResponsiveFontSize(context, 20),
-                        fontFamily: 'Montserrat',
-                        fontWeight: FontWeight.w700,
+                    Center(
+                      child: Container(
+                        width: 50,
+                        height: 5,
+                        decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    _buildDialogTextField(_titleController, 'Title', Icons.title),
-                    const SizedBox(height: 16),
-                    _buildDialogTextField(_descriptionController, 'Description (Optional)', Icons.description_outlined, maxLines: 3),
-                    const SizedBox(height: 16),
-                    _buildEventTypeDropdown(setModalState),
-                    const SizedBox(height: 30),
-                    ElevatedButton(
-                      onPressed: _addEventToFirestore,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _primaryColor,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    const SizedBox(height: 25),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          isEditing ? 'Edit Entry' : 'New Entry',
+                          style: TextStyle(
+                            color: _textPrimary,
+                            fontSize: _getResponsiveFontSize(context, 22),
+                            fontFamily: 'Montserrat',
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        if (isEditing)
+                          TextButton.icon(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text('Delete Event?'),
+                                  content: const Text(
+                                      'Are you sure you want to delete this event?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.pop(ctx);
+                                        _deleteEventFromFirestore(event.id);
+                                      },
+                                      child: const Text('Delete',
+                                          style: TextStyle(color: Colors.red)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.delete_outline_rounded,
+                                color: Colors.red, size: 24),
+                            label: const Text('Delete',
+                                style: TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: 'Montserrat')),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                            ),
+                          ),
+                      ],
+                    ),
+                    Text(
+                      DateFormat.yMMMd().format(_selectedDay!),
+                      style: TextStyle(
+                        color: _textSecondary,
+                        fontSize: _getResponsiveFontSize(context, 16),
+                        fontFamily: 'Montserrat',
+                        fontWeight: FontWeight.w600,
                       ),
-                      child: Text(
-                        'Save Event',
-                        style: TextStyle(
-                          fontSize: _getResponsiveFontSize(context, 16),
-                          fontFamily: 'Montserrat',
-                          fontWeight: FontWeight.w600,
+                    ),
+                    const SizedBox(height: 25),
+                    _buildDialogTextField(
+                        _titleController, 'What is it?', Icons.edit_rounded),
+                    const SizedBox(height: 15),
+                    InkWell(
+                      onTap: () async {
+                        final TimeOfDay? picked = await showTimePicker(
+                          context: context,
+                          initialTime: _selectedTime,
+                          builder: (context, child) {
+                            return Theme(
+                              data: Theme.of(context).copyWith(
+                                colorScheme:
+                                    ColorScheme.light(primary: _primaryColor),
+                              ),
+                              child: child!,
+                            );
+                          },
+                        );
+                        if (picked != null && picked != _selectedTime) {
+                          setModalState(() {
+                            _selectedTime = picked;
+                          });
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 16),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade400),
+                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.white,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.access_time_rounded,
+                                color: _textSecondary),
+                            const SizedBox(width: 12),
+                            Text(
+                              _selectedTime.format(context),
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  color: _textPrimary,
+                                  fontFamily: 'Inter'),
+                            ),
+                            const Spacer(),
+                            Icon(Icons.arrow_drop_down_rounded,
+                                color: _textSecondary),
+                          ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 15),
+                    _buildEventTypeDropdown(setModalState),
+                    const SizedBox(height: 15),
+                    _buildDialogTextField(_descriptionController,
+                        'Notes (Optional)', Icons.notes_rounded,
+                        maxLines: 3),
+                    const SizedBox(height: 30),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 55,
+                      child: ElevatedButton(
+                        onPressed: isEditing
+                            ? () => _updateEventInFirestore(event.id)
+                            : _addEventToFirestore,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _primaryColor,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: Text(
+                          isEditing ? 'Update Entry' : 'Save Entry',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontFamily: 'Montserrat',
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -534,18 +851,29 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildDialogTextField(TextEditingController controller, String label, IconData icon, {int maxLines = 1}) {
+  Widget _buildDialogTextField(
+      TextEditingController controller, String label, IconData icon,
+      {int maxLines = 1}) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
+      style: const TextStyle(fontFamily: 'Inter'),
       decoration: InputDecoration(
         labelText: label,
+        alignLabelWithHint: maxLines > 1,
         prefixIcon: Icon(icon, color: _textSecondary),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade400)),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade400)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _primaryColor, width: 2),
+          borderSide: BorderSide(color: _primaryColor, width: 2),
         ),
+        filled: true,
+        fillColor: Colors.white,
       ),
     );
   }
@@ -554,18 +882,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return DropdownButtonFormField<String>(
       value: _selectedEventType,
       decoration: InputDecoration(
-        labelText: 'Event Type',
-        prefixIcon: const Icon(Icons.category_outlined, color: _textSecondary),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        labelText: 'Type',
+        prefixIcon: Icon(Icons.category_rounded, color: _textSecondary),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade400)),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade400)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _primaryColor, width: 2),
+          borderSide: BorderSide(color: _primaryColor, width: 2),
         ),
+        filled: true,
+        fillColor: Colors.white,
       ),
-      items: ['Reminder', 'Medication', 'Appointment'].map((String value) {
+      items: ['Reminder', 'Appointment', 'Event'].map((String value) {
         return DropdownMenuItem<String>(
           value: value,
-          child: Text(value),
+          child: Text(value, style: const TextStyle(fontFamily: 'Inter')),
         );
       }).toList(),
       onChanged: (String? newValue) {
