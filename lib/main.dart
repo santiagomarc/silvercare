@@ -13,7 +13,13 @@ import 'package:silvercare/screens/temperature_screen.dart';
 import 'package:silvercare/screens/sugar_level_screen.dart';
 import 'package:silvercare/screens/notifications_screen.dart';
 import 'package:silvercare/services/notification_service.dart';
+import 'package:silvercare/services/push_notification_service.dart';
 import 'package:silvercare/screens/calendar_screen.dart';
+
+
+
+
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,7 +30,11 @@ void main() async {
 
   // Initialize notification service and wait for completion
   await NotificationService().initialize();
-
+  
+  // Initialize push notification service
+  await PushNotificationService().initialize();
+  await PushNotificationService().requestPermissions();
+  
   runApp(const SilverCareApp());
 }
 

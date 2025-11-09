@@ -2,10 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 // Assuming your models are structured as defined previously
 import 'package:silvercare/models/checklist_item_model.dart';
+import 'package:silvercare/services/persistent_notification_service.dart';
 
 class ChecklistService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final PersistentNotificationService _notificationService = PersistentNotificationService();
 
   static const String _checklistCollection = 'elderly_checklists';
   
@@ -116,13 +118,61 @@ class ChecklistService {
     if (_elderlyId.isEmpty) return;
 
     try {
-      await _firestore.collection(_checklistCollection).doc(itemId).update({
-        'isCompleted': isCompleted,
-        'completedAt': isCompleted ? Timestamp.fromDate(DateTime.now()) : null,
-      });
-      print('✅ Checklist item $itemId completion status updated to $isCompleted');
+      final completedAt = isCompleted ? DateTime.now() : null;
+      
+      // Get the task document first to check for existing notification
+      final taskDoc = await _firestore.collection(_checklistCollection).doc(itemId).get();
+      if (!taskDoc.exists) {
+        print('⚠️ Task document not found: $itemId');
+        return;
+      }
+      
+      final task = ChecklistItemModel.fromDoc(taskDoc);
+      
+      // Handle completing vs uncompleting
+      if (isCompleted && completedAt != null) {
+        // COMPLETING - Create notification and store ID
+        print('📝 Creating notification for task: ${task.task}...');
+        print('   elderlyId: $_elderlyId');
+        
+        final notificationId = await _notificationService.createTaskCompleted(
+          elderlyId: _elderlyId,
+          taskName: task.task,
+          category: task.category,
+          completedAt: completedAt,
+          taskId: itemId,
+        );
+        
+        // Update task with completion and notification ID
+        await _firestore.collection(_checklistCollection).doc(itemId).update({
+          'isCompleted': true,
+          'completedAt': Timestamp.fromDate(completedAt),
+          'notificationId': notificationId,
+        });
+        
+        print('✅ Task marked complete with notification');
+      } else {
+        // UNCOMPLETING - Delete notification if it exists
+        final data = taskDoc.data();
+        final notificationId = data?['notificationId'] as String?;
+        
+        if (notificationId != null) {
+          await _notificationService.deleteNotification(notificationId);
+          print('🗑️ Deleted notification for uncompleted task');
+        }
+        
+        // Update task to mark as incomplete
+        await _firestore.collection(_checklistCollection).doc(itemId).update({
+          'isCompleted': false,
+          'completedAt': null,
+          'notificationId': null,
+        });
+        
+        print('✅ Task marked as incomplete, notification removed');
+      }
     } catch (e) {
-      print('Error updating task status: $e');
+      print('❌ Error updating task status: $e');
+      print('Stack trace: ${StackTrace.current}');
     }
   }
 }

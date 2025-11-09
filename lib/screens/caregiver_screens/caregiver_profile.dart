@@ -385,8 +385,6 @@ class _CaregiverProfileState extends State<CaregiverProfile> {
 
                   const SizedBox(height: 20),
 
-                  // Actions / quick info
-                  
                 ],
               ),
             ),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:silvercare/services/medication_service.dart';
-import 'package:silvercare/services/checklist_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:silvercare/services/persistent_notification_service.dart';
+import 'package:silvercare/models/notification_model.dart';
 import 'package:intl/intl.dart';
 
 const String _logoAssetPath = 'assets/icons/silvercare.png'; 
@@ -18,46 +17,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   final Color _negativeColor = const Color(0xFFCD5C5C); // Red - missed, alerts, dangers
   final Color _positiveColor = const Color(0xFF008000); // Green - completed, taken, good news
   final Color _reminderColor = const Color(0xFF000080); // Blue - upcomings, reminders
+  final Color _warningColor = const Color(0xFFFFA500); // Orange - warnings, late
   final Color _titleTextColor = const Color(0xFF808080);
   
-  final MedicationService _medicationService = MedicationService();
-  final ChecklistService _checklistService = ChecklistService();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance; 
+  final PersistentNotificationService _notificationService = PersistentNotificationService(); 
 
   double _getResponsiveFontSize(BuildContext context, double baseSize) {
     final screenWidth = MediaQuery.of(context).size.width;
     final scaleFactor = screenWidth / 375;
     final clampedScaleFactor = scaleFactor.clamp(0.8, 1.4);
     return baseSize * clampedScaleFactor;
-  }
-
-  void _showComingSoonDialog(BuildContext context, String feature) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          title: Text(
-            'Action: $feature',
-            style: TextStyle(
-              fontFamily: 'Montserrat',
-              fontWeight: FontWeight.w600,
-              fontSize: _getResponsiveFontSize(context, 18),
-            ),
-          ),
-          content: const Text(
-            'This button would typically navigate to the detail screen.',
-            style: TextStyle(fontFamily: 'Inter', fontSize: 14, color: Color(0xFF666666)),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK', style: TextStyle(color: Color(0xFF2C2C2C), fontFamily: 'Inter', fontWeight: FontWeight.w500)),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   Widget _buildHeader(BuildContext context) {
@@ -113,19 +82,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ],
           ),
 
-          InkWell(
-            onTap: () => _showComingSoonDialog(context, 'Settings'),
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.8),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2))],
-              ),
-              child: const Icon(Icons.settings_outlined, color: Color(0xFF2C2C2C), size: 24),
-            ),
-          ),
+          // Empty spacer to balance the layout
+          const SizedBox(width: 48),
         ],
       ),
     );
@@ -314,11 +272,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
   
-  // Build all notifications in a single stream
+  // Build all notifications from persistent storage
   Widget _buildAllNotifications() {
-    return StreamBuilder<Map<String, dynamic>>(
-      stream: _combineAllNotifications(),
+    return StreamBuilder<List<NotificationModel>>(
+      stream: _notificationService.getNotifications(),
       builder: (context, snapshot) {
+        // Show loading spinner
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
             child: Padding(
@@ -328,7 +287,47 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           );
         }
         
-        if (!snapshot.hasData || snapshot.data!['notifications'].isEmpty) {
+        // Handle errors
+        if (snapshot.hasError) {
+          print('❌ Error loading notifications: ${snapshot.error}');
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 80, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(
+                  'Error loading notifications',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${snapshot.error}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {}); // Retry
+                  },
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
+        
+        // Handle empty state
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          print('📭 No notifications found in Firestore');
           return Center(
             child: Column(
               children: [
@@ -349,7 +348,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Check back later for updates',
+                  'Complete tasks or take medications to see notifications here',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey.shade500,
@@ -360,162 +360,58 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           );
         }
         
-        final List<Map<String, dynamic>> notifications = 
-            List<Map<String, dynamic>>.from(snapshot.data!['notifications']);
+        final notifications = snapshot.data!;
+        print('📬 Loaded ${notifications.length} notifications from Firestore');
         
-        return Column(
-          children: notifications.map((notif) {
+        // Add shrinkWrap and physics to prevent layout issues
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: notifications.length,
+          itemBuilder: (context, index) {
+            final notif = notifications[index];
+            
+            // Map severity to color
+            Color color;
+            IconData icon;
+            
+            switch (notif.severity) {
+              case 'positive':
+                color = _positiveColor;
+                icon = Icons.check_circle;
+                break;
+              case 'negative':
+                color = _negativeColor;
+                icon = Icons.error_outline;
+                break;
+              case 'warning':
+                color = _warningColor;
+                icon = Icons.warning_amber_rounded;
+                break;
+              default: // 'reminder'
+                color = _reminderColor;
+                icon = Icons.info_outline;
+            }
+            
+            // Format timestamp
+            final timeStr = DateFormat('MMM d, h:mm a').format(notif.timestamp);
+            
             return _buildNotificationCard(
-              title: notif['title'],
-              subtitle: notif['subtitle'],
-              time: notif['time'],
-              icon: notif['icon'],
-              color: notif['color'],
+              title: notif.title,
+              subtitle: notif.message,
+              time: timeStr,
+              icon: icon,
+              color: color,
               onTap: () {
-                // Navigate to main screen to see details
+                // Mark as read when tapped
+                _notificationService.markAsRead(notif.id);
+                // Navigate to home screen
                 Navigator.pushNamed(context, '/main');
               },
             );
-          }).toList(),
+          },
         );
       },
     );
-  }
-  
-  // Combine all notification sources into one stream
-  Stream<Map<String, dynamic>> _combineAllNotifications() async* {
-    await for (final meds in _medicationService.getActiveMedicationSchedules()) {
-      await for (final tasks in _checklistService.getTodayChecklist()) {
-        final List<Map<String, dynamic>> allNotifications = [];
-        final now = DateTime.now();
-        final today = DateFormat('EEEE').format(now);
-        
-        // Process medications
-        for (final med in meds) {
-          if (!med.daysOfWeek.contains(today)) continue;
-          
-          for (final timeStr in med.timesOfDay) {
-            final timeParts = timeStr.split(':');
-            final scheduledHour = int.parse(timeParts[0]);
-            final scheduledMinute = int.parse(timeParts[1]);
-            final scheduledDateTime = DateTime(
-              now.year,
-              now.month,
-              now.day,
-              scheduledHour,
-              scheduledMinute,
-            );
-            
-            // Check if dose is taken
-            final doseId = '${med.id}_${now.toIso8601String().substring(0, 10)}_${timeStr.replaceAll(':', '')}';
-            final doseDoc = await _firestore
-                .collection(MedicationService.completionCollection)
-                .doc(doseId)
-                .get();
-            
-            final isTaken = doseDoc.exists && (doseDoc.data()?['isTaken'] ?? false);
-            final isPast = now.isAfter(scheduledDateTime.add(const Duration(minutes: 15)));
-            final isUpcoming = scheduledDateTime.isAfter(now) && 
-                              scheduledDateTime.difference(now).inMinutes <= 30;
-            
-            // Convert to 12-hour format
-            final hour12 = scheduledHour > 12 ? scheduledHour - 12 : (scheduledHour == 0 ? 12 : scheduledHour);
-            final period = scheduledHour >= 12 ? 'PM' : 'AM';
-            final time12Hour = '${hour12.toString().padLeft(2, '0')}:${scheduledMinute.toString().padLeft(2, '0')} $period';
-            
-            if (isTaken) {
-              // GREEN - Positive notification (medication taken)
-              final takenAt = doseDoc.data()?['takenAt'] as Timestamp?;
-              final takenTime = takenAt != null ? DateFormat('h:mm a').format(takenAt.toDate()) : time12Hour;
-              
-              allNotifications.add({
-                'title': '✓ ${med.name} Taken',
-                'subtitle': '${med.dosage} taken successfully',
-                'time': 'Taken at $takenTime',
-                'icon': Icons.check_circle,
-                'color': _positiveColor,
-                'timestamp': takenAt?.toDate() ?? scheduledDateTime,
-              });
-            } else if (isPast) {
-              // RED - Negative notification (missed medication)
-              allNotifications.add({
-                'title': '⚠ Missed: ${med.name}',
-                'subtitle': 'You missed your ${med.dosage} dose',
-                'time': 'Was due at $time12Hour',
-                'icon': Icons.error_outline,
-                'color': _negativeColor,
-                'timestamp': scheduledDateTime,
-              });
-            } else if (isUpcoming) {
-              // BLUE - Reminder notification (upcoming medication)
-              final minutesLeft = scheduledDateTime.difference(now).inMinutes;
-              allNotifications.add({
-                'title': '⏰ Upcoming: ${med.name}',
-                'subtitle': 'Take ${med.dosage} soon',
-                'time': 'In $minutesLeft minutes ($time12Hour)',
-                'icon': Icons.access_time,
-                'color': _reminderColor,
-                'timestamp': scheduledDateTime,
-              });
-            }
-          }
-        }
-        
-        // Process checklist tasks
-        for (final task in tasks) {
-          if (task.isCompleted) {
-            // GREEN - Task completed
-            final completedTime = task.completedAt != null 
-                ? DateFormat('h:mm a').format(task.completedAt!) 
-                : 'Earlier';
-            
-            allNotifications.add({
-              'title': '✓ ${task.task}',
-              'subtitle': 'Task completed successfully',
-              'time': 'Completed at $completedTime',
-              'icon': Icons.task_alt,
-              'color': _positiveColor,
-              'timestamp': task.completedAt ?? task.dueDate,
-            });
-          } else {
-            final isPast = now.isAfter(task.dueDate);
-            final isUpcoming = task.dueDate.isAfter(now) && 
-                              task.dueDate.difference(now).inMinutes <= 30;
-            
-            if (isPast) {
-              // RED - Overdue task
-              allNotifications.add({
-                'title': '⚠ Overdue: ${task.task}',
-                'subtitle': 'This task was not completed on time',
-                'time': 'Was due at ${DateFormat('h:mm a').format(task.dueDate)}',
-                'icon': Icons.warning_amber,
-                'color': _negativeColor,
-                'timestamp': task.dueDate,
-              });
-            } else if (isUpcoming) {
-              // BLUE - Upcoming task
-              final minutesLeft = task.dueDate.difference(now).inMinutes;
-              allNotifications.add({
-                'title': '⏰ Reminder: ${task.task}',
-                'subtitle': 'Task due soon',
-                'time': 'Due in $minutesLeft minutes',
-                'icon': Icons.event_note,
-                'color': _reminderColor,
-                'timestamp': task.dueDate,
-              });
-            }
-          }
-        }
-        
-        // Sort notifications by timestamp (most recent first)
-        allNotifications.sort((a, b) => 
-          (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime)
-        );
-        
-        yield {'notifications': allNotifications};
-        break;
-      }
-      break;
-    }
   }
 }

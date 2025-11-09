@@ -5,6 +5,7 @@ import 'package:silvercare/models/checklist_item_model.dart';
 import 'package:silvercare/models/medication_model.dart';
 import 'package:silvercare/services/checklist_service.dart';
 import 'package:silvercare/services/medication_service.dart';
+import 'package:silvercare/services/push_notification_service.dart';
 import 'package:silvercare/widgets/mood_tracker_card.dart';
 import 'package:intl/intl.dart'; // Import for date formatting
 
@@ -21,12 +22,32 @@ class _HomeScreenState extends State<HomeScreen> {
   // Services for our new cards
   final MedicationService _medicationService = MedicationService();
   final ChecklistService _checklistService = ChecklistService();
+  final PushNotificationService _pushNotificationService = PushNotificationService();
   // Firestore instance for real-time dose checking
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
   void initState() {
     super.initState();
+    _scheduleNotifications();
+  }
+
+  // Schedule push notifications for medication reminders
+  void _scheduleNotifications() async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        await _pushNotificationService.scheduleMedicationNotifications(user.uid);
+        await _pushNotificationService.scheduleDailyRefresh(user.uid);
+        
+        // Optional: Print count for debugging
+        final count = await _pushNotificationService.getPendingNotificationsCount();
+        print('Scheduled $count push notifications');
+      }
+    } catch (e) {
+      print('⚠️ Could not schedule push notifications: $e');
+      // Continue anyway - app will work without push notifications
+    }
   }
 
   double _getResponsiveFontSize(BuildContext context, double baseSize) {
@@ -415,14 +436,17 @@ class _HomeScreenState extends State<HomeScreen> {
       scheduledMinute,
     );
     
-    // Grace period for "on time" vs "late"
-    const int graceMinutes = 15;
-    final DateTime graceDeadline = scheduledDateTime.add(Duration(minutes: graceMinutes));
+    // NEW TIME ZONES (1-hour grace period)
+    const int upcomingMinutes = 30; // Show SOON badge 30 min before
+    const int graceMinutes = 60; // 1-hour grace period
     
-    // Determine medication status BEFORE it's taken
-    final bool isPastGrace = now.isAfter(graceDeadline);
-    final bool isUpcoming = scheduledDateTime.isAfter(now) && 
-                            scheduledDateTime.difference(now).inMinutes <= 30;
+    final DateTime upcomingStart = scheduledDateTime.subtract(const Duration(minutes: upcomingMinutes));
+    final DateTime graceDeadline = scheduledDateTime.add(const Duration(minutes: graceMinutes));
+    
+    // Determine time zone
+    final bool isUpcoming = now.isBefore(scheduledDateTime) && now.isAfter(upcomingStart);
+    final bool isTakeNowTime = now.isAfter(scheduledDateTime) && now.isBefore(graceDeadline);
+    final bool isLateTime = now.isAfter(graceDeadline);
     
     // Create the unique ID for this dose instance
     final String doseInstanceId =
@@ -451,48 +475,57 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         }
         
-        // Determine actual status
-        bool isMissed = false;
+        // Determine actual status based on new time zones
         bool isTakenLate = false;
         bool isTakenOnTime = false;
         
         if (isTaken && takenAt != null) {
-          // Check if it was taken after the grace period
+          // Check if it was taken after the 1-hour grace period
           if (takenAt.isAfter(graceDeadline)) {
             isTakenLate = true;
           } else {
             isTakenOnTime = true;
           }
-        } else if (isPastGrace) {
-          // Not taken and past grace period = missed
-          isMissed = true;
         }
         
         // Can undo if taken within last 5 minutes
         final bool canUndo = isTaken && takenAt != null && 
                             DateTime.now().difference(takenAt).inMinutes < 5;
         
+        // Determine if checkbox should be enabled
+        // UPCOMING (SOON badge) = NOT tickable
+        // TAKE NOW or LATE = tickable
+        final bool isTickable = !isTaken && (isTakeNowTime || isLateTime);
+        
         // Card color based on status
         Color cardColor = Colors.white;
         Color borderColor = Colors.grey.shade300;
         
-        if (isMissed) {
-          cardColor = Colors.red.shade50;
-          borderColor = Colors.red.shade300;
+        if (isLateTime && !isTaken) {
+          // LATE TIME but not taken yet
+          cardColor = Colors.orange.shade50;
+          borderColor = Colors.orange.shade400;
         } else if (isTakenLate) {
+          // Was taken late
           cardColor = Colors.orange.shade50;
           borderColor = Colors.orange.shade400;
         } else if (isTakenOnTime) {
+          // Was taken on time
           cardColor = Colors.green.shade50;
           borderColor = Colors.green.shade300;
+        } else if (isTakeNowTime && !isTaken) {
+          // TAKE NOW window
+          cardColor = Colors.green.shade50;
+          borderColor = Colors.green.shade400;
         } else if (isUpcoming) {
+          // UPCOMING (SOON)
           cardColor = Colors.blue.shade50;
           borderColor = Colors.blue.shade300;
         }
 
         return Card(
-          elevation: isMissed ? 4 : 2,
-          shadowColor: isMissed ? Colors.red.withOpacity(0.3) : Colors.black.withOpacity(0.1),
+          elevation: (isLateTime && !isTaken) ? 4 : 2,
+          shadowColor: (isLateTime && !isTaken) ? Colors.orange.withOpacity(0.3) : Colors.black.withOpacity(0.1),
           margin: const EdgeInsets.only(bottom: 12),
           color: cardColor,
           shape: RoundedRectangleBorder(
@@ -504,20 +537,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Row(
               children: [
                 // Status Icon
-                if (isMissed)
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.error_outline,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  )
-                else if (isTakenLate)
+                if (isTakenLate)
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
@@ -579,27 +599,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                 fontSize: _getResponsiveFontSize(context, 18),
                                 fontFamily: 'Montserrat',
                                 fontWeight: FontWeight.w600,
-                                color: isMissed ? Colors.red.shade900 : Colors.black,
+                                color: (isLateTime && !isTaken) ? Colors.orange.shade900 : Colors.black,
                               ),
                             ),
                           ),
-                          if (isMissed)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              child: const Text(
-                                'MISSED',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            )
-                          else if (isTakenLate)
+                          // Badge system: SOON (blue), TAKE NOW (green), LATE (orange when already taken late, orange when not yet taken but late)
+                          if (isLateTime && !isTaken)
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
@@ -608,6 +613,38 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               child: const Text(
                                 'LATE',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            )
+                          else if (isTakenLate && isTaken)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.orange,
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: const Text(
+                                'TAKEN LATE',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            )
+                          else if (isTakeNowTime && !isTaken)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.green,
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: const Text(
+                                'TAKE NOW',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 10,
@@ -702,11 +739,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           );
                           
                           if (confirm == true) {
-                            // Delete the completion document
-                            await _firestore
-                                .collection(MedicationService.completionCollection)
-                                .doc(doseInstanceId)
-                                .delete();
+                            // Call the undo method which deletes both the completion and notification
+                            await _medicationService.undoDoseTaken(
+                              scheduleId: med.id,
+                              doseTime: time,
+                              scheduledDate: scheduledDate,
+                            );
                           }
                         },
                         icon: const Icon(Icons.undo, color: Colors.orange),
@@ -723,24 +761,37 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   )
                 else if (!isTaken)
-                  // Checkbox to mark as taken
-                  Transform.scale(
-                    scale: 1.5,
-                    child: Checkbox(
-                      value: false,
-                      onChanged: (bool? newValue) {
-                        if (newValue == true) {
-                          _medicationService.markDoseAsTaken(
-                            scheduleId: med.id,
-                            doseTime: time,
-                            scheduledDate: scheduledDate,
-                          );
-                        }
-                      },
-                      activeColor: Colors.green,
-                      shape: const CircleBorder(),
-                    ),
-                  )
+                  // Checkbox to mark as taken (only if in TAKE NOW or LATE window)
+                  isTickable
+                    ? Transform.scale(
+                        scale: 1.5,
+                        child: Checkbox(
+                          value: false,
+                          onChanged: (bool? newValue) async {
+                            if (newValue == true) {
+                              await _medicationService.markDoseAsTaken(
+                                scheduleId: med.id,
+                                doseTime: time,
+                                scheduledDate: scheduledDate,
+                              );
+                              // Reschedule notifications after marking dose
+                              _scheduleNotifications();
+                            }
+                          },
+                          activeColor: Colors.green,
+                          shape: const CircleBorder(),
+                        ),
+                      )
+                    : Container(
+                        width: 48,
+                        height: 48,
+                        alignment: Alignment.center,
+                        child: Icon(
+                          Icons.lock_clock,
+                          color: Colors.blue.shade300,
+                          size: 28,
+                        ),
+                      )
                 else
                   // Already taken, show checkmark
                   Icon(
@@ -819,41 +870,209 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // --- NEW WIDGET: Single Checklist Item ---
   Widget _buildChecklistItem(ChecklistItemModel task) {
+    final now = DateTime.now();
+    final isOverdue = !task.isCompleted && now.isAfter(task.dueDate);
+    final dueTimeStr = DateFormat('h:mm a').format(task.dueDate);
+    
+    // Get category icon and color
+    IconData categoryIcon;
+    Color categoryColor;
+    
+    switch (task.category.toLowerCase()) {
+      case 'health':
+        categoryIcon = Icons.favorite;
+        categoryColor = Colors.red;
+        break;
+      case 'medication':
+        categoryIcon = Icons.medication;
+        categoryColor = Colors.blue;
+        break;
+      case 'meals':
+        categoryIcon = Icons.restaurant;
+        categoryColor = Colors.orange;
+        break;
+      case 'exercise':
+        categoryIcon = Icons.fitness_center;
+        categoryColor = Colors.green;
+        break;
+      case 'hydration':
+        categoryIcon = Icons.water_drop;
+        categoryColor = Colors.lightBlue;
+        break;
+      case 'personal care':
+        categoryIcon = Icons.self_improvement;
+        categoryColor = Colors.purple;
+        break;
+      case 'morning':
+        categoryIcon = Icons.wb_sunny;
+        categoryColor = Colors.amber;
+        break;
+      case 'afternoon':
+        categoryIcon = Icons.wb_twilight;
+        categoryColor = Colors.orange;
+        break;
+      case 'evening':
+        categoryIcon = Icons.nights_stay;
+        categoryColor = Colors.indigo;
+        break;
+      default: // 'general' and any other categories
+        categoryIcon = Icons.check_box;
+        categoryColor = Colors.grey;
+    }
+    
+    // Card border color based on status
+    Color borderColor;
+    Color cardColor;
+    
+    if (task.isCompleted) {
+      borderColor = Colors.green.shade300;
+      cardColor = Colors.green.shade50;
+    } else if (isOverdue) {
+      borderColor = Colors.orange.shade400;
+      cardColor = Colors.orange.shade50;
+    } else {
+      borderColor = Colors.grey.shade300;
+      cardColor = Colors.white;
+    }
+    
     return Card(
-      elevation: 2,
-      shadowColor: Colors.black.withOpacity(0.1),
+      elevation: isOverdue ? 3 : 2,
+      shadowColor: isOverdue ? Colors.orange.withOpacity(0.3) : Colors.black.withOpacity(0.1),
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: cardColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: borderColor, width: 1.5),
+      ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
-            // Details
-            Expanded(
-              child: Text(
-                task.task,
-                style: TextStyle(
-                  fontSize: _getResponsiveFontSize(context, 16),
-                  fontFamily: 'Montserrat',
-                  fontWeight: FontWeight.w500,
-                  decoration: task.isCompleted
-                      ? TextDecoration.lineThrough
-                      : TextDecoration.none,
-                  color: task.isCompleted
-                      ? const Color(0xFF666666)
-                      : const Color(0xFF1E1E1E),
-                ),
+            // Category Icon
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: categoryColor.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                categoryIcon,
+                color: categoryColor,
+                size: 24,
               ),
             ),
+            
             const SizedBox(width: 16),
+            
+            // Details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Task name and badges row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          task.task,
+                          style: TextStyle(
+                            fontSize: _getResponsiveFontSize(context, 16),
+                            fontFamily: 'Montserrat',
+                            fontWeight: FontWeight.w600,
+                            decoration: task.isCompleted
+                                ? TextDecoration.lineThrough
+                                : TextDecoration.none,
+                            color: task.isCompleted
+                                ? const Color(0xFF666666)
+                                : (isOverdue ? Colors.orange.shade900 : const Color(0xFF1E1E1E)),
+                          ),
+                        ),
+                      ),
+                      
+                      // Overdue badge
+                      if (isOverdue && !task.isCompleted)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.orange,
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          child: const Text(
+                            'OVERDUE',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 6),
+                  
+                  // Category and time row
+                  Row(
+                    children: [
+                      // Category badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: categoryColor.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: categoryColor.withOpacity(0.5), width: 1),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(categoryIcon, size: 12, color: categoryColor),
+                            const SizedBox(width: 4),
+                            Text(
+                              task.category,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontFamily: 'Montserrat',
+                                fontWeight: FontWeight.w600,
+                                color: categoryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(width: 8),
+                      
+                      // Time with "Before" framing
+                      Icon(Icons.access_time, size: 14, color: Colors.grey.shade600),
+                      const SizedBox(width: 4),
+                      Text(
+                        task.isCompleted
+                            ? 'Completed ${task.completedAt != null ? DateFormat('h:mm a').format(task.completedAt!) : ''}'
+                            : 'Before $dueTimeStr',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontFamily: 'Montserrat',
+                          fontWeight: FontWeight.w500,
+                          color: task.isCompleted
+                              ? Colors.green.shade700
+                              : (isOverdue ? Colors.orange.shade700 : Colors.grey.shade700),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(width: 12),
+            
             // Checkbox
             Transform.scale(
-              scale: 1.5, // Make checkbox larger
+              scale: 1.5,
               child: Checkbox(
                 value: task.isCompleted,
                 onChanged: (bool? newValue) {
                   if (newValue != null) {
-                    // Call the service to update status
                     _checklistService.updateTaskStatus(task.id, newValue);
                   }
                 },
