@@ -287,7 +287,8 @@ class _HomeScreenState extends State<HomeScreen> {
       stream: _firestore
           .collection('health_data')
           .where('elderlyId', isEqualTo: user.uid)
-          .where('measuredAt', isGreaterThanOrEqualTo: startOfTodayTimestamp)
+          // Removed the date filter to avoid index requirement
+          // We'll filter client-side instead
           .snapshots(),
       builder: (context, snapshot) {
         // Count recorded vitals for today
@@ -308,11 +309,28 @@ class _HomeScreenState extends State<HomeScreen> {
         print('   Docs count: ${snapshot.data?.docs.length ?? 0}');
         
         if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-          print('   Documents found:');
+          print('   Documents found (filtering by today):');
           for (var doc in snapshot.data!.docs) {
             final data = doc.data() as Map<String, dynamic>;
             final type = data['type'] as String?;
             final measuredAt = data['measuredAt'];
+            
+            // Client-side filtering: only count today's records
+            if (measuredAt is Timestamp) {
+              final measuredDate = measuredAt.toDate();
+              final measuredDateOnly = DateTime(measuredDate.year, measuredDate.month, measuredDate.day);
+              
+              // Skip if not from today
+              if (!measuredDateOnly.isAtSameMomentAs(startOfToday)) {
+                print('     ⏭️ Skipping $type from ${measuredDate.toString().substring(0, 10)} (not today)');
+                continue;
+              }
+            } else {
+              // Skip records without valid measuredAt
+              print('     ⚠️ Skipping record with invalid measuredAt: $measuredAt');
+              continue;
+            }
+            
             print('     - Type: $type, MeasuredAt: $measuredAt (${measuredAt.runtimeType})');
             
             switch (type) {
@@ -636,8 +654,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildMedicationSection() {
     // Get the name of the current day (e.g., "Monday")
     final String today = DateFormat('EEEE').format(DateTime.now());
-    final DateTime now = DateTime.now();
-    final DateTime todayDate = DateTime(now.year, now.month, now.day);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -669,12 +685,8 @@ class _HomeScreenState extends State<HomeScreen> {
             }
 
             final schedules = snapshot.data!;
-            
-            // 1. Filter schedules to get only those due today
             final todaySchedules = schedules.where((schedule) {
-              // Check if today is in the daysOfWeek list (e.g., "Monday")
               return schedule.daysOfWeek.contains(today);
-              // TODO: Also check for 'specificDates'
             }).toList();
 
             if (todaySchedules.isEmpty) {
