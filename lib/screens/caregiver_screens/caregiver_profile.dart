@@ -1,9 +1,6 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
 import 'package:silvercare/models/caregiver_model.dart';
 import 'package:silvercare/models/elderly_model.dart';
 
@@ -21,7 +18,8 @@ class _CaregiverProfileState extends State<CaregiverProfile> {
   bool _isLoading = true;
   CaregiverModel? _caregiverData;
   ElderlyModel? _elderlyData;
-  Map<String, dynamic>? _userProfile;
+  Map<String, dynamic>? _userProfile; // For caregiver's email from users collection
+  Map<String, dynamic>? _elderlyUserProfile; // For elderly's email from users collection
 
   @override
   void initState() {
@@ -38,14 +36,10 @@ class _CaregiverProfileState extends State<CaregiverProfile> {
         throw Exception('User not authenticated');
       }
 
-      // Fetch fullName from users collection
+      // Fetch caregiver's email from users collection
       final userDoc = await _firestore.collection('users').doc(userId).get();
       if (userDoc.exists) {
         _userProfile = userDoc.data();
-        print('User profile data: $_userProfile');
-      } else {
-        print('No user document found, creating empty profile map');
-        _userProfile = {};
       }
 
       // Fetch caregiver document
@@ -61,6 +55,12 @@ class _CaregiverProfileState extends State<CaregiverProfile> {
               .get();
           if (elderlyDoc.exists) {
             _elderlyData = ElderlyModel.fromDoc(elderlyDoc);
+            
+            // Fetch elderly's email from users collection
+            final elderlyUserDoc = await _firestore.collection('users').doc(_elderlyData!.userId).get();
+            if (elderlyUserDoc.exists) {
+              _elderlyUserProfile = elderlyUserDoc.data();
+            }
           }
         }
       }
@@ -81,28 +81,39 @@ class _CaregiverProfileState extends State<CaregiverProfile> {
     }
   }
 
-  Future<void> _showEditDialog() async {
+  Future<void> _showEditCaregiverDialog() async {
     if (_caregiverData == null) return;
 
-    final fullNameController = TextEditingController(text: _userProfile?['fullName'] ?? '');
+    final nameController = TextEditingController(text: _caregiverData!.fullName ?? '');
+    final emailController = TextEditingController(text: _userProfile?['email'] ?? _caregiverData!.email);
     final relationshipController = TextEditingController(text: _caregiverData!.relationship);
+    final phoneController = TextEditingController(text: _userProfile?['phoneNumber'] ?? '');
 
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Edit Profile'),
+        title: const Text('Edit Caregiver Details'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
-                controller: fullNameController,
+                controller: nameController,
                 decoration: const InputDecoration(
                   labelText: 'Full Name',
                   border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 12),
               TextField(
                 controller: relationshipController,
                 decoration: const InputDecoration(
@@ -110,6 +121,15 @@ class _CaregiverProfileState extends State<CaregiverProfile> {
                   border: OutlineInputBorder(),
                   hintText: 'e.g., Spouse, Child, Professional Caregiver',
                 ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneController,
+                decoration: const InputDecoration(
+                  labelText: 'Phone Number',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.phone,
               ),
             ],
           ),
@@ -128,27 +148,29 @@ class _CaregiverProfileState extends State<CaregiverProfile> {
     );
 
     if (result == true) {
-      await _saveProfileChanges(
-        fullNameController.text,
+      await _saveCaregiverChanges(
+        nameController.text,
+        emailController.text,
         relationshipController.text,
+        phoneController.text,
       );
     }
 
-    fullNameController.dispose();
+    nameController.dispose();
+    emailController.dispose();
     relationshipController.dispose();
+    phoneController.dispose();
   }
 
-  Future<void> _saveProfileChanges(String fullName, String relationship) async {
+  Future<void> _saveCaregiverChanges(
+    String fullName,
+    String email,
+    String relationship,
+    String phoneNumber,
+  ) async {
     try {
       final userId = _auth.currentUser?.uid;
-      if (userId == null) {
-        print('Error: User ID is null');
-        return;
-      }
-
-      print('Saving profile changes for user: $userId');
-      print('Full Name: $fullName');
-      print('Relationship: $relationship');
+      if (userId == null) return;
 
       // Validate input
       if (fullName.trim().isEmpty) {
@@ -163,39 +185,37 @@ class _CaregiverProfileState extends State<CaregiverProfile> {
         return;
       }
 
-      // Update users collection (use set with merge to create field if it doesn't exist)
-      print('Updating users collection...');
+      // Update users collection (email and phone)
       await _firestore.collection('users').doc(userId).set({
         'fullName': fullName.trim(),
+        'email': email.trim(),
+        'phoneNumber': phoneNumber.trim(),
       }, SetOptions(merge: true));
-      print('Users collection updated successfully');
 
       // Update caregivers collection
-      print('Updating caregivers collection...');
       await _firestore.collection('caregivers').doc(userId).update({
+        'fullName': fullName.trim(),
+        'email': email.trim(),
         'relationship': relationship.trim(),
       });
-      print('Caregivers collection updated successfully');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ Profile updated successfully!'),
+            content: Text('✅ Caregiver details updated successfully!'),
             backgroundColor: Colors.green,
           ),
         );
       }
 
       // Refresh data
-      print('Refreshing profile data...');
       await _fetchCaregiverProfile();
-      print('Profile refresh complete');
     } catch (e) {
-      print('Error saving profile changes: $e');
+      print('Error saving caregiver changes: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating profile: $e'),
+            content: Text('Error updating details: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -262,161 +282,198 @@ class _CaregiverProfileState extends State<CaregiverProfile> {
       );
     }
 
-    final created = DateFormat.yMMMMd().add_jm().format(_caregiverData!.createdAt.toLocal());
-
     return SafeArea(
-      child: LayoutBuilder(builder: (context, constraints) {
-        final isNarrow = constraints.maxWidth < 420;
-        final maxContentWidth = min(900.0, constraints.maxWidth);
-        final labelWidth = min(160.0, maxContentWidth * 0.36);
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: maxContentWidth),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Header
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header with profile picture and sign out button
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                CircleAvatar(
+                  radius: 48,
+                  backgroundColor: Colors.deepPurple.shade50,
+                  child: const Icon(
+                    Icons.person,
+                    size: 48,
+                    color: Colors.deepPurple,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
-                        radius: isNarrow ? 36 : 48,
-                        backgroundColor: Colors.deepPurple.shade50,
-                        child: Icon(
-                          Icons.person,
-                          size: isNarrow ? 36 : 48,
-                          color: Colors.deepPurple,
+                      Text(
+                        _caregiverData!.fullName ?? 'Caregiver',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _userProfile?['fullName'] ?? _caregiverData!.email,
-                              style: TextStyle(
-                                fontSize: isNarrow ? 16 : 20,
-                                fontWeight: FontWeight.w700,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '${_caregiverData!.relationship} • Caregiver',
-                              style: TextStyle(
-                                fontSize: isNarrow ? 12 : 14,
-                                color: Colors.grey[700],
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                      const SizedBox(height: 6),
+                      Text(
+                        '${_caregiverData!.relationship} • Caregiver',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[700],
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Column(
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: _showEditDialog,
-                            icon: const Icon(Icons.edit),
-                            label: const Text('Edit'),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          OutlinedButton.icon(
-                            onPressed: _handleSignOut,
-                            icon: const Icon(Icons.logout, color: Colors.red),
-                            label: const Text('Sign Out', style: TextStyle(color: Colors.red)),
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Colors.red),
-                            ),
-                          ),
-                        ],
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 20),
-
-                  // Card with details
-                  Card(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            'Caregiver Details',
-                            style: TextStyle(fontSize: isNarrow ? 16 : 18, fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(height: 12),
-                          const Divider(),
-                          _buildRow(context, labelWidth: labelWidth, label: 'Caregiver ID', value: _caregiverData!.id),
-                          const Divider(),
-                          _buildRow(context, labelWidth: labelWidth, label: 'User ID', value: _caregiverData!.userId),
-                          const Divider(),
-                          _buildRow(context, labelWidth: labelWidth, label: 'Full Name', value: _userProfile?['fullName'] ?? 'N/A'),
-                          const Divider(),
-                          _buildRow(context, labelWidth: labelWidth, label: 'Email', value: _caregiverData!.email),
-                          const Divider(),
-                          _buildRow(context, labelWidth: labelWidth, label: 'Relationship', value: _caregiverData!.relationship),
-                          const Divider(),
-                          _buildRow(context, labelWidth: labelWidth, label: 'Created', value: created),
-                          const Divider(),
-                          _buildRow(context, labelWidth: labelWidth, label: 'Elderly ID', value: _caregiverData!.elderlyId ?? 'Not assigned'),
-                          if (_elderlyData != null) ...[
-                            const Divider(),
-                            _buildRow(context, labelWidth: labelWidth, label: 'Elderly Name', value: _elderlyData!.username),
-                            const Divider(),
-                            _buildRow(context, labelWidth: labelWidth, label: 'Elderly Phone', value: _elderlyData!.phoneNumber),
-                          ],
-                        ],
-                      ),
-                    ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: _handleSignOut,
+                  icon: const Icon(Icons.logout, color: Colors.red, size: 20),
+                  label: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.red),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
-
-                  const SizedBox(height: 20),
-
-                ],
-              ),
+                ),
+              ],
             ),
-          ),
-        );
-      }),
+
+            const SizedBox(height: 24),
+
+            // Caregiver Details Card (Editable)
+            _buildCaregiverCard(),
+
+            const SizedBox(height: 16),
+
+            // Elder Details Card (Read-only)
+            if (_elderlyData != null) _buildElderCard(),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildRow(BuildContext context, {required double labelWidth, required String label, required String value}) {
-    final isNarrow = MediaQuery.of(context).size.width < 420;
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: isNarrow ? 6.0 : 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: labelWidth,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87),
+  Widget _buildCaregiverCard() {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 3,
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.person_outline, color: Colors.deepPurple, size: 24),
+                    SizedBox(width: 8),
+                    Text(
+                      'Caregiver Details',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.deepPurple,
+                      ),
+                    ),
+                  ],
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.deepPurple),
+                  onPressed: _showEditCaregiverDialog,
+                  tooltip: 'Edit Caregiver Details',
+                ),
+              ],
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(color: Colors.black87),
-            ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+            _buildDetailRow('Name', _caregiverData!.fullName ?? 'N/A'),
+            const SizedBox(height: 12),
+            _buildDetailRow('Email', _userProfile?['email'] ?? _caregiverData!.email),
+            const SizedBox(height: 12),
+            _buildDetailRow('Relationship', _caregiverData!.relationship),
+            const SizedBox(height: 12),
+            _buildDetailRow('Phone', _userProfile?['phoneNumber'] ?? 'Not provided'),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildElderCard() {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 3,
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.elderly, color: Colors.teal, size: 24),
+                SizedBox(width: 8),
+                Text(
+                  'Elderly Details',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.teal,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              '(Read-only)',
+              style: TextStyle(
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+            _buildDetailRow('Name', _elderlyData!.username),
+            const SizedBox(height: 12),
+            _buildDetailRow('Phone', _elderlyData!.phoneNumber),
+            const SizedBox(height: 12),
+            _buildDetailRow('Email', _elderlyUserProfile?['email'] ?? 'Not available'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 120,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+              fontSize: 15,
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              color: Colors.black87,
+              fontSize: 15,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

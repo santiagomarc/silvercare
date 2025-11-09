@@ -6,6 +6,7 @@ import 'package:silvercare/models/medication_model.dart';
 import 'package:silvercare/services/checklist_service.dart';
 import 'package:silvercare/services/medication_service.dart';
 import 'package:silvercare/services/push_notification_service.dart';
+import 'package:silvercare/services/persistent_notification_service.dart';
 import 'package:silvercare/widgets/mood_tracker_card.dart';
 import 'package:intl/intl.dart'; // Import for date formatting
 
@@ -23,13 +24,55 @@ class _HomeScreenState extends State<HomeScreen> {
   final MedicationService _medicationService = MedicationService();
   final ChecklistService _checklistService = ChecklistService();
   final PushNotificationService _pushNotificationService = PushNotificationService();
+  final PersistentNotificationService _persistentNotificationService = PersistentNotificationService();
   // Firestore instance for real-time dose checking
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  
+  // Track which doses we've already created missed notifications for (to avoid duplicates)
+  final Set<String> _missedNotificationsCreated = {};
 
   @override
   void initState() {
     super.initState();
     _scheduleNotifications();
+  }
+  
+  /// Check and create a missed medication notification if needed
+  /// Uses in-memory tracking to avoid creating duplicate notifications
+  Future<void> _checkAndCreateMissedNotification(
+    MedicationModel med,
+    DateTime scheduledDateTime,
+    String doseInstanceId,
+  ) async {
+    // Skip if we already created a missed notification for this dose
+    if (_missedNotificationsCreated.contains(doseInstanceId)) {
+      return;
+    }
+    
+    // Check if a missed notification already exists in Firestore
+    final existingNotifications = await _firestore
+        .collection('notifications')
+        .where('type', isEqualTo: 'medication_missed')
+        .where('elderlyId', isEqualTo: _auth.currentUser?.uid)
+        .where('metadata.medicationId', isEqualTo: med.id)
+        .where('metadata.scheduledTime', isEqualTo: scheduledDateTime.toIso8601String())
+        .get();
+    
+    if (existingNotifications.docs.isEmpty) {
+      // Create the missed notification
+      await _persistentNotificationService.createMedicationMissed(
+        elderlyId: _auth.currentUser!.uid,
+        medicationName: med.name,
+        scheduledTime: scheduledDateTime,
+        medicationId: med.id,
+      );
+      
+      // Mark as created in our in-memory tracker
+      _missedNotificationsCreated.add(doseInstanceId);
+    } else {
+      // Notification already exists, just mark it in our tracker
+      _missedNotificationsCreated.add(doseInstanceId);
+    }
   }
 
   // Schedule push notifications for medication reminders
@@ -181,86 +224,224 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildQuickActions() {
-    // ... (Your existing _buildQuickActions code - no changes)
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFF383838), width: 1),
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Text(
-              'Health Vitals Monitor',
-              style: TextStyle(
-                color: const Color(0xFF1E1E1E),
-                fontSize: _getResponsiveFontSize(context, 22),
-                fontFamily: 'Montserrat',
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          // 2x2 Grid for the first 4 vital measurements
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 16,
-            childAspectRatio: 1.0,
-            children: [
-              _buildVitalCard(
-                icon: Icons.bloodtype,
-                label: 'Blood Pressure',
-                color: Colors.orange.shade900,
-                onTap: () => Navigator.pushNamed(context, '/blood_pressure'),
-              ),
-              _buildVitalCard(
-                icon: Icons.water_drop,
-                label: 'Sugar Level',
-                color: Colors.green.shade900,
-                onTap: () => Navigator.pushNamed(context, '/sugar_level'),
-              ),
-              _buildVitalCard(
-                icon: Icons.thermostat,
-                label: 'Temperature',
-                color: Colors.lightBlue.shade900,
-                onTap: () => Navigator.pushNamed(context, '/temperature'),
-              ),
-              _buildVitalCard(
-                icon: Icons.favorite,
-                label: 'Heart Rate',
-                color: Colors.pink.shade900,
-                onTap: () => Navigator.pushNamed(context, '/heart_rate'),
+    final user = _auth.currentUser;
+    if (user == null) {
+      return Container(); // Return empty if no user
+    }
+    
+    // Get start of today for filtering (midnight)
+    final now = DateTime.now();
+    final startOfToday = DateTime(now.year, now.month, now.day);
+    final startOfTodayTimestamp = Timestamp.fromDate(startOfToday);
+    
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestore
+          .collection('health_data')
+          .where('elderlyId', isEqualTo: user.uid)
+          .where('measuredAt', isGreaterThanOrEqualTo: startOfTodayTimestamp)
+          .snapshots(),
+      builder: (context, snapshot) {
+        // Count recorded vitals for today
+        int recordedCount = 0;
+        bool hasBP = false;
+        bool hasSugar = false;
+        bool hasTemp = false;
+        bool hasHR = false;
+        
+        if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+          for (var doc in snapshot.data!.docs) {
+            final data = doc.data() as Map<String, dynamic>;
+            final type = data['type'] as String?;
+            
+            switch (type) {
+              case 'blood_pressure':
+                if (!hasBP) {
+                  hasBP = true;
+                  recordedCount++;
+                }
+                break;
+              case 'sugar_level':
+                if (!hasSugar) {
+                  hasSugar = true;
+                  recordedCount++;
+                }
+                break;
+              case 'temperature':
+                if (!hasTemp) {
+                  hasTemp = true;
+                  recordedCount++;
+                }
+                break;
+              case 'heart_rate':
+                if (!hasHR) {
+                  hasHR = true;
+                  recordedCount++;
+                }
+                break;
+            }
+          }
+        }
+        
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: const Color(0xFF383838), width: 1),
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-
-          const SizedBox(height: 20),
-
-          // Centered Emergency SOS button
-          Center(
-            child: SizedBox(
-              height: 100,
-              width: (MediaQuery.of(context).size.width - 48 - 48 - 16) /
-                  2, // Match grid card width
-              child: _buildVitalCard(
-                icon: Icons.warning,
-                label: 'Emergency SOS',
-                color: Colors.red.shade900,
-                onTap: () => _showEmergencySosDialog(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Title
+              Center(
+                child: Text(
+                  'Health Vitals Monitor',
+                  style: TextStyle(
+                    color: const Color(0xFF1E1E1E),
+                    fontSize: _getResponsiveFontSize(context, 22),
+                    fontFamily: 'Montserrat',
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
+              const SizedBox(height: 12),
+              
+              // Progress Indicator
+              _buildVitalsProgressIndicator(recordedCount),
+              
+              const SizedBox(height: 20),
+              // 2x2 Grid for the first 4 vital measurements
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 16,
+                crossAxisSpacing: 16,
+                childAspectRatio: 1.0,
+                children: [
+                  _buildVitalCard(
+                    icon: Icons.bloodtype,
+                    label: 'Blood Pressure',
+                    color: Colors.orange.shade900,
+                    onTap: () => Navigator.pushNamed(context, '/blood_pressure'),
+                    isRecorded: hasBP,
+                  ),
+                  _buildVitalCard(
+                    icon: Icons.water_drop,
+                    label: 'Sugar Level',
+                    color: Colors.green.shade900,
+                    onTap: () => Navigator.pushNamed(context, '/sugar_level'),
+                    isRecorded: hasSugar,
+                  ),
+                  _buildVitalCard(
+                    icon: Icons.thermostat,
+                    label: 'Temperature',
+                    color: Colors.lightBlue.shade900,
+                    onTap: () => Navigator.pushNamed(context, '/temperature'),
+                    isRecorded: hasTemp,
+                  ),
+                  _buildVitalCard(
+                    icon: Icons.favorite,
+                    label: 'Heart Rate',
+                    color: Colors.pink.shade900,
+                    onTap: () => Navigator.pushNamed(context, '/heart_rate'),
+                    isRecorded: hasHR,
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // Centered Emergency SOS button
+              Center(
+                child: SizedBox(
+                  height: 100,
+                  width: (MediaQuery.of(context).size.width - 48 - 48 - 16) /
+                      2, // Match grid card width
+                  child: _buildVitalCard(
+                    icon: Icons.warning,
+                    label: 'Emergency SOS',
+                    color: Colors.red.shade900,
+                    onTap: () => _showEmergencySosDialog(),
+                    isRecorded: true, // Always true for emergency button
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  
+  Widget _buildVitalsProgressIndicator(int recordedCount) {
+    final double progress = recordedCount / 4.0;
+    final Color progressColor = recordedCount == 4 ? Colors.green : Colors.orange;
+    
+    String message;
+    if (recordedCount == 4) {
+      message = '🎉 All vitals recorded today! Great job!';
+    } else if (recordedCount == 0) {
+      message = '📊 Record your vitals to track your health';
+    } else {
+      message = '👍 Keep going! Record all vitals for best results';
+    }
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: progressColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: progressColor.withOpacity(0.3), width: 2),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Today\'s Progress',
+                style: TextStyle(
+                  fontSize: _getResponsiveFontSize(context, 14),
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[800],
+                ),
+              ),
+              Text(
+                '$recordedCount/4 Recorded',
+                style: TextStyle(
+                  fontSize: _getResponsiveFontSize(context, 16),
+                  fontWeight: FontWeight.w700,
+                  color: progressColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              backgroundColor: Colors.grey[300],
+              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: _getResponsiveFontSize(context, 12),
+              color: Colors.grey[600],
+              fontStyle: FontStyle.italic,
             ),
           ),
         ],
@@ -273,8 +454,8 @@ class _HomeScreenState extends State<HomeScreen> {
     required String label,
     required Color color,
     required VoidCallback onTap,
+    bool isRecorded = false,
   }) {
-    // ... (Your existing _buildVitalCard code - no changes)
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(30),
@@ -291,40 +472,93 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
           children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 15,
-                    offset: const Offset(0, 4),
+            // Main content - centered
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 15,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        icon,
+                        color: color,
+                        size: 36,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: _getResponsiveFontSize(context, 16),
+                        fontFamily: 'Montserrat',
+                        fontWeight: FontWeight.w700,
+                        height: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Badge indicator (only for non-emergency cards)
+            if (label != 'Emergency SOS')
+              Positioned(
+                top: 10,
+                right: 10,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isRecorded ? Colors.green : Colors.orange,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isRecorded ? Icons.check_circle : Icons.pending,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        isRecorded ? 'Done' : 'Pending',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 24,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: color,
-                fontSize: _getResponsiveFontSize(context, 14),
-                fontFamily: 'Montserrat',
-                fontWeight: FontWeight.w700,
-              ),
-            ),
           ],
         ),
       ),
@@ -446,7 +680,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // Determine time zone
     final bool isUpcoming = now.isBefore(scheduledDateTime) && now.isAfter(upcomingStart);
     final bool isTakeNowTime = now.isAfter(scheduledDateTime) && now.isBefore(graceDeadline);
-    final bool isLateTime = now.isAfter(graceDeadline);
+    final bool isMissedTime = now.isAfter(graceDeadline); // After grace period = MISSED
     
     // Create the unique ID for this dose instance
     final String doseInstanceId =
@@ -482,10 +716,17 @@ class _HomeScreenState extends State<HomeScreen> {
         if (isTaken && takenAt != null) {
           // Check if it was taken after the 1-hour grace period
           if (takenAt.isAfter(graceDeadline)) {
-            isTakenLate = true;
+            isTakenLate = true; // TAKEN LATE (orange) - only when ticked after grace period
           } else {
             isTakenOnTime = true;
           }
+        }
+        
+        // Create missed notification if past grace period and not taken
+        // This runs each time the widget builds, but we'll check if notification already exists
+        if (isMissedTime && !isTaken) {
+          // Check if we've already created a missed notification for this dose
+          _checkAndCreateMissedNotification(med, scheduledDateTime, doseInstanceId);
         }
         
         // Can undo if taken within last 5 minutes
@@ -494,19 +735,19 @@ class _HomeScreenState extends State<HomeScreen> {
         
         // Determine if checkbox should be enabled
         // UPCOMING (SOON badge) = NOT tickable
-        // TAKE NOW or LATE = tickable
-        final bool isTickable = !isTaken && (isTakeNowTime || isLateTime);
+        // TAKE NOW, MISSED = tickable
+        final bool isTickable = !isTaken && (isTakeNowTime || isMissedTime);
         
         // Card color based on status
         Color cardColor = Colors.white;
         Color borderColor = Colors.grey.shade300;
         
-        if (isLateTime && !isTaken) {
-          // LATE TIME but not taken yet
-          cardColor = Colors.orange.shade50;
-          borderColor = Colors.orange.shade400;
+        if (isMissedTime && !isTaken) {
+          // MISSED TIME (past grace period) but not taken yet - RED
+          cardColor = Colors.red.shade50;
+          borderColor = Colors.red.shade400;
         } else if (isTakenLate) {
-          // Was taken late
+          // Was taken late (after grace period) - ORANGE
           cardColor = Colors.orange.shade50;
           borderColor = Colors.orange.shade400;
         } else if (isTakenOnTime) {
@@ -524,8 +765,8 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         return Card(
-          elevation: (isLateTime && !isTaken) ? 4 : 2,
-          shadowColor: (isLateTime && !isTaken) ? Colors.orange.withOpacity(0.3) : Colors.black.withOpacity(0.1),
+          elevation: (isMissedTime && !isTaken) ? 4 : 2,
+          shadowColor: (isMissedTime && !isTaken) ? Colors.red.withOpacity(0.3) : Colors.black.withOpacity(0.1),
           margin: const EdgeInsets.only(bottom: 12),
           color: cardColor,
           shape: RoundedRectangleBorder(
@@ -599,20 +840,20 @@ class _HomeScreenState extends State<HomeScreen> {
                                 fontSize: _getResponsiveFontSize(context, 18),
                                 fontFamily: 'Montserrat',
                                 fontWeight: FontWeight.w600,
-                                color: (isLateTime && !isTaken) ? Colors.orange.shade900 : Colors.black,
+                                color: (isMissedTime && !isTaken) ? Colors.red.shade900 : Colors.black,
                               ),
                             ),
                           ),
-                          // Badge system: SOON (blue), TAKE NOW (green), LATE (orange when already taken late, orange when not yet taken but late)
-                          if (isLateTime && !isTaken)
+                          // Badge system: SOON (blue), TAKE NOW (green), MISSED (red when not taken past grace), TAKEN LATE (orange when taken past grace)
+                          if (isMissedTime && !isTaken)
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.orange,
+                                color: Colors.red,
                                 borderRadius: BorderRadius.circular(30),
                               ),
                               child: const Text(
-                                'LATE',
+                                'MISSED',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 10,
@@ -1118,7 +1359,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showEmergencySosDialog() {
-    // ... (Your existing _showEmergencySosDialog code - no changes)
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1134,13 +1374,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 size: 28,
               ),
               const SizedBox(width: 12),
-              Text(
-                'Emergency SOS',
-                style: TextStyle(
-                  fontFamily: 'Montserrat',
-                  fontWeight: FontWeight.w600,
-                  fontSize: _getResponsiveFontSize(context, 18),
-                  color: Colors.red.shade700,
+              Flexible(
+                child: Text(
+                  'Emergency SOS',
+                  style: TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontWeight: FontWeight.w600,
+                    fontSize: _getResponsiveFontSize(context, 18),
+                    color: Colors.red.shade700,
+                  ),
                 ),
               ),
             ],
@@ -1152,6 +1394,7 @@ class _HomeScreenState extends State<HomeScreen> {
               fontSize: _getResponsiveFontSize(context, 14),
               color: const Color(0xFF666666),
             ),
+            softWrap: true,
           ),
           actions: [
             TextButton(

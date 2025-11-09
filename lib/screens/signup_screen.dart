@@ -927,6 +927,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       id: caregiverId,
       userId: caregiverId,
       email: caregiverEmail,
+      fullName: caregiverName,
       elderlyId: elderlyId,
       relationship: relationship,
       createdAt: DateTime.now(),

@@ -114,7 +114,7 @@ class PersistentNotificationService {
       id: '',
       elderlyId: elderlyId,
       type: 'medication_taken',
-      title: isLate ? '💊 Medication Taken (Late)' : '✓ Medication Taken',
+      title: isLate ? '✓ Medication Taken (Late)' : '✓ Medication Taken',
       message: isLate
           ? '$medicationName taken at ${_formatTime(takenAt)} ($minutesLate min late)'
           : '$medicationName taken on time at ${_formatTime(takenAt)}',

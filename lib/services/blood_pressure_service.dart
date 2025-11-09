@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../models/health_data_model.dart';
 
 class BloodPressureService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -35,7 +34,8 @@ class BloodPressureService {
   }
 
   /// Get blood pressure data from Firestore
-  static Future<List<HealthDataModel>> getBloodPressureData({int days = 30}) async {
+  /// Returns a list of Maps containing both systolic and diastolic values
+  static Future<List<Map<String, dynamic>>> getBloodPressureData({int days = 30}) async {
     try {
       final user = _auth.currentUser;
       if (user == null) {
@@ -52,26 +52,29 @@ class BloodPressureService {
           .where('type', isEqualTo: 'blood_pressure')
           .get(); // No orderBy to avoid compound index requirement
 
-      final List<HealthDataModel> allData = querySnapshot.docs.map((doc) {
+      // Create a custom list that includes both systolic and diastolic data
+      final List<Map<String, dynamic>> allDataWithBP = querySnapshot.docs.map((doc) {
         final data = doc.data();
-        return HealthDataModel(
-          id: doc.id,
-          elderlyId: data['elderlyId'] ?? '',
-          type: data['type'] ?? 'blood_pressure',
-          value: (data['value'] ?? 0).toDouble(), // Store systolic as primary value
-          measuredAt: (data['measuredAt'] as Timestamp).toDate(),
-          createdAt: (data['createdAt'] as Timestamp).toDate(),
-          source: data['source'] ?? 'manual',
-        );
+        return {
+          'id': doc.id,
+          'elderlyId': data['elderlyId'] ?? '',
+          'type': data['type'] ?? 'blood_pressure',
+          'systolic': (data['systolic'] ?? data['value'] ?? 0).toDouble(),
+          'diastolic': (data['diastolic'] ?? 0).toDouble(), // Read actual diastolic from Firestore
+          'measuredAt': (data['measuredAt'] as Timestamp).toDate(),
+          'createdAt': (data['createdAt'] as Timestamp).toDate(),
+          'source': data['source'] ?? 'manual',
+        };
       }).toList();
 
-      // Filter by date and sort in memory
-      final filteredData = allData
-          .where((data) => data.measuredAt.isAfter(cutoffDate))
+      // Filter by date
+      final filteredData = allDataWithBP
+          .where((data) => (data['measuredAt'] as DateTime).isAfter(cutoffDate))
           .toList();
       
       // Sort by measuredAt (newest first)
-      filteredData.sort((a, b) => b.measuredAt.compareTo(a.measuredAt));
+      filteredData.sort((a, b) => 
+        (b['measuredAt'] as DateTime).compareTo(a['measuredAt'] as DateTime));
 
       print('✅ Found ${filteredData.length} blood pressure readings (last $days days)');
       return filteredData;

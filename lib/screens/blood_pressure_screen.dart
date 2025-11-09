@@ -52,13 +52,12 @@ class _BloodPressureScreenState extends State<BloodPressureScreen> {
     try {
       final data = await BloodPressureService.getBloodPressureData(days: 30);
       setState(() {
-        // Convert HealthDataModel to BloodPressureRecord
-        // For now, we'll use some sample data since the conversion is complex
-        _bpData = data.map((healthData) => BloodPressureRecord(
-          systolic: healthData.value, // Using value as systolic 
-          diastolic: healthData.value - 40, // Estimate diastolic as systolic - 40
-          dateTime: healthData.measuredAt,
-          source: healthData.source,
+        // Convert Map data to BloodPressureRecord with actual systolic and diastolic values
+        _bpData = data.map((bpData) => BloodPressureRecord(
+          systolic: bpData['systolic'] as double, // Use actual systolic from Firestore
+          diastolic: bpData['diastolic'] as double, // Use actual diastolic from Firestore
+          dateTime: bpData['measuredAt'] as DateTime,
+          source: bpData['source'] as String,
         )).toList();
       });
     } catch (error) {

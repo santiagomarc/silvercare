@@ -4,6 +4,7 @@ class CaregiverModel {
   final String id; // Document ID from Firestore
   final String userId; // Reference to users collection
   final String email;
+  final String? fullName; // Caregiver's full name
   final String? elderlyId; // 1:1 relationship
   final String relationship; // "Spouse" | "Child" | "Professional Caregiver"
   final DateTime createdAt;
@@ -12,6 +13,7 @@ class CaregiverModel {
     required this.id,
     required this.userId,
     required this.email,
+    this.fullName,
     this.elderlyId,
     required this.relationship,
     required this.createdAt,
@@ -22,6 +24,7 @@ class CaregiverModel {
     return {
       'userId': userId,
       'email': email,
+      'fullName': fullName,
       'elderlyId': elderlyId,
       'relationship': relationship,
       'createdAt': Timestamp.fromDate(createdAt),
@@ -35,6 +38,7 @@ class CaregiverModel {
       id: doc.id,
       userId: data['userId'] ?? '',
       email: data['email'] ?? '',
+      fullName: data['fullName'],
       elderlyId: data['elderlyId'],
       relationship: data['relationship'] ?? 'Professional Caregiver',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -47,6 +51,7 @@ class CaregiverModel {
       id: id,
       userId: map['userId'] ?? '',
       email: map['email'] ?? '',
+      fullName: map['fullName'],
       elderlyId: map['elderlyId'],
       relationship: map['relationship'] ?? 'Professional Caregiver',
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -58,6 +63,7 @@ class CaregiverModel {
     String? id,
     String? userId,
     String? email,
+    String? fullName,
     String? elderlyId,
     String? relationship,
     DateTime? createdAt,
@@ -66,6 +72,7 @@ class CaregiverModel {
       id: id ?? this.id,
       userId: userId ?? this.userId,
       email: email ?? this.email,
+      fullName: fullName ?? this.fullName,
       elderlyId: elderlyId ?? this.elderlyId,
       relationship: relationship ?? this.relationship,
       createdAt: createdAt ?? this.createdAt,

@@ -5,6 +5,9 @@ import 'package:silvercare/services/user_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import 'package:silvercare/models/health_data_model.dart';
 import 'package:silvercare/services/mood_service.dart';
+import 'package:silvercare/services/persistent_notification_service.dart';
+import 'package:silvercare/models/notification_model.dart';
+import 'package:intl/intl.dart';
 import 'add_medication_screen.dart'; // Import the medication screen
 import 'add_checklist_screen.dart'; // Import the checklist screen
 import 'manage_medications_screen.dart'; // Import the manage medications screen
@@ -106,16 +109,17 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
   }
 
   void _setupBloodPressureStream(String elderlyId) {
+    // Get TODAY's latest reading only
     final now = DateTime.now();
-    final oneDayAgo = now.subtract(const Duration(days: 1));
-
+    final startOfToday = DateTime(now.year, now.month, now.day);
+    
     final subscription = FirebaseFirestore.instance
         .collection('health_data')
         .where('elderlyId', isEqualTo: elderlyId)
         .where('type', isEqualTo: 'blood_pressure')
-        .where('measuredAt', isGreaterThan: oneDayAgo)
+        .where('measuredAt', isGreaterThanOrEqualTo: startOfToday)
         .orderBy('measuredAt', descending: true)
-        .limit(1)  // Only need 1 document since both values are in the same record
+        .limit(1)  // Only get the latest reading from today
         .snapshots()
         .listen((snapshot) {
       if (snapshot.docs.isNotEmpty) {
@@ -142,20 +146,30 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
           _showHealthUpdateNotification('Blood Pressure', 
             '${systolic.toInt()}/${diastolic.toInt()} mmHg');
         }
+      } else {
+        // No data found for today, reset to defaults
+        setState(() {
+          _healthData['bloodPressure'] = {
+            'systolic': 0.0,
+            'diastolic': 0.0,
+            'timestamp': null,
+          };
+        });
       }
     });
     _streamSubscriptions.add(subscription);
   }
 
   void _setupSugarLevelStream(String elderlyId) {
+    // Get TODAY's latest reading only
     final now = DateTime.now();
-    final oneDayAgo = now.subtract(const Duration(days: 1));
-
+    final startOfToday = DateTime(now.year, now.month, now.day);
+    
     final subscription = FirebaseFirestore.instance
         .collection('health_data')
         .where('elderlyId', isEqualTo: elderlyId)
         .where('type', isEqualTo: 'sugar_level')
-        .where('measuredAt', isGreaterThan: oneDayAgo)
+        .where('measuredAt', isGreaterThanOrEqualTo: startOfToday)
         .orderBy('measuredAt', descending: true)
         .limit(1)
         .snapshots()
@@ -174,20 +188,28 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
         if (oldTimestamp != null && oldTimestamp != sugarData.measuredAt) {
           _showHealthUpdateNotification('Sugar Level', '${sugarData.value.toInt()} mg/dL');
         }
+      } else {
+        setState(() {
+          _healthData['sugarLevel'] = {
+            'value': 0.0,
+            'timestamp': null,
+          };
+        });
       }
     });
     _streamSubscriptions.add(subscription);
   }
 
   void _setupTemperatureStream(String elderlyId) {
+    // Get TODAY's latest reading only
     final now = DateTime.now();
-    final oneDayAgo = now.subtract(const Duration(days: 1));
-
+    final startOfToday = DateTime(now.year, now.month, now.day);
+    
     final subscription = FirebaseFirestore.instance
         .collection('health_data')
         .where('elderlyId', isEqualTo: elderlyId)
         .where('type', isEqualTo: 'temperature')
-        .where('measuredAt', isGreaterThan: oneDayAgo)
+        .where('measuredAt', isGreaterThanOrEqualTo: startOfToday)
         .orderBy('measuredAt', descending: true)
         .limit(1)
         .snapshots()
@@ -206,20 +228,28 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
         if (oldTimestamp != null && oldTimestamp != tempData.measuredAt) {
           _showHealthUpdateNotification('Temperature', '${tempData.value.toStringAsFixed(1)} °C');
         }
+      } else {
+        setState(() {
+          _healthData['temperature'] = {
+            'value': 0.0,
+            'timestamp': null,
+          };
+        });
       }
     });
     _streamSubscriptions.add(subscription);
   }
 
   void _setupHeartRateStream(String elderlyId) {
+    // Get TODAY's latest reading only
     final now = DateTime.now();
-    final oneDayAgo = now.subtract(const Duration(days: 1));
-
+    final startOfToday = DateTime(now.year, now.month, now.day);
+    
     final subscription = FirebaseFirestore.instance
         .collection('health_data')
         .where('elderlyId', isEqualTo: elderlyId)
         .where('type', isEqualTo: 'heart_rate')
-        .where('measuredAt', isGreaterThan: oneDayAgo)
+        .where('measuredAt', isGreaterThanOrEqualTo: startOfToday)
         .orderBy('measuredAt', descending: true)
         .limit(1)
         .snapshots()
@@ -238,6 +268,13 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
         if (oldTimestamp != null && oldTimestamp != hrData.measuredAt) {
           _showHealthUpdateNotification('Heart Rate', '${hrData.value.toInt()} bpm');
         }
+      } else {
+        setState(() {
+          _healthData['heartRate'] = {
+            'value': 0.0,
+            'timestamp': null,
+          };
+        });
       }
     });
     _streamSubscriptions.add(subscription);
@@ -307,10 +344,16 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
     final bp = _healthData['bloodPressure'];
     final systolic = bp['systolic']?.toInt() ?? 0;
     final diastolic = bp['diastolic']?.toInt() ?? 0;
+    final bpTimestamp = bp['timestamp'] as DateTime?;
     
     final sugarValue = _healthData['sugarLevel']['value']?.toDouble() ?? 0.0;
+    final sugarTimestamp = _healthData['sugarLevel']['timestamp'] as DateTime?;
+    
     final tempValue = _healthData['temperature']['value']?.toDouble() ?? 0.0;
+    final tempTimestamp = _healthData['temperature']['timestamp'] as DateTime?;
+    
     final hrValue = _healthData['heartRate']['value']?.toDouble() ?? 0.0;
+    final hrTimestamp = _healthData['heartRate']['timestamp'] as DateTime?;
     
     return [
       {
@@ -321,6 +364,7 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
         "color": Colors.orange.shade900,
         "status": _getBloodPressureStatus(systolic, diastolic),
         "statusColor": _getBloodPressureStatusColor(systolic, diastolic),
+        "timestamp": bpTimestamp,
       },
       {
         "title": "Sugar Level",
@@ -330,6 +374,7 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
         "color": Colors.green.shade900,
         "status": _getSugarLevelStatus(sugarValue),
         "statusColor": _getSugarLevelStatusColor(sugarValue),
+        "timestamp": sugarTimestamp,
       },
       {
         "title": "Temperature",
@@ -339,6 +384,7 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
         "color": Colors.lightBlue.shade900,
         "status": _getTemperatureStatus(tempValue),
         "statusColor": _getTemperatureStatusColor(tempValue),
+        "timestamp": tempTimestamp,
       },
       {
         "title": "Heart Rate",
@@ -348,6 +394,7 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
         "color": Colors.pink.shade900,
         "status": _getHeartRateStatus(hrValue),
         "statusColor": _getHeartRateStatusColor(hrValue),
+        "timestamp": hrTimestamp,
       },
     ];
   }
@@ -411,28 +458,6 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
     if (hr > 100) return Colors.red;
     return Colors.green;
   }
-
-  final List<Map<String, dynamic>> recentActivities = [
-    {
-      "title": "Lola took her Metformin",
-      "time": "10:05 AM",
-      "icon": Icons.check_circle,
-      "color": Colors.green,
-    },
-    {
-      "title": "Lola missed her 9:00 AM Paracetamol",
-      "time": "9:30 AM",
-      "icon": Icons.warning,
-      "color": Colors.red,
-    },
-    {
-      "title": "Lola's heart rate was high",
-      "time": "8:15 AM",
-      "icon": Icons.favorite,
-      "color": Colors.red,
-    },
-  ];
-  // --- End Mock Data ---
 
   @override
   Widget build(BuildContext context) {
@@ -691,6 +716,7 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
           color: item['color'],
           status: item['status'],
           statusColor: item['statusColor'],
+          timestamp: item['timestamp'],
         );
       },
     );
@@ -704,7 +730,18 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
     required Color color,
     String? status,
     Color? statusColor,
+    DateTime? timestamp,
   }) {
+    // Check if there's data for today
+    final bool hasDataToday = value != "N/A";
+    final String elderlyName = _linkedElderly?.username ?? "Your patient";
+    
+    // Format timestamp
+    String timeText = '';
+    if (timestamp != null && hasDataToday) {
+      timeText = DateFormat('h:mm a').format(timestamp);
+    }
+    
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -712,13 +749,14 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center, // Center vertically
+          crossAxisAlignment: CrossAxisAlignment.center, // Center horizontally
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Icon(icon, size: 32, color: color),
-                if (status != null && statusColor != null)
+                if (status != null && statusColor != null && hasDataToday)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
@@ -740,32 +778,82 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
             const SizedBox(height: 8),
             Text(
               title,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: _getResponsiveFontSize(context, 14),
                 color: Colors.grey[600],
+                fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 4),
-            RichText(
-              text: TextSpan(
-                style: TextStyle(
-                  fontSize: _getResponsiveFontSize(context, 22),
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  fontFamily: 'Montserrat',
+            const SizedBox(height: 8),
+            
+            // Show value or "No record" message
+            if (hasDataToday) ...[
+              RichText(
+                textAlign: TextAlign.center,
+                text: TextSpan(
+                  style: TextStyle(
+                    fontSize: _getResponsiveFontSize(context, 22),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    fontFamily: 'Montserrat',
+                  ),
+                  children: [
+                    TextSpan(text: value),
+                    TextSpan(
+                      text: ' $unit',
+                      style: TextStyle(
+                        fontSize: _getResponsiveFontSize(context, 14),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+              if (timeText.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  timeText,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: _getResponsiveFontSize(context, 11),
+                    color: Colors.grey[500],
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ] else ...[
+              // No data for today - show friendly message
+              Column(
                 children: [
-                  TextSpan(text: value),
-                  TextSpan(
-                    text: ' $unit',
+                  Icon(
+                    Icons.schedule,
+                    size: 36,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No record yet',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: _getResponsiveFontSize(context, 14),
-                      fontWeight: FontWeight.w500,
+                      fontSize: _getResponsiveFontSize(context, 13),
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$elderlyName hasn\'t\nrecorded today',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: _getResponsiveFontSize(context, 10),
+                      color: Colors.grey[500],
+                      height: 1.3,
                     ),
                   ),
                 ],
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -913,45 +1001,161 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
   }
 
   Widget _buildRecentActivities() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      color: Colors.white,
-      child: Column(
-        children: recentActivities.map((activity) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                Icon(activity['icon'], color: activity['color'], size: 28),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        activity['title'],
-                        style: TextStyle(
-                          fontSize: _getResponsiveFontSize(context, 15),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      Text(
-                        activity['time'],
-                        style: TextStyle(
-                          fontSize: _getResponsiveFontSize(context, 13),
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-              ],
+    if (_managingElderlyId == null) {
+      return Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        color: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Center(
+            child: Text(
+              'No elderly patient assigned',
+              style: TextStyle(
+                fontSize: _getResponsiveFontSize(context, 14),
+                color: Colors.grey[600],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final notificationService = PersistentNotificationService();
+    
+    return StreamBuilder<List<NotificationModel>>(
+      stream: notificationService.getNotificationsForElderly(_managingElderlyId!),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            color: Colors.white,
+            child: const Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Center(child: CircularProgressIndicator()),
             ),
           );
-        }).toList(),
-      ),
+        }
+
+        if (snapshot.hasError) {
+          return Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            color: Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Center(
+                child: Text(
+                  'Error loading activities',
+                  style: TextStyle(
+                    fontSize: _getResponsiveFontSize(context, 14),
+                    color: Colors.red,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        final notifications = snapshot.data ?? [];
+        
+        if (notifications.isEmpty) {
+          return Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            color: Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.notifications_none, size: 48, color: Colors.grey[400]),
+                    const SizedBox(height: 8),
+                    Text(
+                      'No recent activity',
+                      style: TextStyle(
+                        fontSize: _getResponsiveFontSize(context, 14),
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        // Show only the 5 most recent notifications
+        final recentNotifications = notifications.take(5).toList();
+
+        return Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          color: Colors.white,
+          child: Column(
+            children: recentNotifications.map((notification) {
+              // Map notification type to icon and color
+              IconData icon;
+              Color color;
+              
+              switch (notification.severity) {
+                case 'positive':
+                  icon = Icons.check_circle;
+                  color = Colors.green;
+                  break;
+                case 'negative':
+                  icon = Icons.error_outline;
+                  color = Colors.red;
+                  break;
+                case 'warning':
+                  icon = Icons.warning_amber_rounded;
+                  color = Colors.orange;
+                  break;
+                default: // 'reminder'
+                  icon = Icons.info_outline;
+                  color = Colors.blue;
+              }
+              
+              // Format timestamp
+              final timeStr = DateFormat('h:mm a').format(notification.timestamp);
+              
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(icon, color: color, size: 28),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            notification.title,
+                            style: TextStyle(
+                              fontSize: _getResponsiveFontSize(context, 15),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Text(
+                            timeStr,
+                            style: TextStyle(
+                              fontSize: _getResponsiveFontSize(context, 13),
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        );
+      },
     );
   }
 }
