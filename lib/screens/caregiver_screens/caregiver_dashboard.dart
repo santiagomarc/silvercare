@@ -285,7 +285,7 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
     final dateString = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
     final subscription = FirebaseFirestore.instance
-        .collection('elders')
+        .collection('elderly')
         .doc(elderlyId)
         .collection('moods')
         .doc(dateString)
@@ -1118,8 +1118,17 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
                   color = Colors.blue;
               }
               
-              // Format timestamp
-              final timeStr = DateFormat('h:mm a').format(notification.timestamp);
+              // Format timestamp with date
+              final now = DateTime.now();
+              final notifDate = notification.timestamp;
+              final isToday = notifDate.year == now.year && 
+                             notifDate.month == now.month && 
+                             notifDate.day == now.day;
+              
+              final dateStr = isToday 
+                  ? 'Today'
+                  : DateFormat('MMM d, yyyy').format(notifDate);
+              final timeStr = DateFormat('h:mm a').format(notifDate);
               
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -1138,8 +1147,9 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
                               fontWeight: FontWeight.w500,
                             ),
                           ),
+                          const SizedBox(height: 2),
                           Text(
-                            timeStr,
+                            '$dateStr at $timeStr',
                             style: TextStyle(
                               fontSize: _getResponsiveFontSize(context, 13),
                               color: Colors.grey[600],

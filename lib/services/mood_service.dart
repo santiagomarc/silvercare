@@ -64,7 +64,7 @@ class MoodService {
 
       // Save to user's mood subcollection
       await _firestore
-          .collection('elders')
+          .collection('elderly')
           .doc(user.uid)
           .collection('moods')
           .doc(dateString)
@@ -87,7 +87,7 @@ class MoodService {
       final dateString = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
       final doc = await _firestore
-          .collection('elders')
+          .collection('elderly')
           .doc(user.uid)
           .collection('moods')
           .doc(dateString)
@@ -113,7 +113,7 @@ class MoodService {
       final startDate = endDate.subtract(Duration(days: days));
 
       final querySnapshot = await _firestore
-          .collection('elders')
+          .collection('elderly')
           .doc(user.uid)
           .collection('moods')
           .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))

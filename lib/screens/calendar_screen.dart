@@ -1,46 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
-
-class CalendarEvent {
-  final String id;
-  final String title;
-  final String description;
-  final DateTime eventDate;
-  final String eventType;
-
-  CalendarEvent({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.eventDate,
-    required this.eventType,
-  });
-
-  factory CalendarEvent.fromDoc(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    return CalendarEvent(
-      id: doc.id,
-      title: data['title'] ?? '',
-      description: data['description'] ?? '',
-      eventDate: data['eventDate'] != null
-          ? (data['eventDate'] as Timestamp).toDate()
-          : DateTime.now(),
-      eventType: data['eventType'] ?? 'Reminder',
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'title': title,
-      'description': description,
-      'eventDate': Timestamp.fromDate(eventDate),
-      'eventType': eventType,
-    };
-  }
-}
+import '../models/calendar_model.dart';
+import '../services/calendar_service.dart';
+import '../widgets/upcoming_events_card.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -55,9 +18,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
   static const Color _cardColor = Colors.white;
   static const Color _textPrimary = Color(0xFF2D3748);
   static const Color _textSecondary = Color(0xFF718096);
-
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
@@ -94,34 +54,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Future<void> _loadFirestoreEvents() async {
-    final user = _auth.currentUser;
-    if (user == null) {
-      setState(() => _isLoading = false);
-      return;
-    }
-
     try {
-      final snapshot = await _firestore
-          .collection('elderly')
-          .doc(user.uid)
-          .collection('calendarEvents')
-          .get();
-
-      Map<DateTime, List<CalendarEvent>> newEvents = {};
-
-      for (var doc in snapshot.docs) {
-        final event = CalendarEvent.fromDoc(doc);
-        final day = _normalizeDay(event.eventDate);
-
-        if (newEvents[day] == null) {
-          newEvents[day] = [];
-        }
-        newEvents[day]!.add(event);
-      }
-
-      newEvents.forEach((key, value) {
-        value.sort((a, b) => a.eventDate.compareTo(b.eventDate));
-      });
+      final newEvents = await CalendarService.loadAllEvents();
 
       if (mounted) {
         setState(() {
@@ -161,9 +95,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
   // --- CRUD OPERATIONS ---
 
   Future<void> _addEventToFirestore() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-
     final title = _titleController.text.trim();
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -182,34 +113,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
       _selectedTime.minute,
     );
 
-    final newEvent = CalendarEvent(
-      id: '',
+    final success = await CalendarService.addEvent(
       title: title,
       description: _descriptionController.text.trim(),
       eventDate: fullDateTime,
       eventType: _selectedEventType,
     );
 
-    try {
-      await _firestore
-          .collection('elderly')
-          .doc(user.uid)
-          .collection('calendarEvents')
-          .add(newEvent.toMap());
-
-      if (mounted) {
+    if (mounted) {
+      if (success) {
         Navigator.of(context).pop();
         _loadFirestoreEvents();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text('✅ Event saved!'), backgroundColor: Colors.green),
         );
-      }
-    } catch (e) {
-      if (mounted) {
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('❌ Failed to save: ${e.toString()}'),
+          const SnackBar(
+              content: Text('❌ Failed to save event'),
               backgroundColor: Colors.red),
         );
       }
@@ -217,9 +139,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Future<void> _updateEventInFirestore(String eventId) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-
     final title = _titleController.text.trim();
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -238,32 +157,26 @@ class _CalendarScreenState extends State<CalendarScreen> {
       _selectedTime.minute,
     );
 
-    try {
-      await _firestore
-          .collection('elderly')
-          .doc(user.uid)
-          .collection('calendarEvents')
-          .doc(eventId)
-          .update({
-        'title': title,
-        'description': _descriptionController.text.trim(),
-        'eventDate': Timestamp.fromDate(fullDateTime),
-        'eventType': _selectedEventType,
-      });
+    final success = await CalendarService.updateEvent(
+      eventId: eventId,
+      title: title,
+      description: _descriptionController.text.trim(),
+      eventDate: fullDateTime,
+      eventType: _selectedEventType,
+    );
 
-      if (mounted) {
+    if (mounted) {
+      if (success) {
         Navigator.of(context).pop();
         _loadFirestoreEvents();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text('✅ Event updated!'), backgroundColor: Colors.green),
         );
-      }
-    } catch (e) {
-      if (mounted) {
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('❌ Update failed: ${e.toString()}'),
+          const SnackBar(
+              content: Text('❌ Update failed'),
               backgroundColor: Colors.red),
         );
       }
@@ -271,30 +184,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Future<void> _deleteEventFromFirestore(String eventId) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
+    final success = await CalendarService.deleteEvent(eventId);
 
-    try {
-      await _firestore
-          .collection('elderly')
-          .doc(user.uid)
-          .collection('calendarEvents')
-          .doc(eventId)
-          .delete();
-
-      if (mounted) {
+    if (mounted) {
+      if (success) {
         Navigator.of(context).pop(); // Close edit dialog
         _loadFirestoreEvents();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text('🗑️ Event deleted'), backgroundColor: Colors.grey),
         );
-      }
-    } catch (e) {
-      if (mounted) {
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('❌ Delete failed: ${e.toString()}'),
+          const SnackBar(
+              content: Text('❌ Delete failed'),
               backgroundColor: Colors.red),
         );
       }
@@ -374,6 +277,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
           children: [
             _buildHeader(context),
             _ScreenHeaderButton(context),
+            
+            // Upcoming Events Card
+            const UpcomingEventsCard(),
+            
             Expanded(
               child: Container(
                 width: double.infinity,

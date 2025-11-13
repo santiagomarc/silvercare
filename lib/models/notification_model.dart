@@ -10,6 +10,7 @@ class NotificationModel {
   final String severity; // 'positive' (green), 'negative' (red), 'reminder' (blue), 'warning' (orange)
   final Map<String, dynamic> metadata; // Store medicationId, taskId, scheduledTime, etc.
   final bool isRead;
+  final String? customId; // Optional custom ID to prevent duplicates (e.g., 'eventId_24h')
 
   NotificationModel({
     required this.id,
@@ -21,6 +22,7 @@ class NotificationModel {
     required this.severity,
     this.metadata = const {},
     this.isRead = false,
+    this.customId,
   });
 
   Map<String, dynamic> toMap() {
@@ -33,6 +35,7 @@ class NotificationModel {
       'severity': severity,
       'metadata': metadata,
       'isRead': isRead,
+      if (customId != null) 'customId': customId,
     };
   }
 
@@ -48,6 +51,7 @@ class NotificationModel {
       severity: data['severity'] ?? 'reminder',
       metadata: Map<String, dynamic>.from(data['metadata'] ?? {}),
       isRead: data['isRead'] ?? false,
+      customId: data['customId'],
     );
   }
 
@@ -61,6 +65,7 @@ class NotificationModel {
     String? severity,
     Map<String, dynamic>? metadata,
     bool? isRead,
+    String? customId,
   }) {
     return NotificationModel(
       id: id ?? this.id,
@@ -72,6 +77,7 @@ class NotificationModel {
       severity: severity ?? this.severity,
       metadata: metadata ?? this.metadata,
       isRead: isRead ?? this.isRead,
+      customId: customId ?? this.customId,
     );
   }
 }

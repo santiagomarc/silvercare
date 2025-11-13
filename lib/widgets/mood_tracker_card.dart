@@ -49,21 +49,14 @@ class _MoodTrackerCardState extends State<MoodTrackerCard> {
       if (user != null) {
         print('Loading user data for UID: ${user.uid}');
         
-        // Get username from elderly profile - try both collection names
+        // Get username from elderly profile
         DocumentSnapshot? elderDoc;
         
-        // Try 'elders' collection first
+        // Try 'elderly' collection
         elderDoc = await FirebaseFirestore.instance
-            .collection('elders')
+            .collection('elderly')
             .doc(user.uid)
             .get();
-        
-        if (!elderDoc.exists) {
-          elderDoc = await FirebaseFirestore.instance
-              .collection('elderly')
-              .doc(user.uid)
-              .get();
-        }
         
         if (elderDoc.exists) {
           print('Elder document found with data: ${elderDoc.data()}');

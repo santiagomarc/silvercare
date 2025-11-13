@@ -47,6 +47,32 @@ class PersistentNotificationService {
   
   // ============ CREATE NOTIFICATION EVENTS ============
   
+  /// General method to create any notification
+  Future<void> createNotification({
+    required String title,
+    required String message,
+    required String severity,
+    String? type,
+    Map<String, dynamic>? metadata,
+    String? customId,
+  }) async {
+    if (_currentElderlyId == null) return;
+    
+    final notification = NotificationModel(
+      id: '',
+      elderlyId: _currentElderlyId!,
+      type: type ?? 'general',
+      title: title,
+      message: message,
+      timestamp: DateTime.now(),
+      severity: severity,
+      metadata: metadata ?? {},
+      customId: customId,
+    );
+    
+    await _addNotification(notification);
+  }
+  
   /// Create a medication reminder notification (15 min before dose)
   Future<void> createMedicationReminder({
     required String elderlyId,

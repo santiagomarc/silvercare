@@ -7,6 +7,7 @@ import 'package:silvercare/services/checklist_service.dart';
 import 'package:silvercare/services/medication_service.dart';
 import 'package:silvercare/services/push_notification_service.dart';
 import 'package:silvercare/services/persistent_notification_service.dart';
+import 'package:silvercare/services/calendar_notification_service.dart';
 import 'package:silvercare/widgets/mood_tracker_card.dart';
 import 'package:intl/intl.dart'; // Import for date formatting
 
@@ -36,6 +37,9 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _scheduleNotifications();
     _checkHealthDataDebug(); // Debug health data
+    
+    // Initialize calendar notifications checker
+    CalendarNotificationService.initializePeriodicChecks();
   }
   
   /// Debug method to check if any health data exists
