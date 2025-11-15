@@ -216,6 +216,21 @@ class PushNotificationService {
     await _notifications.show(id, title, body, notificationDetails, payload: payload);
   }
 
+  /// Send a notification immediately (alias for showNotification with auto-generated ID)
+  Future<void> sendNotification({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    final id = DateTime.now().millisecondsSinceEpoch % 100000; // Generate unique ID
+    await showNotification(
+      id: id,
+      title: title,
+      body: body,
+      payload: payload,
+    );
+  }
+
   /// Cancel all scheduled notifications
   Future<void> cancelAllNotifications() async {
     await _notifications.cancelAll();

@@ -10,6 +10,7 @@ import 'package:silvercare/services/persistent_notification_service.dart';
 import 'package:silvercare/services/calendar_notification_service.dart';
 import 'package:silvercare/widgets/mood_tracker_card.dart';
 import 'package:intl/intl.dart'; // Import for date formatting
+import 'dart:async';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,15 +32,36 @@ class _HomeScreenState extends State<HomeScreen> {
   
   // Track which doses we've already created missed notifications for (to avoid duplicates)
   final Set<String> _missedNotificationsCreated = {};
+  
+  // Timer for periodic reminder checks
+  Timer? _reminderTimer;
 
   @override
   void initState() {
     super.initState();
     _scheduleNotifications();
     _checkHealthDataDebug(); // Debug health data
+    _initializeCalendarNotifications();
+  }
+
+  @override
+  void dispose() {
+    _reminderTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Initialize calendar notification system
+  Future<void> _initializeCalendarNotifications() async {
+    // Check daily summary on first app open
+    await CalendarNotificationService.checkDailySummary();
     
-    // Initialize calendar notifications checker
-    CalendarNotificationService.initializePeriodicChecks();
+    // Check imminent reminders immediately
+    await CalendarNotificationService.checkImminentReminders();
+    
+    // Set up periodic checks for imminent reminders (every 5 minutes)
+    _reminderTimer = Timer.periodic(const Duration(minutes: 5), (timer) {
+      CalendarNotificationService.checkImminentReminders();
+    });
   }
   
   /// Debug method to check if any health data exists
@@ -183,9 +205,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildChecklistSection(),
 
                 const SizedBox(height: 40),
-
-                // Sign Out Button
-                _buildSignOutButton(),
               ],
             ),
           ),
@@ -241,30 +260,70 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
 
-        // Notification Bell Icon (right side)
+        // Notification Bell Icon (right side) with unread badge
         GestureDetector(
           onTap: () {
             Navigator.pushNamed(context, '/notifications');
           },
-          child: Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.8),
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.notifications,
-              color: Color(0xFF2C2C2C),
-              size: 24,
-            ),
+          child: StreamBuilder<int>(
+            stream: PersistentNotificationService().getUnreadCount(),
+            builder: (context, snapshot) {
+              final unreadCount = snapshot.data ?? 0;
+              
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.notifications,
+                      color: Color(0xFF2C2C2C),
+                      size: 24,
+                    ),
+                  ),
+                  // Red badge with unread count
+                  if (unreadCount > 0)
+                    Positioned(
+                      right: -2,
+                      top: -2,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFCD5C5C), // Red
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 20,
+                          minHeight: 20,
+                        ),
+                        child: Center(
+                          child: Text(
+                            unreadCount > 99 ? '99+' : unreadCount.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ),
       ],
@@ -1501,117 +1560,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: Colors.white,
                   fontFamily: 'Montserrat',
                   fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildSignOutButton() {
-    // Corrected the typo from shade6600 to shade600
-    return ElevatedButton(
-      onPressed: _handleSignOut,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.red.shade600, // Corrected typo
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
-        ),
-        elevation: 2,
-      ),
-      child: const Text(
-        'Sign Out',
-        style: TextStyle(
-          fontSize: 16,
-          fontFamily: 'Montserrat',
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _handleSignOut() async {
-    // ... (Your existing _handleSignOut code)
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-          ),
-          title: const Text(
-            'Sign Out',
-            style: TextStyle(
-              fontFamily: 'Montserrat',
-              fontWeight: FontWeight.w600,
-              fontSize: 18,
-            ),
-          ),
-          content: const Text(
-            'Are you sure you want to sign out?',
-            style: TextStyle(
-              fontFamily: 'Montserrat',
-              fontSize: 14,
-              color: Color(0xFF666666),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(
-                  color: Color(0xFF666666),
-                  fontFamily: 'Montserrat',
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.of(context).pop(); // Close dialog
-
-                try {
-                  await _auth.signOut();
-
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('👋 Signed out successfully!'),
-                        backgroundColor: Colors.green,
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-
-                    // Navigate back to sign-in
-                    Navigator.of(context).pushReplacementNamed('/signin');
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    // Corrected the typo from f(context) to context
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Error signing out: ${e.toString()}'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.shade600,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-              child: const Text(
-                'Sign Out',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontFamily: 'Montserrat',
                 ),
               ),
             ),

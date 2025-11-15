@@ -19,6 +19,7 @@ class _HeartRateScreenState extends State<HeartRateScreen> {
   
   bool _isLoading = false;
   bool _isSyncing = false;
+  bool _isAutoSyncing = false;
   List<HealthDataModel> _heartRateData = [];
   HeartRateStats? _stats;
 
@@ -26,6 +27,37 @@ class _HeartRateScreenState extends State<HeartRateScreen> {
   void initState() {
     super.initState();
     _loadHeartRateData();
+    // Auto-sync on screen entry (runs after first frame)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _autoSyncFromGoogleFit();
+    });
+  }
+
+  /// Auto-sync heart rate data from Google Fit
+  Future<void> _autoSyncFromGoogleFit() async {
+    setState(() => _isAutoSyncing = true);
+    try {
+      print('🔄 [AUTO-SYNC] Starting heart rate auto-sync...');
+      
+      // Check if signed in to Google Fit
+      if (!GoogleFitService.isSignedIn) {
+        print('⚠️ [AUTO-SYNC] Not signed in to Google Fit, skipping auto-sync');
+        return;
+      }
+      
+      print('✅ [AUTO-SYNC] Signed in to Google Fit, fetching data...');
+      final syncedData = await HeartRateService.syncFromGoogleFit(days: 30); // Extended to 30 days
+      print('📊 [AUTO-SYNC] Synced ${syncedData.length} new heart rate readings');
+      
+      if (syncedData.isNotEmpty) {
+        await _loadHeartRateData(); // Reload to show synced data
+      }
+    } catch (e) {
+      print('⚠️ [AUTO-SYNC] Auto-sync failed (silent): $e');
+      // Silent fail - user can manually sync if needed
+    } finally {
+      setState(() => _isAutoSyncing = false);
+    }
   }
 
   @override
@@ -144,6 +176,10 @@ class _HeartRateScreenState extends State<HeartRateScreen> {
   }
 
   Future<void> _syncFromGoogleFit() async {
+    if (_isAutoSyncing) {
+      _showInfoSnackBar('Auto-sync in progress, please wait...');
+      return;
+    }
     setState(() => _isSyncing = true);
     try {
       // Sign in if not already signed in
@@ -157,7 +193,9 @@ class _HeartRateScreenState extends State<HeartRateScreen> {
       }
 
       // Sync data from Google Fit (only gets new data, prevents duplicates)
-      final List<HealthDataModel> syncedData = await HeartRateService.syncFromGoogleFit(days: 7);
+      print('🔄 [MANUAL-SYNC] Starting manual heart rate sync...');
+      final List<HealthDataModel> syncedData = await HeartRateService.syncFromGoogleFit(days: 30); // Extended to 30 days
+      print('📊 [MANUAL-SYNC] Synced ${syncedData.length} new heart rate readings');
       
       if (syncedData.isNotEmpty) {
         _showSuccessSnackBar('Synced ${syncedData.length} new heart rate readings from Google Fit');
@@ -716,8 +754,8 @@ class _HeartRateScreenState extends State<HeartRateScreen> {
                     ],
                   ),
                   child: ElevatedButton.icon(
-                    onPressed: _isSyncing ? null : _syncFromGoogleFit,
-                    icon: _isSyncing
+                    onPressed: (_isSyncing || _isAutoSyncing) ? null : _syncFromGoogleFit,
+                    icon: (_isSyncing || _isAutoSyncing)
                         ? SizedBox(
                             width: 20,
                             height: 20,
@@ -728,8 +766,8 @@ class _HeartRateScreenState extends State<HeartRateScreen> {
                           )
                         : const Icon(Icons.sync, color: Colors.white, size: 20),
                     label: Text(
-                      _isSyncing 
-                          ? 'Syncing...' 
+                      (_isSyncing || _isAutoSyncing)
+                          ? (_isAutoSyncing ? 'Auto-syncing...' : 'Syncing...') 
                           : GoogleFitService.isSignedIn 
                               ? 'Sync from Google Fit'
                               : 'Connect Google Fit',
@@ -916,42 +954,50 @@ class _HeartRateScreenState extends State<HeartRateScreen> {
                 ),
               ),
               Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: statusColor.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: statusColor,
-                        width: 1,
-                      ),
+                      border: Border.all(color: statusColor, width: 1),
                     ),
                     child: Text(
                       status,
                       style: TextStyle(
-                        fontSize: _getResponsiveFontSize(context, 12),
-                        fontFamily: 'Montserrat',
+                        fontSize: _getResponsiveFontSize(context, 10),
                         fontWeight: FontWeight.w600,
                         color: statusColor,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: source == 'google_fit' ? const Color(0xFF4285F4).withOpacity(0.1) : Colors.grey[200],
-                      borderRadius: BorderRadius.circular(12),
+                      color: source == 'google_fit' ? const Color(0xFF4285F4) : Colors.grey[600],
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text(
-                      source == 'google_fit' ? 'Google Fit' : 'Manual',
-                      style: TextStyle(
-                        fontSize: _getResponsiveFontSize(context, 10),
-                        fontFamily: 'Montserrat',
-                        fontWeight: FontWeight.w600,
-                        color: source == 'google_fit' ? const Color(0xFF4285F4) : Colors.grey[600],
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          source == 'google_fit' ? Icons.cloud_done : Icons.edit,
+                          color: Colors.white,
+                          size: 10,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          source == 'google_fit' ? 'Google Fit' : 'Manual',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: _getResponsiveFontSize(context, 9),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

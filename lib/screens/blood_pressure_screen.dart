@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/blood_pressure_service.dart';
+import '../services/google_fit_service.dart';
 
 // Simple blood pressure record class
 class BloodPressureRecord {
@@ -32,12 +33,85 @@ class _BloodPressureScreenState extends State<BloodPressureScreen> {
   TimeOfDay _selectedTime = TimeOfDay.now();
 
   bool _isLoading = false;
+  bool _isSyncing = false;
+  bool _isAutoSyncing = false;
   List<BloodPressureRecord> _bpData = [];
 
   @override
   void initState() {
     super.initState();
     _loadBPData();
+    // Auto-sync on screen entry (runs after first frame)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _autoSyncFromGoogleFit();
+    });
+  }
+
+  /// Auto-sync blood pressure data from Google Fit
+  Future<void> _autoSyncFromGoogleFit() async {
+    setState(() => _isAutoSyncing = true);
+    try {
+      print('🔄 [AUTO-SYNC] Starting blood pressure auto-sync...');
+      
+      // Check if signed in to Google Fit
+      if (!GoogleFitService.isSignedIn) {
+        print('⚠️ [AUTO-SYNC] Not signed in to Google Fit, skipping auto-sync');
+        return;
+      }
+      
+      print('✅ [AUTO-SYNC] Signed in to Google Fit, fetching data...');
+      final count = await BloodPressureService.syncFromGoogleFit(days: 30); // Extended to 30 days
+      print('📊 [AUTO-SYNC] Synced $count new BP readings');
+      
+      if (count > 0) {
+        await _loadBPData(); // Reload to show synced data
+      }
+    } catch (e) {
+      print('⚠️ [AUTO-SYNC] Auto-sync failed (silent): $e');
+      // Silent fail - user can manually sync if needed
+    } finally {
+      setState(() => _isAutoSyncing = false);
+    }
+  }
+
+  /// Manual sync from Google Fit
+  Future<void> _syncFromGoogleFit() async {
+    if (_isAutoSyncing) {
+      _showErrorSnackBar('Auto-sync in progress, please wait...');
+      return;
+    }
+    setState(() => _isSyncing = true);
+    try {
+      // Sign in if not already signed in
+      if (!GoogleFitService.isSignedIn) {
+        final account = await GoogleFitService.signInWithGoogle();
+        if (account == null) {
+          _showErrorSnackBar('Google sign-in cancelled');
+          return;
+        }
+        _showSuccessSnackBar('Connected to Google Fit as ${account.email}');
+      }
+
+      // Sync data from Google Fit
+      print('🔄 [MANUAL-SYNC] Starting manual BP sync...');
+      final count = await BloodPressureService.syncFromGoogleFit(days: 30); // Extended to 30 days
+      print('📊 [MANUAL-SYNC] Synced $count new BP readings');
+      await _loadBPData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(count > 0 
+              ? '✅ Synced $count new blood pressure reading${count > 1 ? "s" : ""}'
+              : 'No new data from Google Fit'),
+            backgroundColor: count > 0 ? Colors.green : Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      _showErrorSnackBar('Sync failed: $e');
+    } finally {
+      setState(() => _isSyncing = false);
+    }
   }
 
   @override
@@ -250,25 +324,25 @@ class _BloodPressureScreenState extends State<BloodPressureScreen> {
                           ),
                         ),
                         Container(
-                    width: screenWidth * 0.12,
-                    height: screenWidth * 0.12,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
+                          width: screenWidth * 0.12,
+                          height: screenWidth * 0.12,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.bloodtype,
+                            color: Colors.orange,
+                            size: 20,
+                          ),
                         ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.bloodtype,
-                      color: Colors.orange,
-                      size: 20,
-                    ),
-                  ),
                       ],
                     ),
 
@@ -384,6 +458,11 @@ class _BloodPressureScreenState extends State<BloodPressureScreen> {
                       ),
                     ),
 
+                    SizedBox(height: screenHeight * 0.04),
+
+                    // Google Fit Sync Card
+                    _buildGoogleFitCard(),
+
                     SizedBox(height: screenHeight * 0.05),
 
                     // Records
@@ -411,6 +490,180 @@ class _BloodPressureScreenState extends State<BloodPressureScreen> {
                   ],
                 ),
               ),
+      ),
+    );
+  }
+
+  Widget _buildGoogleFitCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text(
+              'GOOGLE FIT SYNC',
+              style: TextStyle(
+                fontSize: _getResponsiveFontSize(context, 22),
+                fontFamily: 'Montserrat',
+                fontWeight: FontWeight.w800,
+                color: Colors.black,
+                shadows: [
+                  Shadow(
+                    offset: const Offset(0, 3),
+                    blurRadius: 3,
+                    color: Colors.black.withOpacity(0.25),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.fitness_center, color: Color(0xFF4285F4), size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        GoogleFitService.isSignedIn
+                            ? 'Connected as ${GoogleFitService.currentUser?.email ?? 'Unknown'}'
+                            : 'Connect to sync smartwatch data',
+                        style: TextStyle(
+                          fontSize: _getResponsiveFontSize(context, 16),
+                          fontFamily: 'Montserrat',
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0F8FF),
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(color: const Color(0xFF4285F4).withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '💡 How this works:',
+                        style: TextStyle(
+                          fontSize: _getResponsiveFontSize(context, 14),
+                          fontFamily: 'Montserrat',
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '• Your smartwatch syncs blood pressure to Google Fit\n• This app fetches new data and prevents duplicates\n• Works with any Google Fit compatible device\n• Only latest readings are added to your records',
+                        style: TextStyle(
+                          fontSize: _getResponsiveFontSize(context, 13),
+                          fontFamily: 'Montserrat',
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF6C757D),
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(25),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 3,
+                        offset: const Offset(0, 7),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton.icon(
+                    onPressed: (_isSyncing || _isAutoSyncing) ? null : _syncFromGoogleFit,
+                    icon: (_isSyncing || _isAutoSyncing)
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Icon(Icons.sync, color: Colors.white, size: 20),
+                    label: Text(
+                      (_isSyncing || _isAutoSyncing)
+                          ? (_isAutoSyncing ? 'Auto-syncing...' : 'Syncing...') 
+                          : GoogleFitService.isSignedIn 
+                              ? 'Sync from Google Fit'
+                              : 'Connect Google Fit',
+                      style: TextStyle(
+                        fontSize: _getResponsiveFontSize(context, 16),
+                        fontFamily: 'Montserrat',
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4285F4),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      elevation: 0,
+                      shadowColor: Colors.transparent,
+                    ),
+                  ),
+                ),
+                if (GoogleFitService.isSignedIn) ...[
+                  const SizedBox(height: 12),
+                  TextButton.icon(
+                    onPressed: () async {
+                      await GoogleFitService.signOut();
+                      setState(() {});
+                      _showErrorSnackBar('Disconnected from Google Fit');
+                    },
+                    icon: const Icon(Icons.logout, size: 16),
+                    label: Text(
+                      'Disconnect Google Fit',
+                      style: TextStyle(
+                        fontSize: _getResponsiveFontSize(context, 14),
+                        fontFamily: 'Montserrat',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.grey[600],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -583,24 +836,54 @@ class _BloodPressureScreenState extends State<BloodPressureScreen> {
                   ),
                 ],
               ),
-              Flexible(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: statusColor, width: 1),
-                  ),
-                  child: Text(
-                    status,
-                    style: TextStyle(
-                      fontSize: _getResponsiveFontSize(context, 10),
-                      fontWeight: FontWeight.w600,
-                      color: statusColor,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: statusColor, width: 1),
                     ),
-                    overflow: TextOverflow.ellipsis,
+                    child: Text(
+                      status,
+                      style: TextStyle(
+                        fontSize: _getResponsiveFontSize(context, 10),
+                        fontWeight: FontWeight.w600,
+                        color: statusColor,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: data.source == 'google_fit' ? const Color(0xFF4285F4) : Colors.grey[600],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          data.source == 'google_fit' ? Icons.cloud_done : Icons.edit,
+                          color: Colors.white,
+                          size: 10,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          data.source == 'google_fit' ? 'Google Fit' : 'Manual',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: _getResponsiveFontSize(context, 9),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

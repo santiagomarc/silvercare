@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/calendar_model.dart';
-import '../services/calendar_service.dart';
 
-class UpcomingEventsCard extends StatelessWidget {
+class UpcomingEventsCard extends StatefulWidget {
   const UpcomingEventsCard({super.key});
+
+  @override
+  State<UpcomingEventsCard> createState() => _UpcomingEventsCardState();
+}
+
+class _UpcomingEventsCardState extends State<UpcomingEventsCard> {
 
   double _getResponsiveFontSize(BuildContext context, double baseSize) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -12,23 +19,30 @@ class UpcomingEventsCard extends StatelessWidget {
     return baseSize * scaleFactor.clamp(0.8, 1.4);
   }
 
-  Future<List<CalendarEvent>> _getUpcomingEvents() async {
-    final allEvents = await CalendarService.loadAllEvents();
-    final now = DateTime.now();
+  Stream<List<CalendarEvent>> _getUpcomingEventsStream() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return Stream.value([]);
 
-    // Flatten all events and filter for upcoming ones
-    List<CalendarEvent> upcomingEvents = [];
-    allEvents.forEach((date, events) {
-      for (var event in events) {
+    return FirebaseFirestore.instance
+        .collection('elderly')
+        .doc(user.uid)
+        .collection('calendarEvents')
+        .snapshots()
+        .map((snapshot) {
+      final now = DateTime.now();
+      List<CalendarEvent> upcomingEvents = [];
+
+      for (var doc in snapshot.docs) {
+        final event = CalendarEvent.fromDoc(doc);
         if (event.eventDate.isAfter(now)) {
           upcomingEvents.add(event);
         }
       }
-    });
 
-    // Sort by date and take top 5
-    upcomingEvents.sort((a, b) => a.eventDate.compareTo(b.eventDate));
-    return upcomingEvents.take(5).toList();
+      // Sort by date and take top 5
+      upcomingEvents.sort((a, b) => a.eventDate.compareTo(b.eventDate));
+      return upcomingEvents.take(5).toList();
+    });
   }
 
   Color _getEventColor(String eventType) {
@@ -74,8 +88,8 @@ class UpcomingEventsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<CalendarEvent>>(
-      future: _getUpcomingEvents(),
+    return StreamBuilder<List<CalendarEvent>>(
+      stream: _getUpcomingEventsStream(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Container(

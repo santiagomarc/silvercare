@@ -20,7 +20,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   final Color _warningColor = const Color(0xFFFFA500); // Orange - warnings, late
   final Color _titleTextColor = const Color(0xFF808080);
   
-  final PersistentNotificationService _notificationService = PersistentNotificationService(); 
+  final PersistentNotificationService _notificationService = PersistentNotificationService();
+
+  @override
+  void initState() {
+    super.initState();
+    // Mark all notifications as read when user opens this screen
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _notificationService.markAllAsRead();
+    });
+  } 
 
   double _getResponsiveFontSize(BuildContext context, double baseSize) {
     final screenWidth = MediaQuery.of(context).size.width;

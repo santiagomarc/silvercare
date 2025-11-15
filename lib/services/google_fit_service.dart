@@ -3,12 +3,15 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 
 class GoogleFitService {
-  static const String _fitnessReadScope = 'https://www.googleapis.com/auth/fitness.heart_rate.read';
-  static const String _fitnessApiUrl = 'https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate';
+  static const List<String> _fitnessScopes = [
+    'https://www.googleapis.com/auth/fitness.heart_rate.read',
+    'https://www.googleapis.com/auth/fitness.blood_pressure.read',
+    'https://www.googleapis.com/auth/fitness.body_temperature.read',
+  ];
   
-  // Google Sign In instance with fitness scope
+  // Google Sign In instance with fitness scopes
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [_fitnessReadScope],
+    scopes: _fitnessScopes,
     forceCodeForRefreshToken: true,
     // Web client ID for testing in Chrome
     clientId: '288695034445-1apprq1ifhkvir41tepjj7l8g0hlh2rv.apps.googleusercontent.com',
@@ -117,14 +120,14 @@ class GoogleFitService {
         allData.addAll(aggregatedData);
         print('📊 Got ${aggregatedData.length} readings from aggregated data');
       } catch (e) {
-        print('⚠️ Aggregated data fetch failed: $e');
+        print('⚠️ Aggregated data failed: $e');
       }
       
       // Method 2: Try direct dataset query for more recent data
       try {
         final directData = await _fetchDirectHeartRateData(accessToken, startTime, endTime);
         allData.addAll(directData);
-        print('� Got ${directData.length} readings from direct data sources');
+        print('[HEART] Got ${directData.length} readings from direct data sources');
       } catch (e) {
         print('⚠️ Direct data fetch failed: $e');
       }
@@ -270,7 +273,6 @@ class GoogleFitService {
                         timestamp: timestamp,
                         source: 'google_fit',
                       ));
-                      print('💓 Direct data: ${heartRate.toInt()} bpm at $timestamp');
                     }
                   }
                 } catch (e) {
@@ -296,15 +298,12 @@ class GoogleFitService {
     
     try {
       final List<dynamic> buckets = data['bucket'] ?? [];
-      print('📦 Found ${buckets.length} data buckets');
       
       for (final bucket in buckets) {
         final List<dynamic> datasets = bucket['dataset'] ?? [];
-        print('📂 Processing ${datasets.length} datasets in bucket');
         
         for (final dataset in datasets) {
           final List<dynamic> points = dataset['point'] ?? [];
-          print('📍 Processing ${points.length} data points in dataset');
           
           for (final point in points) {
             try {
@@ -321,7 +320,6 @@ class GoogleFitService {
                 } else if (valueData['intVal'] != null) {
                   heartRate = (valueData['intVal']).toDouble();
                 } else {
-                  print('⚠️ Unknown value format: $valueData');
                   continue;
                 }
                 
@@ -359,6 +357,219 @@ class GoogleFitService {
     }
   }
 
+  /// Fetch blood pressure data from Google Fit
+  static Future<List<BloodPressureData>> fetchBloodPressureData({int days = 7}) async {
+    try {
+      final account = _googleSignIn.currentUser;
+      if (account == null) throw Exception('User not signed in to Google');
+
+      final auth = await account.authentication;
+      final accessToken = auth.accessToken;
+      if (accessToken == null) throw Exception('No access token');
+
+      final endTime = DateTime.now();
+      final startTime = endTime.subtract(Duration(days: days));
+
+      print('🔄 Fetching RAW blood pressure data from Google Fit...');
+      print('📅 Time range: ${startTime.toString()} to ${endTime.toString()}');
+
+      // First, get available data sources
+      final sourcesResponse = await http.get(
+        Uri.parse('https://www.googleapis.com/fitness/v1/users/me/dataSources'),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (sourcesResponse.statusCode != 200) {
+        throw Exception('Failed to get data sources: ${sourcesResponse.statusCode}');
+      }
+
+      final sourcesData = json.decode(sourcesResponse.body);
+      final dataSources = sourcesData['dataSource'] as List<dynamic>? ?? [];
+      
+      List<BloodPressureData> allData = [];
+
+      // Look for blood pressure data sources
+      for (final source in dataSources) {
+        final dataType = source['dataType'];
+        if (dataType != null && dataType['name'] == 'com.google.blood_pressure') {
+          final dataSourceId = source['dataStreamId'];
+          if (dataSourceId != null) {
+            print('📡 Fetching from BP data source: $dataSourceId');
+            
+            // Fetch RAW data from this specific source (NO AGGREGATION)
+            final datasetId = '${startTime.millisecondsSinceEpoch * 1000000}-${endTime.millisecondsSinceEpoch * 1000000}';
+            final dataUrl = 'https://www.googleapis.com/fitness/v1/users/me/dataSources/$dataSourceId/datasets/$datasetId';
+            
+            final dataResponse = await http.get(
+              Uri.parse(dataUrl),
+              headers: {
+                'Authorization': 'Bearer $accessToken',
+                'Content-Type': 'application/json',
+              },
+            );
+
+            if (dataResponse.statusCode == 200) {
+              final datasetData = json.decode(dataResponse.body);
+              final points = datasetData['point'] as List<dynamic>? ?? [];
+              
+              print('📊 Found ${points.length} RAW BP data points');
+              
+              for (final point in points) {
+                try {
+                  final values = point['value'] ?? [];
+                  print('🔍 RAW BP values: ${values.length} values');
+                  for (int i = 0; i < values.length; i++) {
+                    print('   values[$i]: ${values[i]}');
+                  }
+                  
+                  // RAW data format (not aggregated):
+                  // values[0] = systolic (fpVal)
+                  // values[1] = diastolic (fpVal)
+                  // values[2] = body position (intVal) - optional
+                  // values[3] = measurement location (intVal) - optional
+                  if (values.length >= 2) {
+                    final systolic = (values[0]['fpVal'] ?? 0).toDouble();
+                    final diastolic = (values[1]['fpVal'] ?? 0).toDouble();
+                    final timestamp = DateTime.fromMillisecondsSinceEpoch(
+                      int.parse(point['startTimeNanos']) ~/ 1000000,
+                    );
+                    
+                    print('✅ RAW BP: $systolic/$diastolic at $timestamp');
+                    
+                    allData.add(BloodPressureData(
+                      systolic: systolic,
+                      diastolic: diastolic,
+                      timestamp: timestamp,
+                      source: 'google_fit',
+                    ));
+                  }
+                } catch (e) {
+                  print('⚠️ Error parsing BP point: $e');
+                }
+              }
+            }
+          }
+        }
+      }
+
+      print('✅ Total BP readings fetched: ${allData.length}');
+      return allData;
+    } catch (error) {
+      print('❌ Error fetching blood pressure data: $error');
+      return [];
+    }
+  }
+
+  /// Fetch body temperature data from Google Fit
+  static Future<List<TemperatureData>> fetchTemperatureData({int days = 7}) async {
+    try {
+      final account = _googleSignIn.currentUser;
+      if (account == null) throw Exception('User not signed in to Google');
+
+      final auth = await account.authentication;
+      final accessToken = auth.accessToken;
+      if (accessToken == null) throw Exception('No access token');
+
+      final endTime = DateTime.now();
+      final startTime = endTime.subtract(Duration(days: days));
+
+      print('🔄 Fetching RAW temperature data from Google Fit...');
+      print('📅 Time range: ${startTime.toString()} to ${endTime.toString()}');
+
+      // First, get available data sources
+      final sourcesResponse = await http.get(
+        Uri.parse('https://www.googleapis.com/fitness/v1/users/me/dataSources'),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (sourcesResponse.statusCode != 200) {
+        throw Exception('Failed to get data sources: ${sourcesResponse.statusCode}');
+      }
+
+      final sourcesData = json.decode(sourcesResponse.body);
+      final dataSources = sourcesData['dataSource'] as List<dynamic>? ?? [];
+      
+      List<TemperatureData> allData = [];
+
+      // Look for temperature data sources
+      for (final source in dataSources) {
+        final dataType = source['dataType'];
+        if (dataType != null && dataType['name'] == 'com.google.body.temperature') {
+          final sourceId = source['dataStreamId'];
+          print('🔍 Found temperature data source: $sourceId');
+          
+          // Fetch raw dataset from this source
+          final datasetUrl = 'https://www.googleapis.com/fitness/v1/users/me/dataSources/$sourceId/datasets/${startTime.millisecondsSinceEpoch * 1000000}-${endTime.millisecondsSinceEpoch * 1000000}';
+          
+          final datasetResponse = await http.get(
+            Uri.parse(datasetUrl),
+            headers: {
+              'Authorization': 'Bearer $accessToken',
+              'Content-Type': 'application/json',
+            },
+          );
+          
+          if (datasetResponse.statusCode == 200) {
+            final datasetData = json.decode(datasetResponse.body);
+            final points = datasetData['point'] as List<dynamic>? ?? [];
+            
+            print('📊 RAW temperature points from this source: ${points.length}');
+            
+            for (final point in points) {
+              try {
+                final values = point['value'] as List<dynamic>? ?? [];
+                
+                if (values.isEmpty) {
+                  print('⚠️ Skipping point with no values');
+                  continue;
+                }
+                
+                print('🔍 RAW temperature values: ${values.length} values');
+                for (int i = 0; i < values.length; i++) {
+                  print('   values[$i]: ${values[i]}');
+                }
+                
+                // Temperature data: values[0] = celsius (exact value from device)
+                final celsius = (values[0]['fpVal'] ?? 0).toDouble();
+                
+                final startTimeNanos = point['startTimeNanos'];
+                final timestamp = DateTime.fromMillisecondsSinceEpoch(
+                  int.parse(startTimeNanos.toString()) ~/ 1000000,
+                );
+                
+                print('✅ RAW Temperature: ${celsius}°C at ${timestamp}');
+                
+                allData.add(TemperatureData(
+                  celsius: celsius,
+                  timestamp: timestamp,
+                  source: 'google_fit',
+                ));
+              } catch (e) {
+                print('⚠️ Error parsing temperature point: $e');
+              }
+            }
+          } else {
+            print('⚠️ Failed to fetch dataset: ${datasetResponse.statusCode}');
+          }
+        }
+      }
+
+      print('✅ Total temperature readings fetched: ${allData.length}');
+      return allData;
+    } catch (error) {
+      print('❌ Error fetching temperature data: $error');
+      return [];
+    }
+  }
+
+
+
   /// Test connection to Google Fit API
   static Future<bool> testConnection() async {
     try {
@@ -387,5 +598,43 @@ class HeartRateData {
   @override
   String toString() {
     return 'HeartRateData(bpm: $bpm, timestamp: $timestamp, source: $source)';
+  }
+}
+
+/// Blood pressure data model for Google Fit
+class BloodPressureData {
+  final double systolic;
+  final double diastolic;
+  final DateTime timestamp;
+  final String source;
+
+  BloodPressureData({
+    required this.systolic,
+    required this.diastolic,
+    required this.timestamp,
+    required this.source,
+  });
+
+  @override
+  String toString() {
+    return 'BloodPressureData(systolic: $systolic, diastolic: $diastolic, timestamp: $timestamp, source: $source)';
+  }
+}
+
+/// Body temperature data model for Google Fit
+class TemperatureData {
+  final double celsius;
+  final DateTime timestamp;
+  final String source;
+
+  TemperatureData({
+    required this.celsius,
+    required this.timestamp,
+    required this.source,
+  });
+
+  @override
+  String toString() {
+    return 'TemperatureData(celsius: $celsius, timestamp: $timestamp, source: $source)';
   }
 }
