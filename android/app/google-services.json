@@ -12,7 +12,20 @@
           "package_name": "com.example.silvercare"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1025474256493-m8724e31el5p3itb5l0ltn8ertif3g8b.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.silvercare",
+            "certificate_hash": "2596119148e4cdd00634a88e35c0ff88ad914dfa"
+          }
+        },
+        {
+          "client_id": "1025474256493-tl98osvir7p1e72prs1v5jo19tm1nb0g.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDiEDW0nA2H0ldAgQvBfPMS8z9HyVsXp3U"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1025474256493-tl98osvir7p1e72prs1v5jo19tm1nb0g.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

@@ -1,1 +1,25 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"silvercare-app-3102","appId":"1:1025474256493:android:a84b17c4279567bb2f6964","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"silvercare-app-3102","configurations":{"android":"1:1025474256493:android:a84b17c4279567bb2f6964","web":"1:1025474256493:web:c7ada0da00236b0b2f6964"}}}}}}
+{
+  "functions": {
+    "source": "functions"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "silvercare-app-3102",
+          "appId": "1:1025474256493:android:a84b17c4279567bb2f6964",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "silvercare-app-3102",
+          "configurations": {
+            "android": "1:1025474256493:android:a84b17c4279567bb2f6964",
+            "web": "1:1025474256493:web:c7ada0da00236b0b2f6964"
+          }
+        }
+      }
+    }
+  }
+}

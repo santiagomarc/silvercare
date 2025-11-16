@@ -12,8 +12,10 @@ import 'package:silvercare/screens/blood_pressure_screen.dart';
 import 'package:silvercare/screens/temperature_screen.dart';
 import 'package:silvercare/screens/sugar_level_screen.dart';
 import 'package:silvercare/screens/notifications_screen.dart';
+import 'package:silvercare/screens/caregiver_screens/sos_alert_screen.dart';
 import 'package:silvercare/services/notification_service.dart';
 import 'package:silvercare/services/push_notification_service.dart';
+import 'package:silvercare/services/sos_listener_service.dart';
 import 'package:silvercare/screens/calendar_screen.dart';
 
 
@@ -46,8 +48,9 @@ class SilverCareApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Set the navigator key in NotificationService
+    // Set the navigator key in NotificationService and SOSListenerService
     NotificationService.navigatorKey = navigatorKey;
+    SOSListenerService.navigatorKey = navigatorKey;
 
     return MaterialApp(
       navigatorKey: navigatorKey,
@@ -76,6 +79,10 @@ class SilverCareApp extends StatelessWidget {
         '/notifications': (context) => const NotificationsScreen(),
         // 2. ADD THIS ROUTE
         '/calendar': (context) => const CalendarScreen(),
+        '/sos_alert': (context) {
+          final alertId = ModalRoute.of(context)?.settings.arguments as String?;
+          return SOSAlertScreen(alertId: alertId);
+        },
       },
       // Handle unknown routes
       onUnknownRoute: (settings) {

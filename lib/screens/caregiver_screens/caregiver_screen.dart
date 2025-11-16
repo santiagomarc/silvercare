@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:silvercare/services/sos_listener_service.dart';
 import 'caregiver_dashboard.dart';
 import 'caregiver_profile.dart';
 
@@ -18,6 +19,21 @@ class _CaregiverScreenState extends State<CaregiverScreen> {
     CaregiverProfile()
   ];
   final List<String> _titles = ["CAREGIVER DASHBOARD", "PROFILE"];
+
+  @override
+  void initState() {
+    super.initState();
+    // Start listening for SOS alerts
+    SOSListenerService().startListening();
+  }
+
+  @override
+  void dispose() {
+    // Stop listening when screen is disposed
+    SOSListenerService().stopListening();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

@@ -8,6 +8,7 @@ import 'package:silvercare/services/medication_service.dart';
 import 'package:silvercare/services/push_notification_service.dart';
 import 'package:silvercare/services/persistent_notification_service.dart';
 import 'package:silvercare/services/calendar_notification_service.dart';
+import 'package:silvercare/services/sos_service.dart';
 import 'package:silvercare/widgets/mood_tracker_card.dart';
 import 'package:intl/intl.dart'; // Import for date formatting
 import 'dart:async';
@@ -1485,7 +1486,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showEmergencySosDialog() {
+  void _showEmergencySosDialog() async {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1517,7 +1518,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           content: SingleChildScrollView(
             child: Text(
-              'This feature will send an emergency alert to your emergency contacts and local emergency services.',
+              'This will send an emergency alert to your caregiver with your current location and vital signs.',
               style: TextStyle(
                 fontFamily: 'Montserrat',
                 fontSize: _getResponsiveFontSize(context, 14),
@@ -1538,15 +1539,62 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('🚨 Emergency SOS feature coming soon!'),
-                    backgroundColor: Colors.red.shade600,
-                    duration: const Duration(seconds: 3),
+                
+                // Show loading indicator
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => const Center(
+                    child: CircularProgressIndicator(),
                   ),
                 );
+
+                try {
+                  // Trigger SOS alert
+                  final sosService = SOSService();
+                  await sosService.triggerSOSAlert();
+
+                  // Close loading indicator
+                  if (mounted) Navigator.of(context).pop();
+
+                  // Show success message
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('🚨 Emergency SOS sent to your caregiver!'),
+                        backgroundColor: Colors.green.shade600,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  // Close loading indicator
+                  if (mounted) Navigator.of(context).pop();
+                  
+                  // Parse error message
+                  String errorMessage = e.toString();
+                  if (errorMessage.contains('Exception:')) {
+                    errorMessage = errorMessage.replaceAll('Exception:', '').trim();
+                  }
+                  
+                  // Show specific error message
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('❌ $errorMessage'),
+                        backgroundColor: Colors.red,
+                        duration: const Duration(seconds: 5),
+                        action: SnackBarAction(
+                          label: 'OK',
+                          textColor: Colors.white,
+                          onPressed: () {},
+                        ),
+                      ),
+                    );
+                  }
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade600,

@@ -13,8 +13,9 @@ class GoogleFitService {
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: _fitnessScopes,
     forceCodeForRefreshToken: true,
-    // Web client ID for testing in Chrome
-    clientId: '288695034445-1apprq1ifhkvir41tepjj7l8g0hlh2rv.apps.googleusercontent.com',
+    // TODO: Replace with YOUR Web Client ID from Google Cloud Console
+    // Get it from: APIs & Services → Credentials → Web client (OAuth 2.0 Client ID)
+    clientId: '1025474256493-tl98osvir7p1e72prs1v5jo19tm1nb0g.apps.googleusercontent.com',
   );
 
   /// Check if user is signed in to Google

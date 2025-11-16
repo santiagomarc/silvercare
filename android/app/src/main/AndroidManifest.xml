@@ -8,6 +8,17 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <!-- Required for showing notifications (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    
+    <!-- Permissions for SOS Alert System -->
+    <!-- Location permissions for emergency SOS -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Wake lock to show full-screen alerts -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Use full-screen intents for emergency alerts (Android 10+) -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <!-- System alert window for emergency overlay -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
 
     <application
@@ -64,7 +75,17 @@
         <!-- This is used by FCM when a notification comes in while the app is in the background -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="medication_reminder_channel_id" />
+            android:value="sos_alert_channel" />
+        
+        <!-- SOS Alert: High priority notification channel for emergency alerts -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_priority"
+            android:value="high" />
+        
+        <!-- Google Maps API Key -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyAwMFPNbW4j41JVhrm-ULVr8puapSZWmuo" />
             
     </application>
     <!-- Required to query activities that can process text, see:
