@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 // IMPORT THE NEW FILE
 import 'memory_match_screen.dart';
+import 'breathing_exercise_screen.dart';
 
 class WellnessScreen extends StatefulWidget {
   const WellnessScreen({super.key});
@@ -281,7 +282,11 @@ class _WellnessScreenState extends State<WellnessScreen> {
                             const Color(0xFF4DB6AC),
                             const Color(0xFF1565C0),
                           ],
-                          onTap: () => _navigateToPlaceholder(context, 'Breathing Exercise', const Color(0xFF1565C0)),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => const BreathingExerciseScreen()),
+                            );
+                          }
                         ),
                         
                         _buildModernMenuButton(
