@@ -5,6 +5,9 @@ import 'home_screen.dart';
 import 'profile_screen.dart';
 import 'analytics_screen.dart';
 import 'calendar_screen.dart'; 
+import 'wellness_screen.dart';
+
+
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -21,7 +24,7 @@ class _MainScreenState extends State<MainScreen> {
     const HomeScreenContent(), // Home
     const CalendarScreen(),    
     const AnalyticsScreenContent(), // Analytics
-    const PlaceholderScreen(title: 'Wellness', color: Color(0xFF9C27B0)), // Wellness
+    const WellnessScreen(), // Wellness
     const ProfileScreenContent(), // Profile
   ];
 

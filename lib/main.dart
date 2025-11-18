@@ -17,6 +17,8 @@ import 'package:silvercare/services/notification_service.dart';
 import 'package:silvercare/services/push_notification_service.dart';
 import 'package:silvercare/services/sos_listener_service.dart';
 import 'package:silvercare/screens/calendar_screen.dart';
+import 'package:silvercare/screens/wellness_screen.dart';
+
 
 
 
@@ -79,6 +81,7 @@ class SilverCareApp extends StatelessWidget {
         '/notifications': (context) => const NotificationsScreen(),
         // 2. ADD THIS ROUTE
         '/calendar': (context) => const CalendarScreen(),
+        '/wellness': (context) => const WellnessScreen(),
         '/sos_alert': (context) {
           final alertId = ModalRoute.of(context)?.settings.arguments as String?;
           return SOSAlertScreen(alertId: alertId);
