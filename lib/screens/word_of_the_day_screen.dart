@@ -343,10 +343,11 @@ class _WordOfTheDayScreenState extends State<WordOfTheDayScreen> with SingleTick
                               ],
                             ),
                           ),
-                          padding: const EdgeInsets.all(35),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(35),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
                               // Decorative Quote Icon
                               Container(
                                 padding: const EdgeInsets.all(16),
@@ -370,23 +371,25 @@ class _WordOfTheDayScreenState extends State<WordOfTheDayScreen> with SingleTick
                                 ),
                               ),
 
-                              const SizedBox(height: 35),
+                              const SizedBox(height: 25),
 
                               // Quote Text
                               Text(
                                 quote['quote']!,
                                 textAlign: TextAlign.center,
+                                softWrap: true,
+                                overflow: TextOverflow.visible,
                                 style: TextStyle(
-                                  fontSize: screenWidth < 360 ? 20 : 24,
+                                  fontSize: screenWidth < 360 ? 18 : 22,
                                   fontFamily: 'Montserrat',
                                   fontWeight: FontWeight.w600,
                                   color: _textPrimary,
-                                  height: 1.5,
+                                  height: 1.4,
                                   letterSpacing: 0.3,
                                 ),
                               ),
 
-                              const SizedBox(height: 30),
+                              const SizedBox(height: 20),
 
                               // Author
                               Container(
@@ -412,7 +415,7 @@ class _WordOfTheDayScreenState extends State<WordOfTheDayScreen> with SingleTick
                                 ),
                               ),
 
-                              const SizedBox(height: 40),
+                              const SizedBox(height: 25),
 
                               // Action Call
                               Container(
@@ -432,6 +435,7 @@ class _WordOfTheDayScreenState extends State<WordOfTheDayScreen> with SingleTick
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     const Icon(Icons.wb_sunny_rounded, color: Colors.white, size: 22),
                                     const SizedBox(width: 12),
@@ -452,6 +456,7 @@ class _WordOfTheDayScreenState extends State<WordOfTheDayScreen> with SingleTick
                                 ),
                               ),
                             ],
+                          ),
                           ),
                         ),
                       ),

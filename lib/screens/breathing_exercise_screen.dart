@@ -130,11 +130,12 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen>
         centerTitle: true,
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
               Text(
                 'Box Breathing Exercise',
                 style: TextStyle(
@@ -169,7 +170,8 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen>
               const SizedBox(height: 8),
 
               // Animated circle
-              Expanded(
+              SizedBox(
+                height: 350,
                 child: Center(
                   child: AnimatedBuilder(
                     animation: _sizeAnim,
@@ -295,7 +297,8 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen>
               ),
 
               const SizedBox(height: 24),
-            ],
+              ],
+            ),
           ),
         ),
       ),
