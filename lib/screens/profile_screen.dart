@@ -269,23 +269,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
-      child: Center(
-        child: Text(
-          'SILVER CARE',
-          style: TextStyle(
-            color: _textPrimary,
-            fontSize: _getResponsiveFontSize(context, 28),
-            fontFamily: 'Montserrat',
-            fontWeight: FontWeight.w900,
-            letterSpacing: 2.0,
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _ScreenHeaderButton(BuildContext context) {
     return Container(
@@ -594,7 +577,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(context),
             
             _ScreenHeaderButton(context),
             

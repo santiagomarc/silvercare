@@ -618,7 +618,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     return baseSize;
   }
 
-  Widget _buildSectionTitle(BuildContext context) {
+   Widget _ScreenHeaderButton(BuildContext context) {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 10, 20, 20),
       height: 80,
@@ -632,19 +632,19 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             offset: const Offset(0, 5),
           ),
         ],
-        border: Border.all(color: const Color.fromRGBO(108, 99, 255, 0.2), width: 2),
+        border: Border.all(color: Colors.orangeAccent.withOpacity(0.2), width: 2),
       ),
       child: Center(
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.analytics, size: 28, color: Color(0xFFFFB300)),
+            Icon(Icons.analytics, size: 28, color: Colors.orangeAccent),
             const SizedBox(width: 12),
             Text(
-              'Analytics',
+              'ANALYTICS',
               style: TextStyle(
                 color: Color(0xFF2D3748),
-                fontSize: _getResponsiveFontSize(context, 24),
+                fontSize: _getResponsiveFontSize(context, 28),
                 fontFamily: 'Montserrat',
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1.2,
@@ -953,49 +953,52 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Title Header
-          _buildSectionTitle(context),
-          const SizedBox(height: 5),
-
-          // Combined Summary and Insights
-          _buildSummaryAndInsights(),
-          const SizedBox(height: 16),
-
-          // Insights Section (separate card)
-          _buildInsightsSection(),
-          const SizedBox(height: 24),
-
-          // Blood Pressure Card
-          BloodPressureAnalyticsCard(
-            bpData: _getBloodPressureChartData(),
-            onTapDetails: () {
-              // TODO: Navigate to detailed BP view
-            },
-          ),
-          const SizedBox(height: 16),
-
-          // Sugar Level Card - pass sugar chart records
-          SugarLevelAnalyticsCard(
-            sugarData: _getSugarChartData(),
-          ),
-          const SizedBox(height: 16),
-
-          // Temperature Card - pass the prepared temp chart records
-          TemperatureAnalyticsCard(
-            tempData: _getTemperatureChartData(),
-          ),
-          const SizedBox(height: 16),
-
-          // Heart Rate Card - pass the prepared hr chart records
-          HeartRateAnalyticsCard(
-            hrData: _getHeartRateChartData(),
-          ),
-        ],
+    return Scaffold(
+      backgroundColor: Color(0xFFF8F9FA),
+      body: SingleChildScrollView(
+      
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Title Header
+            _ScreenHeaderButton(context),
+            const SizedBox(height: 5),
+      
+            // Combined Summary and Insights
+            _buildSummaryAndInsights(),
+            const SizedBox(height: 16),
+      
+            // Insights Section (separate card)
+            _buildInsightsSection(),
+            const SizedBox(height: 24),
+      
+            // Blood Pressure Card
+            BloodPressureAnalyticsCard(
+              bpData: _getBloodPressureChartData(),
+              onTapDetails: () {
+                // TODO: Navigate to detailed BP view
+              },
+            ),
+            const SizedBox(height: 16),
+      
+            // Sugar Level Card - pass sugar chart records
+            SugarLevelAnalyticsCard(
+              sugarData: _getSugarChartData(),
+            ),
+            const SizedBox(height: 16),
+      
+            // Temperature Card - pass the prepared temp chart records
+            TemperatureAnalyticsCard(
+              tempData: _getTemperatureChartData(),
+            ),
+            const SizedBox(height: 16),
+      
+            // Heart Rate Card - pass the prepared hr chart records
+            HeartRateAnalyticsCard(
+              hrData: _getHeartRateChartData(),
+            ),
+          ],
+        ),
       ),
     );
   }

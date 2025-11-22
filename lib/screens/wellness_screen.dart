@@ -25,198 +25,46 @@ class _WellnessScreenState extends State<WellnessScreen> {
 
   // --- Header Widgets ---
 
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [_primaryColor, _primaryColor.withOpacity(0.7)],
-              ),
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: _primaryColor.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: const Icon(Icons.favorite_rounded, color: Colors.white, size: 16),
-          ),
-          const SizedBox(width: 8),
-          ShaderMask(
-            shaderCallback: (bounds) => LinearGradient(
-              colors: [_primaryColor, const Color(0xFF9C27B0)],
-            ).createShader(bounds),
-            child: Text(
-              'SILVER CARE',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: _getResponsiveFontSize(context, 22),
-                fontFamily: 'Montserrat',
-                fontWeight: FontWeight.w900,
-                letterSpacing: 2.0,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _ScreenHeaderButton(BuildContext context) {
+   
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-      height: 70,
+      margin: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+      height: 80,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(40),
         boxShadow: [
           BoxShadow(
-            color: _primaryColor.withOpacity(0.25),
-            blurRadius: 25,
-            offset: const Offset(0, 10),
-            spreadRadius: 0,
-          ),
-          BoxShadow(
-            color: Colors.white.withOpacity(0.9),
-            blurRadius: 10,
-            offset: const Offset(0, -4),
-            spreadRadius: 0,
+            color: const Color.fromRGBO(0, 0, 0, 0.15),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
+        border: Border.all(color: _primaryColor.withOpacity(0.2), width: 2),
       ),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(30),
-          color: Colors.white,
-          border: Border.all(
-            width: 2,
-            color: _primaryColor.withOpacity(0.2),
-          ),
-        ),
-        child: Stack(
+      child: Center(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Decorative elements
-            Positioned(
-              left: -20,
-              top: -10,
-              child: Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      _primaryColor.withOpacity(0.03),
-                      _primaryColor.withOpacity(0.0),
-                    ],
-                  ),
-                ),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: _primaryColor,
+                shape: BoxShape.circle,
               ),
+              child: const Icon(Icons.spa_rounded, size: 24, color: Colors.white),
             ),
-            Positioned(
-              right: -30,
-              bottom: -20,
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      const Color(0xFFFFC107).withOpacity(0.06),
-                      const Color(0xFFFFC107).withOpacity(0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            
-            // Main content
-            Center(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Icon with enhanced styling
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          _primaryColor,
-                          const Color(0xFF9C27B0),
-                        ],
-                      ),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: _primaryColor.withOpacity(0.4),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                          spreadRadius: 1,
-                        ),
-                        BoxShadow(
-                          color: Colors.white.withOpacity(0.8),
-                          blurRadius: 6,
-                          offset: const Offset(0, -2),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(Icons.spa_rounded, size: 24, color: Colors.white),
-                  ),
-                  const SizedBox(width: 12),
-                  
-                  // Title with gradient
-                  ShaderMask(
-                    shaderCallback: (bounds) => LinearGradient(
-                      colors: [
-                        _textPrimary,
-                        _primaryColor,
-                      ],
-                    ).createShader(bounds),
-                    child: Text(
-                      'WELLNESS',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: _getResponsiveFontSize(context, 22),
-                        fontFamily: 'Montserrat',
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  
-                  // Sparkle badge
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFFC107), Color(0xFFFF9800)],
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFFFC107).withOpacity(0.4),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.auto_awesome_rounded, 
-                      size: 14, 
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
+            const SizedBox(width: 12),
+            Text(
+              'WELLNESS',
+              style: TextStyle(
+                color: const Color(0xFF2D3748),
+                fontSize: _getResponsiveFontSize(context, 24),
+                fontFamily: 'Montserrat',
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
               ),
             ),
           ],
@@ -405,7 +253,6 @@ class _WellnessScreenState extends State<WellnessScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(context),
               _ScreenHeaderButton(context),
               
               const SizedBox(height: 5),
