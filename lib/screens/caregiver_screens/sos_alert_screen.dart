@@ -20,11 +20,11 @@ class _SOSAlertScreenState extends State<SOSAlertScreen> {
   bool _loading = true;
   GoogleMapController? _mapController;
 
-  // Modern Color Palette
+  // Modern Palette
   final Color _emergencyRed = const Color(0xFFE53935);
   final Color _bgGrey = const Color(0xFFF5F7FA);
   final Color _cardWhite = Colors.white;
-  final Color _textDark = const Color(0xFF2D3748);
+  final Color _textDark = const Color(0xFF1A202C);
 
   @override
   void initState() {
@@ -43,7 +43,6 @@ class _SOSAlertScreenState extends State<SOSAlertScreen> {
       setState(() => _loading = false);
       return;
     }
-
     final alert = await _sosService.getAlertById(widget.alertId!);
     setState(() {
       _alert = alert;
@@ -54,93 +53,42 @@ class _SOSAlertScreenState extends State<SOSAlertScreen> {
   Future<void> _stopAlarm() async {
     await SOSListenerService.stopSOSAlarm();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Alarm silenced'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Alarm silenced')));
     }
   }
 
   Future<void> _acknowledgeAlert() async {
     if (_alert == null) return;
-
     await _sosService.acknowledgeAlert(_alert!.id);
     await SOSListenerService.stopSOSAlarm();
-
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Alert acknowledged'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      setState(() {
-        _alert = _alert!.copyWith(status: 'acknowledged');
-      });
+      setState(() => _alert = _alert!.copyWith(status: 'acknowledged'));
     }
   }
 
   Future<void> _resolveAlert() async {
     if (_alert == null) return;
-
     await _sosService.resolveAlert(_alert!.id);
     await SOSListenerService.stopSOSAlarm();
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Alert resolved'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      Navigator.of(context).pop();
-    }
+    if (mounted) Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return Scaffold(
-        backgroundColor: _bgGrey,
-        body: const Center(child: CircularProgressIndicator(color: Colors.red)),
-      );
-    }
-
-    if (_alert == null) {
-      return Scaffold(
-        backgroundColor: _bgGrey,
-        appBar: AppBar(title: const Text('SOS Alert'), backgroundColor: _emergencyRed),
-        body: const Center(child: Text('Alert details not found')),
-      );
-    }
+    if (_loading) return Scaffold(body: const Center(child: CircularProgressIndicator(color: Colors.red)));
+    if (_alert == null) return const Scaffold(body: Center(child: Text('Alert not found')));
 
     return Scaffold(
       backgroundColor: _bgGrey,
       appBar: AppBar(
-        title: const Text(
-          'EMERGENCY ALERT',
-          style: TextStyle(
-            fontFamily: 'Montserrat',
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.0,
-            fontSize: 18,
-          ),
-        ),
+        title: const Text('EMERGENCY ALERT', style: TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.w700, letterSpacing: 1.0)),
         centerTitle: true,
         backgroundColor: _emergencyRed,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
           if (SOSListenerService.isAlarmPlaying)
-            IconButton(
-              icon: const Icon(Icons.volume_off),
-              onPressed: _stopAlarm,
-              tooltip: 'Silence Alarm',
-            ),
+            IconButton(icon: const Icon(Icons.volume_off), onPressed: _stopAlarm),
         ],
       ),
       body: SafeArea(
@@ -149,33 +97,26 @@ class _SOSAlertScreenState extends State<SOSAlertScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. Status Header
               _buildModernStatusHeader(),
-
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 2. Map Section (Bigger now)
                     if (_alert!.location != null) ...[
-                      _buildSectionTitle('LOCATION'),
+                      _buildSectionTitle('CURRENT LOCATION'),
                       const SizedBox(height: 8),
-                      _buildMapCard(),
+                      _buildMapCard(), // Bigger map
                       const SizedBox(height: 24),
                     ],
-
-                    // 3. Patient Info
                     _buildSectionTitle('PATIENT DETAILS'),
                     const SizedBox(height: 8),
                     _buildElderInfoCard(),
                     const SizedBox(height: 24),
-
-                    // 4. Vitals Grid (Compact & Tighter)
                     if (_alert!.vitalsSummary?.hasData ?? false) ...[
                       _buildSectionTitle('LIVE VITALS'),
                       const SizedBox(height: 8),
-                      _buildCompactVitalsGrid(),
+                      _buildCompactVitalsList(), // New compact list
                       const SizedBox(height: 24),
                     ],
                   ],
@@ -194,13 +135,7 @@ class _SOSAlertScreenState extends State<SOSAlertScreen> {
       padding: const EdgeInsets.only(left: 4),
       child: Text(
         title,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: Colors.grey[600],
-          letterSpacing: 1.2,
-          fontFamily: 'Montserrat',
-        ),
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.grey[600], letterSpacing: 1.2, fontFamily: 'Montserrat'),
       ),
     );
   }
@@ -219,13 +154,13 @@ class _SOSAlertScreenState extends State<SOSAlertScreen> {
         subtitle = 'Immediate attention required';
         break;
       case 'acknowledged':
-        bgColor = Colors.orange.shade700;
+        bgColor = Colors.orange.shade800;
         icon = Icons.check_circle_outline;
         title = 'ACKNOWLEDGED';
         subtitle = 'Response in progress';
         break;
       case 'resolved':
-        bgColor = Colors.green.shade600;
+        bgColor = Colors.green.shade700;
         icon = Icons.check_circle;
         title = 'RESOLVED';
         subtitle = 'Situation is stable';
@@ -238,55 +173,29 @@ class _SOSAlertScreenState extends State<SOSAlertScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 15, 20, 25),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(24),
           bottomRight: Radius.circular(24),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: bgColor.withOpacity(0.4),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: bgColor.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 6))],
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.25),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: Colors.white, size: 36),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+            child: Icon(icon, color: Colors.white, size: 32),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    fontFamily: 'Montserrat',
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.95),
-                    fontSize: 14,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                Text(title, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, fontFamily: 'Montserrat', letterSpacing: 0.5)),
+                Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14, fontFamily: 'Inter')),
               ],
             ),
           ),
@@ -298,28 +207,23 @@ class _SOSAlertScreenState extends State<SOSAlertScreen> {
   Widget _buildMapCard() {
     final location = _alert!.location!;
     final latLng = LatLng(location.latitude, location.longitude);
+    
+    // Fallback if address is null (GPS Coordinates)
+    final addressDisplay = location.address ?? 
+        '${latLng.latitude.toStringAsFixed(5)}, ${latLng.longitude.toStringAsFixed(5)}';
 
     return Container(
-      height: 350, // Increased height as requested
+      height: 400, // ⬆️ Increased Height
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 15, offset: const Offset(0, 5))],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: Stack(
           children: [
             GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: latLng,
-                zoom: 16, // Zoomed in slightly more
-              ),
+              initialCameraPosition: CameraPosition(target: latLng, zoom: 16),
               markers: {
                 Marker(
                   markerId: const MarkerId('elder_location'),
@@ -327,62 +231,37 @@ class _SOSAlertScreenState extends State<SOSAlertScreen> {
                   icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
                 ),
               },
-              onMapCreated: (controller) => _mapController = controller,
+              onMapCreated: (c) => _mapController = c,
               zoomControlsEnabled: false,
-              myLocationButtonEnabled: false,
               mapToolbarEnabled: false,
+              myLocationButtonEnabled: false,
             ),
-            // Modern Address Overlay
             Positioned(
-              bottom: 16,
-              left: 16,
-              right: 16,
+              bottom: 16, left: 16, right: 16,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 4))],
                 ),
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: _emergencyRed.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.location_on, color: _emergencyRed, size: 20),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: _emergencyRed.withOpacity(0.1), shape: BoxShape.circle),
+                      child: Icon(Icons.location_on, color: _emergencyRed, size: 24),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
                         children: [
+                          Text("REPORTED LOCATION", style: TextStyle(color: Colors.grey[500], fontSize: 10, fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 2),
                           Text(
-                            "Reported Location",
-                            style: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          Text(
-                            location.address ?? 'Unknown Address',
-                            style: TextStyle(
-                              color: _textDark,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                              fontFamily: 'Montserrat',
-                            ),
+                            addressDisplay,
+                            style: TextStyle(color: _textDark, fontWeight: FontWeight.w700, fontSize: 14, fontFamily: 'Montserrat'),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -400,209 +279,100 @@ class _SOSAlertScreenState extends State<SOSAlertScreen> {
   }
 
   Widget _buildElderInfoCard() {
-    final timestamp = DateFormat('hh:mm a • MMM dd').format(_alert!.timestamp);
-
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _cardWhite,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Hero(
-            tag: 'profile_pic',
-            child: Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.grey.shade200, width: 2),
-              ),
-              child: const Icon(Icons.person, color: Colors.grey, size: 32),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _alert!.elderName,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: _textDark,
-                    fontFamily: 'Montserrat',
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.access_time, size: 12, color: Colors.grey[600]),
-                      const SizedBox(width: 6),
-                      Text(
-                        timestamp,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[700],
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'Inter',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // NEW: Tighter, more compact grid
-  Widget _buildCompactVitalsGrid() {
-    final vitals = _alert!.vitalsSummary!;
-    final List<Widget> vitalCards = [];
-
-    if (vitals.bloodPressureFormatted != null) {
-      vitalCards.add(_buildCompactVitalTile(
-        'BLOOD PRESSURE',
-        vitals.bloodPressureFormatted!,
-        'mmHg',
-        Icons.monitor_heart_outlined,
-        Colors.blue,
-      ));
-    }
-    if (vitals.heartRate != null) {
-      vitalCards.add(_buildCompactVitalTile(
-        'HEARTRATE',
-        vitals.heartRate!.toInt().toString(),
-        'bpm',
-        Icons.favorite_border,
-        _emergencyRed,
-      ));
-    }
-    if (vitals.sugarLevel != null) {
-      vitalCards.add(_buildCompactVitalTile(
-        'SUGAR LEVEL',
-        vitals.sugarLevel!.toInt().toString(),
-        'mg/dL',
-        Icons.water_drop_outlined,
-        Colors.orange,
-      ));
-    }
-    if (vitals.temperature != null) {
-      vitalCards.add(_buildCompactVitalTile(
-        'TEMPERATURE',
-        vitals.temperature!.toStringAsFixed(1),
-        '°C',
-        Icons.thermostat_outlined,
-        Colors.teal,
-      ));
-    }
-
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 2.2, // WIDER aspect ratio makes them short & compact
-      children: vitalCards,
-    );
-  }
-
-  Widget _buildCompactVitalTile(
-    String label,
-    String value,
-    String unit,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: _cardWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade100),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: Colors.grey.shade200,
+            child: const Icon(Icons.person, color: Colors.grey, size: 28),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_alert!.elderName, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _textDark, fontFamily: 'Montserrat')),
+              Text(
+                DateFormat('hh:mm a • MMM dd, yyyy').format(_alert!.timestamp),
+                style: TextStyle(fontSize: 13, color: Colors.grey[600], fontFamily: 'Inter', fontWeight: FontWeight.w500),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+
+  // 🛠️ NEW: Compact Vitals List (Row based, not Grid)
+  Widget _buildCompactVitalsList() {
+    final vitals = _alert!.vitalsSummary!;
+    
+    return Column(
+      children: [
+        Row(
+          children: [
+            if (vitals.bloodPressureFormatted != null)
+              Expanded(child: _buildCompactVitalTile('BP', vitals.bloodPressureFormatted!, 'mmHg', Icons.monitor_heart_outlined, Colors.blue)),
+            if (vitals.bloodPressureFormatted != null && vitals.heartRate != null)
+              const SizedBox(width: 12),
+            if (vitals.heartRate != null)
+              Expanded(child: _buildCompactVitalTile('HR', vitals.heartRate!.toInt().toString(), 'bpm', Icons.favorite_border, _emergencyRed)),
+          ],
+        ),
+        if (vitals.sugarLevel != null || vitals.temperature != null) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              if (vitals.sugarLevel != null)
+                Expanded(child: _buildCompactVitalTile('Glucose', vitals.sugarLevel!.toInt().toString(), 'mg/dL', Icons.water_drop_outlined, Colors.orange)),
+              if (vitals.sugarLevel != null && vitals.temperature != null)
+                const SizedBox(width: 12),
+              if (vitals.temperature != null)
+                Expanded(child: _buildCompactVitalTile('Temp', vitals.temperature!.toStringAsFixed(1), '°C', Icons.thermostat_outlined, Colors.teal)),
+            ],
+          ),
+        ]
+      ],
+    );
+  }
+
+  Widget _buildCompactVitalTile(String label, String value, String unit, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14), // Tighter padding
+      decoration: BoxDecoration(
+        color: _cardWhite,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 6, offset: const Offset(0, 2))],
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
             child: Icon(icon, size: 20, color: color),
           ),
           const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  label.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.grey[500],
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                RichText(
-                  text: TextSpan(
-                    children: [
-                      TextSpan(
-                        text: value,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: _textDark,
-                          fontFamily: 'Montserrat',
-                        ),
-                      ),
-                      TextSpan(
-                        text: ' $unit',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.grey[500],
-                          fontFamily: 'Inter',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.grey[500])),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: _textDark, fontFamily: 'Montserrat')),
+                  const SizedBox(width: 2),
+                  Text(unit, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.grey[500])),
+                ],
+              ),
+            ],
           ),
         ],
       ),
@@ -616,94 +386,57 @@ class _SOSAlertScreenState extends State<SOSAlertScreen> {
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -5))],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (_alert!.status == 'active')
-            _buildActionButton(
-              label: 'ACKNOWLEDGE ALERT',
-              icon: Icons.check_circle_outline,
-              color: Colors.blue.shade600,
-              onPressed: _acknowledgeAlert,
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton.icon(
+                onPressed: _acknowledgeAlert,
+                icon: const Icon(Icons.check_circle_outline, size: 22),
+                label: const Text('ACKNOWLEDGE ALERT', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, fontFamily: 'Montserrat', letterSpacing: 0.5)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade600,
+                  foregroundColor: Colors.white,
+                  elevation: 4,
+                  shadowColor: Colors.blue.withOpacity(0.4),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
             ),
-          
-          if (_alert!.status == 'active') 
-            const SizedBox(height: 12),
-
-          _buildActionButton(
-            label: 'MARK AS RESOLVED',
-            icon: Icons.check_circle,
-            color: Colors.green.shade600,
-            onPressed: _resolveAlert,
-            isOutlined: _alert!.status == 'active',
+          if (_alert!.status == 'active') const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 54,
+            child: _alert!.status == 'active'
+                ? OutlinedButton.icon(
+                    onPressed: _resolveAlert,
+                    icon: const Icon(Icons.check_circle, size: 22),
+                    label: const Text('MARK AS RESOLVED', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, fontFamily: 'Montserrat', letterSpacing: 0.5)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.green.shade600,
+                      side: BorderSide(color: Colors.green.shade600, width: 2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  )
+                : ElevatedButton.icon(
+                    onPressed: _resolveAlert,
+                    icon: const Icon(Icons.check_circle, size: 22),
+                    label: const Text('MARK AS RESOLVED', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, fontFamily: 'Montserrat', letterSpacing: 0.5)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade600,
+                      foregroundColor: Colors.white,
+                      elevation: 4,
+                      shadowColor: Colors.green.withOpacity(0.4),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onPressed,
-    bool isOutlined = false,
-  }) {
-    if (isOutlined) {
-      return SizedBox(
-        width: double.infinity,
-        height: 54,
-        child: OutlinedButton.icon(
-          onPressed: onPressed,
-          icon: Icon(icon, size: 20),
-          label: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              fontFamily: 'Montserrat',
-              letterSpacing: 0.5,
-            ),
-          ),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: color,
-            side: BorderSide(color: color, width: 2),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          ),
-        ),
-      );
-    }
-
-    return SizedBox(
-      width: double.infinity,
-      height: 54,
-      child: ElevatedButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon, size: 20),
-        label: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            fontFamily: 'Montserrat',
-            letterSpacing: 0.5,
-          ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          elevation: 4,
-          shadowColor: color.withOpacity(0.4),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
       ),
     );
   }

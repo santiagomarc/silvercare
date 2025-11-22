@@ -128,7 +128,8 @@ class SOSService {
     }
   }
 
-  /// Get current GPS location with address
+  /// Get current GPS location with smart address formatting
+  /// Prioritizes: Street, Barangay (SubLocality), City (Locality)
   Future<LocationData> _getCurrentLocation() async {
     // Check if location services are enabled
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -149,24 +150,62 @@ class SOSService {
       throw Exception('Location permissions are permanently denied');
     }
 
-    // Get current position
+    // Get current position (High accuracy for better street matching)
     Position position = await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
 
-    // Reverse geocode to get address
+    // Reverse geocode to get human-readable address
     String? address;
     try {
       List<Placemark> placemarks = await placemarkFromCoordinates(
         position.latitude,
         position.longitude,
       );
+      
       if (placemarks.isNotEmpty) {
         final place = placemarks.first;
-        address = '${place.street}, ${place.locality}, ${place.country}';
+        
+        // 🛠️ SMART ADDRESS BUILDER
+        // Instead of relying on a default format, we build it manually
+        // to ensure we capture the Barangay (SubLocality)
+        final List<String> components = [];
+
+        // 1. Street (e.g., "Rizal Street" or "Block 5")
+        if (place.street != null && place.street!.isNotEmpty && place.street != place.name) {
+           components.add(place.street!);
+        } else if (place.name != null && place.name!.isNotEmpty) {
+           // Fallback to name if street is empty (often contains building name)
+           components.add(place.name!);
+        }
+
+        // 2. Barangay (Stored as 'subLocality' in geocoding)
+        if (place.subLocality != null && place.subLocality!.isNotEmpty) {
+          components.add(place.subLocality!);
+        }
+
+        // 3. City (Locality)
+        if (place.locality != null && place.locality!.isNotEmpty) {
+          components.add(place.locality!);
+        }
+        
+        // 4. Province/Region (AdministrativeArea) - Optional, good if city is missing
+        if ((place.locality == null || place.locality!.isEmpty) && 
+            place.administrativeArea != null && place.administrativeArea!.isNotEmpty) {
+          components.add(place.administrativeArea!);
+        }
+
+        // Join them with commas: "Rizal St, Brgy. San Jose, Calamba City"
+        if (components.isNotEmpty) {
+          address = components.join(', ');
+        } else {
+          // Absolute fallback if everything else is empty
+          address = place.country ?? "Unknown Location";
+        }
       }
     } catch (e) {
       print('⚠️ Could not reverse geocode: $e');
+      // We leave address as null here; the UI will display coordinates as a last resort
     }
 
     return LocationData(
