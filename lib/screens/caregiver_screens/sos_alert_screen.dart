@@ -5,8 +5,6 @@ import '../../models/sos_alert_model.dart';
 import '../../services/sos_service.dart';
 import '../../services/sos_listener_service.dart';
 
-/// Screen displayed to caregivers when an SOS alert is received
-/// Shows elder's location on map, vitals, and allows acknowledging/resolving the alert
 class SOSAlertScreen extends StatefulWidget {
   final String? alertId;
 
@@ -21,6 +19,12 @@ class _SOSAlertScreenState extends State<SOSAlertScreen> {
   SOSAlertModel? _alert;
   bool _loading = true;
   GoogleMapController? _mapController;
+
+  // Modern Color Palette
+  final Color _emergencyRed = const Color(0xFFE53935);
+  final Color _bgGrey = const Color(0xFFF5F7FA);
+  final Color _cardWhite = Colors.white;
+  final Color _textDark = const Color(0xFF2D3748);
 
   @override
   void initState() {
@@ -49,9 +53,14 @@ class _SOSAlertScreenState extends State<SOSAlertScreen> {
 
   Future<void> _stopAlarm() async {
     await SOSListenerService.stopSOSAlarm();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Alarm stopped')),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Alarm silenced'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Future<void> _acknowledgeAlert() async {
@@ -62,7 +71,11 @@ class _SOSAlertScreenState extends State<SOSAlertScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('✅ Alert acknowledged')),
+        const SnackBar(
+          content: Text('✅ Alert acknowledged'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       setState(() {
         _alert = _alert!.copyWith(status: 'acknowledged');
@@ -78,7 +91,11 @@ class _SOSAlertScreenState extends State<SOSAlertScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('✅ Alert resolved')),
+        const SnackBar(
+          content: Text('✅ Alert resolved'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       Navigator.of(context).pop();
     }
@@ -88,246 +105,186 @@ class _SOSAlertScreenState extends State<SOSAlertScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('SOS Alert'),
-          backgroundColor: Colors.red,
-        ),
-        body: const Center(child: CircularProgressIndicator()),
+        backgroundColor: _bgGrey,
+        body: const Center(child: CircularProgressIndicator(color: Colors.red)),
       );
     }
 
     if (_alert == null) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('SOS Alert'),
-          backgroundColor: Colors.red,
-        ),
-        body: const Center(
-          child: Text('Alert not found'),
-        ),
+        backgroundColor: _bgGrey,
+        appBar: AppBar(title: const Text('SOS Alert'), backgroundColor: _emergencyRed),
+        body: const Center(child: Text('Alert details not found')),
       );
     }
 
     return Scaffold(
+      backgroundColor: _bgGrey,
       appBar: AppBar(
-        title: const Text('🚨 EMERGENCY SOS ALERT'),
-        backgroundColor: Colors.red,
+        title: const Text(
+          'EMERGENCY ALERT',
+          style: TextStyle(
+            fontFamily: 'Montserrat',
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.0,
+            fontSize: 18,
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: _emergencyRed,
         foregroundColor: Colors.white,
-        elevation: 4,
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Alert Status Banner
-            _buildStatusBanner(),
-
-            // Map Section
-            if (_alert!.location != null) _buildMapSection(),
-
-            // Elder Info Card
-            _buildElderInfoCard(),
-
-            // Vitals Card
-            if (_alert!.vitalsSummary?.hasData ?? false) _buildVitalsCard(),
-
-            // Action Buttons
-            _buildActionButtons(),
-
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusBanner() {
-    Color statusColor;
-    IconData statusIcon;
-    String statusText;
-
-    switch (_alert!.status) {
-      case 'active':
-        statusColor = Colors.red;
-        statusIcon = Icons.warning_amber_rounded;
-        statusText = 'ACTIVE - Needs Immediate Attention';
-        break;
-      case 'acknowledged':
-        statusColor = Colors.orange;
-        statusIcon = Icons.check_circle_outline;
-        statusText = 'ACKNOWLEDGED - In Progress';
-        break;
-      case 'resolved':
-        statusColor = Colors.green;
-        statusIcon = Icons.check_circle;
-        statusText = 'RESOLVED';
-        break;
-      default:
-        statusColor = Colors.grey;
-        statusIcon = Icons.info_outline;
-        statusText = 'Unknown Status';
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      color: statusColor,
-      child: Row(
-        children: [
-          Icon(statusIcon, color: Colors.white, size: 28),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              statusText,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+        elevation: 0,
+        actions: [
+          if (SOSListenerService.isAlarmPlaying)
+            IconButton(
+              icon: const Icon(Icons.volume_off),
+              onPressed: _stopAlarm,
+              tooltip: 'Silence Alarm',
             ),
-          ),
         ],
       ),
-    );
-  }
-
-  Widget _buildMapSection() {
-    final location = _alert!.location!;
-    final latLng = LatLng(location.latitude, location.longitude);
-
-    return Container(
-      height: 300,
-      margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: GoogleMap(
-          initialCameraPosition: CameraPosition(
-            target: latLng,
-            zoom: 15,
-          ),
-          markers: {
-            Marker(
-              markerId: const MarkerId('elder_location'),
-              position: latLng,
-              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-              infoWindow: InfoWindow(
-                title: _alert!.elderName,
-                snippet: location.address ?? 'Current Location',
-              ),
-            ),
-          },
-          onMapCreated: (controller) {
-            _mapController = controller;
-          },
-          myLocationButtonEnabled: true,
-          zoomControlsEnabled: true,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildElderInfoCard() {
-    final location = _alert!.location;
-    final timestamp = DateFormat('MMM dd, yyyy - hh:mm a').format(_alert!.timestamp);
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.person, color: Colors.red, size: 32),
-              const SizedBox(width: 12),
-              Expanded(
+              // 1. Status Header
+              _buildModernStatusHeader(),
+
+              Padding(
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      _alert!.elderName,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Montserrat',
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'SOS Triggered',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                        fontFamily: 'Montserrat',
-                      ),
-                    ),
+                    // 2. Map Section (Bigger now)
+                    if (_alert!.location != null) ...[
+                      _buildSectionTitle('LOCATION'),
+                      const SizedBox(height: 8),
+                      _buildMapCard(),
+                      const SizedBox(height: 24),
+                    ],
+
+                    // 3. Patient Info
+                    _buildSectionTitle('PATIENT DETAILS'),
+                    const SizedBox(height: 8),
+                    _buildElderInfoCard(),
+                    const SizedBox(height: 24),
+
+                    // 4. Vitals Grid (Compact & Tighter)
+                    if (_alert!.vitalsSummary?.hasData ?? false) ...[
+                      _buildSectionTitle('LIVE VITALS'),
+                      const SizedBox(height: 8),
+                      _buildCompactVitalsGrid(),
+                      const SizedBox(height: 24),
+                    ],
                   ],
                 ),
               ),
             ],
           ),
-          const Divider(height: 24),
-          _buildInfoRow(Icons.access_time, 'Time', timestamp),
-          if (location?.address != null)
-            _buildInfoRow(Icons.location_on, 'Location', location!.address!),
-          if (location?.accuracy != null)
-            _buildInfoRow(
-              Icons.my_location,
-              'Accuracy',
-              '±${location!.accuracy!.toStringAsFixed(0)}m',
-            ),
-        ],
+        ),
+      ),
+      bottomNavigationBar: _buildBottomActionBar(),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: Colors.grey[600],
+          letterSpacing: 1.2,
+          fontFamily: 'Montserrat',
+        ),
       ),
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+  Widget _buildModernStatusHeader() {
+    Color bgColor;
+    IconData icon;
+    String title;
+    String subtitle;
+
+    switch (_alert!.status) {
+      case 'active':
+        bgColor = _emergencyRed;
+        icon = Icons.warning_amber_rounded;
+        title = 'ACTIVE SOS';
+        subtitle = 'Immediate attention required';
+        break;
+      case 'acknowledged':
+        bgColor = Colors.orange.shade700;
+        icon = Icons.check_circle_outline;
+        title = 'ACKNOWLEDGED';
+        subtitle = 'Response in progress';
+        break;
+      case 'resolved':
+        bgColor = Colors.green.shade600;
+        icon = Icons.check_circle;
+        title = 'RESOLVED';
+        subtitle = 'Situation is stable';
+        break;
+      default:
+        bgColor = Colors.grey;
+        icon = Icons.info_outline;
+        title = 'UNKNOWN';
+        subtitle = 'Status unknown';
+    }
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 15, 20, 25),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: bgColor.withOpacity(0.4),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: Colors.grey[600]),
-          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.25),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: Colors.white, size: 36),
+          ),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
                     fontFamily: 'Montserrat',
+                    letterSpacing: 0.5,
                   ),
                 ),
-                const SizedBox(height: 2),
                 Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 16,
+                  subtitle,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.95),
+                    fontSize: 14,
+                    fontFamily: 'Inter',
                     fontWeight: FontWeight.w500,
-                    fontFamily: 'Montserrat',
                   ),
                 ),
               ],
@@ -338,126 +295,313 @@ class _SOSAlertScreenState extends State<SOSAlertScreen> {
     );
   }
 
-  Widget _buildVitalsCard() {
-    final vitals = _alert!.vitalsSummary!;
-    final lastUpdated = vitals.lastUpdated != null
-        ? DateFormat('MMM dd, hh:mm a').format(vitals.lastUpdated!)
-        : 'Unknown';
+  Widget _buildMapCard() {
+    final location = _alert!.location!;
+    final latLng = LatLng(location.latitude, location.longitude);
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(20),
+      height: 350, // Increased height as requested
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          children: [
+            GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: latLng,
+                zoom: 16, // Zoomed in slightly more
+              ),
+              markers: {
+                Marker(
+                  markerId: const MarkerId('elder_location'),
+                  position: latLng,
+                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+                ),
+              },
+              onMapCreated: (controller) => _mapController = controller,
+              zoomControlsEnabled: false,
+              myLocationButtonEnabled: false,
+              mapToolbarEnabled: false,
+            ),
+            // Modern Address Overlay
+            Positioned(
+              bottom: 16,
+              left: 16,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: _emergencyRed.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.location_on, color: _emergencyRed, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            "Reported Location",
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          Text(
+                            location.address ?? 'Unknown Address',
+                            style: TextStyle(
+                              color: _textDark,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              fontFamily: 'Montserrat',
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildElderInfoCard() {
+    final timestamp = DateFormat('hh:mm a • MMM dd').format(_alert!.timestamp);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _cardWhite,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              const Icon(Icons.favorite, color: Colors.red, size: 28),
-              const SizedBox(width: 12),
-              const Text(
-                'Latest Vitals',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Montserrat',
-                ),
+          Hero(
+            tag: 'profile_pic',
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.grey.shade200, width: 2),
               ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Last updated: $lastUpdated',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-              fontFamily: 'Montserrat',
+              child: const Icon(Icons.person, color: Colors.grey, size: 32),
             ),
           ),
-          const Divider(height: 24),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              if (vitals.bloodPressureFormatted != null)
-                _buildVitalChip(
-                  Icons.monitor_heart,
-                  'Blood Pressure',
-                  vitals.bloodPressureFormatted!,
-                  Colors.blue,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _alert!.elderName,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: _textDark,
+                    fontFamily: 'Montserrat',
+                  ),
                 ),
-              if (vitals.heartRate != null)
-                _buildVitalChip(
-                  Icons.favorite,
-                  'Heart Rate',
-                  '${vitals.heartRate!.toInt()} bpm',
-                  Colors.red,
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.access_time, size: 12, color: Colors.grey[600]),
+                      const SizedBox(width: 6),
+                      Text(
+                        timestamp,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[700],
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              if (vitals.sugarLevel != null)
-                _buildVitalChip(
-                  Icons.water_drop,
-                  'Blood Sugar',
-                  '${vitals.sugarLevel!.toInt()} mg/dL',
-                  Colors.orange,
-                ),
-              if (vitals.temperature != null)
-                _buildVitalChip(
-                  Icons.thermostat,
-                  'Temperature',
-                  '${vitals.temperature!.toStringAsFixed(1)}°C',
-                  Colors.green,
-                ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildVitalChip(IconData icon, String label, String value, Color color) {
+  // NEW: Tighter, more compact grid
+  Widget _buildCompactVitalsGrid() {
+    final vitals = _alert!.vitalsSummary!;
+    final List<Widget> vitalCards = [];
+
+    if (vitals.bloodPressureFormatted != null) {
+      vitalCards.add(_buildCompactVitalTile(
+        'BLOOD PRESSURE',
+        vitals.bloodPressureFormatted!,
+        'mmHg',
+        Icons.monitor_heart_outlined,
+        Colors.blue,
+      ));
+    }
+    if (vitals.heartRate != null) {
+      vitalCards.add(_buildCompactVitalTile(
+        'HEARTRATE',
+        vitals.heartRate!.toInt().toString(),
+        'bpm',
+        Icons.favorite_border,
+        _emergencyRed,
+      ));
+    }
+    if (vitals.sugarLevel != null) {
+      vitalCards.add(_buildCompactVitalTile(
+        'SUGAR LEVEL',
+        vitals.sugarLevel!.toInt().toString(),
+        'mg/dL',
+        Icons.water_drop_outlined,
+        Colors.orange,
+      ));
+    }
+    if (vitals.temperature != null) {
+      vitalCards.add(_buildCompactVitalTile(
+        'TEMPERATURE',
+        vitals.temperature!.toStringAsFixed(1),
+        '°C',
+        Icons.thermostat_outlined,
+        Colors.teal,
+      ));
+    }
+
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 2.2, // WIDER aspect ratio makes them short & compact
+      children: vitalCards,
+    );
+  }
+
+  Widget _buildCompactVitalTile(
+    String label,
+    String value,
+    String unit,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 18, color: color),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'Montserrat',
-                ),
-              ),
-            ],
+        color: _cardWhite,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Montserrat',
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 20, color: color),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.grey[500],
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                RichText(
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: value,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: _textDark,
+                          fontFamily: 'Montserrat',
+                        ),
+                      ),
+                      TextSpan(
+                        text: ' $unit',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[500],
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -465,96 +609,101 @@ class _SOSAlertScreenState extends State<SOSAlertScreen> {
     );
   }
 
-  Widget _buildActionButtons() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          // Stop Alarm Button (always visible if alarm is playing)
-          if (SOSListenerService.isAlarmPlaying)
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton.icon(
-                onPressed: _stopAlarm,
-                icon: const Icon(Icons.volume_off, size: 24),
-                label: const Text(
-                  'Stop Alarm',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Montserrat',
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 4,
-                ),
-              ),
-            ),
+  Widget _buildBottomActionBar() {
+    if (_alert!.status == 'resolved') return const SizedBox.shrink();
 
-          if (SOSListenerService.isAlarmPlaying) const SizedBox(height: 12),
-
-          // Acknowledge Button (only for active alerts)
-          if (_alert!.status == 'active')
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton.icon(
-                onPressed: _acknowledgeAlert,
-                icon: const Icon(Icons.check_circle_outline, size: 24),
-                label: const Text(
-                  'Acknowledge Alert',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Montserrat',
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 4,
-                ),
-              ),
-            ),
-
-          if (_alert!.status == 'active') const SizedBox(height: 12),
-
-          // Resolve Button (for active or acknowledged alerts)
-          if (_alert!.status == 'active' || _alert!.status == 'acknowledged')
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton.icon(
-                onPressed: _resolveAlert,
-                icon: const Icon(Icons.check_circle, size: 24),
-                label: const Text(
-                  'Mark as Resolved',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Montserrat',
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 4,
-                ),
-              ),
-            ),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
         ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_alert!.status == 'active')
+            _buildActionButton(
+              label: 'ACKNOWLEDGE ALERT',
+              icon: Icons.check_circle_outline,
+              color: Colors.blue.shade600,
+              onPressed: _acknowledgeAlert,
+            ),
+          
+          if (_alert!.status == 'active') 
+            const SizedBox(height: 12),
+
+          _buildActionButton(
+            label: 'MARK AS RESOLVED',
+            icon: Icons.check_circle,
+            color: Colors.green.shade600,
+            onPressed: _resolveAlert,
+            isOutlined: _alert!.status == 'active',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onPressed,
+    bool isOutlined = false,
+  }) {
+    if (isOutlined) {
+      return SizedBox(
+        width: double.infinity,
+        height: 54,
+        child: OutlinedButton.icon(
+          onPressed: onPressed,
+          icon: Icon(icon, size: 20),
+          label: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              fontFamily: 'Montserrat',
+              letterSpacing: 0.5,
+            ),
+          ),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: color,
+            side: BorderSide(color: color, width: 2),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      width: double.infinity,
+      height: 54,
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 20),
+        label: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            fontFamily: 'Montserrat',
+            letterSpacing: 0.5,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          elevation: 4,
+          shadowColor: color.withOpacity(0.4),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
       ),
     );
   }

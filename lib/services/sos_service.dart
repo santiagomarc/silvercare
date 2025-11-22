@@ -5,6 +5,7 @@ import 'package:geocoding/geocoding.dart';
 import '../models/sos_alert_model.dart';
 import '../models/elderly_model.dart';
 import '../models/health_data_model.dart';
+import 'persistent_notification_service.dart';
 
 /// Service to handle SOS emergency alerts
 /// Simplified version - just creates alerts in Firestore
@@ -105,6 +106,19 @@ class SOSService {
       final createdAlert = sosAlert.copyWith(id: alertDoc.id);
 
       print('✅ SOS alert created: ${alertDoc.id}');
+      
+      // Create notification for elderly user
+      try {
+        final persistentNotificationService = PersistentNotificationService();
+        await persistentNotificationService.createSOSAlertSent(
+          elderlyId: userId,
+          alertId: alertDoc.id,
+        );
+        print('✅ SOS notification created for elderly');
+      } catch (e) {
+        print('⚠️ Failed to create SOS notification: $e');
+      }
+      
       print('✅ SOS alert process completed - caregiver listener will be notified');
       
       return createdAlert;
@@ -166,19 +180,29 @@ class SOSService {
   /// Get latest vitals for elderly user
   Future<VitalsSummary?> _getLatestVitals(String elderlyId) async {
     try {
-      // Get latest health data for each type
-      final now = DateTime.now();
-      final yesterday = now.subtract(const Duration(days: 1));
+      // 1. Use userId from auth to ensure we are querying the correct user
+      final userId = _auth.currentUser?.uid;
+      if (userId == null) return null;
+      
+      print('🔎 Fetching vitals for user: $userId');
 
-      // Query for recent health data (last 24 hours)
+      // 2. Widened search window to 30 days to ensure test data is found
+      final now = DateTime.now();
+      final lookBack = now.subtract(const Duration(days: 30));
+
+      // 3. EXECUTE QUERY
+      // NOTE: This query requires a Firestore Index: health_data (elderlyId ASC, measuredAt DESC)
       final healthDataSnapshot = await _firestore
           .collection('health_data')
-          .where('elderlyId', isEqualTo: elderlyId)
-          .where('measuredAt', isGreaterThan: Timestamp.fromDate(yesterday))
+          .where('elderlyId', isEqualTo: userId)
+          .where('measuredAt', isGreaterThan: Timestamp.fromDate(lookBack))
           .orderBy('measuredAt', descending: true)
           .get();
 
+      print('📄 Found ${healthDataSnapshot.docs.length} health records in last 30 days');
+
       if (healthDataSnapshot.docs.isEmpty) {
+        print('⚠️ No health records found. CHECK FIRESTORE INDEX if data exists in DB.');
         return null;
       }
 
@@ -191,38 +215,51 @@ class SOSService {
       DateTime? lastUpdated;
 
       for (var doc in healthDataSnapshot.docs) {
+        // Use the model to safely parse data
         final data = HealthDataModel.fromDoc(doc);
         
+        // Update lastUpdated to the most recent record found
+        if (lastUpdated == null || data.measuredAt.isAfter(lastUpdated)) {
+          lastUpdated = data.measuredAt;
+        }
+        
+        // Fill in values if they haven't been found yet (because we sort descending, first found is latest)
         switch (data.type) {
           case 'heart_rate':
-            if (heartRate == null) {
-              heartRate = data.value;
-              lastUpdated ??= data.measuredAt;
-            }
+            if (heartRate == null) heartRate = data.value;
             break;
+            
           case 'blood_pressure':
             if (bpSystolic == null) {
-              bpSystolic = data.value;
-              bpDiastolic = data.value * 0.67; // Rough approximation
-              lastUpdated ??= data.measuredAt;
+              // Try to get systolic from specific field, fallback to value
+              // In your DB structure: value = systolic
+              bpSystolic = data.value; 
+              
+              // Try to get diastolic from metadata (populated by fromDoc) OR from specific field in doc
+              final rawData = doc.data() as Map<String, dynamic>;
+              if (data.metadata != null && data.metadata!.containsKey('diastolic')) {
+                bpDiastolic = (data.metadata!['diastolic'] as num).toDouble();
+              } else if (rawData.containsKey('diastolic')) {
+                bpDiastolic = (rawData['diastolic'] as num).toDouble();
+              } else {
+                // Fallback estimate if data is corrupted
+                bpDiastolic = data.value * 0.67; 
+              }
+              print('   🩸 Found BP: $bpSystolic / $bpDiastolic');
             }
             break;
+            
           case 'sugar_level':
-            if (sugarLevel == null) {
-              sugarLevel = data.value;
-              lastUpdated ??= data.measuredAt;
-            }
+            if (sugarLevel == null) sugarLevel = data.value;
             break;
+            
           case 'temperature':
-            if (temperature == null) {
-              temperature = data.value;
-              lastUpdated ??= data.measuredAt;
-            }
+            if (temperature == null) temperature = data.value;
             break;
         }
       }
 
-      return VitalsSummary(
+      final summary = VitalsSummary(
         heartRate: heartRate,
         bloodPressureSystolic: bpSystolic,
         bloodPressureDiastolic: bpDiastolic,
@@ -230,12 +267,15 @@ class SOSService {
         temperature: temperature,
         lastUpdated: lastUpdated,
       );
+      
+      print('✅ Generated Vitals Summary: $summary');
+      return summary;
+      
     } catch (e) {
       print('⚠️ Error getting vitals: $e');
       return null;
     }
   }
-
   /// Acknowledge an SOS alert (called by caregiver)
   Future<void> acknowledgeAlert(String alertId) async {
     try {

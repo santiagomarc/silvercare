@@ -23,6 +23,7 @@ class SOSListenerService {
   static bool _alarmPlaying = false;
   static Timer? _alarmTimer;
   String? _lastProcessedAlertId; // Prevent duplicate notifications
+  DateTime? _listenerStartTime; // Track when listener started
   
   // Global navigator key for navigation
   static GlobalKey<NavigatorState>? navigatorKey;
@@ -60,6 +61,9 @@ class SOSListenerService {
 
       print('✅ Starting SOS listener for elderly: $elderlyId');
 
+      // Track when listener started to avoid processing old alerts
+      _listenerStartTime = DateTime.now();
+
       // Listen to sos_alerts collection for this elderly user
       // Simplified query (no orderBy) to avoid needing composite index
       _alertsSubscription = _firestore
@@ -82,6 +86,12 @@ class SOSListenerService {
     for (var doc in snapshot.docChanges) {
       if (doc.type == DocumentChangeType.added) {
         final alert = SOSAlertModel.fromDoc(doc.doc);
+        
+        // Skip alerts created before listener started (to avoid showing old resolved alerts)
+        if (_listenerStartTime != null && alert.timestamp.isBefore(_listenerStartTime!)) {
+          print('⚠️ Alert ${alert.id} created before listener started, skipping');
+          continue;
+        }
         
         // Prevent duplicate notifications for same alert
         if (_lastProcessedAlertId == alert.id) {

@@ -1,0 +1,10 @@
+# Template for local.properties
+# Copy this file to local.properties and add your actual values
+# local.properties is already in .gitignore and will NOT be committed
+
+sdk.dir=C:\\Users\\YourUsername\\AppData\\Local\\Android\\sdk
+flutter.sdk=C:\\src\\flutter
+
+# Google Maps API Key
+# Get this from Google Cloud Console > APIs & Services > Credentials
+GOOGLE_MAPS_API_KEY=YOUR_NEW_API_KEY_HERE

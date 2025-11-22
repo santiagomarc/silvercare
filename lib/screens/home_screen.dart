@@ -1486,13 +1486,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showEmergencySosDialog() async {
+void _showEmergencySosDialog() async {
+    // 1. Capture the context of the HomeScreen (Parent) BEFORE showing any dialogs
+    // This context remains valid even after the confirmation dialog closes
+    final parentContext = context;
+
     showDialog(
-      context: context,
-      builder: (BuildContext context) {
+      context: parentContext, // Use parentContext here
+      builder: (BuildContext dialogContext) { // This is the context of the Confirmation Dialog
         return AlertDialog(
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(30),
           ),
           contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
           title: Row(
@@ -1509,7 +1513,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(
                     fontFamily: 'Montserrat',
                     fontWeight: FontWeight.w600,
-                    fontSize: _getResponsiveFontSize(context, 16),
+                    fontSize: _getResponsiveFontSize(parentContext, 16),
                     color: Colors.red.shade700,
                   ),
                 ),
@@ -1521,7 +1525,7 @@ class _HomeScreenState extends State<HomeScreen> {
               'This will send an emergency alert to your caregiver with your current location and vital signs.',
               style: TextStyle(
                 fontFamily: 'Montserrat',
-                fontSize: _getResponsiveFontSize(context, 14),
+                fontSize: _getResponsiveFontSize(parentContext, 14),
                 color: const Color(0xFF666666),
               ),
               softWrap: true,
@@ -1529,7 +1533,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.of(dialogContext).pop(), // Close using dialogContext
               child: const Text(
                 'Cancel',
                 style: TextStyle(
@@ -1540,28 +1544,33 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
-                Navigator.of(context).pop();
+                // 1. Close the Confirmation Dialog immediately
+                Navigator.of(dialogContext).pop();
                 
-                // Show loading indicator
+                // 2. Show Loading Dialog using the PARENT context
+                // We use a barrierDismissible: false to prevent user closing it
                 showDialog(
-                  context: context,
+                  context: parentContext,
                   barrierDismissible: false,
-                  builder: (context) => const Center(
+                  builder: (ctx) => const Center(
                     child: CircularProgressIndicator(),
                   ),
                 );
 
                 try {
-                  // Trigger SOS alert
+                  // 3. Trigger SOS alert
                   final sosService = SOSService();
                   await sosService.triggerSOSAlert();
 
-                  // Close loading indicator
-                  if (mounted) Navigator.of(context).pop();
+                  // 4. Close Loading Dialog using PARENT context
+                  // We use rootNavigator: true to ensure we grab the top-most overlay (the loader)
+                  if (parentContext.mounted) {
+                    Navigator.of(parentContext, rootNavigator: true).pop();
+                  }
 
-                  // Show success message
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                  // 5. Show success message
+                  if (parentContext.mounted) {
+                    ScaffoldMessenger.of(parentContext).showSnackBar(
                       SnackBar(
                         content: const Text('🚨 Emergency SOS sent to your caregiver!'),
                         backgroundColor: Colors.green.shade600,
@@ -1570,27 +1579,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   }
                 } catch (e) {
-                  // Close loading indicator
-                  if (mounted) Navigator.of(context).pop();
+                  // Close loading indicator on error
+                  if (parentContext.mounted) {
+                    Navigator.of(parentContext, rootNavigator: true).pop();
+                  }
                   
-                  // Parse error message
+                  // Clean error message
                   String errorMessage = e.toString();
                   if (errorMessage.contains('Exception:')) {
                     errorMessage = errorMessage.replaceAll('Exception:', '').trim();
                   }
                   
-                  // Show specific error message
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                  if (parentContext.mounted) {
+                    ScaffoldMessenger.of(parentContext).showSnackBar(
                       SnackBar(
                         content: Text('❌ $errorMessage'),
                         backgroundColor: Colors.red,
                         duration: const Duration(seconds: 5),
-                        action: SnackBarAction(
-                          label: 'OK',
-                          textColor: Colors.white,
-                          onPressed: () {},
-                        ),
                       ),
                     );
                   }

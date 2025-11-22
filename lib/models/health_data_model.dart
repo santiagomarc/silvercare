@@ -8,6 +8,7 @@ class HealthDataModel {
   final DateTime measuredAt; // When the measurement was taken
   final DateTime createdAt; // When the record was created
   final String source; // "manual" | "google_fit" | "device" - data source
+  final Map<String, dynamic>? metadata; // Additional data (e.g., diastolic BP)
 
   HealthDataModel({
     required this.id,
@@ -17,6 +18,7 @@ class HealthDataModel {
     required this.measuredAt,
     required this.createdAt,
     required this.source,
+    this.metadata,
   });
 
   // Convert to Map for saving to Firestore
@@ -28,12 +30,24 @@ class HealthDataModel {
       'measuredAt': Timestamp.fromDate(measuredAt),
       'createdAt': Timestamp.fromDate(createdAt),
       'source': source,
+      if (metadata != null) 'metadata': metadata,
     };
   }
 
   // Create HealthDataModel from Firestore document
   factory HealthDataModel.fromDoc(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    
+    // Build metadata from additional fields (for blood pressure)
+    Map<String, dynamic>? metadata = data['metadata'] as Map<String, dynamic>?;
+    if (data['type'] == 'blood_pressure') {
+      // Blood pressure stores systolic/diastolic as separate fields
+      metadata = {
+        'systolic': data['systolic'],
+        'diastolic': data['diastolic'],
+      };
+    }
+    
     return HealthDataModel(
       id: doc.id,
       elderlyId: data['elderlyId'] ?? '',
@@ -42,11 +56,22 @@ class HealthDataModel {
       measuredAt: (data['measuredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       source: data['source'] ?? 'manual',
+      metadata: metadata,
     );
   }
 
   // Create HealthDataModel from Map
   factory HealthDataModel.fromMap(Map<String, dynamic> map, String id) {
+    // Build metadata from additional fields (for blood pressure)
+    Map<String, dynamic>? metadata = map['metadata'] as Map<String, dynamic>?;
+    if (map['type'] == 'blood_pressure') {
+      // Blood pressure stores systolic/diastolic as separate fields
+      metadata = {
+        'systolic': map['systolic'],
+        'diastolic': map['diastolic'],
+      };
+    }
+    
     return HealthDataModel(
       id: id,
       elderlyId: map['elderlyId'] ?? '',
@@ -55,6 +80,7 @@ class HealthDataModel {
       measuredAt: (map['measuredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       source: map['source'] ?? 'manual',
+      metadata: metadata,
     );
   }
 
@@ -67,6 +93,7 @@ class HealthDataModel {
     DateTime? measuredAt,
     DateTime? createdAt,
     String? source,
+    Map<String, dynamic>? metadata,
   }) {
     return HealthDataModel(
       id: id ?? this.id,
@@ -76,6 +103,7 @@ class HealthDataModel {
       measuredAt: measuredAt ?? this.measuredAt,
       createdAt: createdAt ?? this.createdAt,
       source: source ?? this.source,
+      metadata: metadata ?? this.metadata,
     );
   }
 

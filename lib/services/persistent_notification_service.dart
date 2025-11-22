@@ -214,6 +214,50 @@ class PersistentNotificationService {
     await _addNotification(notification);
   }
   
+  /// Create SOS alert sent notification (for elderly user)
+  Future<void> createSOSAlertSent({
+    required String elderlyId,
+    required String alertId,
+  }) async {
+    final notification = NotificationModel(
+      id: '',
+      elderlyId: elderlyId,
+      type: 'sos_alert_sent',
+      title: '🚨 SOS Alert Sent',
+      message: 'Emergency alert has been sent to your caregiver!',
+      timestamp: DateTime.now(),
+      severity: 'negative', // Red for emergency
+      metadata: {
+        'alertId': alertId,
+      },
+    );
+    
+    await _addNotification(notification);
+  }
+  
+  /// Create SOS alert received notification (for caregiver - shown in recent activities)
+  Future<void> createSOSAlertReceived({
+    required String elderlyId,
+    required String elderName,
+    required String alertId,
+  }) async {
+    final notification = NotificationModel(
+      id: '',
+      elderlyId: elderlyId,
+      type: 'sos_alert_received',
+      title: '🚨 SOS Alert Received',
+      message: '$elderName sent an SOS alert! Check on them now.',
+      timestamp: DateTime.now(),
+      severity: 'negative', // Red for emergency
+      metadata: {
+        'alertId': alertId,
+        'elderName': elderName,
+      },
+    );
+    
+    await _addNotification(notification);
+  }
+  
   // ============ READ NOTIFICATIONS ============
   
   /// Get all notifications for current user (last 30 days)
