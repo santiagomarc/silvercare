@@ -166,9 +166,6 @@ class SOSService {
       if (placemarks.isNotEmpty) {
         final place = placemarks.first;
         
-        // 🛠️ SMART ADDRESS BUILDER
-        // Instead of relying on a default format, we build it manually
-        // to ensure we capture the Barangay (SubLocality)
         final List<String> components = [];
 
         // 1. Street (e.g., "Rizal Street" or "Block 5")

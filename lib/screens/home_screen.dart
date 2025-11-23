@@ -10,7 +10,8 @@ import 'package:silvercare/services/persistent_notification_service.dart';
 import 'package:silvercare/services/calendar_notification_service.dart';
 import 'package:silvercare/services/sos_service.dart';
 import 'package:silvercare/widgets/mood_tracker_card.dart';
-import 'package:intl/intl.dart'; // Import for date formatting
+import 'package:silvercare/utils/responsive_layout.dart';
+import 'package:intl/intl.dart';
 import 'dart:async';
 
 class HomeScreen extends StatefulWidget {
@@ -23,12 +24,12 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Services for our new cards
+
   final MedicationService _medicationService = MedicationService();
   final ChecklistService _checklistService = ChecklistService();
   final PushNotificationService _pushNotificationService = PushNotificationService();
   final PersistentNotificationService _persistentNotificationService = PersistentNotificationService();
-  // Firestore instance for real-time dose checking
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   
   // Track which doses we've already created missed notifications for (to avoid duplicates)
@@ -165,47 +166,56 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   double _getResponsiveFontSize(BuildContext context, double baseSize) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final scaleFactor = screenWidth / 375;
-    final clampedScaleFactor = scaleFactor.clamp(0.8, 1.4);
-    return baseSize * clampedScaleFactor;
+    return ResponsiveLayout.fontSize(context, baseSize);
   }
 
   @override
   Widget build(BuildContext context) {
+    // Calculate safe bottom padding (includes iOS home indicator)
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final spacing = ResponsiveLayout.spacing(context, 30);
+    final horizontalPadding = ResponsiveLayout.padding(context, base: 20);
+    
     return Scaffold(
       backgroundColor: const Color(0xFFDEDEDE),
       body: SafeArea(
+        bottom: false, // Don't apply SafeArea to bottom - we'll handle it manually
         child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           child: Padding(
-            padding: const EdgeInsets.all(20.0),
+            padding: EdgeInsets.only(
+              left: horizontalPadding.left,
+              right: horizontalPadding.right,
+              top: horizontalPadding.top,
+              bottom: bottomPadding + 20, // Extra space at bottom for SOS button
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Header Section
                 _buildHeader(),
 
-                const SizedBox(height: 30),
+                SizedBox(height: spacing),
 
                 // Mood Tracker Card
                 const MoodTrackerCard(),
 
-                const SizedBox(height: 30),
+                SizedBox(height: spacing),
 
                 // Health Vitals Monitor
                 _buildQuickActions(),
 
-                const SizedBox(height: 30),
+                SizedBox(height: spacing),
 
                 // --- NEW: Today's Medications Section ---
                 _buildMedicationSection(),
 
-                const SizedBox(height: 30),
+                SizedBox(height: spacing),
 
                 // --- NEW: Today's Checklist Section ---
                 _buildChecklistSection(),
 
-                const SizedBox(height: 40),
+                SizedBox(height: spacing + 20), // Extra space at end
               ],
             ),
           ),
@@ -466,44 +476,52 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildVitalsProgressIndicator(recordedCount),
               
               const SizedBox(height: 20),
-              // 2x2 Grid for the first 4 vital measurements
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 1.0,
-                children: [
-                  _buildVitalCard(
-                    icon: Icons.bloodtype,
-                    label: 'Blood Pressure',
-                    color: Colors.orange.shade900,
-                    onTap: () => Navigator.pushNamed(context, '/blood_pressure'),
-                    isRecorded: hasBP,
-                  ),
-                  _buildVitalCard(
-                    icon: Icons.water_drop,
-                    label: 'Sugar Level',
-                    color: Colors.green.shade900,
-                    onTap: () => Navigator.pushNamed(context, '/sugar_level'),
-                    isRecorded: hasSugar,
-                  ),
-                  _buildVitalCard(
-                    icon: Icons.thermostat,
-                    label: 'Temperature',
-                    color: Colors.lightBlue.shade900,
-                    onTap: () => Navigator.pushNamed(context, '/temperature'),
-                    isRecorded: hasTemp,
-                  ),
-                  _buildVitalCard(
-                    icon: Icons.favorite,
-                    label: 'Heart Rate',
-                    color: Colors.pink.shade900,
-                    onTap: () => Navigator.pushNamed(context, '/heart_rate'),
-                    isRecorded: hasHR,
-                  ),
-                ],
+              // 2x2 Grid for the first 4 vital measurements - responsive
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  // Use 1 column for very small screens (< 320px), 2 for normal
+                  final columns = constraints.maxWidth < ResponsiveLayout.mobileSmall ? 1 : 2;
+                  final aspectRatio = constraints.maxWidth < ResponsiveLayout.mobileSmall ? 1.5 : 1.0;
+                  
+                  return GridView.count(
+                    crossAxisCount: columns,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                    childAspectRatio: aspectRatio,
+                    children: [
+                      _buildVitalCard(
+                        icon: Icons.bloodtype,
+                        label: 'Blood Pressure',
+                        color: Colors.orange.shade900,
+                        onTap: () => Navigator.pushNamed(context, '/blood_pressure'),
+                        isRecorded: hasBP,
+                      ),
+                      _buildVitalCard(
+                        icon: Icons.water_drop,
+                        label: 'Sugar Level',
+                        color: Colors.green.shade900,
+                        onTap: () => Navigator.pushNamed(context, '/sugar_level'),
+                        isRecorded: hasSugar,
+                      ),
+                      _buildVitalCard(
+                        icon: Icons.thermostat,
+                        label: 'Temperature',
+                        color: Colors.lightBlue.shade900,
+                        onTap: () => Navigator.pushNamed(context, '/temperature'),
+                        isRecorded: hasTemp,
+                      ),
+                      _buildVitalCard(
+                        icon: Icons.favorite,
+                        label: 'Heart Rate',
+                        color: Colors.pink.shade900,
+                        onTap: () => Navigator.pushNamed(context, '/heart_rate'),
+                        isRecorded: hasHR,
+                      ),
+                    ],
+                  );
+                },
               ),
 
               const SizedBox(height: 20),
@@ -511,7 +529,7 @@ class _HomeScreenState extends State<HomeScreen> {
               // Centered Emergency SOS button
               Center(
                 child: SizedBox(
-                  height: 100,
+                  height: ResponsiveLayout.spacing(context, 150),
                   width: (MediaQuery.of(context).size.width - 48 - 48 - 16) /
                       2, // Match grid card width
                   child: _buildVitalCard(
