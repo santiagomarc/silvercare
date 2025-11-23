@@ -8,7 +8,9 @@ import 'package:silvercare/widgets/blood_pressure_analytics_card.dart';
 import 'package:silvercare/widgets/sugar_level_analytics_card.dart';
 import 'package:silvercare/widgets/temperature_analytics_card.dart';
 import 'package:silvercare/widgets/heart_rate_analytics_card.dart';
-// ...existing imports...
+import 'package:silvercare/widgets/health_score_card.dart';
+import 'package:silvercare/widgets/bmi_wellness_card.dart';
+import 'package:silvercare/widgets/health_trends_card.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -960,23 +962,39 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Title Header
-            _ScreenHeaderButton(context),
-            const SizedBox(height: 5),
-      
-            // Combined Summary and Insights
-            _buildSummaryAndInsights(),
-            const SizedBox(height: 16),
-      
-            // Insights Section (separate card)
-            _buildInsightsSection(),
-            const SizedBox(height: 24),
-      
-            // Blood Pressure Card
+          // Title Header
+          _ScreenHeaderButton(context),
+          const SizedBox(height: 5),
+    
+          // Health Score Card (New - High Impact)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: HealthScoreCard(
+              bpData: _bloodPressureData,
+              sugarData: _sugarLevelData,
+              tempData: _temperatureData,
+              hrData: _heartRateData,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // BMI & Wellness Card (New)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: BMIWellnessCard(),
+          ),
+          const SizedBox(height: 16),
+    
+          // Combined Summary and Insights
+          _buildSummaryAndInsights(),
+          const SizedBox(height: 16),
+    
+          // Insights Section (separate card)
+          _buildInsightsSection(),
+          const SizedBox(height: 24),            // Blood Pressure Card
             BloodPressureAnalyticsCard(
               bpData: _getBloodPressureChartData(),
               onTapDetails: () {
-                // TODO: Navigate to detailed BP view
               },
             ),
             const SizedBox(height: 16),
@@ -997,6 +1015,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             HeartRateAnalyticsCard(
               hrData: _getHeartRateChartData(),
             ),
+            const SizedBox(height: 24),
+
+            // Weekly Trends Comparison (Moved to bottom for better context)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: HealthTrendsCard(),
+            ),
+            const SizedBox(height: 24),
           ],
         ),
       ),

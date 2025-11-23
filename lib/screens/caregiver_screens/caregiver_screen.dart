@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:silvercare/services/sos_listener_service.dart';
 import 'caregiver_dashboard.dart';
+import 'caregiver_analytics.dart';
 import 'caregiver_profile.dart';
 
 class CaregiverScreen extends StatefulWidget {
@@ -16,9 +17,10 @@ class _CaregiverScreenState extends State<CaregiverScreen> {
 
   final List<Widget> _pages = [
     CaregiverDashboard(),
+    CaregiverAnalytics(),
     CaregiverProfile()
   ];
-  final List<String> _titles = ["CAREGIVER DASHBOARD", "PROFILE"];
+  final List<String> _titles = ["DASHBOARD", "ANALYTICS", "PROFILE"];
 
   @override
   void initState() {
@@ -75,10 +77,16 @@ class _CaregiverScreenState extends State<CaregiverScreen> {
               _selectedIndex = index;
             });
           },
-          items: [
+          selectedItemColor: const Color(0xFF6C63FF),
+          unselectedItemColor: Colors.grey,
+          items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.dashboard),
               label: 'Dashboard',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.analytics_outlined),
+              label: 'Analytics',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person),

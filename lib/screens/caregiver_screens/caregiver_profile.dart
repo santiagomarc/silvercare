@@ -403,6 +403,29 @@ class _CaregiverProfileState extends State<CaregiverProfile> {
   }
 
   Widget _buildElderCard() {
+    // Calculate BMI if height and weight are available
+    String bmiText = 'N/A';
+    String bmiCategory = '';
+    if (_elderlyData!.height != null && 
+        _elderlyData!.weight != null && 
+        _elderlyData!.height! > 0) {
+      // BMI = weight (kg) / (height (m))^2
+      final heightInMeters = _elderlyData!.height! / 100; // Convert cm to m
+      final bmi = _elderlyData!.weight! / (heightInMeters * heightInMeters);
+      bmiText = bmi.toStringAsFixed(1);
+      
+      // Determine BMI category
+      if (bmi < 18.5) {
+        bmiCategory = ' (Underweight)';
+      } else if (bmi < 25) {
+        bmiCategory = ' (Normal)';
+      } else if (bmi < 30) {
+        bmiCategory = ' (Overweight)';
+      } else {
+        bmiCategory = ' (Obese)';
+      }
+    }
+
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 3,
@@ -429,11 +452,94 @@ class _CaregiverProfileState extends State<CaregiverProfile> {
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
+            
+            // Basic Information
             _buildDetailRow('Name', _elderlyData!.username),
+            const SizedBox(height: 12),
+            _buildDetailRow('Email', _elderlyUserProfile?['email'] ?? 'Not available'),
             const SizedBox(height: 12),
             _buildDetailRow('Phone', _elderlyData!.phoneNumber),
             const SizedBox(height: 12),
-            _buildDetailRow('Email', _elderlyUserProfile?['email'] ?? 'Not available'),
+            _buildDetailRow('Sex', _elderlyData!.sex),
+            const SizedBox(height: 12),
+            _buildDetailRow('Age', _elderlyData!.age?.toString() ?? 'Not provided'),
+            
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+            
+            // Physical Information
+            const Text(
+              'Physical Information',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.teal,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildDetailRow('Height', _elderlyData!.height != null ? '${_elderlyData!.height!.toStringAsFixed(1)} cm' : 'Not provided'),
+            const SizedBox(height: 12),
+            _buildDetailRow('Weight', _elderlyData!.weight != null ? '${_elderlyData!.weight!.toStringAsFixed(1)} kg' : 'Not provided'),
+            const SizedBox(height: 12),
+            _buildDetailRow('BMI', bmiText + bmiCategory),
+            
+            // Medical Information
+            if (_elderlyData!.medicalInfo != null) ...[
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 8),
+              const Text(
+                'Medical Information',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.teal,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _buildMedicalInfoRow(
+                'Conditions',
+                _elderlyData!.medicalInfo!.conditions.isEmpty
+                    ? 'None'
+                    : _elderlyData!.medicalInfo!.conditions.join(', '),
+              ),
+              const SizedBox(height: 12),
+              _buildMedicalInfoRow(
+                'Medications',
+                _elderlyData!.medicalInfo!.medications.isEmpty
+                    ? 'None'
+                    : _elderlyData!.medicalInfo!.medications.join(', '),
+              ),
+              const SizedBox(height: 12),
+              _buildMedicalInfoRow(
+                'Allergies',
+                _elderlyData!.medicalInfo!.allergies.isEmpty
+                    ? 'None'
+                    : _elderlyData!.medicalInfo!.allergies.join(', '),
+              ),
+            ],
+            
+            // Emergency Contact
+            if (_elderlyData!.emergencyContact != null) ...[
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 8),
+              const Text(
+                'Emergency Contact',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.teal,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _buildDetailRow('Name', _elderlyData!.emergencyContact!.name),
+              const SizedBox(height: 12),
+              _buildDetailRow('Phone', _elderlyData!.emergencyContact!.phone),
+              const SizedBox(height: 12),
+              _buildDetailRow('Relationship', _elderlyData!.emergencyContact!.relationship),
+            ],
           ],
         ),
       ),
@@ -463,6 +569,36 @@ class _CaregiverProfileState extends State<CaregiverProfile> {
               color: Colors.black87,
               fontSize: 15,
             ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMedicalInfoRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 120,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+              fontSize: 15,
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              color: Colors.black87,
+              fontSize: 15,
+            ),
+            softWrap: true,
           ),
         ),
       ],
