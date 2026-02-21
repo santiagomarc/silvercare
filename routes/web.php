@@ -14,6 +14,7 @@ use App\Http\Controllers\HealthMetricController;
 use App\Http\Controllers\GoogleFitController;
 use App\Http\Controllers\WellnessController; // <--- ADDED THIS
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\AiAssistantController;
 use Illuminate\Support\Facades\Route;
 
 // Welcome landing page - redirect logged-in users to their dashboard
@@ -69,6 +70,12 @@ Route::middleware(['auth', 'verified', 'elderly'])->group(function () {
     Route::get('/wellness/memory-match', [WellnessController::class, 'memoryMatch'])->name('elderly.wellness.memory');
     Route::get('/wellness/morning-stretch', [WellnessController::class, 'morningStretch'])->name('elderly.wellness.stretch');
     Route::get('/wellness/word-of-day', [WellnessController::class, 'wordOfDay'])->name('elderly.wellness.word');
+
+    // ---------------------------------------------------------------------
+    // AI ASSISTANT ROUTES
+    // ---------------------------------------------------------------------
+    Route::get('/ai-assistant', [AiAssistantController::class, 'index'])->name('elderly.ai-assistant.index');
+    Route::post('/ai-assistant/chat', [AiAssistantController::class, 'chat'])->name('elderly.ai-assistant.chat');
 
     // ---------------------------------------------------------------------
     // NOTIFICATION ROUTES

@@ -36,6 +36,18 @@
             <main>
                 {{ $slot }}
             </main>
+
+            <!-- AI Assistant Floating Button (Only for Elderly) -->
+            @if(Auth::check() && Auth::user()->profile?->user_type === 'elderly')
+                <a href="{{ route('elderly.ai-assistant.index') }}" class="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-[#000080] to-blue-600 rounded-full shadow-2xl flex items-center justify-center text-white hover:scale-110 transition-transform z-50 group">
+                    <span class="text-2xl group-hover:animate-bounce">🤖</span>
+                    <!-- Tooltip -->
+                    <div class="absolute right-full mr-4 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                        Ask AI Assistant
+                        <div class="absolute top-1/2 -right-1 -translate-y-1/2 border-4 border-transparent border-l-gray-900"></div>
+                    </div>
+                </a>
+            @endif
         </div>
     </body>
 </html>
