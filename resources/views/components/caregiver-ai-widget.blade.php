@@ -1,29 +1,28 @@
 {{-- ============================================================
-     SilverCare AI Chat Widget — Streaming + Memory + Markdown
+     SilverCare Caregiver AI Analyst Widget — Streaming + Markdown
      ============================================================ --}}
 
-{{-- Minimal Markdown renderer (no external dependency) --}}
 <style>
-    .ai-md p { margin-bottom: 0.4rem; }
-    .ai-md strong { font-weight: 700; }
-    .ai-md em { font-style: italic; }
-    .ai-md ul, .ai-md ol { padding-left: 1.2rem; margin-bottom: 0.4rem; }
-    .ai-md ul { list-style: disc; }
-    .ai-md ol { list-style: decimal; }
-    .ai-md li { margin-bottom: 0.15rem; }
-    .ai-md h1,.ai-md h2,.ai-md h3 { font-weight: 700; margin-bottom: 0.3rem; }
-    .ai-md h1 { font-size: 1.1rem; }
-    .ai-md h2 { font-size: 1rem; }
-    .ai-md h3 { font-size: 0.95rem; }
-    .ai-md code { background: #f3f4f6; padding: 0.1rem 0.3rem; border-radius: 0.25rem; font-size: 0.85em; }
-    .ai-md a { color: #1d4ed8; text-decoration: underline; }
-    .chat-fade-in { animation: chatFadeIn 0.3s ease-out; }
-    @keyframes chatFadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-    .typing-cursor::after { content:'▊'; animation: blink 0.7s infinite; color: #6b7280; }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    .cg-ai-md p { margin-bottom: 0.4rem; }
+    .cg-ai-md strong { font-weight: 700; }
+    .cg-ai-md em { font-style: italic; }
+    .cg-ai-md ul, .cg-ai-md ol { padding-left: 1.2rem; margin-bottom: 0.4rem; }
+    .cg-ai-md ul { list-style: disc; }
+    .cg-ai-md ol { list-style: decimal; }
+    .cg-ai-md li { margin-bottom: 0.15rem; }
+    .cg-ai-md h1,.cg-ai-md h2,.cg-ai-md h3 { font-weight: 700; margin-bottom: 0.3rem; }
+    .cg-ai-md h1 { font-size: 1.1rem; }
+    .cg-ai-md h2 { font-size: 1rem; }
+    .cg-ai-md h3 { font-size: 0.95rem; }
+    .cg-ai-md code { background: #f3f4f6; padding: 0.1rem 0.3rem; border-radius: 0.25rem; font-size: 0.85em; }
+    .cg-ai-md a { color: #7c3aed; text-decoration: underline; }
+    .cg-chat-fade-in { animation: cgChatFadeIn 0.3s ease-out; }
+    @keyframes cgChatFadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    .cg-typing-cursor::after { content:'▊'; animation: cgBlink 0.7s infinite; color: #6b7280; }
+    @keyframes cgBlink { 0%,100%{opacity:1} 50%{opacity:0} }
 </style>
 
-<div x-data="aiChatWidget()" class="fixed z-50" :class="isFullScreen ? 'inset-0' : 'bottom-6 right-6'">
+<div x-data="caregiverAiWidget()" class="fixed z-50" :class="isFullScreen ? 'inset-0' : 'bottom-6 right-6'">
     
     {{-- Floating Button --}}
     <button 
@@ -35,10 +34,10 @@
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="opacity-100 scale-100"
         x-transition:leave-end="opacity-0 scale-50"
-        class="w-16 h-16 bg-gradient-to-r from-[#000080] to-blue-600 rounded-full shadow-2xl flex items-center justify-center text-white hover:scale-110 transition-transform border-4 border-white focus:outline-none"
-        aria-label="Open AI Assistant"
+        class="w-16 h-16 bg-gradient-to-r from-purple-700 to-purple-500 rounded-full shadow-2xl flex items-center justify-center text-white hover:scale-110 transition-transform border-4 border-white focus:outline-none"
+        aria-label="Open AI Health Analyst"
     >
-        <span class="text-3xl">🤖</span>
+        <span class="text-3xl">📊</span>
     </button>
 
     {{-- Chat Window --}}
@@ -55,19 +54,19 @@
         style="display: none;"
     >
         {{-- Header --}}
-        <div class="bg-gradient-to-r from-[#000080] to-blue-600 p-4 flex items-center justify-between text-white shrink-0">
+        <div class="bg-gradient-to-r from-purple-700 to-purple-500 p-4 flex items-center justify-between text-white shrink-0">
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-2xl">
-                    🤖
+                    📊
                 </div>
                 <div>
-                    <h3 class="font-bold text-lg leading-tight">SilverCare AI</h3>
-                    <p class="text-xs text-blue-100" x-text="isStreaming ? 'Typing...' : 'Always here to help'"></p>
+                    <h3 class="font-bold text-lg leading-tight">AI Health Analyst</h3>
+                    <p class="text-xs text-purple-100" x-text="isStreaming ? 'Analyzing...' : 'Patient insights powered by AI'"></p>
                 </div>
             </div>
             <div class="flex items-center space-x-1">
                 {{-- New Chat --}}
-                <button @click="startNewSession()" class="p-2 hover:bg-white/20 rounded-full transition-colors focus:outline-none" title="New Chat">
+                <button @click="startNewSession()" class="p-2 hover:bg-white/20 rounded-full transition-colors focus:outline-none" title="New Analysis">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
@@ -81,8 +80,8 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
                     </svg>
                 </button>
-                {{-- Close Button --}}
-                <button @click="closeChat()" class="p-2 hover:bg-white/20 rounded-full transition-colors focus:outline-none" title="Close Chat">
+                {{-- Close --}}
+                <button @click="closeChat()" class="p-2 hover:bg-white/20 rounded-full transition-colors focus:outline-none" title="Close">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -91,26 +90,26 @@
         </div>
 
         {{-- Messages Area --}}
-        <div class="flex-1 p-4 overflow-y-auto bg-gray-50 space-y-4" id="ai-chat-messages" x-ref="messagesContainer">
+        <div class="flex-1 p-4 overflow-y-auto bg-gray-50 space-y-4" x-ref="messagesContainer">
             
-            {{-- Loading History Spinner --}}
+            {{-- Loading History --}}
             <div x-show="isLoadingHistory" class="flex justify-center py-8" style="display: none;">
                 <div class="flex flex-col items-center space-y-2">
-                    <svg class="animate-spin h-8 w-8 text-[#000080]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <svg class="animate-spin h-8 w-8 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                     </svg>
-                    <span class="text-xs text-gray-500 font-medium">Loading chat...</span>
+                    <span class="text-xs text-gray-500 font-medium">Loading analysis...</span>
                 </div>
             </div>
 
-            {{-- Welcome Message (only when no history) --}}
-            <div x-show="!isLoadingHistory && messages.length === 0" class="chat-fade-in" style="display: none;">
+            {{-- Welcome (no history) --}}
+            <div x-show="!isLoadingHistory && messages.length === 0" class="cg-chat-fade-in" style="display: none;">
                 <div class="flex items-start space-x-2">
-                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-lg shrink-0">🤖</div>
+                    <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-lg shrink-0">📊</div>
                     <div class="bg-white border border-gray-100 text-gray-800 p-3 rounded-2xl rounded-tl-none shadow-sm max-w-[85%]">
-                        <p class="text-sm font-medium">Hello! 👋 I'm your SilverCare AI Assistant.</p>
-                        <p class="text-sm text-gray-600 mt-1">I can help with your medications, tasks, health tips, and more. What would you like to know?</p>
+                        <p class="text-sm font-medium">Hello! 👋 I'm the SilverCare AI Health Analyst.</p>
+                        <p class="text-sm text-gray-600 mt-1">I can analyze your patient's health data, medication adherence, and identify trends. Ask me anything about their well-being.</p>
                     </div>
                 </div>
 
@@ -121,7 +120,7 @@
                         <template x-for="(prompt, i) in suggestedPrompts" :key="i">
                             <button 
                                 @click="sendSuggestedPrompt(prompt)"
-                                class="text-xs bg-white border border-gray-200 hover:border-[#000080] hover:bg-blue-50 text-gray-700 hover:text-[#000080] px-3 py-1.5 rounded-full transition-all shadow-sm font-medium"
+                                class="text-xs bg-white border border-gray-200 hover:border-purple-500 hover:bg-purple-50 text-gray-700 hover:text-purple-700 px-3 py-1.5 rounded-full transition-all shadow-sm font-medium"
                                 x-text="prompt"
                             ></button>
                         </template>
@@ -129,30 +128,28 @@
                 </div>
             </div>
 
-            {{-- Dynamic Messages --}}
+            {{-- Messages --}}
             <template x-for="(msg, index) in messages" :key="index">
-                <div class="flex items-start space-x-2 chat-fade-in" :class="msg.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''">
-                    {{-- Avatar --}}
+                <div class="flex items-start space-x-2 cg-chat-fade-in" :class="msg.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''">
                     <div class="w-8 h-8 rounded-full flex items-center justify-center text-lg shrink-0"
-                         :class="msg.role === 'user' ? 'bg-[#000080] text-white' : 'bg-blue-100'">
-                        <span x-text="msg.role === 'user' ? '👤' : '🤖'"></span>
+                         :class="msg.role === 'user' ? 'bg-purple-600 text-white' : 'bg-purple-100'">
+                        <span x-text="msg.role === 'user' ? '👤' : '📊'"></span>
                     </div>
-                    {{-- Bubble --}}
                     <div class="p-3 shadow-sm max-w-[85%]"
-                         :class="msg.role === 'user' ? 'bg-[#000080] text-white rounded-2xl rounded-tr-none' : 'bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-tl-none'">
+                         :class="msg.role === 'user' ? 'bg-purple-600 text-white rounded-2xl rounded-tr-none' : 'bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-tl-none'">
                         <div x-show="msg.role === 'user'" class="text-sm whitespace-pre-wrap" x-text="msg.content"></div>
-                        <div x-show="msg.role !== 'user'" class="text-sm ai-md" :class="msg.streaming ? 'typing-cursor' : ''" x-html="renderMarkdown(msg.content)"></div>
+                        <div x-show="msg.role !== 'user'" class="text-sm cg-ai-md" :class="msg.streaming ? 'cg-typing-cursor' : ''" x-html="renderMarkdown(msg.content)"></div>
                     </div>
                 </div>
             </template>
 
             {{-- Thinking Indicator --}}
             <div x-show="isLoading && !isStreaming" class="flex items-start space-x-2" style="display: none;">
-                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-lg shrink-0">🤖</div>
+                <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-lg shrink-0">📊</div>
                 <div class="bg-white border border-gray-100 p-4 rounded-2xl rounded-tl-none shadow-sm flex space-x-1.5 items-center">
-                    <div class="w-2 h-2 bg-[#000080] rounded-full animate-bounce"></div>
-                    <div class="w-2 h-2 bg-[#000080] rounded-full animate-bounce" style="animation-delay: 0.15s"></div>
-                    <div class="w-2 h-2 bg-[#000080] rounded-full animate-bounce" style="animation-delay: 0.3s"></div>
+                    <div class="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
+                    <div class="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style="animation-delay: 0.15s"></div>
+                    <div class="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style="animation-delay: 0.3s"></div>
                 </div>
             </div>
         </div>
@@ -165,13 +162,13 @@
                     x-model="input" 
                     x-ref="chatInput"
                     @keydown.escape="closeChat()"
-                    placeholder="Type your message..." 
-                    class="flex-1 border border-gray-300 rounded-full px-4 py-2.5 focus:outline-none focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 text-sm transition-all"
+                    placeholder="Ask about your patient's health..." 
+                    class="flex-1 border border-gray-300 rounded-full px-4 py-2.5 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 text-sm transition-all"
                     :disabled="isLoading"
                 >
                 <button 
                     type="submit" 
-                    class="w-10 h-10 bg-[#000080] text-white rounded-full flex items-center justify-center hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none shrink-0"
+                    class="w-10 h-10 bg-purple-600 text-white rounded-full flex items-center justify-center hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none shrink-0"
                     :disabled="isLoading || input.trim() === ''"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transform rotate-90" viewBox="0 0 20 20" fill="currentColor">
@@ -184,44 +181,29 @@
 </div>
 
 <script>
-    /**
-     * Lightweight Markdown → HTML renderer (no dependencies).
-     * Handles: bold, italic, headers, lists, code, links, line breaks.
-     */
-    function simpleMarkdown(text) {
+    function cgSimpleMarkdown(text) {
         if (!text) return '';
         let html = text
-            // Escape HTML
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            // Headers
             .replace(/^### (.+)$/gm, '<h3>$1</h3>')
             .replace(/^## (.+)$/gm, '<h2>$1</h2>')
             .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-            // Bold & Italic
             .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
             .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
             .replace(/\*(.+?)\*/g, '<em>$1</em>')
-            // Inline code
             .replace(/`(.+?)`/g, '<code>$1</code>')
-            // Unordered lists
             .replace(/^[\-\*] (.+)$/gm, '<li>$1</li>')
-            // Ordered lists
             .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
-            // Links
             .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-            // Line breaks (double newline = paragraph, single = br)
             .replace(/\n\n/g, '</p><p>')
             .replace(/\n/g, '<br>');
-        
-        // Wrap consecutive <li> in <ul>
         html = html.replace(/(<li>.*?<\/li>)(?:\s*<br>)?/gs, '$1');
         html = html.replace(/((?:<li>.*?<\/li>\s*)+)/gs, '<ul>$1</ul>');
-        
         return '<p>' + html + '</p>';
     }
 
     document.addEventListener('alpine:init', () => {
-        Alpine.data('aiChatWidget', () => ({
+        Alpine.data('caregiverAiWidget', () => ({
             isOpen: false,
             isFullScreen: false,
             messages: [],
@@ -235,9 +217,7 @@
 
             openChat() {
                 this.isOpen = true;
-                if (!this.historyLoaded) {
-                    this.loadHistory();
-                }
+                if (!this.historyLoaded) this.loadHistory();
                 setTimeout(() => { this.$refs.chatInput?.focus(); }, 150);
             },
 
@@ -258,23 +238,19 @@
             },
 
             renderMarkdown(text) {
-                return simpleMarkdown(text);
+                return cgSimpleMarkdown(text);
             },
 
-            /**
-             * Load chat history + suggested prompts from the server.
-             */
             async loadHistory() {
                 this.isLoadingHistory = true;
                 try {
-                    const url = new URL('{{ route("elderly.ai-assistant.history") }}', window.location.origin);
+                    const url = new URL('{{ route("caregiver.ai-analyst.history") }}', window.location.origin);
                     if (this.sessionId) url.searchParams.set('session_id', this.sessionId);
 
                     const res = await fetch(url, {
                         headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
                     });
                     const data = await res.json();
-
                     if (data.success) {
                         this.sessionId = data.session_id;
                         this.messages = data.messages || [];
@@ -282,19 +258,16 @@
                         this.historyLoaded = true;
                     }
                 } catch (e) {
-                    console.error('Failed to load chat history:', e);
+                    console.error('Failed to load analyst history:', e);
                 } finally {
                     this.isLoadingHistory = false;
                     this.scrollToBottom();
                 }
             },
 
-            /**
-             * Start a fresh chat session.
-             */
             async startNewSession() {
                 try {
-                    const res = await fetch('{{ route("elderly.ai-assistant.new-session") }}', {
+                    const res = await fetch('{{ route("caregiver.ai-analyst.new-session") }}', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -312,17 +285,11 @@
                 }
             },
 
-            /**
-             * Send a suggested prompt chip as a message.
-             */
             sendSuggestedPrompt(prompt) {
                 this.input = prompt;
                 this.sendMessage();
             },
 
-            /**
-             * Send a message and stream the AI response via SSE.
-             */
             async sendMessage() {
                 if (this.input.trim() === '' || this.isLoading) return;
 
@@ -333,8 +300,7 @@
                 this.scrollToBottom();
 
                 try {
-                    // Use SSE streaming endpoint
-                    const response = await fetch('{{ route("elderly.ai-assistant.stream") }}', {
+                    const response = await fetch('{{ route("caregiver.ai-analyst.stream") }}', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -347,9 +313,7 @@
                         })
                     });
 
-                    if (!response.ok) {
-                        throw new Error('Stream request failed');
-                    }
+                    if (!response.ok) throw new Error('Stream request failed');
 
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
@@ -362,45 +326,34 @@
 
                         buffer += decoder.decode(value, { stream: true });
                         const lines = buffer.split('\n');
-                        buffer = lines.pop(); // Keep incomplete line in buffer
+                        buffer = lines.pop();
 
                         for (const line of lines) {
                             if (!line.startsWith('data: ')) continue;
-                            
                             try {
                                 const payload = JSON.parse(line.substring(6));
-
                                 if (payload.type === 'session') {
                                     this.sessionId = payload.session_id;
-                                }
-                                else if (payload.type === 'chunk') {
+                                } else if (payload.type === 'chunk') {
                                     if (aiMessageIndex === null) {
-                                        // Create the AI message bubble
                                         this.messages.push({ role: 'ai', content: '', streaming: true });
                                         aiMessageIndex = this.messages.length - 1;
                                         this.isStreaming = true;
                                     }
                                     this.messages[aiMessageIndex].content += payload.content;
                                     this.scrollToBottom();
-                                }
-                                else if (payload.type === 'done') {
-                                    if (aiMessageIndex !== null) {
-                                        this.messages[aiMessageIndex].streaming = false;
-                                    }
+                                } else if (payload.type === 'done') {
+                                    if (aiMessageIndex !== null) this.messages[aiMessageIndex].streaming = false;
                                     this.isStreaming = false;
-                                }
-                                else if (payload.type === 'error') {
+                                } else if (payload.type === 'error') {
                                     this.messages.push({ role: 'ai', content: payload.content });
                                     this.isStreaming = false;
                                 }
-                            } catch (e) {
-                                // Skip malformed JSON lines
-                            }
+                            } catch (e) {}
                         }
                     }
                 } catch (error) {
                     console.error('Stream error:', error);
-                    // Fallback to non-streaming endpoint
                     await this.sendMessageFallback(userMessage);
                 } finally {
                     this.isLoading = false;
@@ -410,32 +363,26 @@
                 }
             },
 
-            /**
-             * Non-streaming fallback if SSE fails.
-             */
             async sendMessageFallback(userMessage) {
                 try {
-                    const response = await fetch('{{ route("elderly.ai-assistant.chat") }}', {
+                    const response = await fetch('{{ route("caregiver.ai-analyst.chat") }}', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             'X-CSRF-TOKEN': '{{ csrf_token() }}',
                             'Accept': 'application/json'
                         },
-                        body: JSON.stringify({
-                            message: userMessage,
-                            session_id: this.sessionId
-                        })
+                        body: JSON.stringify({ message: userMessage, session_id: this.sessionId })
                     });
                     const data = await response.json();
                     if (data.success) {
                         this.sessionId = data.session_id;
                         this.messages.push({ role: 'ai', content: data.message });
                     } else {
-                        this.messages.push({ role: 'ai', content: data.message || 'Sorry, an error occurred.' });
+                        this.messages.push({ role: 'ai', content: data.message || 'Analysis failed.' });
                     }
                 } catch (e) {
-                    this.messages.push({ role: 'ai', content: 'Network error. Please check your connection and try again.' });
+                    this.messages.push({ role: 'ai', content: 'Network error. Please try again.' });
                 }
             }
         }));

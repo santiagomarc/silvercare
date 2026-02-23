@@ -70,4 +70,26 @@ class User extends Authenticatable
     {
         return $this->hasMany(CalendarEvent::class);
     }
+
+    /**
+     * Get the user's chat sessions.
+     */
+    public function chatSessions()
+    {
+        return $this->hasMany(ChatSession::class);
+    }
+
+    /**
+     * Get or create the active chat session for today.
+     */
+    public function activeChatSession(): ChatSession
+    {
+        return $this->chatSessions()
+            ->whereDate('created_at', now()->toDateString())
+            ->latest()
+            ->first()
+            ?? $this->chatSessions()->create([
+                'title' => 'Chat ' . now()->format('M j, Y'),
+            ]);
+    }
 }

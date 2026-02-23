@@ -15,6 +15,7 @@ use App\Http\Controllers\GoogleFitController;
 use App\Http\Controllers\WellnessController; // <--- ADDED THIS
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\AiAssistantController;
+use App\Http\Controllers\CaregiverAiController;
 use Illuminate\Support\Facades\Route;
 
 // Welcome landing page - redirect logged-in users to their dashboard
@@ -74,7 +75,12 @@ Route::middleware(['auth', 'verified', 'elderly'])->group(function () {
     // ---------------------------------------------------------------------
     // AI ASSISTANT ROUTES
     // ---------------------------------------------------------------------
+    Route::get('/ai-assistant', [AiAssistantController::class, 'index'])->name('elderly.ai-assistant.index');
     Route::post('/ai-assistant/chat', [AiAssistantController::class, 'chat'])->name('elderly.ai-assistant.chat');
+    Route::post('/ai-assistant/stream', [AiAssistantController::class, 'stream'])->name('elderly.ai-assistant.stream');
+    Route::get('/ai-assistant/history', [AiAssistantController::class, 'history'])->name('elderly.ai-assistant.history');
+    Route::get('/ai-assistant/sessions', [AiAssistantController::class, 'sessions'])->name('elderly.ai-assistant.sessions');
+    Route::post('/ai-assistant/new-session', [AiAssistantController::class, 'newSession'])->name('elderly.ai-assistant.new-session');
 
     // ---------------------------------------------------------------------
     // NOTIFICATION ROUTES
@@ -101,6 +107,12 @@ Route::middleware(['auth', 'verified', 'caregiver'])->prefix('caregiver')->name(
     Route::resource('medications', MedicationController::class);
     Route::resource('checklists', ChecklistController::class);
     Route::post('checklists/{checklist}/toggle', [ChecklistController::class, 'toggleComplete'])->name('checklists.toggle');
+
+    // AI Analyst Routes (Caregiver)
+    Route::post('/ai-analyst/chat', [CaregiverAiController::class, 'chat'])->name('ai-analyst.chat');
+    Route::post('/ai-analyst/stream', [CaregiverAiController::class, 'stream'])->name('ai-analyst.stream');
+    Route::get('/ai-analyst/history', [CaregiverAiController::class, 'history'])->name('ai-analyst.history');
+    Route::post('/ai-analyst/new-session', [CaregiverAiController::class, 'newSession'])->name('ai-analyst.new-session');
 });
 
 // Profile Completion Routes

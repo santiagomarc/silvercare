@@ -513,5 +513,8 @@
         });
     </script>
 
+    {{-- Caregiver AI Health Analyst Widget --}}
+    <x-caregiver-ai-widget />
+
 </body>
 </html>
