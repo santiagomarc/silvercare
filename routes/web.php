@@ -74,7 +74,6 @@ Route::middleware(['auth', 'verified', 'elderly'])->group(function () {
     // ---------------------------------------------------------------------
     // AI ASSISTANT ROUTES
     // ---------------------------------------------------------------------
-    Route::get('/ai-assistant', [AiAssistantController::class, 'index'])->name('elderly.ai-assistant.index');
     Route::post('/ai-assistant/chat', [AiAssistantController::class, 'chat'])->name('elderly.ai-assistant.chat');
 
     // ---------------------------------------------------------------------

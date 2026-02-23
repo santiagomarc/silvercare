@@ -1567,5 +1567,8 @@
         });
     </script>
 
+    <!-- AI Assistant Chat Widget -->
+    <x-ai-chat-widget />
+
 </body>
 </html>

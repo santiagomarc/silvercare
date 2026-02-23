@@ -4,21 +4,13 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use OpenAI\Laravel\Facades\OpenAI;
+use Gemini\Laravel\Facades\Gemini;
 use App\Models\Medication;
 use App\Models\Checklist;
 use Carbon\Carbon;
 
 class AiAssistantController extends Controller
 {
-    /**
-     * Display the AI Assistant interface.
-     */
-    public function index()
-    {
-        return view('elderly.ai-assistant.index');
-    }
-
     /**
      * Handle chat requests to the AI.
      */
@@ -30,7 +22,7 @@ class AiAssistantController extends Controller
 
         try {
             $user = Auth::user();
-            $today = strtolower(Carbon::now()->format('l'));
+            $today = Carbon::now()->format('l'); // e.g., "Monday"
             
             // Gather user's context for the AI
             $medications = Medication::where('elderly_id', $user->profile->id)
@@ -57,16 +49,9 @@ class AiAssistantController extends Controller
                             "Medications: " . ($medications ?: "None scheduled for today.") . "\n" .
                             "Tasks: " . ($tasks ?: "No tasks for today.");
 
-            $result = OpenAI::chat()->create([
-                'model' => 'gpt-4o-mini',
-                'messages' => [
-                    ['role' => 'system', 'content' => $systemPrompt],
-                    ['role' => 'user', 'content' => $request->message],
-                ],
-                'max_tokens' => 300,
-            ]);
+            $result = Gemini::generativeModel('gemini-2.5-flash')->generateContent($systemPrompt . "\n\nUser: " . $request->message);
 
-            $response = $result->choices[0]->message->content;
+            $response = $result->text();
 
             return response()->json([
                 'success' => true,
@@ -74,6 +59,7 @@ class AiAssistantController extends Controller
             ]);
             
         } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Gemini API Error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => "I'm sorry, I'm having a little trouble connecting right now. Please try again in a moment.",
