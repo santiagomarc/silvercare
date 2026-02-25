@@ -129,5 +129,6 @@
 
     </div>
 
+<x-ai-chat-widget />
 </body>
 </html>

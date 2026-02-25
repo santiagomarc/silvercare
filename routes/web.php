@@ -73,14 +73,16 @@ Route::middleware(['auth', 'verified', 'elderly'])->group(function () {
     Route::get('/wellness/word-of-day', [WellnessController::class, 'wordOfDay'])->name('elderly.wellness.word');
 
     // ---------------------------------------------------------------------
-    // AI ASSISTANT ROUTES
+    // AI ASSISTANT ROUTES (rate-limited: 30 requests per minute)
     // ---------------------------------------------------------------------
-    Route::get('/ai-assistant', [AiAssistantController::class, 'index'])->name('elderly.ai-assistant.index');
-    Route::post('/ai-assistant/chat', [AiAssistantController::class, 'chat'])->name('elderly.ai-assistant.chat');
-    Route::post('/ai-assistant/stream', [AiAssistantController::class, 'stream'])->name('elderly.ai-assistant.stream');
-    Route::get('/ai-assistant/history', [AiAssistantController::class, 'history'])->name('elderly.ai-assistant.history');
-    Route::get('/ai-assistant/sessions', [AiAssistantController::class, 'sessions'])->name('elderly.ai-assistant.sessions');
-    Route::post('/ai-assistant/new-session', [AiAssistantController::class, 'newSession'])->name('elderly.ai-assistant.new-session');
+    Route::middleware('throttle:30,1')->group(function () {
+        Route::get('/ai-assistant', [AiAssistantController::class, 'index'])->name('elderly.ai-assistant.index');
+        Route::post('/ai-assistant/chat', [AiAssistantController::class, 'chat'])->name('elderly.ai-assistant.chat');
+        Route::post('/ai-assistant/stream', [AiAssistantController::class, 'stream'])->name('elderly.ai-assistant.stream');
+        Route::get('/ai-assistant/history', [AiAssistantController::class, 'history'])->name('elderly.ai-assistant.history');
+        Route::get('/ai-assistant/sessions', [AiAssistantController::class, 'sessions'])->name('elderly.ai-assistant.sessions');
+        Route::post('/ai-assistant/new-session', [AiAssistantController::class, 'newSession'])->name('elderly.ai-assistant.new-session');
+    });
 
     // ---------------------------------------------------------------------
     // NOTIFICATION ROUTES
@@ -108,11 +110,13 @@ Route::middleware(['auth', 'verified', 'caregiver'])->prefix('caregiver')->name(
     Route::resource('checklists', ChecklistController::class);
     Route::post('checklists/{checklist}/toggle', [ChecklistController::class, 'toggleComplete'])->name('checklists.toggle');
 
-    // AI Analyst Routes (Caregiver)
-    Route::post('/ai-analyst/chat', [CaregiverAiController::class, 'chat'])->name('ai-analyst.chat');
-    Route::post('/ai-analyst/stream', [CaregiverAiController::class, 'stream'])->name('ai-analyst.stream');
-    Route::get('/ai-analyst/history', [CaregiverAiController::class, 'history'])->name('ai-analyst.history');
-    Route::post('/ai-analyst/new-session', [CaregiverAiController::class, 'newSession'])->name('ai-analyst.new-session');
+    // AI Analyst Routes (Caregiver) — rate-limited: 30 requests per minute
+    Route::middleware('throttle:30,1')->group(function () {
+        Route::post('/ai-analyst/chat', [CaregiverAiController::class, 'chat'])->name('ai-analyst.chat');
+        Route::post('/ai-analyst/stream', [CaregiverAiController::class, 'stream'])->name('ai-analyst.stream');
+        Route::get('/ai-analyst/history', [CaregiverAiController::class, 'history'])->name('ai-analyst.history');
+        Route::post('/ai-analyst/new-session', [CaregiverAiController::class, 'newSession'])->name('ai-analyst.new-session');
+    });
 });
 
 // Profile Completion Routes

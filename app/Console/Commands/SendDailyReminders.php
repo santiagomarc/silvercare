@@ -6,6 +6,7 @@ use App\Models\HealthMetric;
 use App\Models\Medication;
 use App\Models\MedicationLog;
 use App\Models\UserProfile;
+use App\Services\AiAssistantService;
 use App\Services\NotificationService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
@@ -29,7 +30,7 @@ class SendDailyReminders extends Command
     /**
      * Execute the console command.
      */
-    public function handle(NotificationService $notificationService)
+    public function handle(NotificationService $notificationService, AiAssistantService $aiAssistantService)
     {
         $this->info('Starting daily reminders check...');
         
@@ -87,6 +88,34 @@ class SendDailyReminders extends Command
                     } catch (\Exception $e) {
                         // Duplicate prevention
                         $this->line("  - Mood reminder already sent to profile #{$elderlyId}");
+                    }
+                }
+            }
+
+            // ---------------------------------------------------------
+            // 4. AI MORNING HEALTH SUMMARY (once per day, after 7 AM)
+            // ---------------------------------------------------------
+            if ($now->hour >= 7 && $now->hour < 12) {
+                $summaryCustomId = "ai_summary_{$elderlyId}_{$today->format('Y-m-d')}";
+                $alreadySent = \App\Models\Notification::where('custom_id', $summaryCustomId)->exists();
+
+                if (!$alreadySent && $profile->user) {
+                    try {
+                        $summary = $aiAssistantService->generateDailySummary($profile->user);
+
+                        if (!empty($summary)) {
+                            $notificationService->createNotification([
+                                'elderly_id' => $elderlyId,
+                                'type'       => 'ai_daily_summary',
+                                'title'      => '🌟 Good Morning Health Summary',
+                                'message'    => $summary,
+                                'severity'   => 'reminder',
+                                'custom_id'  => $summaryCustomId,
+                            ]);
+                            $this->info("  - Sent AI morning summary to profile #{$elderlyId}");
+                        }
+                    } catch (\Exception $e) {
+                        $this->error("  - AI summary failed for profile #{$elderlyId}: {$e->getMessage()}");
                     }
                 }
             }

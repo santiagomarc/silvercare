@@ -603,4 +603,90 @@ PROMPT;
             ])
             ->toArray();
     }
+
+    // =========================================================================
+    // AI DAILY HEALTH SUMMARY
+    // =========================================================================
+
+    /**
+     * Generate a personalised morning health summary for an elderly user.
+     * Called by the SendDailyReminders command.
+     *
+     * @return string The AI-generated summary text.
+     */
+    public function generateDailySummary(User $user): string
+    {
+        $profile = $user->profile;
+        if (!$profile) {
+            return '';
+        }
+
+        $today = Carbon::now();
+        $yesterday = $today->copy()->subDay();
+
+        // --- Medications due today ---
+        $medications = Medication::where('elderly_id', $profile->id)
+            ->where('is_active', true)
+            ->get()
+            ->map(function ($med) {
+                $times = is_array($med->scheduled_times)
+                    ? $med->scheduled_times
+                    : (json_decode($med->scheduled_times, true) ?? []);
+                $timeStr = implode(', ', $times);
+                return "• {$med->name} ({$med->dosage}) — {$timeStr}";
+            })->implode("\n");
+
+        // --- Pending tasks today ---
+        $pendingTasks = Checklist::where('elderly_id', $profile->id)
+            ->whereDate('due_date', $today->toDateString())
+            ->where('is_completed', false)
+            ->get()
+            ->map(fn($t) => "• {$t->task}")
+            ->implode("\n");
+
+        // --- Yesterday's vitals snapshot ---
+        $yesterdayVitals = HealthMetric::where('elderly_id', $profile->id)
+            ->whereBetween('measured_at', [$yesterday->startOfDay(), $yesterday->endOfDay()])
+            ->orderBy('measured_at', 'desc')
+            ->get()
+            ->groupBy('type')
+            ->map(function ($records, $type) {
+                $latest = $records->first();
+                $val = $latest->value_text ?? $latest->value;
+                $unit = $latest->unit ? " {$latest->unit}" : '';
+                return "• {$type}: {$val}{$unit}";
+            })->implode("\n");
+
+        $prompt = <<<PROMPT
+You are SilverCare's morning health assistant. Generate a brief, warm, encouraging "Good Morning" health summary for {$user->name}.
+
+TODAY: {$today->format('l, F j, Y')}
+
+=== MEDICATIONS DUE TODAY ===
+{$medications}
+
+=== PENDING TASKS TODAY ===
+{$pendingTasks}
+
+=== YESTERDAY'S VITAL SIGNS ===
+{$yesterdayVitals}
+
+RULES:
+- Keep it under 150 words.
+- Use a warm, friendly tone suitable for elderly users.
+- Mention each medication by name with its time.
+- Include a quick wellness tip.
+- Do NOT use markdown — plain text only.
+PROMPT;
+
+        try {
+            $response = Gemini::generativeModel('gemini-2.5-flash')
+                ->generateContent($prompt);
+
+            return $response->text();
+        } catch (\Exception $e) {
+            Log::error('Daily summary generation failed: ' . $e->getMessage());
+            return '';
+        }
+    }
 }

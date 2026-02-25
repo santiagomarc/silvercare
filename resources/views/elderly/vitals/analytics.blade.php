@@ -210,6 +210,95 @@
         </div>
 
         <!-- Insights Section (Now in Grid with BMI) -->
+
+        <!-- ✨ AI Vitals Trend Analyzer -->
+        @if($totalFactors > 0)
+        <div x-data="vitalsAiAnalyzer()" class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-xl overflow-hidden">
+            <div class="p-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3 text-white">
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-[900]">AI Vitals Trend Analyzer</h3>
+                            <p class="text-sm font-[600] text-white/70">Powered by Gemini AI</p>
+                        </div>
+                    </div>
+                    <button @click="analyze()" :disabled="loading"
+                        class="px-6 py-3 bg-white text-indigo-700 rounded-xl font-[800] text-sm hover:bg-indigo-50 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg">
+                        <template x-if="loading">
+                            <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                        </template>
+                        <span x-text="loading ? 'Analyzing...' : (analysis ? 'Re-Analyze' : '🔍 Analyze My Trends')"></span>
+                    </button>
+                </div>
+
+                <!-- AI Analysis Result -->
+                <div x-show="analysis" x-transition class="mt-5 bg-white/10 backdrop-blur rounded-xl p-5 text-white">
+                    <div class="prose prose-invert prose-sm max-w-none" x-html="renderMarkdown(analysis)"></div>
+                    <p class="text-xs text-white/50 mt-3 font-[600]">⚕️ This is AI-generated insight, not medical advice.</p>
+                </div>
+
+                <!-- Error -->
+                <div x-show="error" x-transition class="mt-4 bg-red-500/20 rounded-xl p-4 text-white text-sm font-[600]">
+                    <span x-text="error"></span>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        function vitalsAiAnalyzer() {
+            return {
+                loading: false,
+                analysis: null,
+                error: null,
+
+                async analyze() {
+                    this.loading = true;
+                    this.error = null;
+                    try {
+                        const res = await fetch('{{ route("elderly.ai-assistant.chat") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                message: 'Analyze my health vitals trends from the past week. Focus on what looks good, any concerning patterns, and practical tips to improve. Be specific with my numbers.',
+                            }),
+                        });
+                        const data = await res.json();
+                        if (data.response) {
+                            this.analysis = data.response;
+                        } else {
+                            this.error = data.error || 'Unable to generate analysis right now.';
+                        }
+                    } catch (e) {
+                        this.error = 'Network error — please try again.';
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                renderMarkdown(text) {
+                    if (!text) return '';
+                    return text
+                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                        .replace(/^### (.*$)/gm, '<h4 class="font-bold text-base mt-3 mb-1">$1</h4>')
+                        .replace(/^## (.*$)/gm, '<h3 class="font-bold text-lg mt-3 mb-1">$1</h3>')
+                        .replace(/^- (.*$)/gm, '<li class="ml-4">$1</li>')
+                        .replace(/(<li.*<\/li>)/gs, '<ul class="list-disc space-y-1">$1</ul>')
+                        .replace(/\n{2,}/g, '<br><br>')
+                        .replace(/\n/g, '<br>');
+                },
+            };
+        }
+        </script>
+        @endif
+
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
             <!-- Personalized Insights Card (Swapped - now in big square) -->
@@ -758,5 +847,6 @@
     });
 </script>
 
+<x-ai-chat-widget />
 </body>
 </html>

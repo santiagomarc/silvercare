@@ -675,5 +675,6 @@
             if (e.key === 'Escape') closeRecordModal();
         });
     </script>
+<x-ai-chat-widget />
 </body>
 </html>

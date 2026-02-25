@@ -475,5 +475,6 @@
         }, 30000); // Check every 30 seconds
     </script>
 
+<x-ai-chat-widget />
 </body>
 </html>

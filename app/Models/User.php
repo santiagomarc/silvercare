@@ -8,6 +8,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+/**
+ * @method \Illuminate\Database\Eloquent\Relations\HasMany chatSessions()
+ * @method \Illuminate\Database\Eloquent\Relations\HasMany calendarEvents()
+ */
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
