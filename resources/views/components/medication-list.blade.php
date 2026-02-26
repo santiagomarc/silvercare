@@ -26,7 +26,7 @@
                 @php
                     $logKey = $medication->id . '_' . $time;
                     $log = $logs->get($logKey);
-                    $status = $medication->getDoseStatus($time, $log);
+                    $status = \App\Presenters\MedicationPresenter::getDoseStatus($time, $log);
                 @endphp
                 <div x-data="{ expanded: false }" class="medication-entry rounded-xl p-3 border-2 transition-all duration-300 cursor-pointer hover:shadow-md active:scale-[0.98] {{ $status['bg'] }} {{ $status['isTaken'] ? 'opacity-75' : '' }}" 
                      data-medication-id="{{ $medication->id }}"

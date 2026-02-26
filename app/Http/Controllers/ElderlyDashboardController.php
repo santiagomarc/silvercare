@@ -179,6 +179,28 @@ class ElderlyDashboardController extends Controller
             }
         }
 
+        // Get upcoming events
+        $upcomingEvents = [];
+        try {
+            if(class_exists('App\Models\CalendarEvent')) {
+                $upcomingEvents = \App\Models\CalendarEvent::where('user_id', $user->id)
+                    ->where('start_time', '>=', now())
+                    ->orderBy('start_time', 'asc')
+                    ->take(3)
+                    ->get();
+            }
+        } catch (\Exception $e) {
+            // Prevent crash if table/model issues exist
+        }
+
+        // Get unread notifications count
+        $unreadNotifications = 0;
+        if ($elderlyId) {
+            $unreadNotifications = \App\Models\Notification::where('elderly_id', $elderlyId)
+                ->where('is_read', false)
+                ->count();
+        }
+
         return view('elderly.dashboard', compact(
             'medications',
             'todayMedications',
@@ -200,7 +222,9 @@ class ElderlyDashboardController extends Controller
             'medicationProgress',
             'dailyGoalsProgress',
             'googleFitConnected',
-            'todayMood'
+            'todayMood',
+            'upcomingEvents',
+            'unreadNotifications'
         ));
     }
 

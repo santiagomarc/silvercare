@@ -86,22 +86,6 @@
 </head>
 <body class="bg-[#EBEBEB] min-h-screen">
 
-    <!-- DATA FETCHING: Get Upcoming Events safely -->
-    @php
-        $upcomingEvents = [];
-        try {
-            if(class_exists('App\Models\CalendarEvent')) {
-                $upcomingEvents = \App\Models\CalendarEvent::where('user_id', Auth::id())
-                    ->where('start_time', '>=', now())
-                    ->orderBy('start_time', 'asc')
-                    ->take(3)
-                    ->get();
-            }
-        } catch (\Exception $e) {
-            // Prevent crash if table/model issues exist
-        }
-    @endphp
-
     <!-- NAV BAR (Enhanced with Dashboard Title) -->
     <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div class="max-w-[1600px] mx-auto px-6 lg:px-12 h-16 flex justify-between items-center">
@@ -123,11 +107,6 @@
                     <svg class="w-6 h-6 text-gray-600 group-hover:text-[#000080] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                     </svg>
-                    @php
-                        $unreadNotifications = App\Models\Notification::where('elderly_id', Auth::user()->profile->id)
-                            ->where('is_read', false)
-                            ->count();
-                    @endphp
                     @if($unreadNotifications > 0)
                         <span class="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                             {{ $unreadNotifications > 9 ? '9+' : $unreadNotifications }}

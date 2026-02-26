@@ -148,31 +148,6 @@
                 </div>
 
                 <!-- Medical Conditions Badge -->
-                @php
-                    // Check dedicated columns first, then fall back to legacy medical_info field
-                    $conditions = $elderly->medical_conditions ?? [];
-                    if (is_string($conditions)) { $conditions = json_decode($conditions, true) ?? []; }
-                    
-                    $medications = $elderly->medications ?? [];
-                    if (is_string($medications)) { $medications = json_decode($medications, true) ?? []; }
-                    
-                    $allergies = $elderly->allergies ?? [];
-                    if (is_string($allergies)) { $allergies = json_decode($allergies, true) ?? []; }
-                    
-                    // Fallback to legacy medical_info field if dedicated columns are empty
-                    $medicalInfo = $elderly->medical_info ?? [];
-                    if (is_string($medicalInfo)) { $medicalInfo = json_decode($medicalInfo, true) ?? []; }
-                    
-                    if (empty($conditions) && !empty($medicalInfo['conditions'])) {
-                        $conditions = $medicalInfo['conditions'];
-                    }
-                    if (empty($medications) && !empty($medicalInfo['medications'])) {
-                        $medications = $medicalInfo['medications'];
-                    }
-                    if (empty($allergies) && !empty($medicalInfo['allergies'])) {
-                        $allergies = $medicalInfo['allergies'];
-                    }
-                @endphp
                 @if(!empty($conditions) || !empty($medications) || !empty($allergies))
                     <div class="relative z-10 mt-5 pt-5 border-t border-white/20">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-5">

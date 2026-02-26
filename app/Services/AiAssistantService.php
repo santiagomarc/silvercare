@@ -11,6 +11,10 @@ use App\Models\MedicationLog;
 use App\Models\User;
 use Carbon\Carbon;
 use Gemini\Laravel\Facades\Gemini;
+use Gemini\Data\FunctionDeclaration;
+use Gemini\Data\Schema;
+use Gemini\Data\Tool;
+use Gemini\Enums\DataType;
 use Illuminate\Support\Facades\Log;
 
 class AiAssistantService
@@ -76,10 +80,22 @@ class AiAssistantService
         $conversationHistory = $this->buildConversationHistory($session);
 
         // 4. Call Gemini
-        $aiResponse = $this->callGemini($systemPrompt, $conversationHistory, $userMessage);
+        $response = $this->callGemini($systemPrompt, $conversationHistory, $userMessage, $this->getTools());
 
-        // 5. Check if the AI response contains an action request
-        $aiResponse = $this->processActions($user, $aiResponse);
+        if (is_string($response)) {
+            $aiResponse = $response;
+        } else {
+            $parts = $response->parts();
+            $aiResponse = '';
+            
+            foreach ($parts as $part) {
+                if ($part->functionCall) {
+                    $aiResponse .= $this->executeFunctionCall($user, $part->functionCall);
+                } elseif ($part->text) {
+                    $aiResponse .= $part->text;
+                }
+            }
+        }
 
         // 6. Persist AI response
         $session->messages()->create([
@@ -115,15 +131,29 @@ class AiAssistantService
 
         // 4. Stream from Gemini
         $fullResponse = '';
+        $functionCallOutput = '';
 
         try {
             $stream = Gemini::generativeModel('gemini-2.5-flash')
+                ->withTool($this->getTools())
                 ->streamGenerateContent($systemPrompt . "\n\n" . $conversationHistory . "\nUser: " . $userMessage);
 
             foreach ($stream as $response) {
-                $chunk = $response->text();
-                $fullResponse .= $chunk;
-                yield $chunk;
+                $parts = $response->parts();
+                foreach ($parts as $part) {
+                    if ($part->functionCall) {
+                        $functionCallOutput .= $this->executeFunctionCall($user, $part->functionCall);
+                    } elseif ($part->text) {
+                        $chunk = $part->text;
+                        $fullResponse .= $chunk;
+                        yield $chunk;
+                    }
+                }
+            }
+            
+            if ($functionCallOutput) {
+                $fullResponse .= $functionCallOutput;
+                yield $functionCallOutput;
             }
         } catch (\Exception $e) {
             Log::error('Gemini Stream Error: ' . $e->getMessage());
@@ -131,9 +161,6 @@ class AiAssistantService
             $fullResponse = $fallback;
             yield $fallback;
         }
-
-        // 5. Process actions in the completed response
-        $fullResponse = $this->processActions($user, $fullResponse);
 
         // 6. Persist the full AI response
         $session->messages()->create([
@@ -160,7 +187,8 @@ class AiAssistantService
 
         $prompt = $question ?: 'Give me a comprehensive health summary of my patient for the past week. Include medication adherence, vital signs trends, task completion, and any areas of concern.';
 
-        return $this->callGemini($systemPrompt, '', $prompt);
+        $response = $this->callGemini($systemPrompt, '', $prompt);
+        return is_string($response) ? $response : $response->text();
     }
 
     /**
@@ -237,7 +265,7 @@ class AiAssistantService
                     ->toArray();
 
                 $takenStr = count($takenLogs) > 0 ? ' [TAKEN: ' . implode(', ', $takenLogs) . ']' : ' [NOT YET TAKEN]';
-                return "• {$med->name} ({$med->dosage}) — scheduled at {$timesStr}{$takenStr}";
+                return "• [ID: {$med->id}] {$med->name} ({$med->dosage}) — scheduled at {$timesStr}{$takenStr}";
             })->implode("\n");
 
         // Gather tasks for today
@@ -247,7 +275,7 @@ class AiAssistantService
             ->map(function ($task) {
                 $status = $task->is_completed ? '✅ Done' : '⬜ Pending';
                 $priority = $task->priority ? " [{$task->priority}]" : '';
-                return "• {$task->task} — {$status}{$priority}";
+                return "• [ID: {$task->id}] {$task->task} — {$status}{$priority}";
             })->implode("\n");
 
         // Gather latest vitals (last 24h)
@@ -293,8 +321,8 @@ USER: {$user->name}
 3. You can format responses using **bold**, bullet points, and line breaks for readability.
 4. NEVER provide medical diagnoses. If the user describes serious symptoms, strongly recommend they contact their caregiver or doctor immediately.
 5. If the user seems distressed or mentions an emergency, respond with care and urgency.
-6. If the user asks you to mark a task as done, include the special tag [ACTION:COMPLETE_TASK:task_id] in your response (replace task_id with the actual ID).
-7. If the user asks you to log a medication as taken, include the special tag [ACTION:LOG_MEDICATION:medication_id] in your response.
+6. If the user asks you to mark a task as done, use the `mark_task_complete` tool.
+7. If the user asks you to log a medication as taken, use the `log_medication` tool.
 8. Keep answers concise (2-4 paragraphs max) unless the user asks for detail.
 PROMPT;
     }
@@ -409,6 +437,45 @@ PROMPT;
         })->implode("\n\n");
     }
 
+    /**
+     * Get the tools available to the AI.
+     */
+    protected function getTools(): Tool
+    {
+        return new Tool(
+            functionDeclarations: [
+                new FunctionDeclaration(
+                    name: 'mark_task_complete',
+                    description: 'Mark a specific task as completed by its ID.',
+                    parameters: new Schema(
+                        type: DataType::OBJECT,
+                        properties: [
+                            'task_id' => new Schema(
+                                type: DataType::INTEGER,
+                                description: 'The ID of the task to mark as completed.'
+                            ),
+                        ],
+                        required: ['task_id']
+                    )
+                ),
+                new FunctionDeclaration(
+                    name: 'log_medication',
+                    description: 'Log a specific medication as taken by its ID.',
+                    parameters: new Schema(
+                        type: DataType::OBJECT,
+                        properties: [
+                            'medication_id' => new Schema(
+                                type: DataType::INTEGER,
+                                description: 'The ID of the medication to log as taken.'
+                            ),
+                        ],
+                        required: ['medication_id']
+                    )
+                ),
+            ]
+        );
+    }
+
     // =========================================================================
     // GEMINI API CALL
     // =========================================================================
@@ -416,7 +483,7 @@ PROMPT;
     /**
      * Call the Gemini API with the given prompt components.
      */
-    protected function callGemini(string $systemPrompt, string $history, string $userMessage): string
+    protected function callGemini(string $systemPrompt, string $history, string $userMessage, ?Tool $tools = null): \Gemini\Responses\GenerativeModel\GenerateContentResponse|string
     {
         try {
             $fullPrompt = $systemPrompt;
@@ -427,10 +494,12 @@ PROMPT;
 
             $fullPrompt .= "\n\nUser: " . $userMessage;
 
-            $result = Gemini::generativeModel('gemini-2.5-flash')
-                ->generateContent($fullPrompt);
+            $model = Gemini::generativeModel('gemini-2.5-flash');
+            if ($tools) {
+                $model = $model->withTool($tools);
+            }
 
-            return $result->text();
+            return $model->generateContent($fullPrompt);
         } catch (\Exception $e) {
             Log::error('Gemini API Error: ' . $e->getMessage());
             return "I'm sorry, I'm having a little trouble connecting right now. Please try again in a moment.";
@@ -442,76 +511,60 @@ PROMPT;
     // =========================================================================
 
     /**
-     * Detect and execute action tags in the AI response.
-     * Tags look like: [ACTION:COMPLETE_TASK:123] or [ACTION:LOG_MEDICATION:456]
+     * Execute a function call returned by the model.
      */
-    protected function processActions(User $user, string $response): string
+    protected function executeFunctionCall(User $user, \Gemini\Data\FunctionCall $functionCall): string
     {
         $profile = $user->profile;
-        if (!$profile) return $response;
+        if (!$profile) return '';
 
-        // Process COMPLETE_TASK actions
-        if (preg_match_all('/\[ACTION:COMPLETE_TASK:(\d+)\]/', $response, $matches)) {
-            foreach ($matches[1] as $taskId) {
-                try {
-                    $task = Checklist::where('id', $taskId)
-                        ->where('elderly_id', $profile->id)
-                        ->first();
+        $name = $functionCall->name;
+        $args = $functionCall->args;
 
-                    if ($task && !$task->is_completed) {
-                        $task->update([
-                            'is_completed' => true,
-                            'completed_at' => Carbon::now(),
-                        ]);
-                        // Remove the action tag and add confirmation
-                        $response = str_replace(
-                            "[ACTION:COMPLETE_TASK:{$taskId}]",
-                            "✅ *Task \"{$task->task}\" marked as done!*",
-                            $response
-                        );
-                    } else {
-                        $response = str_replace("[ACTION:COMPLETE_TASK:{$taskId}]", '', $response);
-                    }
-                } catch (\Exception $e) {
-                    Log::warning("AI action failed (COMPLETE_TASK:{$taskId}): " . $e->getMessage());
-                    $response = str_replace("[ACTION:COMPLETE_TASK:{$taskId}]", '', $response);
+        if ($name === 'mark_task_complete') {
+            $taskId = $args['task_id'] ?? null;
+            if (!$taskId) return '';
+
+            try {
+                $task = Checklist::where('id', $taskId)
+                    ->where('elderly_id', $profile->id)
+                    ->first();
+
+                if ($task && !$task->is_completed) {
+                    $task->update([
+                        'is_completed' => true,
+                        'completed_at' => Carbon::now(),
+                    ]);
+                    return "\n\n✅ *Task \"{$task->task}\" marked as done!*";
                 }
+            } catch (\Exception $e) {
+                Log::warning("AI action failed (COMPLETE_TASK:{$taskId}): " . $e->getMessage());
+            }
+        } elseif ($name === 'log_medication') {
+            $medId = $args['medication_id'] ?? null;
+            if (!$medId) return '';
+
+            try {
+                $medication = Medication::where('id', $medId)
+                    ->where('elderly_id', $profile->id)
+                    ->first();
+
+                if ($medication) {
+                    MedicationLog::create([
+                        'elderly_id' => $profile->id,
+                        'medication_id' => $medication->id,
+                        'scheduled_time' => Carbon::now(),
+                        'is_taken' => true,
+                        'taken_at' => Carbon::now(),
+                    ]);
+                    return "\n\n💊 *{$medication->name} logged as taken!*";
+                }
+            } catch (\Exception $e) {
+                Log::warning("AI action failed (LOG_MEDICATION:{$medId}): " . $e->getMessage());
             }
         }
 
-        // Process LOG_MEDICATION actions
-        if (preg_match_all('/\[ACTION:LOG_MEDICATION:(\d+)\]/', $response, $matches)) {
-            foreach ($matches[1] as $medId) {
-                try {
-                    $medication = Medication::where('id', $medId)
-                        ->where('elderly_id', $profile->id)
-                        ->first();
-
-                    if ($medication) {
-                        MedicationLog::create([
-                            'elderly_id' => $profile->id,
-                            'medication_id' => $medication->id,
-                            'scheduled_time' => Carbon::now(),
-                            'is_taken' => true,
-                            'taken_at' => Carbon::now(),
-                        ]);
-
-                        $response = str_replace(
-                            "[ACTION:LOG_MEDICATION:{$medId}]",
-                            "💊 *{$medication->name} logged as taken!*",
-                            $response
-                        );
-                    } else {
-                        $response = str_replace("[ACTION:LOG_MEDICATION:{$medId}]", '', $response);
-                    }
-                } catch (\Exception $e) {
-                    Log::warning("AI action failed (LOG_MEDICATION:{$medId}): " . $e->getMessage());
-                    $response = str_replace("[ACTION:LOG_MEDICATION:{$medId}]", '', $response);
-                }
-            }
-        }
-
-        return $response;
+        return '';
     }
 
     // =========================================================================
