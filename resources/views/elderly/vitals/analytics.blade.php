@@ -1,18 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Health Analytics - SilverCare</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<x-dashboard-layout>
+    <x-slot:title>Health Analytics - SilverCare</x-slot:title>
+    <x-slot:bodyClass>bg-gray-100 min-h-screen</x-slot:bodyClass>
+
+    @push('head-scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    
+    @endpush
+
+    @push('styles')
     <style>
-        body { font-family: 'Montserrat', sans-serif; }
         .period-btn.active { background: white; color: #1f2937; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .card-filter.active { background: white; color: #1f2937; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .insights-card { animation: fadeIn 0.3s ease-out; }
@@ -24,8 +19,7 @@
         .drawer-slide.hidden { transform: translateX(100%); }
         .health-ring { transition: stroke-dashoffset 1s ease-out; }
     </style>
-</head>
-<body class="bg-gray-100 min-h-screen">
+    @endpush
 
 @php
     // Calculate health score based on latest readings and normal ranges
@@ -630,6 +624,7 @@
     </div>
 </div>
 
+@push('scripts')
 <script>
     const charts = {};
     const analyticsData = @json($analyticsData);
@@ -846,7 +841,8 @@
         initCharts();
     });
 </script>
+@endpush
 
 <x-ai-chat-widget />
-</body>
-</html>
+
+</x-dashboard-layout>

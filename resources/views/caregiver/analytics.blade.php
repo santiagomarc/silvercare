@@ -1,31 +1,18 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Health Analytics - SilverCare</title>
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="{{ asset('assets/icons/silvercare.png') }}">
-    <link rel="apple-touch-icon" href="{{ asset('assets/icons/silvercare.png') }}">
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<x-dashboard-layout>
+    <x-slot:title>Health Analytics - SilverCare</x-slot:title>
+
+    @push('head-scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    @endpush
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-
+    @push('styles')
     <style>
-        body { font-family: 'Montserrat', sans-serif; }
         .period-btn.active { background: white; color: #1f2937; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .health-ring { transition: stroke-dashoffset 1s ease-out; }
     </style>
-</head>
-<body class="bg-[#EBEBEB] min-h-screen">
+    @endpush
 
-    <!-- NAV BAR -->
+    {{-- Navigation --}}
     <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div class="max-w-[1600px] mx-auto px-6 lg:px-12 h-16 flex justify-between items-center">
             <div class="flex items-center gap-6">
@@ -41,14 +28,14 @@
             </div>
             
             <div class="flex items-center gap-4">
-                <!-- Time Period Selector -->
+                {{-- Time Period Selector --}}
                 <div class="flex bg-gray-100 rounded-xl p-1 hidden md:flex">
                     <button onclick="changePeriod('7days')" class="period-btn active px-4 py-2 rounded-lg text-sm font-[700] transition-all" data-period="7days">Week</button>
                     <button onclick="changePeriod('30days')" class="period-btn px-4 py-2 rounded-lg text-sm font-[700] transition-all" data-period="30days">Month</button>
                     <button onclick="changePeriod('90days')" class="period-btn px-4 py-2 rounded-lg text-sm font-[700] transition-all" data-period="90days">3 Months</button>
                 </div>
                 
-                <!-- Export PDF Button -->
+                {{-- Export PDF Button --}}
                 <a href="{{ route('caregiver.analytics.export') }}" class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#000080] to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -64,7 +51,7 @@
         </div>
     </nav>
 
-    <!-- MAIN CONTENT -->
+    {{-- Main Content --}}
     <main class="max-w-[1600px] mx-auto px-6 lg:px-12 py-6">
         
         @if(!$elderly)
@@ -422,6 +409,7 @@
         @endif
     </main>
 
+    @push('scripts')
     <script>
         const charts = {};
         const analyticsData = @json($analyticsData ?? []);
@@ -512,9 +500,9 @@
             initCharts();
         });
     </script>
+    @endpush
 
     {{-- Caregiver AI Health Analyst Widget --}}
     <x-caregiver-ai-widget />
 
-</body>
-</html>
+</x-dashboard-layout>

@@ -1,24 +1,8 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Dashboard - SilverCare</title>
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="{{ asset('assets/icons/silvercare.png') }}">
-    <link rel="apple-touch-icon" href="{{ asset('assets/icons/silvercare.png') }}">
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<x-dashboard-layout>
+    <x-slot:title>Dashboard - SilverCare</x-slot:title>
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-
+    @push('styles')
     <style>
-        body { font-family: 'Montserrat', sans-serif; }
-        
         /* Smooth Slider Styling */
         input[type=range] {
             -webkit-appearance: none;
@@ -83,84 +67,19 @@
             50% { box-shadow: 0 0 0 8px rgba(255, 255, 255, 0); }
         }
     </style>
-</head>
-<body class="bg-[#EBEBEB] min-h-screen">
+    @endpush
 
-    <!-- NAV BAR (Enhanced with Dashboard Title) -->
-    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div class="max-w-[1600px] mx-auto px-6 lg:px-12 h-16 flex justify-between items-center">
-            <div class="flex items-center gap-6">
-                <div class="flex items-center gap-3">
-                    <img src="{{ asset('assets/icons/silvercare.png') }}" alt="SilverCare" class="w-9 h-9 object-contain">
-                    <h1 class="text-xl font-[900] tracking-tight text-gray-900 hidden sm:block">SILVER<span class="text-[#000080]">CARE</span></h1>
-                </div>
-                <div class="h-6 w-[1px] bg-gray-200 hidden md:block"></div>
-                <div class="hidden md:block">
-                    <h2 class="text-lg font-[800] text-gray-900">Dashboard Overview</h2>
-                    <p class="text-xs text-gray-500 font-medium -mt-0.5">{{ now()->format('l, F j, Y') }}</p>
-                </div>
-            </div>
-            
-            <div class="flex items-center gap-4">
-                <!-- NOTIFICATIONS BELL -->
-                <a href="{{ route('elderly.notifications.index') }}" class="relative p-2 hover:bg-gray-50 rounded-xl transition-all group" title="Notifications">
-                    <svg class="w-6 h-6 text-gray-600 group-hover:text-[#000080] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-                    </svg>
-                    @if($unreadNotifications > 0)
-                        <span class="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                            {{ $unreadNotifications > 9 ? '9+' : $unreadNotifications }}
-                        </span>
-                    @endif
-                </a>
+    {{-- Navigation --}}
+    <x-dashboard-nav
+        title="Dashboard Overview"
+        role="elderly"
+        :unread-notifications="$unreadNotifications"
+    />
 
-                <!-- PROFILE LINK -->
-                <a href="{{ route('profile.edit') }}" class="flex items-center gap-2 group hover:bg-gray-50 rounded-xl py-1.5 px-2 transition-all cursor-pointer" title="Manage Profile">
-                    <div class="relative">
-                        <div class="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-[#000080] font-[900] text-base group-hover:bg-[#000080] group-hover:text-white transition-colors overflow-hidden">
-                            @if(Auth::user()->profile && Auth::user()->profile->profile_photo)
-                                <img src="{{ Storage::url(Auth::user()->profile->profile_photo) }}" alt="{{ Auth::user()->name }}" class="w-full h-full object-cover">
-                            @else
-                                {{ substr(Auth::user()->name, 0, 1) }}
-                            @endif
-                        </div>
-                    </div>
-                    <div class="hidden sm:block">
-                        <p class="text-sm font-bold text-gray-900 leading-tight group-hover:text-[#000080] transition-colors">{{ Auth::user()->name }}</p>
-                        <p class="text-[10px] text-gray-500 font-medium">Patient</p>
-                    </div>
-                </a>
-
-                <!-- Logout Button -->
-                <form method="POST" action="{{ route('logout') }}" class="ml-1">
-                    @csrf
-                    <button type="submit" class="flex items-center gap-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-bold text-sm transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                        </svg>
-                        <span class="hidden sm:inline">Logout</span>
-                    </button>
-                </form>
-            </div>
-        </div>
-    </nav>
-
-    <!-- DASHBOARD CONTENT -->
+    {{-- Dashboard Content --}}
     <main class="max-w-[1600px] mx-auto px-6 lg:px-12 py-5">
-        
-        @if(session('success'))
-            <div class="mb-4 bg-green-50 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded-lg shadow-sm flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                {{ session('success') }}
-            </div>
-        @endif
 
-        @if(session('error'))
-            <div class="mb-4 bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg shadow-sm flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                {{ session('error') }}
-            </div>
-        @endif
+        <x-flash-messages />
 
         <!-- ============================================ -->
         <!-- TOP ROW: 3 Action Buttons -->
@@ -476,7 +395,7 @@
         </div>
     </main>
 
-    <!-- JAVASCRIPT LOGIC (Unchanged) -->
+    @push('scripts')
     <script>
         // ==========================================
         // CONFIGURATION
@@ -1545,9 +1464,9 @@
             });
         });
     </script>
+    @endpush
 
     <!-- AI Assistant Chat Widget -->
     <x-ai-chat-widget />
 
-</body>
-</html>
+</x-dashboard-layout>

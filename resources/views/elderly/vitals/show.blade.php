@@ -1,17 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $config['name'] }} - SilverCare</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
+<x-dashboard-layout>
+    <x-slot:title>{{ $config['name'] }} - SilverCare</x-slot:title>
+    <x-slot:bodyClass>bg-[#F1F5F9] min-h-screen text-gray-800</x-slot:bodyClass>
+
+    @push('styles')
     <style>
-        body { font-family: 'Montserrat', sans-serif; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
@@ -28,8 +20,7 @@
         .stagger-4 { animation-delay: 0.2s; }
         .stagger-5 { animation-delay: 0.25s; }
     </style>
-</head>
-<body class="bg-[#F1F5F9] min-h-screen text-gray-800">
+    @endpush
 
     <nav class="bg-white shadow-md sticky top-0 z-40 border-b border-gray-200">
         <div class="max-w-[1600px] mx-auto px-6 lg:px-12 h-20 flex justify-between items-center">
@@ -445,6 +436,7 @@
         </div>
     </div>
 
+    @push('scripts')
     <script>
         const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;
         const VITAL_TYPE = '{{ $type }}';
@@ -675,6 +667,8 @@
             if (e.key === 'Escape') closeRecordModal();
         });
     </script>
+    @endpush
+
 <x-ai-chat-widget />
-</body>
-</html>
+
+</x-dashboard-layout>
