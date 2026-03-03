@@ -1,3 +1,143 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ================================================================
+   SilverCare Design System
+   ================================================================ */
+
+/* ── Base Layer: Accessibility-first defaults ────────────────────── */
+@layer base {
+    html {
+        font-size: 18px;                       /* 18px base for elderly readability */
+        -webkit-tap-highlight-color: transparent;
+        scroll-behavior: smooth;
+    }
+
+    body {
+        @apply font-sans text-gray-900 antialiased;
+    }
+
+    /* Enforce visible focus rings globally */
+    :focus-visible {
+        @apply outline-2 outline-offset-2 outline-navy;
+    }
+
+    /* Minimum touch-target for interactive elements */
+    a, button, [role="button"], input[type="checkbox"], input[type="radio"], select {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    /* Override for inline text links that shouldn't be 44px tall */
+    p a, li a, span a, td a {
+        min-height: auto;
+        min-width: auto;
+    }
+}
+
+/* ── Component Layer: Reusable design patterns ───────────────────── */
+@layer components {
+
+    /* Card — standard surface container */
+    .card {
+        @apply bg-white rounded-card shadow-md border border-gray-100;
+    }
+
+    /* Card with gradient (action buttons, hero cards) */
+    .card-gradient {
+        @apply rounded-card shadow-lg relative overflow-hidden transition-all duration-300;
+    }
+    .card-gradient:hover {
+        @apply shadow-xl -translate-y-0.5;
+    }
+
+    /* Badge — small status indicator */
+    .badge {
+        @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold;
+    }
+    .badge-success { @apply bg-green-100 text-green-700; }
+    .badge-warning { @apply bg-amber-100 text-amber-700; }
+    .badge-danger  { @apply bg-red-100 text-red-700; }
+    .badge-info    { @apply bg-blue-100 text-blue-700; }
+    .badge-neutral { @apply bg-gray-100 text-gray-600; }
+
+    /* Progress bar */
+    .progress-track {
+        @apply h-2.5 rounded-full overflow-hidden;
+        background: rgba(0, 0, 0, 0.08);
+    }
+    .progress-fill {
+        @apply h-full rounded-full transition-all duration-700 ease-out;
+    }
+
+    /* Tab bar (elderly dashboard) */
+    .tab-bar {
+        @apply flex bg-gray-100 rounded-2xl p-1.5 gap-1;
+    }
+    .tab-btn {
+        @apply flex-1 py-3 px-4 rounded-xl text-sm font-bold text-gray-500
+               transition-all duration-200 text-center cursor-pointer
+               min-h-touch flex items-center justify-center gap-2;
+    }
+    .tab-btn:hover {
+        @apply text-gray-700 bg-gray-50;
+    }
+    .tab-btn[aria-selected="true"] {
+        @apply bg-white text-navy shadow-sm;
+    }
+
+    /* Medication dose states */
+    .dose-taken      { @apply bg-green-50 border-green-300 opacity-75; }
+    .dose-taken-late { @apply bg-orange-50 border-orange-300 opacity-75; }
+    .dose-missed     { @apply bg-red-50 border-red-300; }
+    .dose-active     { @apply bg-amber-50 border-amber-300; }
+    .dose-upcoming   { @apply bg-white border-gray-200; }
+
+    /* Toast notification container */
+    .toast-container {
+        @apply fixed bottom-6 right-6 z-[100] flex flex-col gap-2 items-end;
+    }
+    .toast {
+        @apply px-5 py-3 rounded-xl shadow-lg font-bold text-sm text-white
+               transform transition-all duration-300;
+    }
+    .toast-success { @apply bg-green-600; }
+    .toast-error   { @apply bg-red-600; }
+    .toast-info    { @apply bg-navy; }
+
+    /* Skip navigation — accessibility */
+    .skip-nav {
+        @apply sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4
+               focus:z-[9999] focus:bg-navy focus:text-white focus:px-6 focus:py-3
+               focus:rounded-xl focus:font-bold focus:shadow-lg;
+    }
+
+    /* Hero action card */
+    .hero-action {
+        @apply card-gradient p-6 md:p-8 text-white min-h-[140px]
+               flex flex-col justify-between;
+    }
+}
+
+/* ── Utility Layer ───────────────────────────────────────────────── */
+@layer utilities {
+    /* Scrollbar hiding (cross-browser) */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    /* Minimum touch target helper */
+    .touch-target {
+        @apply min-w-touch min-h-touch;
+    }
+
+    /* Stagger animation delay helpers */
+    .stagger-1 { animation-delay: 50ms; }
+    .stagger-2 { animation-delay: 100ms; }
+    .stagger-3 { animation-delay: 150ms; }
+    .stagger-4 { animation-delay: 200ms; }
+    .stagger-5 { animation-delay: 250ms; }
+}

@@ -1,3 +1,11 @@
+{{-- ============================================================
+     ELDERLY DASHBOARD — Progressive Disclosure Layout
+     ============================================================
+     Structured into 3 tabs: Today / Health / Activity
+     Hero card shows the single most urgent action.
+     All interactivity via extracted Alpine.data() components.
+     ============================================================ --}}
+
 <x-dashboard-layout>
     <x-slot:title>Dashboard - SilverCare</x-slot:title>
 
