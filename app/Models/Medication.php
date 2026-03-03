@@ -51,3 +51,4 @@ class Medication extends Model
     {
         return $this->hasMany(MedicationLog::class);
     }
+}

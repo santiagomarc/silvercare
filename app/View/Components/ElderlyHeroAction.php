@@ -33,10 +33,10 @@ class ElderlyHeroAction extends Component
         int        $dailyGoalsProgress = 0,
     ) {
         $this->overallProgress = $dailyGoalsProgress;
-        $this->resolve($medications, $medicationLogs, $vitalsData, $checklists);
+        $this->determineAction($medications, $medicationLogs, $vitalsData, $checklists);
     }
 
-    private function resolve(Collection $meds, Collection $logs, array $vitals, Collection $checklists): void
+    private function determineAction(Collection $meds, Collection $logs, array $vitals, Collection $checklists): void
     {
         // 1. Check for overdue or active medications
         $now = Carbon::now();
@@ -54,8 +54,8 @@ class ElderlyHeroAction extends Component
                     $this->actionType = 'medication';
                     $this->headline   = 'Time to take ' . $med->name;
                     $this->subtext    = $med->dosage . ' — scheduled for ' . $scheduled->format('g:i A');
-                    $this->ctaLabel   = 'Mark as Taken';
-                    $this->ctaAction  = "toggleEntry(\$refs['med_{$med->id}_{$time}'])";
+                    $this->ctaLabel   = 'View Medications';
+                    $this->ctaAction  = "switchTab('today')";
                     $this->gradient   = 'from-green-500 to-emerald-600';
                     $this->icon       = '💊';
                     return;
@@ -65,8 +65,8 @@ class ElderlyHeroAction extends Component
                     $this->actionType = 'medication';
                     $this->headline   = 'Missed: ' . $med->name;
                     $this->subtext    = $med->dosage . ' was due at ' . $scheduled->format('g:i A');
-                    $this->ctaLabel   = 'Take Now (Late)';
-                    $this->ctaAction  = "toggleEntry(\$refs['med_{$med->id}_{$time}'])";
+                    $this->ctaLabel   = 'View Medications';
+                    $this->ctaAction  = "switchTab('today')";
                     $this->gradient   = 'from-red-500 to-rose-600';
                     $this->icon       = '⚠️';
                     return;
@@ -87,7 +87,7 @@ class ElderlyHeroAction extends Component
                 $this->headline   = 'Record your ' . ($names[$type] ?? $type);
                 $this->subtext    = 'Daily vital check helps your caregiver monitor your health';
                 $this->ctaLabel   = 'Record Now';
-                $this->ctaAction  = "openModal('{$type}')";
+                $this->ctaAction  = "\$dispatch('open-vital-modal', { type: '{$type}' })";
                 $this->gradient   = 'from-blue-500 to-indigo-600';
                 $this->icon       = '❤️';
                 return;
@@ -98,7 +98,7 @@ class ElderlyHeroAction extends Component
         $incomplete = $checklists->where('is_completed', false)->first();
         if ($incomplete) {
             $this->actionType = 'checklist';
-            $this->headline   = $incomplete->title;
+            $this->headline   = $incomplete->task;
             $this->subtext    = $incomplete->description ?? 'Complete this task to grow your garden';
             $this->ctaLabel   = 'View Tasks';
             $this->ctaAction  = "switchTab('today')";

@@ -26,6 +26,9 @@
 </head>
 <body class="{{ $bodyClass ?? 'bg-[#EBEBEB] min-h-screen' }}" style="font-family: 'Montserrat', sans-serif;">
 
+    {{-- Skip navigation link for keyboard/screen-reader users --}}
+    <a href="#main-content" class="skip-nav">Skip to main content</a>
+
     {{ $slot }}
 
     <!-- Page-Specific Scripts -->

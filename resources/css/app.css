@@ -6,6 +6,9 @@
    SilverCare Design System
    ================================================================ */
 
+/* Hide elements until Alpine initialises */
+[x-cloak] { display: none !important; }
+
 /* ── Base Layer: Accessibility-first defaults ────────────────────── */
 @layer base {
     html {

@@ -4,7 +4,7 @@
      Uses Alpine.data('vitalRecorder') for state.
      ============================================================ --}}
 
-<div x-data="vitalRecorder()">
+<div x-data="vitalRecorder()" @open-vital-modal.window="openModal($event.detail.type)">
     {{-- Modal backdrop + dialog --}}
     <div
         x-show="open"
