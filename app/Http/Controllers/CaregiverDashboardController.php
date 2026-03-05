@@ -116,119 +116,18 @@ class CaregiverDashboardController extends Controller
      */
     private function getRecentActivity($elderlyId)
     {
-        $activities = collect();
         $sevenDaysAgo = Carbon::now()->subDays(7);
 
-        // Get elder's notifications (these are important alerts for caregivers)
         $notifications = Notification::where('elderly_id', $elderlyId)
             ->where('created_at', '>=', $sevenDaysAgo)
             ->orderBy('created_at', 'desc')
             ->limit(15)
             ->get();
 
-        // Map notification types to icons and colors for caregiver view
-        $notificationConfig = [
-            'medication_taken' => ['icon' => '💊', 'color' => 'green'],
-            'medication_taken_late' => ['icon' => '⚠️', 'color' => 'amber'],
-            'medication_missed' => ['icon' => '❌', 'color' => 'red'],
-            'task_completed' => ['icon' => '✅', 'color' => 'green'],
-            'vitals_recorded' => ['icon' => '📊', 'color' => 'blue'],
-            'daily_reminder' => ['icon' => '🔔', 'color' => 'blue'],
-            'health_alert' => ['icon' => '⚠️', 'color' => 'amber'],
-        ];
-
-        foreach ($notifications as $notification) {
-            $config = $notificationConfig[$notification->type] ?? ['icon' => '🔔', 'color' => 'gray'];
-            
-            // Adapt the notification message for caregiver context
-            $caregiverTitle = $this->adaptNotificationForCaregiver($notification);
-            
-            $activities->push([
-                'type' => 'notification_' . $notification->type,
-                'title' => $caregiverTitle,
-                'subtitle' => $this->formatNotificationSubtitle($notification),
-                'timestamp' => $notification->created_at,
-                'icon' => $config['icon'],
-                'color' => $config['color'],
-                'severity' => $notification->severity,
-            ]);
-        }
-
-        // Sort by timestamp and take the most recent 30
-        return $activities->sortByDesc('timestamp')->take(30)->values();
-    }
-
-    /**
-     * Adapt notification message for caregiver context
-     */
-    private function adaptNotificationForCaregiver(Notification $notification): string
-    {
-        $elderName = $notification->elderly?->user?->name ?? 'Patient';
-        $firstName = explode(' ', $elderName)[0];
-        
-        switch ($notification->type) {
-            case 'medication_taken':
-                $medName = $notification->metadata['medicationName'] ?? 'medication';
-                return "{$firstName} took {$medName}";
-                
-            case 'medication_taken_late':
-                $medName = $notification->metadata['medicationName'] ?? 'medication';
-                return "{$firstName} took {$medName} (late)";
-                
-            case 'medication_missed':
-                $medName = $notification->metadata['medicationName'] ?? 'medication';
-                return "{$firstName} missed {$medName}";
-                
-            case 'task_completed':
-                $taskName = $notification->metadata['taskName'] ?? 'a task';
-                return "{$firstName} completed {$taskName}";
-                
-            case 'vitals_recorded':
-                $vitalType = $notification->metadata['vitalType'] ?? 'vital';
-                return "{$firstName} recorded {$vitalType}";
-                
-            case 'daily_reminder':
-                return "Reminder sent to {$firstName}";
-                
-            case 'health_alert':
-                return "Health alert for {$firstName}";
-                
-            default:
-                // Use the original title but prefix with patient name
-                return "{$firstName}: " . $notification->title;
-        }
-    }
-
-    /**
-     * Format notification subtitle with relevant details
-     */
-    private function formatNotificationSubtitle(Notification $notification): string
-    {
-        $metadata = $notification->metadata ?? [];
-        
-        switch ($notification->type) {
-            case 'medication_taken':
-            case 'medication_taken_late':
-                if (isset($metadata['takenAt'])) {
-                    return Carbon::parse($metadata['takenAt'])->format('g:i A');
-                }
-                return 'Dose recorded';
-                
-            case 'medication_missed':
-                return $metadata['scheduledTime'] ?? 'Scheduled dose';
-                
-            case 'vitals_recorded':
-                $value = $metadata['value'] ?? '';
-                $type = $metadata['vitalType'] ?? '';
-                return $value ? "{$value}" : ucfirst(str_replace('_', ' ', $type));
-                
-            case 'task_completed':
-                return ucfirst($metadata['category'] ?? 'Task');
-                
-            default:
-                // Return severity-based subtitle
-                return ucfirst($notification->severity);
-        }
+        return \App\Presenters\NotificationPresenter::toCaregiverActivity($notifications)
+            ->sortByDesc('timestamp')
+            ->take(30)
+            ->values();
     }
 
     /**

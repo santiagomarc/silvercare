@@ -346,21 +346,17 @@ PROMPT;
         $elderlyUser = $elderlyProfile ? $elderlyProfile->user : null;
         $elderlyName = $elderlyUser ? $elderlyUser->name : 'Patient';
 
-        // Medication adherence for the past week
-        $totalScheduled = MedicationLog::where('elderly_id', $elderlyProfileId)
+        // Medication adherence — single query with eager-loaded medication
+        $allLogs = MedicationLog::where('elderly_id', $elderlyProfileId)
             ->whereBetween('scheduled_time', [$weekAgo, $today])
-            ->count();
-        $totalTaken = MedicationLog::where('elderly_id', $elderlyProfileId)
-            ->whereBetween('scheduled_time', [$weekAgo, $today])
-            ->where('is_taken', true)
-            ->count();
+            ->with('medication')
+            ->get();
+
+        $totalScheduled = $allLogs->count();
+        $totalTaken = $allLogs->where('is_taken', true)->count();
         $adherenceRate = $totalScheduled > 0 ? round(($totalTaken / $totalScheduled) * 100, 1) : 0;
 
-        $missedMeds = MedicationLog::where('elderly_id', $elderlyProfileId)
-            ->whereBetween('scheduled_time', [$weekAgo, $today])
-            ->where('is_taken', false)
-            ->with('medication')
-            ->get()
+        $missedMeds = $allLogs->where('is_taken', false)
             ->map(function ($log) {
                 $medName = $log->medication->name ?? 'Unknown';
                 $time = Carbon::parse($log->scheduled_time)->format('M j, g:i A');
@@ -384,14 +380,13 @@ PROMPT;
                 return "• {$type}: {$count} readings | Avg: {$avg} | Range: {$min}-{$max} | Latest: {$latestVal} {$unit}";
             })->implode("\n");
 
-        // Task completion for the past week
-        $totalTasks = Checklist::where('elderly_id', $elderlyProfileId)
+        // Task completion — single query, partition in PHP
+        $tasks = Checklist::where('elderly_id', $elderlyProfileId)
             ->whereBetween('due_date', [$weekAgo, $today])
-            ->count();
-        $completedTasks = Checklist::where('elderly_id', $elderlyProfileId)
-            ->whereBetween('due_date', [$weekAgo, $today])
-            ->where('is_completed', true)
-            ->count();
+            ->get();
+
+        $totalTasks = $tasks->count();
+        $completedTasks = $tasks->where('is_completed', true)->count();
         $taskRate = $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100, 1) : 0;
 
         return <<<PROMPT

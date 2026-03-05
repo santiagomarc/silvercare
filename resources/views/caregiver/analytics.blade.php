@@ -219,12 +219,8 @@
                                     </div>
                                     <div class="text-center bg-gray-50 rounded-xl p-3">
                                         <p class="text-[10px] font-[700] text-gray-500 uppercase">Trend</p>
-                                        @php
-                                            $trend = $data[$period]['trend'] ?? 'stable';
-                                            $trendIcon = $trend === 'increasing' ? '↗' : ($trend === 'decreasing' ? '↘' : '→');
-                                            $trendColor = $trend === 'stable' ? 'text-gray-600' : ($trend === 'increasing' ? 'text-red-600' : 'text-green-600');
-                                        @endphp
-                                        <p class="text-xl font-[900] {{ $trendColor }}">{{ $trendIcon }}</p>
+                                        @php $t = \App\Presenters\HealthMetricPresenter::trendDisplay($data[$period]['trend'] ?? 'stable'); @endphp
+                                        <p class="text-xl font-[900] {{ $t['color'] }}">{{ $t['icon'] }}</p>
                                     </div>
                                 @endif
                             </div>

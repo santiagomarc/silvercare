@@ -47,4 +47,16 @@ class HealthMetricPresenter
         if ($value < 36.0) return ['label' => 'Low', 'color' => 'blue', 'bg' => 'bg-blue-100', 'text' => 'text-blue-700'];
         return ['label' => 'Normal', 'color' => 'green', 'bg' => 'bg-green-100', 'text' => 'text-green-700'];
     }
+
+    /**
+     * Return trend icon and CSS color class for a trend string.
+     */
+    public static function trendDisplay(string $trend): array
+    {
+        return match ($trend) {
+            'increasing' => ['icon' => '↗', 'color' => 'text-red-600'],
+            'decreasing' => ['icon' => '↘', 'color' => 'text-green-600'],
+            default       => ['icon' => '→', 'color' => 'text-gray-600'],
+        };
+    }
 }

@@ -44,42 +44,19 @@
             </div>
         @endif
 
-        @php
-            $categoryIcons = [
-                'Health' => '❤️',
-                'Exercise' => '🏃',
-                'Nutrition' => '🍎',
-                'Social' => '👥',
-                'Hygiene' => '🧼',
-                'Mental' => '🧠',
-                'Medication' => '💊',
-                'Other' => '📋',
-            ];
-            $today = now()->format('Y-m-d');
-        @endphp
-
         @forelse($groupedChecklists as $date => $dayChecklists)
             @php
-                $dateObj = \Carbon\Carbon::parse($date);
-                $isToday = $dateObj->isToday();
-                $isPast = $dateObj->isPast() && !$isToday;
-                $isFuture = $dateObj->isFuture();
+                $header = \App\Presenters\ChecklistPresenter::dateHeader($date);
+                $isToday = $header['isToday'];
+                $isPast  = $header['isPast'];
             @endphp
             
             <div class="mb-8">
                 <!-- Date Header -->
                 <div class="flex items-center mb-4">
                     <div class="flex-grow h-px bg-gray-300"></div>
-                    <div class="px-4 py-2 {{ $isToday ? 'bg-green-500 text-white' : ($isPast ? 'bg-gray-400 text-white' : 'bg-blue-500 text-white') }} rounded-full font-bold text-sm">
-                        @if($isToday)
-                            📅 Today - {{ $dateObj->format('M d') }}
-                        @elseif($dateObj->isYesterday())
-                            Yesterday - {{ $dateObj->format('M d') }}
-                        @elseif($dateObj->isTomorrow())
-                            Tomorrow - {{ $dateObj->format('M d') }}
-                        @else
-                            {{ $dateObj->format('l, M d') }}
-                        @endif
+                    <div class="px-4 py-2 {{ $header['css'] }} rounded-full font-bold text-sm">
+                        {{ $header['label'] }}
                     </div>
                     <div class="flex-grow h-px bg-gray-300"></div>
                 </div>
@@ -101,7 +78,7 @@
 
                                 <!-- Category Icon -->
                                 <div class="flex-shrink-0 mr-4 text-3xl">
-                                    {{ $categoryIcons[$checklist->category] ?? '📋' }}
+                                    {{ \App\Presenters\ChecklistPresenter::categoryIcon($checklist->category) }}
                                 </div>
 
                                 <!-- Task Content -->
