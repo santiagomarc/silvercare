@@ -244,22 +244,28 @@ class AiAssistantService
         $dateFormatted = $today->format('F j, Y');
         $profile = $user->profile;
 
-        // Gather medications for today
+        // Gather medications for today — eager-load today's logs to avoid N+1
         $medications = Medication::where('elderly_id', $profile->id)
             ->where('is_active', true)
             ->where(function ($q) use ($dayName) {
                 $q->whereJsonContains('days_of_week', $dayName)
                   ->orWhereNull('days_of_week');
             })
+            ->get();
+
+        // Pre-fetch all taken logs for today in one query
+        $medIds = $medications->pluck('id');
+        $todayLogs = MedicationLog::whereIn('medication_id', $medIds)
+            ->where('elderly_id', $profile->id)
+            ->whereDate('scheduled_time', $today)
+            ->where('is_taken', true)
             ->get()
-            ->map(function ($med) use ($profile, $today) {
+            ->groupBy('medication_id');
+
+        $medications = $medications->map(function ($med) use ($todayLogs) {
                 $timesStr = implode(', ', $med->times_of_day ?? []);
 
-                // Check which doses are taken today
-                $takenLogs = MedicationLog::where('elderly_id', $profile->id)
-                    ->where('medication_id', $med->id)
-                    ->whereDate('scheduled_time', $today)
-                    ->where('is_taken', true)
+                $takenLogs = ($todayLogs->get($med->id) ?? collect())
                     ->pluck('scheduled_time')
                     ->map(fn($t) => Carbon::parse($t)->format('H:i'))
                     ->toArray();

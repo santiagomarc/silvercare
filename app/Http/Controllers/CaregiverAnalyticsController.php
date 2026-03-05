@@ -8,38 +8,15 @@ use App\Models\HealthMetric;
 use App\Models\MedicationLog;
 use App\Models\Checklist;
 use App\Models\Medication;
+use App\Services\HealthAnalyticsService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 
 class CaregiverAnalyticsController extends Controller
 {
-    // Vital types configuration (same as HealthMetricController)
-    private const VITAL_TYPES = [
-        'blood_pressure' => [
-            'name' => 'Blood Pressure',
-            'unit' => 'mmHg',
-            'icon' => '🩺',
-            'color' => 'red',
-        ],
-        'heart_rate' => [
-            'name' => 'Heart Rate',
-            'unit' => 'bpm',
-            'icon' => '❤️',
-            'color' => 'rose',
-        ],
-        'sugar_level' => [
-            'name' => 'Blood Sugar',
-            'unit' => 'mg/dL',
-            'icon' => '🍬',
-            'color' => 'pink',
-        ],
-        'temperature' => [
-            'name' => 'Temperature',
-            'unit' => '°C',
-            'icon' => '🌡️',
-            'color' => 'orange',
-        ],
-    ];
+    public function __construct(protected HealthAnalyticsService $analyticsService)
+    {
+    }
 
     public function index()
     {
@@ -69,116 +46,24 @@ class CaregiverAnalyticsController extends Controller
         $elderlyUser = $elderly->user;
         $elderlyId = $elderly->id;
         
-        // Get vitals analytics data (same structure as elderly analytics)
+        // Use shared analytics service
         $periods = [
-            '7days' => Carbon::now()->subDays(7),
+            '7days'  => Carbon::now()->subDays(7),
             '30days' => Carbon::now()->subDays(30),
             '90days' => Carbon::now()->subDays(90),
         ];
 
-        $analyticsData = [];
-        $healthScore = 0;
-        $healthFactors = [];
-        $totalFactors = 0;
+        $analyticsData = $this->analyticsService->getAnalyticsData($elderlyId, $periods);
+        $health = $this->analyticsService->calculateHealthScore($analyticsData);
+        $readings = $this->analyticsService->getReadingCounts($elderlyId);
 
-        foreach (self::VITAL_TYPES as $type => $config) {
-            $data = [
-                'config' => $config,
-                'type' => $type,
-            ];
-
-            foreach ($periods as $periodKey => $startDate) {
-                $metrics = HealthMetric::where('elderly_id', $elderlyId)
-                    ->where('type', $type)
-                    ->where('measured_at', '>=', $startDate)
-                    ->orderBy('measured_at', 'asc')
-                    ->get();
-
-                $periodData = [
-                    'count' => $metrics->count(),
-                    'metrics' => $metrics,
-                ];
-
-                if ($type === 'blood_pressure') {
-                    $systolic = [];
-                    $diastolic = [];
-                    foreach ($metrics as $metric) {
-                        if ($metric->value_text && preg_match('/^(\d+)\/(\d+)$/', $metric->value_text, $matches)) {
-                            $systolic[] = intval($matches[1]);
-                            $diastolic[] = intval($matches[2]);
-                        }
-                    }
-                    if (!empty($systolic)) {
-                        $periodData['systolic_avg'] = round(array_sum($systolic) / count($systolic), 1);
-                        $periodData['systolic_min'] = min($systolic);
-                        $periodData['systolic_max'] = max($systolic);
-                        $periodData['diastolic_avg'] = round(array_sum($diastolic) / count($diastolic), 1);
-                        $periodData['diastolic_min'] = min($diastolic);
-                        $periodData['diastolic_max'] = max($diastolic);
-                    }
-                } else {
-                    if ($metrics->isNotEmpty()) {
-                        $values = $metrics->pluck('value')->map(fn($v) => floatval($v));
-                        $periodData['avg'] = round($values->avg(), 1);
-                        $periodData['min'] = $values->min();
-                        $periodData['max'] = $values->max();
-                        $periodData['trend'] = $this->calculateTrend($metrics);
-                    }
-                }
-
-                $data[$periodKey] = $periodData;
-            }
-
-            $analyticsData[$type] = $data;
-            
-            // Calculate health score contribution
-            if (($data['7days']['count'] ?? 0) > 0) {
-                $totalFactors++;
-                $score = 0;
-                $status = 'unknown';
-                
-                if ($type === 'blood_pressure') {
-                    $sys = $data['7days']['systolic_avg'] ?? 120;
-                    $dia = $data['7days']['diastolic_avg'] ?? 80;
-                    if ($sys < 120 && $dia < 80) { $score = 100; $status = 'Optimal'; }
-                    elseif ($sys < 130 && $dia < 85) { $score = 85; $status = 'Normal'; }
-                    elseif ($sys < 140 && $dia < 90) { $score = 70; $status = 'Elevated'; }
-                    else { $score = 50; $status = 'High'; }
-                } elseif ($type === 'heart_rate') {
-                    $hr = $data['7days']['avg'] ?? 72;
-                    if ($hr >= 60 && $hr <= 100) { $score = 100; $status = 'Optimal'; }
-                    elseif ($hr >= 50 && $hr <= 110) { $score = 80; $status = 'Normal'; }
-                    else { $score = 60; $status = 'Attention'; }
-                } elseif ($type === 'temperature') {
-                    $temp = $data['7days']['avg'] ?? 36.5;
-                    if ($temp >= 36.1 && $temp <= 37.2) { $score = 100; $status = 'Normal'; }
-                    elseif ($temp >= 35.5 && $temp <= 37.8) { $score = 75; $status = 'Mild'; }
-                    else { $score = 50; $status = 'Attention'; }
-                } elseif ($type === 'sugar_level') {
-                    $sugar = $data['7days']['avg'] ?? 100;
-                    if ($sugar >= 70 && $sugar <= 100) { $score = 100; $status = 'Optimal'; }
-                    elseif ($sugar >= 60 && $sugar <= 125) { $score = 80; $status = 'Normal'; }
-                    else { $score = 60; $status = 'Attention'; }
-                }
-                
-                $healthScore += $score;
-                $healthFactors[$type] = ['score' => $score, 'status' => $status];
-            }
-        }
-        
-        $healthScore = $totalFactors > 0 ? round($healthScore / $totalFactors) : 0;
-        $healthLabel = $healthScore >= 90 ? 'Excellent' : ($healthScore >= 75 ? 'Good' : ($healthScore >= 60 ? 'Fair' : 'Needs Attention'));
-        $healthColor = $healthScore >= 90 ? 'emerald' : ($healthScore >= 75 ? 'blue' : ($healthScore >= 60 ? 'amber' : 'red'));
-
-        // Overall reading counts
-        $totalReadings = HealthMetric::where('elderly_id', $elderlyId)
-            ->whereIn('type', array_keys(self::VITAL_TYPES))
-            ->count();
-
-        $readingsThisWeek = HealthMetric::where('elderly_id', $elderlyId)
-            ->whereIn('type', array_keys(self::VITAL_TYPES))
-            ->where('measured_at', '>=', Carbon::now()->subDays(7))
-            ->count();
+        $healthScore   = $health['score'];
+        $healthLabel   = $health['label'];
+        $healthColor   = $health['color'];
+        $healthFactors = $health['factors'];
+        $totalFactors  = $health['totalFactors'];
+        $totalReadings    = $readings['total'];
+        $readingsThisWeek = $readings['thisWeek'];
 
         // Medication Summary (7 days)
         $medicationSummary = $this->getMedicationSummary($elderly);
@@ -207,6 +92,15 @@ class CaregiverAnalyticsController extends Controller
         $medications = $elderly->trackedMedications()->where('is_active', true)->get();
         $last7Days = Carbon::today()->subDays(6);
         
+        // Pre-fetch ALL taken logs for the 7-day window in one query
+        $medIds = $medications->pluck('id');
+        $allLogs = MedicationLog::whereIn('medication_id', $medIds)
+            ->whereDate('scheduled_time', '>=', $last7Days)
+            ->whereDate('scheduled_time', '<=', Carbon::today())
+            ->where('is_taken', true)
+            ->get()
+            ->groupBy(fn ($log) => $log->medication_id . '_' . $log->scheduled_time->format('Y-m-d'));
+
         $totalScheduled = 0;
         $totalTaken = 0;
         $lowStockCount = 0;
@@ -222,11 +116,8 @@ class CaregiverAnalyticsController extends Controller
                     $doseCount = count($med->times_of_day ?? []);
                     $scheduled += $doseCount;
                     
-                    $takenCount = MedicationLog::where('medication_id', $med->id)
-                        ->whereDate('scheduled_time', $date)
-                        ->where('is_taken', true)
-                        ->count();
-                    $taken += $takenCount;
+                    $key = $med->id . '_' . $date->format('Y-m-d');
+                    $taken += ($allLogs->get($key)?->count() ?? 0);
                 }
             }
             
@@ -297,21 +188,7 @@ class CaregiverAnalyticsController extends Controller
 
     private function calculateTrend($metrics)
     {
-        if ($metrics->count() < 3) return 'stable';
-        
-        $values = $metrics->take(7)->pluck('value')->map(fn($v) => floatval($v))->toArray();
-        $firstHalf = array_slice($values, 0, (int)ceil(count($values)/2));
-        $secondHalf = array_slice($values, (int)ceil(count($values)/2));
-        
-        $firstAvg = count($firstHalf) > 0 ? array_sum($firstHalf) / count($firstHalf) : 0;
-        $secondAvg = count($secondHalf) > 0 ? array_sum($secondHalf) / count($secondHalf) : 0;
-        
-        $diff = $secondAvg - $firstAvg;
-        $threshold = $firstAvg * 0.05;
-        
-        if ($diff > $threshold) return 'increasing';
-        if ($diff < -$threshold) return 'decreasing';
-        return 'stable';
+        return $this->analyticsService->calculateTrend($metrics);
     }
 
     /**
@@ -333,110 +210,18 @@ class CaregiverAnalyticsController extends Controller
 
         $elderlyUser = $elderly->user;
         $elderlyId = $elderly->id;
-        
-        // Get vitals analytics data (7 days only for PDF)
-        $startDate = Carbon::now()->subDays(7);
 
-        $analyticsData = [];
-        $healthScore = 0;
-        $healthFactors = [];
-        $totalFactors = 0;
+        $periods = ['7days' => Carbon::now()->subDays(7)];
+        $analyticsData = $this->analyticsService->getAnalyticsData($elderlyId, $periods);
+        $health = $this->analyticsService->calculateHealthScore($analyticsData);
+        $readings = $this->analyticsService->getReadingCounts($elderlyId);
 
-        foreach (self::VITAL_TYPES as $type => $config) {
-            $data = [
-                'config' => $config,
-                'type' => $type,
-            ];
+        $healthScore   = $health['score'];
+        $healthLabel   = $health['label'];
+        $healthFactors = $health['factors'];
+        $totalReadings    = $readings['total'];
+        $readingsThisWeek = $readings['thisWeek'];
 
-            $metrics = HealthMetric::where('elderly_id', $elderlyId)
-                ->where('type', $type)
-                ->where('measured_at', '>=', $startDate)
-                ->orderBy('measured_at', 'asc')
-                ->get();
-
-            $periodData = [
-                'count' => $metrics->count(),
-                'metrics' => $metrics,
-            ];
-
-            if ($type === 'blood_pressure') {
-                $systolic = [];
-                $diastolic = [];
-                foreach ($metrics as $metric) {
-                    if ($metric->value_text && preg_match('/^(\d+)\/(\d+)$/', $metric->value_text, $matches)) {
-                        $systolic[] = intval($matches[1]);
-                        $diastolic[] = intval($matches[2]);
-                    }
-                }
-                if (!empty($systolic)) {
-                    $periodData['systolic_avg'] = round(array_sum($systolic) / count($systolic), 1);
-                    $periodData['systolic_min'] = min($systolic);
-                    $periodData['systolic_max'] = max($systolic);
-                    $periodData['diastolic_avg'] = round(array_sum($diastolic) / count($diastolic), 1);
-                    $periodData['diastolic_min'] = min($diastolic);
-                    $periodData['diastolic_max'] = max($diastolic);
-                }
-            } else {
-                if ($metrics->isNotEmpty()) {
-                    $values = $metrics->pluck('value')->map(fn($v) => floatval($v));
-                    $periodData['avg'] = round($values->avg(), 1);
-                    $periodData['min'] = $values->min();
-                    $periodData['max'] = $values->max();
-                }
-            }
-
-            $data['7days'] = $periodData;
-            $analyticsData[$type] = $data;
-            
-            // Calculate health score contribution
-            if (($data['7days']['count'] ?? 0) > 0) {
-                $totalFactors++;
-                $score = 0;
-                $status = 'unknown';
-                
-                if ($type === 'blood_pressure') {
-                    $sys = $data['7days']['systolic_avg'] ?? 120;
-                    $dia = $data['7days']['diastolic_avg'] ?? 80;
-                    if ($sys < 120 && $dia < 80) { $score = 100; $status = 'Optimal'; }
-                    elseif ($sys < 130 && $dia < 85) { $score = 85; $status = 'Normal'; }
-                    elseif ($sys < 140 && $dia < 90) { $score = 70; $status = 'Elevated'; }
-                    else { $score = 50; $status = 'High'; }
-                } elseif ($type === 'heart_rate') {
-                    $hr = $data['7days']['avg'] ?? 72;
-                    if ($hr >= 60 && $hr <= 100) { $score = 100; $status = 'Optimal'; }
-                    elseif ($hr >= 50 && $hr <= 110) { $score = 80; $status = 'Normal'; }
-                    else { $score = 60; $status = 'Attention'; }
-                } elseif ($type === 'temperature') {
-                    $temp = $data['7days']['avg'] ?? 36.5;
-                    if ($temp >= 36.1 && $temp <= 37.2) { $score = 100; $status = 'Normal'; }
-                    elseif ($temp >= 35.5 && $temp <= 37.8) { $score = 75; $status = 'Mild'; }
-                    else { $score = 50; $status = 'Attention'; }
-                } elseif ($type === 'sugar_level') {
-                    $sugar = $data['7days']['avg'] ?? 100;
-                    if ($sugar >= 70 && $sugar <= 100) { $score = 100; $status = 'Optimal'; }
-                    elseif ($sugar >= 60 && $sugar <= 125) { $score = 80; $status = 'Normal'; }
-                    else { $score = 60; $status = 'Attention'; }
-                }
-                
-                $healthScore += $score;
-                $healthFactors[$type] = ['score' => $score, 'status' => $status];
-            }
-        }
-        
-        $healthScore = $totalFactors > 0 ? round($healthScore / $totalFactors) : 0;
-        $healthLabel = $healthScore >= 90 ? 'Excellent' : ($healthScore >= 75 ? 'Good' : ($healthScore >= 60 ? 'Fair' : 'Needs Attention'));
-
-        // Overall reading counts
-        $totalReadings = HealthMetric::where('elderly_id', $elderlyId)
-            ->whereIn('type', array_keys(self::VITAL_TYPES))
-            ->count();
-
-        $readingsThisWeek = HealthMetric::where('elderly_id', $elderlyId)
-            ->whereIn('type', array_keys(self::VITAL_TYPES))
-            ->where('measured_at', '>=', Carbon::now()->subDays(7))
-            ->count();
-
-        // Medication & Task Summary
         $medicationSummary = $this->getMedicationSummary($elderly);
         $taskSummary = $this->getTaskSummary($elderly);
 

@@ -14,17 +14,16 @@ class MedicationPresenter
     {
         $now = now();
         $scheduledTime = Carbon::parse(today()->format('Y-m-d') . ' ' . $time);
-        $windowStart = $scheduledTime->copy(); // Window starts AT scheduled time
-        $windowEnd = $scheduledTime->copy()->addMinutes(60); // 1 hour grace period after
+        $windowStart = $scheduledTime->copy();
+        $windowEnd = $scheduledTime->copy()->addMinutes(60);
         
         $isWithinWindow = $now->between($windowStart, $windowEnd);
         $isPastWindow = $now->gt($windowEnd);
-        $isBeforeWindow = $now->lt($windowStart);
         $isTaken = $log?->is_taken ?? false;
         $takenAt = $log?->taken_at;
         
         $canTake = $isWithinWindow || $isPastWindow;
-        $canUndo = !$isPastWindow; // Can only undo within the grace period
+        $canUndo = !$isPastWindow;
         
         if ($isTaken) {
             $wasLate = $takenAt && $takenAt->gt($windowEnd);
@@ -56,11 +55,11 @@ class MedicationPresenter
         if ($isWithinWindow) {
             return [
                 'status' => 'Take Now', 
-                'icon' => '●', 
-                'bg' => 'bg-amber-50 border-amber-300', 
-                'iconBg' => 'bg-amber-200', 
+                'icon' => '💊', 
+                'bg' => 'bg-blue-50 border-blue-300 ring-2 ring-blue-400 ring-offset-2', 
+                'iconBg' => 'bg-blue-200 animate-pulse', 
                 'canTake' => true, 
-                'canUndo' => true,
+                'canUndo' => false,
                 'isTaken' => false,
                 'isWithinWindow' => true,
             ];
@@ -68,9 +67,9 @@ class MedicationPresenter
         
         return [
             'status' => 'Upcoming', 
-            'icon' => '○', 
-            'bg' => 'bg-white border-gray-200', 
-            'iconBg' => 'bg-green-100', 
+            'icon' => '⏳', 
+            'bg' => 'bg-gray-50 border-gray-200 opacity-75', 
+            'iconBg' => 'bg-gray-200', 
             'canTake' => false, 
             'canUndo' => false,
             'isTaken' => false,

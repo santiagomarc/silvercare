@@ -1,54 +1,14 @@
 @props(['medication', 'time', 'log'])
 
 @php
-    $now = now();
-    $scheduledTime = \Carbon\Carbon::parse(today()->format('Y-m-d') . ' ' . $time);
-    $windowStart = $scheduledTime->copy();
-    $windowEnd = $scheduledTime->copy()->addMinutes(60);
-    
-    $isWithinWindow = $now->between($windowStart, $windowEnd);
-    $isPastWindow = $now->gt($windowEnd);
-    $isBeforeWindow = $now->lt($windowStart);
-    $isTaken = $log?->is_taken ?? false;
-    $takenAt = $log?->taken_at;
-    
-    $canTake = $isWithinWindow || $isPastWindow;
-    $canUndo = !$isPastWindow;
-    
-    $status = '';
-    $icon = '';
-    $bgClass = '';
-    $iconBgClass = '';
-    
-    if ($isTaken) {
-        $wasLate = $takenAt && $takenAt->gt($windowEnd);
-        $status = $wasLate ? 'Taken Late' : 'Taken';
-        $icon = '✓';
-        $bgClass = $wasLate ? 'bg-orange-50 border-orange-300' : 'bg-green-50 border-green-300';
-        $iconBgClass = $wasLate ? 'bg-orange-200' : 'bg-green-200';
-        $canTake = false;
-    } elseif ($isPastWindow) {
-        $status = 'Missed';
-        $icon = '!';
-        $bgClass = 'bg-red-50 border-red-300';
-        $iconBgClass = 'bg-red-200';
-        $canTake = true;
-        $canUndo = false;
-    } elseif ($isWithinWindow) {
-        $status = 'Take Now';
-        $icon = '💊';
-        $bgClass = 'bg-blue-50 border-blue-300 ring-2 ring-blue-400 ring-offset-2';
-        $iconBgClass = 'bg-blue-200 animate-pulse';
-        $canTake = true;
-        $canUndo = false;
-    } else {
-        $status = 'Upcoming';
-        $icon = '⏳';
-        $bgClass = 'bg-gray-50 border-gray-200 opacity-75';
-        $iconBgClass = 'bg-gray-200';
-        $canTake = false;
-        $canUndo = false;
-    }
+    $dose = \App\Presenters\MedicationPresenter::getDoseStatus($time, $log);
+    $status = $dose['status'];
+    $icon = $dose['icon'];
+    $bgClass = $dose['bg'];
+    $iconBgClass = $dose['iconBg'];
+    $canTake = $dose['canTake'];
+    $canUndo = $dose['canUndo'];
+    $isTaken = $dose['isTaken'];
 @endphp
 
 <div class="flex items-center justify-between p-3 rounded-xl border {{ $bgClass }} transition-all duration-300">

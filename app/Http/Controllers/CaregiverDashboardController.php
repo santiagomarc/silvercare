@@ -37,7 +37,7 @@ class CaregiverDashboardController extends Controller
         // Get the elderly user
         $elderlyUser = $elderly->user;
 
-        // Fetch TODAY's latest metrics only (like Flutter version)
+        // Fetch TODAY's latest metrics in a single query, grouped by type
         $today = Carbon::today();
         
         $mood = HealthMetric::where('elderly_id', $elderly->id)
@@ -45,30 +45,19 @@ class CaregiverDashboardController extends Controller
             ->whereDate('measured_at', $today)
             ->latest('measured_at')
             ->first();
-        
-        $heartRate = HealthMetric::where('elderly_id', $elderly->id)
-            ->where('type', 'heart_rate')
+
+        $todayMetrics = HealthMetric::where('elderly_id', $elderly->id)
+            ->whereIn('type', ['heart_rate', 'blood_pressure', 'sugar_level', 'temperature'])
             ->whereDate('measured_at', $today)
-            ->latest('measured_at')
-            ->first();
-            
-        $bloodPressure = HealthMetric::where('elderly_id', $elderly->id)
-            ->where('type', 'blood_pressure')
-            ->whereDate('measured_at', $today)
-            ->latest('measured_at')
-            ->first();
-            
-        $sugarLevel = HealthMetric::where('elderly_id', $elderly->id)
-            ->where('type', 'sugar_level')
-            ->whereDate('measured_at', $today)
-            ->latest('measured_at')
-            ->first();
-            
-        $temperature = HealthMetric::where('elderly_id', $elderly->id)
-            ->where('type', 'temperature')
-            ->whereDate('measured_at', $today)
-            ->latest('measured_at')
-            ->first();
+            ->orderBy('measured_at', 'desc')
+            ->get()
+            ->unique('type')
+            ->keyBy('type');
+
+        $heartRate     = $todayMetrics->get('heart_rate');
+        $bloodPressure = $todayMetrics->get('blood_pressure');
+        $sugarLevel    = $todayMetrics->get('sugar_level');
+        $temperature   = $todayMetrics->get('temperature');
 
         $vitals = [
             'heart_rate' => $heartRate ? [
@@ -248,28 +237,23 @@ class CaregiverDashboardController extends Controller
     private function getStats($elderly)
     {
         $today = Carbon::today();
+        $dayOfWeek = $today->format('l');
 
-        // Today's medication adherence
+        // Today's medication adherence — bulk-loaded
         $todaysMeds = $elderly->trackedMedications()
             ->where('is_active', true)
             ->get();
-        
-        $totalDosesToday = 0;
-        $takenDosesToday = 0;
-        $dayOfWeek = $today->format('l');
-        
-        foreach ($todaysMeds as $med) {
-            if (in_array($dayOfWeek, $med->days_of_week ?? [])) {
-                $doseCount = count($med->times_of_day ?? []);
-                $totalDosesToday += $doseCount;
-                
-                $takenToday = MedicationLog::where('medication_id', $med->id)
-                    ->whereDate('scheduled_time', $today)
-                    ->where('is_taken', true)
-                    ->count();
-                $takenDosesToday += $takenToday;
-            }
-        }
+
+        $applicableMeds = $todaysMeds->filter(fn ($med) => in_array($dayOfWeek, $med->days_of_week ?? []));
+        $medIds = $applicableMeds->pluck('id');
+
+        $totalDosesToday = $applicableMeds->sum(fn ($med) => count($med->times_of_day ?? []));
+
+        // Single bulk query for all medication logs today
+        $takenDosesToday = MedicationLog::whereIn('medication_id', $medIds)
+            ->whereDate('scheduled_time', $today)
+            ->where('is_taken', true)
+            ->count();
         
         $medicationAdherence = $totalDosesToday > 0 
             ? round(($takenDosesToday / $totalDosesToday) * 100) 

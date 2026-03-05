@@ -7,6 +7,7 @@ use App\Models\MedicationLog;
 use App\Models\Checklist;
 use App\Models\HealthMetric;
 use App\Models\GoogleFitToken;
+use App\Services\ElderlyDashboardService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,213 +20,36 @@ class ElderlyDashboardController extends Controller
      */
     const MEDICATION_GRACE_MINUTES = 60;
 
-    /**
-     * Required vital types for daily goals tracking
-     */
-    const REQUIRED_VITALS = ['heart_rate', 'blood_pressure', 'sugar_level', 'temperature'];
+    public function __construct(protected ElderlyDashboardService $dashboardService)
+    {
+    }
 
     public function index()
     {
         $user = Auth::user();
         $elderlyId = $user->profile?->id;
 
-        // Get medications assigned to this elderly
-        $medications = collect();
-        $todayMedications = collect();
-        $medicationLogs = collect();
-        
-        if ($elderlyId) {
-            $medications = Medication::where('elderly_id', $elderlyId)
-                ->where('is_active', true)
-                ->get();
-            
-            // Filter today's medications based on days_of_week
-            $todayName = Carbon::now()->format('l'); // e.g., "Monday"
-            $todayMedications = $medications->filter(function ($med) use ($todayName) {
-                return empty($med->days_of_week) || in_array($todayName, $med->days_of_week);
-            });
-
-            // Get today's medication logs for this elderly
-            $medicationLogs = MedicationLog::where('elderly_id', $elderlyId)
-                ->whereDate('scheduled_time', Carbon::today())
-                ->get()
-                ->keyBy(function ($log) {
-                    // Create key: medication_id_HH:mm
-                    return $log->medication_id . '_' . $log->scheduled_time->format('H:i');
-                });
+        if (!$elderlyId) {
+            return view('elderly.dashboard', $this->emptyDashboard());
         }
 
-        // Get checklists for today
-        $checklists = collect();
-        $todayChecklists = collect();
-        
-        if ($elderlyId) {
-            $checklists = Checklist::where('elderly_id', $elderlyId)->get();
-            
-            $todayChecklists = Checklist::where('elderly_id', $elderlyId)
-                ->whereDate('due_date', Carbon::today())
-                ->orderBy('due_time')
-                ->get();
-        }
+        $data = $this->dashboardService->getDashboardData($elderlyId, $user->id);
 
-        // Get today's vitals - check which vitals have been recorded today
-        $todayVitals = collect();
-        $recordedVitalTypes = [];
-        
-        if ($elderlyId) {
-            $todayVitals = HealthMetric::where('elderly_id', $elderlyId)
-                ->whereDate('measured_at', Carbon::today())
-                ->get();
-            
-            // Get unique vital types recorded today
-            $recordedVitalTypes = $todayVitals->pluck('type')->unique()->toArray();
-        }
+        return view('elderly.dashboard', $data);
+    }
 
-        // Calculate vitals progress (based on required daily vitals)
-        $totalRequiredVitals = count(self::REQUIRED_VITALS);
-        $completedVitals = count(array_intersect(self::REQUIRED_VITALS, $recordedVitalTypes));
-        $vitalsProgress = $totalRequiredVitals > 0 ? round(($completedVitals / $totalRequiredVitals) * 100) : 0;
-
-        // Calculate checklist progress
-        $completedChecklists = $todayChecklists->where('is_completed', true)->count();
-        $totalChecklists = $todayChecklists->count();
-        $checklistProgress = $totalChecklists > 0 ? round(($completedChecklists / $totalChecklists) * 100) : 0;
-
-        // Calculate medication progress
-        $totalMedicationDoses = 0;
-        $takenMedicationDoses = 0;
-        foreach ($todayMedications as $med) {
-            $times = $med->times_of_day ?? [];
-            $totalMedicationDoses += count($times);
-            foreach ($times as $time) {
-                $logKey = $med->id . '_' . $time;
-                if (isset($medicationLogs[$logKey]) && $medicationLogs[$logKey]->is_taken) {
-                    $takenMedicationDoses++;
-                }
-            }
-        }
-        $medicationProgress = $totalMedicationDoses > 0 ? round(($takenMedicationDoses / $totalMedicationDoses) * 100) : 0;
-
-        // Calculate overall daily goals progress (weighted average)
-        // Weights: Checklists 40%, Medications 40%, Vitals 20%
-        $hasChecklists = $totalChecklists > 0;
-        $hasMedications = $totalMedicationDoses > 0;
-        $hasVitals = $totalRequiredVitals > 0;
-
-        // Calculate dynamic weights based on what's applicable
-        $totalWeight = 0;
-        $weightedProgress = 0;
-
-        if ($hasChecklists) {
-            $totalWeight += 40;
-            $weightedProgress += $checklistProgress * 40;
-        }
-        if ($hasMedications) {
-            $totalWeight += 40;
-            $weightedProgress += $medicationProgress * 40;
-        }
-        if ($hasVitals) {
-            $totalWeight += 20;
-            $weightedProgress += $vitalsProgress * 20;
-        }
-
-        $dailyGoalsProgress = $totalWeight > 0 ? round($weightedProgress / $totalWeight) : 0;
-
-        // Check Google Fit connection status
-        $googleFitConnected = GoogleFitToken::where('user_id', $user->id)->exists();
-
-        // Organize vitals data for display - keyed by type with latest values
-        $vitalsData = [];
-        foreach (self::REQUIRED_VITALS as $vitalType) {
-            $latestMetric = $todayVitals->where('type', $vitalType)->sortByDesc('measured_at')->first();
-            $vitalsData[$vitalType] = [
-                'recorded' => $latestMetric !== null,
-                'value' => $latestMetric?->value,
-                'value_text' => $latestMetric?->value_text,
-                'unit' => $latestMetric?->unit,
-                'measured_at' => $latestMetric?->measured_at,
-                'source' => $latestMetric?->source,
-            ];
-        }
-
-        // Get today's steps from Google Fit (if connected)
-        $stepsData = null;
-        if ($elderlyId) {
-            $stepsMetric = HealthMetric::where('elderly_id', $elderlyId)
-                ->where('type', 'steps')
-                ->whereDate('measured_at', today())
-                ->orderBy('measured_at', 'desc')
-                ->first();
-            
-            if ($stepsMetric) {
-                $stepsData = [
-                    'value' => (int) $stepsMetric->value,
-                    'goal' => 6000, // Default daily step goal for seniors
-                    'source' => $stepsMetric->source,
-                    'synced_at' => $stepsMetric->measured_at,
-                ];
-            }
-        }
-
-        // Get today's mood
-        $todayMood = 3; // Default to neutral
-        if ($elderlyId) {
-            $moodMetric = HealthMetric::where('elderly_id', $elderlyId)
-                ->where('type', 'mood')
-                ->whereDate('measured_at', Carbon::today())
-                ->first();
-            if ($moodMetric) {
-                $todayMood = (int) $moodMetric->value;
-            }
-        }
-
-        // Get upcoming events
-        $upcomingEvents = [];
-        try {
-            if(class_exists('App\Models\CalendarEvent')) {
-                $upcomingEvents = \App\Models\CalendarEvent::where('user_id', $user->id)
-                    ->where('start_time', '>=', now())
-                    ->orderBy('start_time', 'asc')
-                    ->take(3)
-                    ->get();
-            }
-        } catch (\Exception $e) {
-            // Prevent crash if table/model issues exist
-        }
-
-        // Get unread notifications count
-        $unreadNotifications = 0;
-        if ($elderlyId) {
-            $unreadNotifications = \App\Models\Notification::where('elderly_id', $elderlyId)
-                ->where('is_read', false)
-                ->count();
-        }
-
-        return view('elderly.dashboard', compact(
-            'medications',
-            'todayMedications',
-            'medicationLogs',
-            'checklists',
-            'todayChecklists',
-            'completedChecklists',
-            'totalChecklists',
-            'checklistProgress',
-            'todayVitals',
-            'recordedVitalTypes',
-            'completedVitals',
-            'totalRequiredVitals',
-            'vitalsProgress',
-            'vitalsData',
-            'stepsData',
-            'takenMedicationDoses',
-            'totalMedicationDoses',
-            'medicationProgress',
-            'dailyGoalsProgress',
-            'googleFitConnected',
-            'todayMood',
-            'upcomingEvents',
-            'unreadNotifications'
-        ));
+    private function emptyDashboard(): array
+    {
+        return [
+            'medications' => collect(), 'todayMedications' => collect(), 'medicationLogs' => collect(),
+            'checklists' => collect(), 'todayChecklists' => collect(),
+            'completedChecklists' => 0, 'totalChecklists' => 0, 'checklistProgress' => 0,
+            'todayVitals' => collect(), 'recordedVitalTypes' => [], 'completedVitals' => 0,
+            'totalRequiredVitals' => 4, 'vitalsProgress' => 0, 'vitalsData' => [],
+            'stepsData' => null, 'takenMedicationDoses' => 0, 'totalMedicationDoses' => 0,
+            'medicationProgress' => 0, 'dailyGoalsProgress' => 0, 'googleFitConnected' => false,
+            'todayMood' => 3, 'upcomingEvents' => [], 'unreadNotifications' => 0,
+        ];
     }
 
     public function medications()

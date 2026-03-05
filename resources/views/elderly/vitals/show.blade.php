@@ -254,34 +254,15 @@
             <div class="divide-y divide-gray-100 max-h-[600px] overflow-y-auto custom-scrollbar">
                 @forelse($metrics as $metric)
                     @php
-                       // Logic for Health Status Labels (Retained from original)
                        $recordStatus = null;
-                       // ... (Keep existing extensive PHP logic for $recordStatus here - implied for brevity, copying verbatim from prompt logic)
                        if ($type === 'blood_pressure' && $metric->value_text) {
-                            $parts = explode('/', $metric->value_text);
-                            if (count($parts) === 2) {
-                                $sys = intval($parts[0]); $dia = intval($parts[1]);
-                                if ($sys >= 180 || $dia >= 120) $recordStatus = ['label' => 'Critical', 'bg' => 'bg-red-100', 'text' => 'text-red-700'];
-                                elseif ($sys >= 140 || $dia >= 90) $recordStatus = ['label' => 'High', 'bg' => 'bg-orange-100', 'text' => 'text-orange-700'];
-                                elseif ($sys >= 130 || $dia >= 80) $recordStatus = ['label' => 'Elevated', 'bg' => 'bg-yellow-100', 'text' => 'text-yellow-700'];
-                                elseif ($sys < 90 || $dia < 60) $recordStatus = ['label' => 'Low', 'bg' => 'bg-blue-100', 'text' => 'text-blue-700'];
-                                else $recordStatus = ['label' => 'Normal', 'bg' => 'bg-green-100', 'text' => 'text-green-700'];
-                            }
+                            $recordStatus = \App\Presenters\HealthMetricPresenter::getBloodPressureStatus($metric->value_text);
                         } elseif ($type === 'sugar_level' && $metric->value) {
-                            $val = floatval($metric->value);
-                            if ($val >= 250) $recordStatus = ['label' => 'Critical', 'bg' => 'bg-red-100', 'text' => 'text-red-700'];
-                            elseif ($val >= 180) $recordStatus = ['label' => 'High', 'bg' => 'bg-orange-100', 'text' => 'text-orange-700'];
-                            elseif ($val < 70) $recordStatus = ['label' => 'Low', 'bg' => 'bg-blue-100', 'text' => 'text-blue-700'];
-                            else $recordStatus = ['label' => 'Normal', 'bg' => 'bg-green-100', 'text' => 'text-green-700'];
+                            $recordStatus = \App\Presenters\HealthMetricPresenter::getSugarLevelStatus(floatval($metric->value));
                         } elseif ($type === 'temperature' && $metric->value) {
-                            $val = floatval($metric->value);
-                            if ($val >= 38.0) $recordStatus = ['label' => 'Fever', 'bg' => 'bg-red-100', 'text' => 'text-red-700'];
-                            else $recordStatus = ['label' => 'Normal', 'bg' => 'bg-green-100', 'text' => 'text-green-700'];
+                            $recordStatus = \App\Presenters\HealthMetricPresenter::getTemperatureStatus(floatval($metric->value));
                         } elseif ($type === 'heart_rate' && $metric->value) {
-                            $val = floatval($metric->value);
-                            if ($val >= 100) $recordStatus = ['label' => 'High', 'bg' => 'bg-orange-100', 'text' => 'text-orange-700'];
-                            elseif ($val < 60) $recordStatus = ['label' => 'Low', 'bg' => 'bg-blue-100', 'text' => 'text-blue-700'];
-                            else $recordStatus = ['label' => 'Normal', 'bg' => 'bg-green-100', 'text' => 'text-green-700'];
+                            $recordStatus = \App\Presenters\HealthMetricPresenter::getHeartRateStatus(floatval($metric->value));
                         }
                     @endphp
 
