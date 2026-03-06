@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreHealthMetricRequest;
+use App\Http\Requests\StoreMoodRequest;
 use App\Models\HealthMetric;
 use App\Services\HealthAnalyticsService;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class HealthMetricController extends Controller
 {
@@ -29,7 +31,7 @@ class HealthMetricController extends Controller
     /**
      * Store a new health metric reading
      */
-    public function store(Request $request)
+    public function store(StoreHealthMetricRequest $request)
     {
         $user = Auth::user();
         $elderlyId = $user->profile?->id;
@@ -41,69 +43,24 @@ class HealthMetricController extends Controller
             ], 404);
         }
 
+        $this->authorize('create', HealthMetric::class);
+
         $vitalTypes = $this->vitalTypes();
 
-        $request->validate([
-            'type' => 'required|string|in:' . implode(',', array_keys($vitalTypes)),
-            'value' => 'nullable|numeric',
-            'value_text' => 'nullable|string|max:50',
-            'notes' => 'nullable|string|max:500',
-        ]);
-
-        $type = $request->input('type');
+        $validated = $request->validated();
+        $type = $validated['type'];
         $config = $vitalTypes[$type];
-
-        // Validate based on type
-        if ($config['has_text_value'] ?? false) {
-            // Blood pressure needs text value (e.g., "120/80")
-            if (!$request->input('value_text')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Value is required for ' . $config['name']
-                ], 422);
-            }
-            
-            // Validate blood pressure format
-            if ($type === 'blood_pressure') {
-                $bp = $request->input('value_text');
-                if (!preg_match('/^\d{2,3}\/\d{2,3}$/', $bp)) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Blood pressure must be in format like 120/80'
-                    ], 422);
-                }
-            }
-        } else {
-            // Numeric value required
-            if (!$request->has('value') || $request->input('value') === null) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Value is required for ' . $config['name']
-                ], 422);
-            }
-
-            $value = $request->input('value');
-            $min = $config['min'] ?? 0;
-            $max = $config['max'] ?? 999999;
-
-            if ($value < $min || $value > $max) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "{$config['name']} must be between {$min} and {$max}"
-                ], 422);
-            }
-        }
 
         // Create the health metric
         $metric = HealthMetric::create([
             'elderly_id' => $elderlyId,
             'type' => $type,
-            'value' => $request->input('value'),
-            'value_text' => $request->input('value_text'),
+            'value' => $validated['value'] ?? null,
+            'value_text' => $validated['value_text'] ?? null,
             'unit' => $config['unit'],
             'measured_at' => Carbon::now(),
             'source' => 'manual',
-            'notes' => $request->input('notes'),
+            'notes' => $validated['notes'] ?? null,
         ]);
 
         return response()->json([
@@ -222,15 +179,7 @@ class HealthMetricController extends Controller
      */
     public function destroy(HealthMetric $metric)
     {
-        $user = Auth::user();
-        $elderlyId = $user->profile?->id;
-
-        if ($metric->elderly_id !== $elderlyId) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized'
-            ], 403);
-        }
+        $this->authorize('delete', $metric);
 
         $metric->delete();
 
@@ -243,7 +192,7 @@ class HealthMetricController extends Controller
     /**
      * Store mood value (auto-saved from dashboard slider)
      */
-    public function storeMood(Request $request)
+    public function storeMood(StoreMoodRequest $request)
     {
         $user = Auth::user();
         $elderlyId = $user->profile?->id;
@@ -255,10 +204,6 @@ class HealthMetricController extends Controller
             ], 404);
         }
 
-        $request->validate([
-            'value' => 'required|integer|min:1|max:5',
-        ]);
-
         // Update or create today's mood entry (only one mood per day)
         $metric = HealthMetric::updateOrCreate(
             [
@@ -267,7 +212,7 @@ class HealthMetricController extends Controller
                 'measured_at' => Carbon::today(),
             ],
             [
-                'value' => $request->input('value'),
+                'value' => $request->validated('value'),
                 'unit' => '',
                 'source' => 'manual',
             ]

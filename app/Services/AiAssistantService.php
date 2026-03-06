@@ -244,66 +244,10 @@ class AiAssistantService
         $dateFormatted = $today->format('F j, Y');
         $profile = $user->profile;
 
-        // Gather medications for today — eager-load today's logs to avoid N+1
-        $medications = Medication::where('elderly_id', $profile->id)
-            ->where('is_active', true)
-            ->where(function ($q) use ($dayName) {
-                $q->whereJsonContains('days_of_week', $dayName)
-                  ->orWhereNull('days_of_week');
-            })
-            ->get();
-
-        // Pre-fetch all taken logs for today in one query
-        $medIds = $medications->pluck('id');
-        $todayLogs = MedicationLog::whereIn('medication_id', $medIds)
-            ->where('elderly_id', $profile->id)
-            ->whereDate('scheduled_time', $today)
-            ->where('is_taken', true)
-            ->get()
-            ->groupBy('medication_id');
-
-        $medications = $medications->map(function ($med) use ($todayLogs) {
-                $timesStr = implode(', ', $med->times_of_day ?? []);
-
-                $takenLogs = ($todayLogs->get($med->id) ?? collect())
-                    ->pluck('scheduled_time')
-                    ->map(fn($t) => Carbon::parse($t)->format('H:i'))
-                    ->toArray();
-
-                $takenStr = count($takenLogs) > 0 ? ' [TAKEN: ' . implode(', ', $takenLogs) . ']' : ' [NOT YET TAKEN]';
-                return "• [ID: {$med->id}] {$med->name} ({$med->dosage}) — scheduled at {$timesStr}{$takenStr}";
-            })->implode("\n");
-
-        // Gather tasks for today
-        $tasks = Checklist::where('elderly_id', $profile->id)
-            ->whereDate('due_date', $today)
-            ->get()
-            ->map(function ($task) {
-                $status = $task->is_completed ? '✅ Done' : '⬜ Pending';
-                $priority = $task->priority ? " [{$task->priority}]" : '';
-                return "• [ID: {$task->id}] {$task->task} — {$status}{$priority}";
-            })->implode("\n");
-
-        // Gather latest vitals (last 24h)
-        $latestVitals = HealthMetric::where('elderly_id', $profile->id)
-            ->where('measured_at', '>=', $today->copy()->subDay())
-            ->orderBy('measured_at', 'desc')
-            ->get()
-            ->groupBy('type')
-            ->map(function ($records, $type) {
-                $latest = $records->first();
-                $val = $latest->value_text ?? $latest->value;
-                $unit = $latest->unit ? " {$latest->unit}" : '';
-                return "• {$type}: {$val}{$unit} (at " . Carbon::parse($latest->measured_at)->format('g:i A') . ")";
-            })->implode("\n");
-
-        // Medical profile info
-        $medicalInfo = '';
-        if ($profile) {
-            $conditions = $profile->medical_conditions ?? 'None noted';
-            $allergies = $profile->allergies ?? 'None noted';
-            $medicalInfo = "Medical conditions: {$conditions}\nAllergies: {$allergies}";
-        }
+        $medications = $this->buildMedicationContext($profile->id, $today, $dayName);
+        $tasks = $this->buildTaskContext($profile->id, $today);
+        $latestVitals = $this->buildVitalsContext($profile->id, $today->copy()->subDay());
+        $medicalInfo = $this->buildMedicalInfoContext($profile);
 
         return <<<PROMPT
 You are the SilverCare AI Assistant — a warm, empathetic, and patient companion built for elderly users.
@@ -346,48 +290,9 @@ PROMPT;
         $elderlyUser = $elderlyProfile ? $elderlyProfile->user : null;
         $elderlyName = $elderlyUser ? $elderlyUser->name : 'Patient';
 
-        // Medication adherence — single query with eager-loaded medication
-        $allLogs = MedicationLog::where('elderly_id', $elderlyProfileId)
-            ->whereBetween('scheduled_time', [$weekAgo, $today])
-            ->with('medication')
-            ->get();
-
-        $totalScheduled = $allLogs->count();
-        $totalTaken = $allLogs->where('is_taken', true)->count();
-        $adherenceRate = $totalScheduled > 0 ? round(($totalTaken / $totalScheduled) * 100, 1) : 0;
-
-        $missedMeds = $allLogs->where('is_taken', false)
-            ->map(function ($log) {
-                $medName = $log->medication->name ?? 'Unknown';
-                $time = Carbon::parse($log->scheduled_time)->format('M j, g:i A');
-                return "• {$medName} — missed at {$time}";
-            })->implode("\n");
-
-        // Health metrics summary (last 7 days)
-        $healthMetrics = HealthMetric::where('elderly_id', $elderlyProfileId)
-            ->whereBetween('measured_at', [$weekAgo, $today])
-            ->orderBy('measured_at', 'desc')
-            ->get()
-            ->groupBy('type')
-            ->map(function ($records, $type) {
-                $count = $records->count();
-                $avg = round($records->avg('value'), 1);
-                $min = $records->min('value');
-                $max = $records->max('value');
-                $latest = $records->first();
-                $latestVal = $latest->value_text ?? $latest->value;
-                $unit = $latest->unit ?? '';
-                return "• {$type}: {$count} readings | Avg: {$avg} | Range: {$min}-{$max} | Latest: {$latestVal} {$unit}";
-            })->implode("\n");
-
-        // Task completion — single query, partition in PHP
-        $tasks = Checklist::where('elderly_id', $elderlyProfileId)
-            ->whereBetween('due_date', [$weekAgo, $today])
-            ->get();
-
-        $totalTasks = $tasks->count();
-        $completedTasks = $tasks->where('is_completed', true)->count();
-        $taskRate = $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100, 1) : 0;
+        $medicationSummary = $this->buildCaregiverMedicationContext($elderlyProfileId, $weekAgo, $today);
+        $healthMetrics = $this->buildCaregiverVitalsContext($elderlyProfileId, $weekAgo, $today);
+        $taskSummary = $this->buildCaregiverTaskContext($elderlyProfileId, $weekAgo, $today);
 
         return <<<PROMPT
 You are the SilverCare Caregiver AI Analyst — a clinical, data-driven assistant for caregivers monitoring their elderly patient.
@@ -397,15 +302,13 @@ PATIENT: {$elderlyName}
 ANALYSIS PERIOD: {$weekAgo->format('M j')} – {$today->format('M j, Y')}
 
 === MEDICATION ADHERENCE (7 days) ===
-Adherence Rate: {$adherenceRate}% ({$totalTaken}/{$totalScheduled} doses taken)
-Missed Doses:
-{$missedMeds}
+{$medicationSummary}
 
 === HEALTH METRICS (7 days) ===
 {$healthMetrics}
 
 === TASK COMPLETION (7 days) ===
-Completion Rate: {$taskRate}% ({$completedTasks}/{$totalTasks} tasks)
+{$taskSummary}
 
 === INSTRUCTIONS ===
 1. Provide clinical, factual analysis based on the real data above.
@@ -517,7 +420,7 @@ PROMPT;
     protected function executeFunctionCall(User $user, \Gemini\Data\FunctionCall $functionCall): string
     {
         $profile = $user->profile;
-        if (!$profile) return '';
+        if (!$profile || !$profile->isElderly()) return '';
 
         $name = $functionCall->name;
         $args = $functionCall->args;
@@ -536,6 +439,13 @@ PROMPT;
                         'is_completed' => true,
                         'completed_at' => Carbon::now(),
                     ]);
+
+                    $this->notificationService->createTaskCompletedNotification(
+                        $profile->id,
+                        $task->task,
+                        $task->category ?? 'General'
+                    );
+
                     return "\n\n✅ *Task \"{$task->task}\" marked as done!*";
                 }
             } catch (\Exception $e) {
@@ -551,13 +461,20 @@ PROMPT;
                     ->first();
 
                 if ($medication) {
-                    MedicationLog::create([
+                    MedicationLog::updateOrCreate([
                         'elderly_id' => $profile->id,
                         'medication_id' => $medication->id,
                         'scheduled_time' => Carbon::now(),
+                    ], [
                         'is_taken' => true,
                         'taken_at' => Carbon::now(),
                     ]);
+
+                    $this->notificationService->createMedicationTakenNotification(
+                        $profile->id,
+                        $medication->name
+                    );
+
                     return "\n\n💊 *{$medication->name} logged as taken!*";
                 }
             } catch (\Exception $e) {
@@ -606,12 +523,12 @@ PROMPT;
                 'title' => '🚨 Emergency Alert from ' . $user->name,
                 'message' => "{$user->name} may need urgent help. They mentioned: \"{$message}\" (detected: {$matchedKeyword})",
                 'severity' => 'critical',
-                'metadata' => json_encode([
+                'metadata' => [
                     'source' => 'ai_chat',
                     'keyword' => $matchedKeyword,
                     'original_message' => $message,
                     'timestamp' => now()->toIso8601String(),
-                ]),
+                ],
             ]);
 
             Log::warning("Emergency alert fired for user {$user->id}: keyword '{$matchedKeyword}'");
@@ -683,9 +600,7 @@ PROMPT;
             ->where('is_active', true)
             ->get()
             ->map(function ($med) {
-                $times = is_array($med->scheduled_times)
-                    ? $med->scheduled_times
-                    : (json_decode($med->scheduled_times, true) ?? []);
+                $times = $med->times_of_day ?? [];
                 $timeStr = implode(', ', $times);
                 return "• {$med->name} ({$med->dosage}) — {$timeStr}";
             })->implode("\n");
@@ -742,5 +657,139 @@ PROMPT;
             Log::error('Daily summary generation failed: ' . $e->getMessage());
             return '';
         }
+    }
+
+    private function buildMedicationContext(int $elderlyProfileId, Carbon $today, string $dayName): string
+    {
+        $medications = Medication::where('elderly_id', $elderlyProfileId)
+            ->where('is_active', true)
+            ->get()
+            ->filter(fn (Medication $medication) => empty($medication->days_of_week) || in_array($dayName, $medication->days_of_week, true));
+
+        $todayLogs = MedicationLog::whereIn('medication_id', $medications->pluck('id'))
+            ->where('elderly_id', $elderlyProfileId)
+            ->whereDate('scheduled_time', $today)
+            ->where('is_taken', true)
+            ->get()
+            ->groupBy('medication_id');
+
+        return $medications->map(function (Medication $medication) use ($todayLogs) {
+            $timesStr = implode(', ', $medication->times_of_day ?? []);
+            $takenLogs = ($todayLogs->get($medication->id) ?? collect())
+                ->pluck('scheduled_time')
+                ->map(fn ($time) => Carbon::parse($time)->format('H:i'))
+                ->toArray();
+
+            $takenStr = count($takenLogs) > 0
+                ? ' [TAKEN: ' . implode(', ', $takenLogs) . ']'
+                : ' [NOT YET TAKEN]';
+
+            return "• [ID: {$medication->id}] {$medication->name} ({$medication->dosage}) — scheduled at {$timesStr}{$takenStr}";
+        })->implode("\n");
+    }
+
+    private function buildTaskContext(int $elderlyProfileId, Carbon $date): string
+    {
+        return Checklist::where('elderly_id', $elderlyProfileId)
+            ->whereDate('due_date', $date)
+            ->get()
+            ->map(function (Checklist $task) {
+                $status = $task->is_completed ? '✅ Done' : '⬜ Pending';
+                $priority = $task->priority ? " [{$task->priority}]" : '';
+
+                return "• [ID: {$task->id}] {$task->task} — {$status}{$priority}";
+            })->implode("\n");
+    }
+
+    private function buildVitalsContext(int $elderlyProfileId, Carbon $windowStart): string
+    {
+        return HealthMetric::where('elderly_id', $elderlyProfileId)
+            ->where('measured_at', '>=', $windowStart)
+            ->orderBy('measured_at', 'desc')
+            ->get()
+            ->groupBy('type')
+            ->map(function ($records, $type) {
+                $latest = $records->first();
+                $value = $latest->value_text ?? $latest->value;
+                $unit = $latest->unit ? " {$latest->unit}" : '';
+
+                return "• {$type}: {$value}{$unit} (at " . Carbon::parse($latest->measured_at)->format('g:i A') . ")";
+            })->implode("\n");
+    }
+
+    private function buildMedicalInfoContext($profile): string
+    {
+        if (!$profile) {
+            return '';
+        }
+
+        $conditions = $this->formatListContext($profile->medical_conditions, 'None noted');
+        $allergies = $this->formatListContext($profile->allergies, 'None noted');
+
+        return "Medical conditions: {$conditions}\nAllergies: {$allergies}";
+    }
+
+    private function buildCaregiverMedicationContext(int $elderlyProfileId, Carbon $weekAgo, Carbon $today): string
+    {
+        $allLogs = MedicationLog::where('elderly_id', $elderlyProfileId)
+            ->whereBetween('scheduled_time', [$weekAgo, $today])
+            ->with('medication')
+            ->get();
+
+        $totalScheduled = $allLogs->count();
+        $totalTaken = $allLogs->where('is_taken', true)->count();
+        $adherenceRate = $totalScheduled > 0 ? round(($totalTaken / $totalScheduled) * 100, 1) : 0;
+        $missedMeds = $allLogs->where('is_taken', false)
+            ->map(function ($log) {
+                $medName = $log->medication->name ?? 'Unknown';
+                $time = Carbon::parse($log->scheduled_time)->format('M j, g:i A');
+
+                return "• {$medName} — missed at {$time}";
+            })->implode("\n");
+
+        return "Adherence Rate: {$adherenceRate}% ({$totalTaken}/{$totalScheduled} doses taken)\nMissed Doses:\n" . ($missedMeds ?: '• None');
+    }
+
+    private function buildCaregiverVitalsContext(int $elderlyProfileId, Carbon $weekAgo, Carbon $today): string
+    {
+        return HealthMetric::where('elderly_id', $elderlyProfileId)
+            ->whereBetween('measured_at', [$weekAgo, $today])
+            ->orderBy('measured_at', 'desc')
+            ->get()
+            ->groupBy('type')
+            ->map(function ($records, $type) {
+                $numericRecords = $records->filter(fn (HealthMetric $metric) => $metric->value !== null);
+                $latest = $records->first();
+                $latestVal = $latest->value_text ?? $latest->value;
+                $unit = $latest->unit ?? '';
+                $count = $records->count();
+                $avg = $numericRecords->isNotEmpty() ? round($numericRecords->avg('value'), 1) : 'n/a';
+                $min = $numericRecords->isNotEmpty() ? $numericRecords->min('value') : 'n/a';
+                $max = $numericRecords->isNotEmpty() ? $numericRecords->max('value') : 'n/a';
+
+                return "• {$type}: {$count} readings | Avg: {$avg} | Range: {$min}-{$max} | Latest: {$latestVal} {$unit}";
+            })->implode("\n");
+    }
+
+    private function buildCaregiverTaskContext(int $elderlyProfileId, Carbon $weekAgo, Carbon $today): string
+    {
+        $tasks = Checklist::where('elderly_id', $elderlyProfileId)
+            ->whereBetween('due_date', [$weekAgo, $today])
+            ->get();
+
+        $totalTasks = $tasks->count();
+        $completedTasks = $tasks->where('is_completed', true)->count();
+        $taskRate = $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100, 1) : 0;
+
+        return "Completion Rate: {$taskRate}% ({$completedTasks}/{$totalTasks} tasks)";
+    }
+
+    private function formatListContext(mixed $value, string $fallback): string
+    {
+        if (is_array($value)) {
+            return empty($value) ? $fallback : implode(', ', $value);
+        }
+
+        return blank($value) ? $fallback : (string) $value;
     }
 }

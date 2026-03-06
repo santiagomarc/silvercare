@@ -1,24 +1,8 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Notifications - SilverCare</title>
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="{{ asset('assets/icons/silvercare.png') }}">
-    <link rel="apple-touch-icon" href="{{ asset('assets/icons/silvercare.png') }}">
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<x-dashboard-layout>
+    <x-slot:title>Notifications - SilverCare</x-slot:title>
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-
+    @push('styles')
     <style>
-        body { font-family: 'Montserrat', sans-serif; }
-        
         .notification-item {
             transition: all 0.3s ease;
         }
@@ -53,48 +37,16 @@
             }
         }
     </style>
-</head>
-<body class="bg-[#EBEBEB] min-h-screen">
+    @endpush
 
-    <!-- NAV BAR -->
-    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-        <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-12 h-20 flex justify-between items-center">
-            <div class="flex items-center gap-4">
-                <a href="{{ route('dashboard') }}" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                    <img src="{{ asset('assets/icons/silvercare.png') }}" alt="SilverCare" class="w-10 h-10 object-contain">
-                    <h1 class="text-2xl font-[900] tracking-tight text-gray-900">SILVER<span class="text-[#000080]">CARE</span></h1>
-                </a>
-            </div>
-            
-            <div class="flex items-center gap-6">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#000080] font-[900] text-lg overflow-hidden">
-                        @if(Auth::user()->profile && Auth::user()->profile->profile_photo)
-                            <img src="{{ Storage::url(Auth::user()->profile->profile_photo) }}" alt="{{ Auth::user()->name }}" class="w-full h-full object-cover">
-                        @else
-                            {{ substr(Auth::user()->name, 0, 1) }}
-                        @endif
-                    </div>
-                    <div class="hidden sm:block">
-                        <p class="text-sm font-bold text-gray-900 leading-tight">{{ Auth::user()->name }}</p>
-                        <p class="text-xs text-gray-500 font-medium">Patient</p>
-                    </div>
-                </div>
-                <form method="POST" action="{{ route('logout') }}" class="ml-2">
-                    @csrf
-                    <button type="submit" class="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-bold text-sm transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                        </svg>
-                        <span class="hidden sm:inline">Logout</span>
-                    </button>
-                </form>
-            </div>
-        </div>
-    </nav>
+    <x-dashboard-nav
+        title="Notifications"
+        subtitle="Stay updated with your health reminders and activities"
+        role="elderly"
+        :unread-notifications="$unreadCount"
+    />
 
-    <!-- MAIN CONTENT -->
-    <main class="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-12 py-8">
+    <main id="main-content" class="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-12 py-8">
         
         <!-- Header Section -->
         <div class="mb-8">
@@ -236,12 +188,12 @@
                                         <!-- Actions -->
                                         <div class="flex items-center gap-2">
                                             @if(!$notification->is_read)
-                                                <button onclick="markAsRead({{ $notification->id }})" class="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                                                <button data-notification-id="{{ $notification->id }}" onclick="markAsRead(this.dataset.notificationId)" class="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1">
                                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                                                     Mark as Read
                                                 </button>
                                             @endif
-                                            <button onclick="deleteNotification({{ $notification->id }})" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1">
+                                            <button data-notification-id="{{ $notification->id }}" onclick="deleteNotification(this.dataset.notificationId)" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1">
                                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                                 Delete
                                             </button>
@@ -279,11 +231,10 @@
 
     </main>
 
-    <!-- JavaScript -->
+    @push('scripts')
     <script>
         const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;
 
-        // Mark single notification as read
         async function markAsRead(notificationId) {
             try {
                 const response = await fetch(`/notifications/${notificationId}/read`, {
@@ -296,21 +247,19 @@
                 });
 
                 const data = await response.json();
-                
+
                 if (data.success) {
                     const notificationEl = document.querySelector(`[data-id="${notificationId}"]`);
                     notificationEl.classList.remove('notification-unread');
                     notificationEl.classList.add('notification-read');
                     notificationEl.dataset.read = 'true';
-                    
-                    // Remove unread indicator
+
                     const unreadDot = notificationEl.querySelector('.bg-blue-500');
                     if (unreadDot) unreadDot.remove();
-                    
-                    // Remove mark as read button
+
                     const markButton = notificationEl.querySelector('button[onclick*="markAsRead"]');
                     if (markButton) markButton.remove();
-                    
+
                     updateCounts();
                     showToast('✓ Marked as read', 'success');
                 }
@@ -320,7 +269,6 @@
             }
         }
 
-        // Mark all as read
         async function markAllAsRead() {
             if (!confirm('Mark all notifications as read?')) return;
 
@@ -335,7 +283,7 @@
                 });
 
                 const data = await response.json();
-                
+
                 if (data.success) {
                     location.reload();
                 }
@@ -345,7 +293,6 @@
             }
         }
 
-        // Delete notification
         async function deleteNotification(notificationId) {
             if (!confirm('Delete this notification?')) return;
 
@@ -360,18 +307,18 @@
                 });
 
                 const data = await response.json();
-                
+
                 if (data.success) {
                     const notificationEl = document.querySelector(`[data-id="${notificationId}"]`);
                     notificationEl.style.transform = 'translateX(100%)';
                     notificationEl.style.opacity = '0';
-                    
+
                     setTimeout(() => {
                         notificationEl.remove();
                         updateCounts();
                         checkIfEmpty();
                     }, 300);
-                    
+
                     showToast('✓ Notification deleted', 'success');
                 }
             } catch (error) {
@@ -380,7 +327,6 @@
             }
         }
 
-        // Clear all notifications
         async function clearAllNotifications() {
             if (!confirm('Clear all notifications? This action cannot be undone.')) return;
 
@@ -395,7 +341,7 @@
                 });
 
                 const data = await response.json();
-                
+
                 if (data.success) {
                     location.reload();
                 }
@@ -405,16 +351,14 @@
             }
         }
 
-        // Update counts
         function updateCounts() {
             const unreadElements = document.querySelectorAll('[data-read="false"]');
             const unreadCount = unreadElements.length;
             const totalCount = document.querySelectorAll('.notification-item').length;
-            
+
             document.getElementById('unreadCount').textContent = unreadCount;
             document.getElementById('totalCount').textContent = totalCount;
-            
-            // Update badge
+
             const badge = document.querySelector('.badge-pulse');
             if (badge) {
                 if (unreadCount === 0) {
@@ -425,7 +369,6 @@
             }
         }
 
-        // Check if list is empty
         function checkIfEmpty() {
             const notifications = document.querySelectorAll('.notification-item');
             if (notifications.length === 0) {
@@ -433,7 +376,6 @@
             }
         }
 
-        // Toast notification
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
             const colors = {
@@ -441,16 +383,16 @@
                 error: 'bg-red-500',
                 info: 'bg-blue-500'
             };
-            
+
             toast.className = `fixed bottom-6 right-6 ${colors[type]} text-white px-6 py-3 rounded-xl shadow-lg font-bold text-sm z-50 transform translate-y-20 opacity-0 transition-all duration-300`;
             toast.textContent = message;
             document.body.appendChild(toast);
-            
+
             setTimeout(() => {
                 toast.style.transform = 'translateY(0)';
                 toast.style.opacity = '1';
             }, 10);
-            
+
             setTimeout(() => {
                 toast.style.transform = 'translateY(20px)';
                 toast.style.opacity = '0';
@@ -458,23 +400,21 @@
             }, 3000);
         }
 
-        // Auto-refresh unread count every 30 seconds
         setInterval(async () => {
             try {
                 const response = await fetch('/notifications/unread-count');
                 const data = await response.json();
-                
-                const currentCount = parseInt(document.getElementById('unreadCount').textContent);
+
+                const currentCount = parseInt(document.getElementById('unreadCount').textContent, 10);
                 if (data.count !== currentCount) {
-                    // New notifications arrived, reload page
                     location.reload();
                 }
             } catch (error) {
                 console.error('Error fetching unread count:', error);
             }
-        }, 30000); // Check every 30 seconds
+        }, 30000);
     </script>
+    @endpush
 
-<x-ai-chat-widget />
-</body>
-</html>
+    <x-ai-chat-widget />
+</x-dashboard-layout>

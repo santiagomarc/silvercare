@@ -3,13 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Models\Notification;
-use Illuminate\Http\Request;
+use App\Presenters\NotificationPresenter;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Auth;
 
 class NotificationController extends Controller
 {
+    public function __construct(protected NotificationService $notificationService)
+    {
+    }
+
     public function index()
     {
+        $this->authorize('viewAny', Notification::class);
+
         $user = Auth::user();
         $profile = $user->profile;
 
@@ -48,11 +55,9 @@ class NotificationController extends Controller
         ));
     }
 
-    public function markAsRead($id)
+    public function markAsRead(Notification $notification)
     {
-        $user = Auth::user();
-        $notification = Notification::where('elderly_id', $user->profile->id)
-            ->findOrFail($id);
+        $this->authorize('update', $notification);
 
         $notification->update(['is_read' => true]);
 
@@ -64,6 +69,8 @@ class NotificationController extends Controller
 
     public function markAllAsRead()
     {
+        $this->authorize('viewAny', Notification::class);
+
         $user = Auth::user();
         
         Notification::where('elderly_id', $user->profile->id)
@@ -76,11 +83,9 @@ class NotificationController extends Controller
         ]);
     }
 
-    public function delete($id)
+    public function delete(Notification $notification)
     {
-        $user = Auth::user();
-        $notification = Notification::where('elderly_id', $user->profile->id)
-            ->findOrFail($id);
+        $this->authorize('delete', $notification);
 
         $notification->delete();
 
@@ -92,6 +97,8 @@ class NotificationController extends Controller
 
     public function clearAll()
     {
+        $this->authorize('viewAny', Notification::class);
+
         $user = Auth::user();
         
         Notification::where('elderly_id', $user->profile->id)->delete();
@@ -105,6 +112,8 @@ class NotificationController extends Controller
     // API endpoint for real-time updates
     public function getUnreadCount()
     {
+        $this->authorize('viewAny', Notification::class);
+
         $user = Auth::user();
         
         $count = Notification::where('elderly_id', $user->profile->id)
@@ -117,13 +126,14 @@ class NotificationController extends Controller
     // API endpoint to fetch latest notifications
     public function getLatest()
     {
-        $user = Auth::user();
-        
-        $notifications = Notification::where('elderly_id', $user->profile->id)
-            ->orderBy('created_at', 'desc')
-            ->limit(5)
-            ->get();
+        $this->authorize('viewAny', Notification::class);
 
-        return response()->json(['notifications' => $notifications]);
+        $user = Auth::user();
+
+        $notifications = $this->notificationService->getNotificationsForElderly($user->profile->id, 5);
+
+        return response()->json([
+            'notifications' => NotificationPresenter::toElderlyFeed($notifications)->values(),
+        ]);
     }
 }

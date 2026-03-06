@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreCalendarEventRequest;
 use App\Models\CalendarEvent;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 
@@ -11,6 +11,8 @@ class CalendarController extends Controller
 {
     public function index()
     {
+        $this->authorize('viewAny', CalendarEvent::class);
+
         // Get events for the current user
         // Some environments may not yet have the `start_time` column
         // (migration not run or schema differs). Guard the query to
@@ -34,20 +36,13 @@ class CalendarController extends Controller
         return view('calendar.index', compact('events'));
     }
 
-    public function store(Request $request)
+    public function store(StoreCalendarEventRequest $request)
     {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'start_time' => 'required|date',
-            'type' => 'required|in:Reminder,Appointment,Event',
-        ]);
+        $this->authorize('create', CalendarEvent::class);
 
         CalendarEvent::create([
             'user_id' => Auth::id(),
-            'title' => $request->title,
-            'description' => $request->description,
-            'start_time' => $request->start_time,
-            'type' => $request->type,
+            ...$request->validated(),
         ]);
 
         return back()->with('success', 'Event added successfully');
@@ -55,10 +50,7 @@ class CalendarController extends Controller
 
     public function destroy(CalendarEvent $event)
     {
-        // Ensure user owns the event
-        if ($event->user_id !== Auth::id()) {
-            abort(403);
-        }
+        $this->authorize('delete', $event);
 
         $event->delete();
         return back()->with('success', 'Event deleted');

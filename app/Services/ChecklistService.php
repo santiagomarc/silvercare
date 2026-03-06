@@ -17,8 +17,12 @@ class ChecklistService
             'elderly_id' => $data['elderly_id'],
             'caregiver_id' => $data['caregiver_id'],
             'task' => $data['task'],
+            'description' => $data['description'] ?? null,
             'category' => $data['category'] ?? null,
             'due_date' => $data['due_date'] ?? null,
+            'due_time' => $data['due_time'] ?? null,
+            'priority' => $data['priority'] ?? null,
+            'notes' => $data['notes'] ?? null,
             'is_completed' => false,
         ]);
     }
@@ -30,11 +34,17 @@ class ChecklistService
     {
         $checklist->update([
             'task' => $data['task'] ?? $checklist->task,
+            'description' => $data['description'] ?? $checklist->description,
             'category' => $data['category'] ?? $checklist->category,
             'due_date' => $data['due_date'] ?? $checklist->due_date,
+            'due_time' => $data['due_time'] ?? $checklist->due_time,
+            'priority' => $data['priority'] ?? $checklist->priority,
+            'notes' => $data['notes'] ?? $checklist->notes,
+            'is_completed' => $data['is_completed'] ?? $checklist->is_completed,
+            'completed_at' => $data['completed_at'] ?? $checklist->completed_at,
         ]);
 
-        return $checklist->fresh();
+        return $checklist;
     }
 
     /**
@@ -48,7 +58,7 @@ class ChecklistService
             'completed_at' => Carbon::now(),
         ]);
 
-        return $checklist->fresh();
+        return $checklist;
     }
 
     /**
@@ -62,7 +72,7 @@ class ChecklistService
             'completed_at' => null,
         ]);
 
-        return $checklist->fresh();
+        return $checklist;
     }
 
     /**

@@ -1,42 +1,14 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>My Medications - SilverCare</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<x-dashboard-layout>
+    <x-slot:title>My Medications - SilverCare</x-slot:title>
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <x-dashboard-nav
+        title="My Medications"
+        subtitle="{{ $medications->count() }} active medications"
+        role="elderly"
+        :unread-notifications="$unreadNotifications"
+    />
 
-    <style>
-        body { font-family: 'Montserrat', sans-serif; }
-    </style>
-</head>
-<body class="antialiased bg-[#F5F5F5] min-h-screen">
-
-    <!-- Header -->
-    <div class="bg-white shadow-md sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <a href="{{ route('dashboard') }}" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                    <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                </a>
-                <div>
-                    <h1 class="text-xl font-[900] text-gray-900">My Medications</h1>
-                    <p class="text-xs text-gray-500 font-semibold">{{ $medications->count() }} active medications</p>
-                </div>
-            </div>
-            <div class="w-12 h-12 bg-[#000080] rounded-xl flex items-center justify-center">
-                <span class="text-white text-2xl">💊</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Content -->
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main id="main-content" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         @php
             $todayName = now()->format('l');
@@ -127,8 +99,7 @@
             </div>
         @endforelse
 
-    </div>
+    </main>
 
-<x-ai-chat-widget />
-</body>
-</html>
+    <x-ai-chat-widget />
+</x-dashboard-layout>

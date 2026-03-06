@@ -2,6 +2,7 @@
 
 namespace App\View\Components;
 
+use Carbon\Carbon;
 use Closure;
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
@@ -32,7 +33,7 @@ class MedicationList extends Component
             $times = $med->times_of_day ?? [];
             $this->totalDoses += count($times);
             foreach ($times as $t) {
-                $lk = $med->id . '_' . $t;
+                $lk = $med->id . '_' . Carbon::parse($t)->format('H:i');
                 if ($this->logs->get($lk)?->is_taken) {
                     $this->takenDoses++;
                 }

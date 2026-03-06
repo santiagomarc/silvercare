@@ -10,6 +10,7 @@ use App\Models\Medication;
 use App\Models\MedicationLog;
 use App\Models\Notification;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 
 class ElderlyDashboardService
 {
@@ -78,7 +79,7 @@ class ElderlyDashboardService
         $medicationLogs = MedicationLog::where('elderly_id', $elderlyId)
             ->whereDate('scheduled_time', Carbon::today())
             ->get()
-            ->keyBy(fn ($log) => $log->medication_id . '_' . $log->scheduled_time->format('H:i'));
+            ->keyBy(fn ($log) => $this->doseLogKey($log->medication_id, $log->scheduled_time));
 
         return compact('medications', 'todayMedications', 'medicationLogs');
     }
@@ -100,6 +101,7 @@ class ElderlyDashboardService
         $todayVitals = HealthMetric::where('elderly_id', $elderlyId)
             ->whereDate('measured_at', Carbon::today())
             ->get();
+        $vitalsByType = $todayVitals->sortByDesc('measured_at')->groupBy('type');
 
         $recordedVitalTypes = $todayVitals->pluck('type')->unique()->toArray();
 
@@ -109,7 +111,7 @@ class ElderlyDashboardService
 
         $vitalsData = [];
         foreach (self::REQUIRED_VITALS as $vitalType) {
-            $latestMetric = $todayVitals->where('type', $vitalType)->sortByDesc('measured_at')->first();
+            $latestMetric = $vitalsByType->get($vitalType)?->first();
             $vitalsData[$vitalType] = [
                 'recorded'   => $latestMetric !== null,
                 'value'      => $latestMetric?->value,
@@ -123,7 +125,7 @@ class ElderlyDashboardService
         return compact('todayVitals', 'recordedVitalTypes', 'totalRequiredVitals', 'completedVitals', 'vitalsProgress', 'vitalsData');
     }
 
-    private function getMedicationProgress($todayMedications, $medicationLogs): array
+    private function getMedicationProgress($todayMedications, Collection $medicationLogs): array
     {
         $total = 0;
         $taken = 0;
@@ -132,7 +134,7 @@ class ElderlyDashboardService
             $times = $med->times_of_day ?? [];
             $total += count($times);
             foreach ($times as $time) {
-                $logKey = $med->id . '_' . $time;
+                $logKey = $this->doseLogKey($med->id, $time);
                 if (isset($medicationLogs[$logKey]) && $medicationLogs[$logKey]->is_taken) {
                     $taken++;
                 }
@@ -226,5 +228,10 @@ class ElderlyDashboardService
         return Notification::where('elderly_id', $elderlyId)
             ->where('is_read', false)
             ->count();
+    }
+
+    private function doseLogKey(int $medicationId, mixed $time): string
+    {
+        return $medicationId . '_' . Carbon::parse($time)->format('H:i');
     }
 }

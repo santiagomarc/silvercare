@@ -3,16 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Models\Medication;
-use Illuminate\Http\Request;
+use App\Http\Requests\StoreMedicationRequest;
+use App\Http\Requests\UpdateMedicationRequest;
+use App\Services\MedicationService;
 use Illuminate\Support\Facades\Auth;
 
 class MedicationController extends Controller
 {
+    public function __construct(protected MedicationService $medicationService)
+    {
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
+        $this->authorize('viewAny', Medication::class);
+
         $caregiver = Auth::user()->profile;
         $elderly = $caregiver->elderly;
 
@@ -20,7 +28,7 @@ class MedicationController extends Controller
             return redirect()->route('caregiver.dashboard')->with('error', 'No elderly profile associated.');
         }
 
-        $medications = $elderly->trackedMedications()->orderBy('created_at', 'desc')->get();
+        $medications = $this->medicationService->getMedicationSchedulesForElderly($elderly->id);
 
         return view('caregiver.medications.index', compact('medications'));
     }
@@ -30,25 +38,17 @@ class MedicationController extends Controller
      */
     public function create()
     {
+        $this->authorize('create', Medication::class);
+
         return view('caregiver.medications.create');
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreMedicationRequest $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'dosage' => 'required|string|max:50',
-            'dosage_unit' => 'nullable|string|max:20',
-            'instructions' => 'nullable|string|max:1000',
-            'days_of_week' => 'required|array|min:1',
-            'days_of_week.*' => 'string|in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
-            'times_of_day' => 'required|array|min:1',
-            'times_of_day.*' => 'string|date_format:H:i',
-            'start_date' => 'nullable|date',
-        ]);
+        $this->authorize('create', Medication::class);
 
         $caregiver = Auth::user()->profile;
         $elderly = $caregiver->elderly;
@@ -57,20 +57,15 @@ class MedicationController extends Controller
             return redirect()->route('caregiver.dashboard')->with('error', 'No elderly profile associated.');
         }
 
-        Medication::create([
+        $this->medicationService->addMedicationSchedule([
             'elderly_id' => $elderly->id,
             'caregiver_id' => $caregiver->id,
-            'name' => $request->name,
-            'dosage' => $request->dosage,
-            'dosage_unit' => $request->dosage_unit ?? 'mg',
-            'instructions' => $request->instructions,
-            'days_of_week' => $request->days_of_week,
-            'times_of_day' => $request->times_of_day,
-            'start_date' => $request->start_date ?? now(),
+            ...$request->validated(),
+            'start_date' => $request->validated('start_date') ?? now(),
             'is_active' => true,
-            'track_inventory' => $request->has('track_inventory'),
-            'current_stock' => $request->current_stock ?? 0,
-            'low_stock_threshold' => $request->low_stock_threshold ?? 5,
+            'track_inventory' => $request->boolean('track_inventory'),
+            'current_stock' => $request->integer('current_stock'),
+            'low_stock_threshold' => $request->integer('low_stock_threshold') ?: 5,
         ]);
 
         return redirect()->route('caregiver.medications.index')->with('success', 'Medication added successfully.');
@@ -87,48 +82,25 @@ class MedicationController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function edit(Medication $medication)
     {
-        $medication = Medication::findOrFail($id);
-        // Ensure ownership
-        if ($medication->caregiver_id !== Auth::user()->profile->id) {
-            abort(403);
-        }
+        $this->authorize('update', $medication);
+
         return view('caregiver.medications.edit', compact('medication'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(UpdateMedicationRequest $request, Medication $medication)
     {
-        $medication = Medication::findOrFail($id);
-        
-        if ($medication->caregiver_id !== Auth::user()->profile->id) {
-            abort(403);
-        }
+        $this->authorize('update', $medication);
 
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'dosage' => 'required|string|max:50',
-            'dosage_unit' => 'nullable|string|max:20',
-            'instructions' => 'nullable|string|max:1000',
-            'days_of_week' => 'required|array|min:1',
-            'days_of_week.*' => 'string|in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
-            'times_of_day' => 'required|array|min:1',
-            'times_of_day.*' => 'string|date_format:H:i',
-        ]);
-
-        $medication->update([
-            'name' => $request->name,
-            'dosage' => $request->dosage,
-            'dosage_unit' => $request->dosage_unit ?? 'mg',
-            'instructions' => $request->instructions,
-            'days_of_week' => $request->days_of_week,
-            'times_of_day' => $request->times_of_day,
-            'track_inventory' => $request->has('track_inventory'),
-            'current_stock' => $request->current_stock,
-            'low_stock_threshold' => $request->low_stock_threshold ?? 5,
+        $this->medicationService->updateMedicationSchedule($medication, [
+            ...$request->validated(),
+            'track_inventory' => $request->boolean('track_inventory'),
+            'current_stock' => $request->integer('current_stock'),
+            'low_stock_threshold' => $request->integer('low_stock_threshold') ?: 5,
         ]);
 
         return redirect()->route('caregiver.medications.index')->with('success', 'Medication updated successfully.');
@@ -137,13 +109,12 @@ class MedicationController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Medication $medication)
     {
-        $medication = Medication::findOrFail($id);
-        if ($medication->caregiver_id !== Auth::user()->profile->id) {
-            abort(403);
-        }
-        $medication->delete();
+        $this->authorize('delete', $medication);
+
+        $this->medicationService->deleteMedicationSchedule($medication->id);
+
         return redirect()->route('caregiver.medications.index')->with('success', 'Medication deleted successfully.');
     }
 }

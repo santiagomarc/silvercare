@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\MedicationDoseRequest;
 use App\Models\Medication;
 use App\Models\MedicationLog;
 use App\Models\Checklist;
 use App\Models\HealthMetric;
-use App\Models\GoogleFitToken;
 use App\Services\ElderlyDashboardService;
 use App\Services\NotificationService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
@@ -56,6 +55,9 @@ class ElderlyDashboardController extends Controller
     {
         $user = Auth::user();
         $elderlyId = $user->profile?->id;
+        $unreadNotifications = $elderlyId
+            ? $this->unreadNotificationsCount($elderlyId)
+            : 0;
 
         $medications = collect();
         $medicationLogs = collect();
@@ -75,13 +77,16 @@ class ElderlyDashboardController extends Controller
                 });
         }
 
-        return view('elderly.medications', compact('medications', 'medicationLogs'));
+        return view('elderly.medications', compact('medications', 'medicationLogs', 'unreadNotifications'));
     }
 
     public function checklists()
     {
         $user = Auth::user();
         $elderlyId = $user->profile?->id;
+        $unreadNotifications = $elderlyId
+            ? $this->unreadNotificationsCount($elderlyId)
+            : 0;
 
         $checklists = collect();
         if ($elderlyId) {
@@ -97,7 +102,7 @@ class ElderlyDashboardController extends Controller
             return $item->due_date->format('Y-m-d');
         });
 
-        return view('elderly.checklists', compact('checklists', 'groupedChecklists'));
+        return view('elderly.checklists', compact('checklists', 'groupedChecklists', 'unreadNotifications'));
     }
 
     /**
@@ -105,19 +110,8 @@ class ElderlyDashboardController extends Controller
      */
     public function toggleChecklist(Checklist $checklist)
     {
-        $user = Auth::user();
-        $elderlyId = $user->profile?->id;
-
-        // Ensure the checklist belongs to this elderly
-        if ($checklist->elderly_id !== $elderlyId) {
-            if (request()->wantsJson() || request()->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized'
-                ], 403);
-            }
-            abort(403);
-        }
+        $elderlyId = Auth::user()->profile?->id;
+        $this->authorize('toggleCompletion', $checklist);
 
         $newStatus = !$checklist->is_completed;
         
@@ -151,27 +145,12 @@ class ElderlyDashboardController extends Controller
     /**
      * Mark a medication dose as taken
      */
-    public function takeMedication(Request $request, Medication $medication)
+    public function takeMedication(MedicationDoseRequest $request, Medication $medication)
     {
-        $user = Auth::user();
-        $elderlyId = $user->profile?->id;
+        $elderlyId = Auth::user()->profile?->id;
+        $this->authorize('take', $medication);
 
-        // Ensure the medication belongs to this elderly
-        if ($medication->elderly_id !== $elderlyId) {
-            if (request()->wantsJson() || request()->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized'
-                ], 403);
-            }
-            abort(403);
-        }
-
-        $request->validate([
-            'time' => 'required|string', // Format: HH:mm
-        ]);
-
-        $scheduledTime = $request->input('time');
+        $scheduledTime = $request->validated('time');
         $now = Carbon::now();
         $today = Carbon::today();
 
@@ -206,8 +185,6 @@ class ElderlyDashboardController extends Controller
         }
 
         // Create or update the medication log
-        $logKey = $medication->id . '_' . $scheduledTime;
-        
         $log = MedicationLog::updateOrCreate(
             [
                 'elderly_id' => $elderlyId,
@@ -240,27 +217,12 @@ class ElderlyDashboardController extends Controller
     /**
      * Undo a medication dose
      */
-    public function undoMedication(Request $request, Medication $medication)
+    public function undoMedication(MedicationDoseRequest $request, Medication $medication)
     {
-        $user = Auth::user();
-        $elderlyId = $user->profile?->id;
+        $elderlyId = Auth::user()->profile?->id;
+        $this->authorize('take', $medication);
 
-        // Ensure the medication belongs to this elderly
-        if ($medication->elderly_id !== $elderlyId) {
-            if (request()->wantsJson() || request()->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized'
-                ], 403);
-            }
-            abort(403);
-        }
-
-        $request->validate([
-            'time' => 'required|string', // Format: HH:mm
-        ]);
-
-        $scheduledTime = $request->input('time');
+        $scheduledTime = $request->validated('time');
         $now = Carbon::now();
         $today = Carbon::today();
         $scheduledDateTime = Carbon::parse($today->format('Y-m-d') . ' ' . $scheduledTime);
@@ -322,5 +284,12 @@ class ElderlyDashboardController extends Controller
             'window_end' => $windowEnd,
             'scheduled_time' => $scheduledDateTime,
         ];
+    }
+
+    private function unreadNotificationsCount(int $elderlyId): int
+    {
+        return \App\Models\Notification::where('elderly_id', $elderlyId)
+            ->where('is_read', false)
+            ->count();
     }
 }

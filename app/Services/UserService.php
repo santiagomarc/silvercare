@@ -51,7 +51,7 @@ class UserService
             'profile_completed' => $data['profile_completed'] ?? true,
         ]);
 
-        return $profile->fresh();
+        return $profile;
     }
 
     /**
@@ -65,7 +65,7 @@ class UserService
             'profile_completed' => $data['profile_completed'] ?? true,
         ]);
 
-        return $profile->fresh();
+        return $profile;
     }
 
     /**

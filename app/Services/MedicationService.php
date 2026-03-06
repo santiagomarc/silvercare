@@ -21,6 +21,7 @@ class MedicationService
             'caregiver_id' => $data['caregiver_id'],
             'name' => $data['name'],
             'dosage' => $data['dosage'],
+            'dosage_unit' => $data['dosage_unit'] ?? 'mg',
             'instructions' => $data['instructions'] ?? null,
             'days_of_week' => $data['days_of_week'] ?? null, // [1,3,5] for Mon,Wed,Fri
             'specific_dates' => $data['specific_dates'] ?? null, // ['2025-12-25'] for one-time
@@ -28,6 +29,9 @@ class MedicationService
             'start_date' => $data['start_date'],
             'end_date' => $data['end_date'] ?? null,
             'is_active' => $data['is_active'] ?? true,
+            'track_inventory' => $data['track_inventory'] ?? false,
+            'current_stock' => $data['current_stock'] ?? 0,
+            'low_stock_threshold' => $data['low_stock_threshold'] ?? 5,
         ]);
     }
 
@@ -39,6 +43,7 @@ class MedicationService
         $medication->update([
             'name' => $data['name'] ?? $medication->name,
             'dosage' => $data['dosage'] ?? $medication->dosage,
+            'dosage_unit' => $data['dosage_unit'] ?? $medication->dosage_unit,
             'instructions' => $data['instructions'] ?? $medication->instructions,
             'days_of_week' => $data['days_of_week'] ?? $medication->days_of_week,
             'specific_dates' => $data['specific_dates'] ?? $medication->specific_dates,
@@ -46,9 +51,12 @@ class MedicationService
             'start_date' => $data['start_date'] ?? $medication->start_date,
             'end_date' => $data['end_date'] ?? $medication->end_date,
             'is_active' => $data['is_active'] ?? $medication->is_active,
+            'track_inventory' => $data['track_inventory'] ?? $medication->track_inventory,
+            'current_stock' => $data['current_stock'] ?? $medication->current_stock,
+            'low_stock_threshold' => $data['low_stock_threshold'] ?? $medication->low_stock_threshold,
         ]);
 
-        return $medication->fresh();
+        return $medication;
     }
 
     /**
@@ -81,11 +89,12 @@ class MedicationService
     /**
      * Get medication schedules for elderly (caregiver view)
      */
-    public function getMedicationSchedulesForElderly(int $elderlyProfileId): Collection
+    public function getMedicationSchedulesForElderly(int $elderlyProfileId, int $limit = 100): Collection
     {
         return Medication::where('elderly_id', $elderlyProfileId)
             ->with(['elderly', 'caregiver'])
             ->orderBy('created_at', 'desc')
+            ->limit($limit)
             ->get();
     }
 

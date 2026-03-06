@@ -4,6 +4,7 @@ namespace App\Presenters;
 
 use App\Models\Notification;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 
 class NotificationPresenter
 {
@@ -30,6 +31,20 @@ class NotificationPresenter
             'icon'      => static::CONFIG[$n->type]['icon']  ?? '🔔',
             'color'     => static::CONFIG[$n->type]['color'] ?? 'gray',
             'severity'  => $n->severity,
+        ]);
+    }
+
+    public static function toElderlyFeed($notifications): Collection
+    {
+        return $notifications->map(fn (Notification $notification) => [
+            'id' => $notification->id,
+            'type' => $notification->type,
+            'title' => $notification->title,
+            'message' => $notification->message,
+            'severity' => $notification->severity,
+            'is_read' => $notification->is_read,
+            'relative_time' => $notification->created_at->diffForHumans(),
+            'timestamp' => $notification->created_at->toISOString(),
         ]);
     }
 
