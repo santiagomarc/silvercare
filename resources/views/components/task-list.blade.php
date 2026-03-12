@@ -4,12 +4,13 @@
      ============================================================ --}}
 
 <div x-data="checklistTracker({{ $completedCount }}, {{ $totalCount }})"
-     class="bg-blue-50 rounded-card p-6 shadow-lg border border-blue-200 relative overflow-hidden"
+    class="surface-sky relative overflow-hidden p-6"
      role="region"
      aria-label="Today's tasks">
 
     {{-- Background decoration --}}
-    <div class="absolute -bottom-8 -right-8 w-32 h-32 bg-blue-100 rounded-full opacity-50" aria-hidden="true"></div>
+    <div class="ambient-orb -bottom-10 -right-6 h-36 w-36 bg-blue-200/45" aria-hidden="true"></div>
+    <div class="ambient-orb left-10 top-4 h-16 w-16 bg-white/40 blur-2xl" aria-hidden="true"></div>
 
     <div class="relative z-10">
         <div class="flex justify-between items-center mb-4">
@@ -44,7 +45,7 @@
 
             @forelse($checklists->take(5) as $checklist)
                 <div x-data="{ expanded: false }"
-                     class="checklist-item flex items-start gap-3 p-3 rounded-xl border transition-all duration-300 {{ $checklist->is_completed ? 'bg-green-50/50 border-green-200 opacity-75' : 'bg-white border-gray-100 hover:border-green-200 hover:bg-green-50/30' }}"
+                     class="checklist-item flex items-start gap-3 p-3 rounded-xl border transition-all duration-300 backdrop-blur-sm {{ $checklist->is_completed ? 'bg-green-50/75 border-green-200 opacity-75' : 'bg-white/75 border-white/70 hover:border-green-200 hover:bg-green-50/40' }}"
                      data-id="{{ $checklist->id }}"
                      data-completed="{{ $checklist->is_completed ? 'true' : 'false' }}">
 

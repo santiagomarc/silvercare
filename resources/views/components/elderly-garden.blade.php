@@ -18,12 +18,13 @@
         { done: {{ $takenMedicationDoses }}, total: {{ $totalMedicationDoses }} },
         { done: {{ $completedVitals }}, total: {{ $totalRequiredVitals }} }
     )"
-    class="bg-gradient-to-br from-green-50 to-emerald-100 rounded-card p-5 shadow-md border border-emerald-200 relative overflow-hidden"
+    class="surface-mint relative overflow-hidden p-5"
     role="region"
     aria-label="Garden of Wellness progress"
 >
     {{-- Decorative sun --}}
-    <div class="absolute top-0 right-0 w-14 h-14 bg-yellow-300 rounded-full blur-xl opacity-20 animate-pulse-gentle" aria-hidden="true"></div>
+    <div class="absolute right-1 top-0 h-16 w-16 rounded-full bg-yellow-300/55 blur-xl opacity-30 animate-pulse-gentle" aria-hidden="true"></div>
+    <div class="ambient-orb -left-6 bottom-0 h-24 w-24 bg-emerald-200/35 blur-2xl" aria-hidden="true"></div>
 
     <div class="flex items-center justify-between mb-3 relative z-10">
         <h3 class="font-extrabold text-base text-emerald-900">🌱 Your Garden</h3>
@@ -91,19 +92,19 @@
 
     {{-- Metrics row --}}
     <div class="grid grid-cols-3 gap-2 text-center mt-3">
-        <div class="bg-white/60 rounded-xl py-2 px-2">
+        <div class="surface-accent rounded-xl px-2 py-2">
             <div class="text-xs text-gray-500 font-bold">Tasks</div>
             <div class="font-extrabold text-sm text-emerald-800">
                 <span x-text="checklists.done"></span>/<span x-text="checklists.total"></span>
             </div>
         </div>
-        <div class="bg-white/60 rounded-xl py-2 px-2">
+        <div class="surface-accent rounded-xl px-2 py-2">
             <div class="text-xs text-gray-500 font-bold">Meds</div>
             <div class="font-extrabold text-sm text-emerald-800">
                 <span x-text="meds.done"></span>/<span x-text="meds.total"></span>
             </div>
         </div>
-        <div class="bg-white/60 rounded-xl py-2 px-2">
+        <div class="surface-accent rounded-xl px-2 py-2">
             <div class="text-xs text-gray-500 font-bold">Vitals</div>
             <div class="font-extrabold text-sm text-emerald-800">
                 <span x-text="vitals.done"></span>/<span x-text="vitals.total"></span>

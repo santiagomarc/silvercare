@@ -16,13 +16,13 @@
 
 <div
     x-data="googleFitSync()"
-    class="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-card p-6 shadow-lg text-white relative overflow-hidden"
+    class="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-card p-6 text-white relative overflow-hidden shadow-[0_30px_55px_-30px_rgba(5,150,105,0.62)]"
     role="region"
     aria-label="Steps progress"
 >
     {{-- Decorative circles --}}
-    <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16" aria-hidden="true"></div>
-    <div class="absolute bottom-0 left-0 w-20 h-20 bg-white/5 rounded-full -ml-10 -mb-10" aria-hidden="true"></div>
+    <div class="absolute top-0 right-0 h-36 w-36 rounded-full bg-white/10 -mr-16 -mt-16 blur-sm" aria-hidden="true"></div>
+    <div class="absolute bottom-0 left-0 h-24 w-24 rounded-full bg-white/5 -ml-10 -mb-10 blur-sm" aria-hidden="true"></div>
 
     <div class="relative z-10">
         <div class="flex justify-between items-start mb-4">
@@ -56,7 +56,7 @@
 
         {{-- Progress Bar --}}
         <div class="progress-track bg-white/20">
-            <div class="progress-fill bg-white" style="width: {{ $progress }}%"></div>
+            <div class="progress-fill bg-white" @style(['width: ' . $progress . '%'])></div>
         </div>
 
         <div class="flex justify-between items-center mt-3 text-sm">

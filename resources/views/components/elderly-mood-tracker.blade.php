@@ -7,10 +7,12 @@
 
 <div
     x-data="moodTracker({{ $initialMood }})"
-    class="bg-gradient-to-br from-amber-50 to-orange-100 rounded-card p-6 shadow-md border border-amber-200"
+    class="surface-warm relative overflow-hidden p-6"
     role="region"
     aria-label="Mood tracker"
 >
+    <div class="ambient-orb -right-8 top-0 h-28 w-28 bg-amber-200/45"></div>
+    <div class="ambient-orb -bottom-8 left-8 h-24 w-24 bg-rose-200/30 blur-2xl"></div>
     <div class="flex flex-col sm:flex-row items-center gap-5">
         {{-- Emoji display --}}
         <div class="flex flex-col items-center justify-center w-28 flex-shrink-0">

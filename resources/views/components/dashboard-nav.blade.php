@@ -27,7 +27,7 @@
     $roleLabel = $isCaregiver ? 'Caregiver' : 'Patient';
 @endphp
 
-<nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
+<nav class="sticky top-0 z-50 border-b border-white/60 bg-white/70 backdrop-blur-xl shadow-[0_18px_40px_-32px_rgba(15,23,42,0.42)]">
     <div class="max-w-[1600px] mx-auto px-6 lg:px-12 h-16 flex justify-between items-center">
 
         {{-- Left Side: Logo + Title --}}
@@ -48,7 +48,7 @@
 
             {{-- Notifications Bell (Elderly Only) --}}
             @if(!$isCaregiver)
-                <a href="{{ route('elderly.notifications.index') }}" class="relative p-2 hover:bg-gray-50 rounded-xl transition-all group" title="Notifications">
+                <a href="{{ route('elderly.notifications.index') }}" class="relative rounded-xl border border-transparent p-2 transition-all group hover:border-white/70 hover:bg-white/60" title="Notifications">
                     <svg class="w-6 h-6 text-gray-600 group-hover:text-[#000080] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                     </svg>
@@ -61,7 +61,7 @@
             @endif
 
             {{-- Profile Link --}}
-            <a href="{{ route('profile.edit') }}" class="flex items-center gap-2 group hover:bg-gray-50 rounded-xl py-1.5 px-2 transition-all cursor-pointer" title="Manage Profile">
+            <a href="{{ route('profile.edit') }}" class="flex cursor-pointer items-center gap-2 rounded-xl border border-transparent px-2 py-1.5 transition-all group hover:border-white/70 hover:bg-white/60" title="Manage Profile">
                 <div class="relative">
                     <div class="w-9 h-9 rounded-full {{ $profileBgColor }} font-[900] text-base group-hover:text-white transition-colors overflow-hidden flex items-center justify-center">
                         @if(Auth::user()->profile && Auth::user()->profile->profile_photo)

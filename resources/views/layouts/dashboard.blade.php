@@ -24,7 +24,7 @@
     <!-- Page-Specific Head Scripts (e.g., Chart.js) -->
     @stack('head-scripts')
 </head>
-<body class="{{ $bodyClass ?? 'bg-[#EBEBEB] min-h-screen' }}" style="font-family: 'Montserrat', sans-serif;">
+<body class="{{ $bodyClass ?? 'bg-gradient-to-br from-slate-100 via-sky-50 to-rose-50 min-h-screen' }}" style="font-family: 'Montserrat', sans-serif;">
 
     {{-- Skip navigation link for keyboard/screen-reader users --}}
     <a href="#main-content" class="skip-nav">Skip to main content</a>

@@ -3,7 +3,17 @@
      Clicking dispatches 'open-vital-modal' for recording.
      ============================================================ --}}
 
-<div class="vital-card card p-6 h-48 flex flex-col justify-between group cursor-pointer transition-all hover:shadow-lg"
+@php
+    $surfaceTint = match ($type) {
+        'blood_pressure' => 'from-red-100/95 via-white/90 to-rose-100/75',
+        'sugar_level' => 'from-blue-100/95 via-white/90 to-cyan-100/75',
+        'temperature' => 'from-orange-100/95 via-white/90 to-amber-100/75',
+        'heart_rate' => 'from-rose-100/95 via-white/90 to-pink-100/75',
+        default => 'from-slate-100/95 via-white/90 to-slate-100/75',
+    };
+@endphp
+
+<div class="vital-card card-glass border-l-4 {{ $border }} p-6 h-48 flex flex-col justify-between group cursor-pointer transition-all hover:-translate-y-1 hover:shadow-[0_28px_50px_-30px_rgba(15,23,42,0.38)]"
      @click="$dispatch('open-vital-modal', { type: '{{ $type }}' })"
      role="button"
      tabindex="0"
@@ -11,8 +21,11 @@
      aria-label="{{ ($data['recorded'] ?? false) ? 'Re-record ' . $title : 'Record ' . $title }}"
      data-type="{{ $type }}">
 
-    <div class="flex justify-between items-start">
-        <div class="w-12 h-12 {{ $bg }} rounded-2xl flex items-center justify-center {{ $color }} group-hover:scale-110 transition-transform">
+    <div class="absolute inset-x-0 top-0 h-24 bg-gradient-to-br {{ $surfaceTint }} opacity-90" aria-hidden="true"></div>
+    <div class="absolute -right-8 top-0 h-24 w-24 rounded-full {{ $bg }} opacity-70 blur-2xl" aria-hidden="true"></div>
+
+    <div class="relative z-10 flex justify-between items-start">
+        <div class="w-12 h-12 {{ $bg }} rounded-2xl flex items-center justify-center {{ $color }} group-hover:scale-110 transition-transform shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
             {!! $icon !!}
         </div>
         <div class="flex items-center gap-1.5">
@@ -33,7 +46,7 @@
         </div>
     </div>
 
-    <div>
+    <div class="relative z-10">
         <h4 class="font-extrabold text-gray-500 text-sm uppercase tracking-wide mb-1">{{ $title }}</h4>
 
         @if($data['recorded'] ?? false)

@@ -7,8 +7,8 @@
      aria-label="Next action: {{ $headline }}">
 
     {{-- Decorative blurs --}}
-    <div class="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 rounded-full bg-white/20 blur-2xl"></div>
-    <div class="absolute bottom-0 left-0 -mb-6 -ml-6 w-20 h-20 rounded-full bg-black/10 blur-xl"></div>
+    <div class="absolute top-0 right-0 -mt-10 -mr-8 h-36 w-36 rounded-full bg-white/20 blur-3xl"></div>
+    <div class="absolute bottom-0 left-0 -mb-8 -ml-8 h-24 w-24 rounded-full bg-black/15 blur-2xl"></div>
 
     <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         {{-- Left: Icon + Text --}}
@@ -45,7 +45,7 @@
             <span class="text-white font-extrabold text-sm">{{ $overallProgress }}%</span>
         </div>
         <div class="progress-track bg-white/20">
-            <div class="progress-fill bg-white" style="width: {{ $overallProgress }}%"></div>
+            <div class="progress-fill bg-white" @style(['width: ' . $overallProgress . '%'])></div>
         </div>
     </div>
 </div>

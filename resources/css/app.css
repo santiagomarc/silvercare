@@ -44,15 +44,64 @@
 
     /* Card — standard surface container */
     .card {
-        @apply bg-white rounded-card shadow-md border border-gray-100;
+        @apply bg-white/90 backdrop-blur-md rounded-card border border-white/70;
+        box-shadow: 0 18px 40px -24px rgba(15, 23, 42, 0.35), 0 12px 24px -20px rgba(59, 130, 246, 0.22);
+    }
+
+    .card-glass {
+        @apply rounded-card border border-white/70 bg-white/80 backdrop-blur-xl;
+        box-shadow: 0 22px 44px -28px rgba(15, 23, 42, 0.34), 0 16px 28px -24px rgba(99, 102, 241, 0.22);
+    }
+
+    .surface-warm {
+        @apply rounded-card border border-amber-100/80 bg-gradient-to-br from-amber-50/95 via-orange-50/90 to-rose-50/90 backdrop-blur-md;
+        box-shadow: 0 24px 50px -32px rgba(251, 146, 60, 0.45), 0 20px 28px -24px rgba(244, 63, 94, 0.2);
+    }
+
+    .surface-sky {
+        @apply rounded-card border border-sky-100/80 bg-gradient-to-br from-sky-50/95 via-blue-50/90 to-indigo-100/80 backdrop-blur-md;
+        box-shadow: 0 24px 50px -32px rgba(59, 130, 246, 0.34), 0 18px 26px -24px rgba(99, 102, 241, 0.24);
+    }
+
+    .surface-mint {
+        @apply rounded-card border border-emerald-100/80 bg-gradient-to-br from-emerald-50/95 via-green-50/90 to-teal-100/80 backdrop-blur-md;
+        box-shadow: 0 24px 50px -32px rgba(16, 185, 129, 0.32), 0 18px 26px -24px rgba(20, 184, 166, 0.22);
+    }
+
+    .surface-accent {
+        @apply rounded-card border border-white/20 bg-white/15 backdrop-blur-md;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 24px 48px -30px rgba(15, 23, 42, 0.45);
+    }
+
+    .panel-shell {
+        @apply relative overflow-hidden rounded-[2rem] border border-white/70 backdrop-blur-xl;
+        box-shadow: 0 28px 60px -36px rgba(15, 23, 42, 0.36), 0 20px 32px -28px rgba(59, 130, 246, 0.16);
+    }
+
+    .panel-shell-today {
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(255, 251, 235, 0.62) 42%, rgba(239, 246, 255, 0.68));
+    }
+
+    .panel-shell-health {
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.76), rgba(224, 242, 254, 0.76) 44%, rgba(224, 231, 255, 0.68));
+    }
+
+    .panel-shell-activity {
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.76), rgba(254, 242, 242, 0.7) 38%, rgba(238, 242, 255, 0.7));
+    }
+
+    .shadow-depth {
+        box-shadow: 0 26px 52px -32px rgba(15, 23, 42, 0.38), 0 18px 32px -26px rgba(79, 70, 229, 0.2);
     }
 
     /* Card with gradient (action buttons, hero cards) */
     .card-gradient {
-        @apply rounded-card shadow-lg relative overflow-hidden transition-all duration-300;
+        @apply rounded-card relative overflow-hidden transition-all duration-300;
+        box-shadow: 0 28px 56px -32px rgba(15, 23, 42, 0.42), 0 18px 30px -24px rgba(255, 255, 255, 0.1);
     }
     .card-gradient:hover {
-        @apply shadow-xl -translate-y-0.5;
+        transform: translateY(-4px) scale(1.01);
+        box-shadow: 0 34px 64px -34px rgba(15, 23, 42, 0.46), 0 22px 34px -24px rgba(255, 255, 255, 0.16);
     }
 
     /* Badge — small status indicator */
@@ -76,18 +125,20 @@
 
     /* Tab bar (elderly dashboard) */
     .tab-bar {
-        @apply flex bg-gray-100 rounded-2xl p-1.5 gap-1;
+        @apply flex rounded-2xl p-1.5 gap-1 border border-white/70 bg-white/50 backdrop-blur-lg;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 18px 38px -30px rgba(15, 23, 42, 0.25);
     }
     .tab-btn {
-        @apply flex-1 py-3 px-4 rounded-xl text-sm font-bold text-gray-500
+        @apply flex-1 py-3 px-4 rounded-xl text-sm font-bold text-slate-500
                transition-all duration-200 text-center cursor-pointer
                min-h-touch flex items-center justify-center gap-2;
     }
     .tab-btn:hover {
-        @apply text-gray-700 bg-gray-50;
+        @apply text-slate-700 bg-white/55;
     }
     .tab-btn[aria-selected="true"] {
-        @apply bg-white text-navy shadow-sm;
+        @apply bg-white/90 text-navy;
+        box-shadow: 0 14px 28px -20px rgba(37, 99, 235, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.8);
     }
 
     /* Medication dose states */
@@ -120,6 +171,10 @@
     .hero-action {
         @apply card-gradient p-6 md:p-8 text-white min-h-[140px]
                flex flex-col justify-between;
+    }
+
+    .ambient-orb {
+        @apply absolute rounded-full blur-3xl pointer-events-none;
     }
 }
 

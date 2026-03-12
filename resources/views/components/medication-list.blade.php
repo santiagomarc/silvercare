@@ -4,11 +4,14 @@
      ============================================================ --}}
 
 <div x-data="medicationTracker({{ $takenDoses }}, {{ $totalDoses }})"
-     class="bg-gradient-to-br from-green-500 to-green-600 rounded-card p-6 shadow-lg text-white flex flex-col"
+    class="bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 rounded-card p-6 text-white flex flex-col relative overflow-hidden shadow-[0_30px_55px_-30px_rgba(5,150,105,0.62)]"
      role="region"
      aria-label="Today's medications">
 
-    <div class="flex justify-between items-center mb-2">
+    <div class="ambient-orb -right-10 -top-8 h-32 w-32 bg-white/15"></div>
+    <div class="ambient-orb -bottom-10 left-0 h-24 w-24 bg-emerald-900/15 blur-2xl"></div>
+
+    <div class="relative z-10 flex justify-between items-center mb-2">
         <div>
             <h3 class="font-extrabold text-lg">Today's Medications</h3>
             <p class="text-white/70 text-xs font-medium">
@@ -23,11 +26,11 @@
     </div>
 
     {{-- Progress Bar --}}
-    <div class="progress-track bg-white/20 mb-4">
+    <div class="relative z-10 progress-track bg-white/20 mb-4">
         <div class="progress-fill bg-white" :style="'width:' + progress + '%'"></div>
     </div>
 
-    <div class="overflow-y-auto no-scrollbar space-y-2">
+    <div class="relative z-10 overflow-y-auto no-scrollbar space-y-2">
         @forelse($medications as $medication)
             @php
                 $medTimes = $medication->times_of_day ?? [];
@@ -39,7 +42,8 @@
                     $status = \App\Presenters\MedicationPresenter::getDoseStatus($time, $log);
                 @endphp
                 <div x-data="{ expanded: false }"
-                     class="medication-entry rounded-xl p-3 border-2 transition-all duration-300 cursor-pointer hover:shadow-md active:scale-[0.98] {{ $status['bg'] }} {{ $status['isTaken'] ? 'opacity-75' : '' }}"
+                     class="medication-entry rounded-xl border p-3 transition-all duration-300 cursor-pointer active:scale-[0.98] hover:shadow-lg backdrop-blur-sm {{ $status['bg'] }} {{ $status['isTaken'] ? 'opacity-75' : '' }}"
+                     style="box-shadow: inset 0 1px 0 rgba(255,255,255,0.35);"
                      data-medication-id="{{ $medication->id }}"
                      data-time="{{ $time }}"
                      data-taken="{{ $status['isTaken'] ? 'true' : 'false' }}"

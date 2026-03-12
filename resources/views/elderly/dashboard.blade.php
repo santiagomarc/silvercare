@@ -8,11 +8,13 @@
 
 <x-dashboard-layout>
     <x-slot:title>Dashboard - SilverCare</x-slot:title>
+    <x-slot:bodyClass>min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.92),_rgba(240,249,255,0.88)_22%,_rgba(224,242,254,0.76)_48%,_rgba(254,242,242,0.82)_100%)]</x-slot:bodyClass>
 
     @push('styles')
     <style>
         /* Range slider styling (mood tracker) */
         input[type=range] {
+            appearance: none;
             -webkit-appearance: none;
             background: transparent;
         }
@@ -51,9 +53,13 @@
     {{-- ══════════════════════════════════════════════════════════
          MAIN CONTENT — wrapped in dashboardTabs Alpine component
          ══════════════════════════════════════════════════════════ --}}
-    <main id="main-content"
-          class="max-w-[1600px] mx-auto px-6 lg:px-12 py-5"
+        <main id="main-content"
+                    class="relative max-w-[1600px] mx-auto px-6 lg:px-12 py-5"
           x-data="dashboardTabs('today')">
+
+                <div class="ambient-orb -left-24 top-20 h-80 w-80 bg-sky-300/40"></div>
+                <div class="ambient-orb right-0 top-32 h-64 w-64 bg-rose-300/30"></div>
+                <div class="ambient-orb bottom-10 left-1/3 h-56 w-56 bg-amber-300/25"></div>
 
         <x-flash-messages />
 
@@ -78,6 +84,7 @@
              Tasks, medications, mood, and garden progress.
              ═══════════════════════════════════════════════════════ --}}
         <div x-show="isActive('today')"
+             class="panel-shell panel-shell-today p-4 md:p-5"
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0 translate-y-2"
              x-transition:enter-end="opacity-100 translate-y-0"
@@ -85,7 +92,10 @@
              role="tabpanel"
              aria-labelledby="tab-today">
 
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="ambient-orb -right-6 -top-6 h-36 w-36 bg-amber-200/35"></div>
+            <div class="ambient-orb -left-8 bottom-0 h-32 w-32 bg-sky-200/25"></div>
+
+            <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6">
 
                 {{-- LEFT COLUMN: Mood + Medications --}}
                 <div class="lg:col-span-7 space-y-6">
@@ -123,6 +133,7 @@
              Vital cards, Google Fit steps.
              ═══════════════════════════════════════════════════════ --}}
         <div x-show="isActive('health')"
+             class="panel-shell panel-shell-health p-4 md:p-5"
              x-cloak
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0 translate-y-2"
@@ -131,27 +142,30 @@
              role="tabpanel"
              aria-labelledby="tab-health">
 
+            <div class="ambient-orb right-2 top-2 h-36 w-36 bg-sky-200/30"></div>
+            <div class="ambient-orb left-10 bottom-0 h-28 w-28 bg-indigo-200/25"></div>
+
             {{-- Health Vitals Header --}}
-            <div class="flex justify-between items-center mb-5">
+            <div class="relative z-10 flex justify-between items-center mb-5 rounded-[1.5rem] border border-white/70 bg-white/55 px-5 py-4 backdrop-blur-md shadow-[0_18px_40px_-32px_rgba(15,23,42,0.32)]">
                 <div>
                     <h3 class="font-extrabold text-xl text-gray-900">Health Vitals</h3>
                     <p class="text-sm text-gray-500 font-medium">Record and track your daily vitals</p>
                 </div>
                 <div class="flex items-center gap-2">
                     @if($googleFitConnected)
-                        <span class="badge badge-success text-xs">
+                        <span class="badge badge-success text-xs shadow-[0_14px_24px_-20px_rgba(34,197,94,0.8)]">
                             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/></svg>
                             Google Fit Connected
                         </span>
                     @endif
-                    <span class="badge badge-neutral text-xs">
+                    <span class="badge text-xs border border-white/80 bg-white/75 text-slate-600 shadow-[0_16px_28px_-22px_rgba(15,23,42,0.35)]">
                         {{ $completedVitals }}/{{ $totalRequiredVitals }} recorded
                     </span>
                 </div>
             </div>
 
             {{-- Vital Cards Grid --}}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 mt-5">
                 <x-vital-card type="blood_pressure" :data="$vitalsData['blood_pressure'] ?? null" />
                 <x-vital-card type="sugar_level" :data="$vitalsData['sugar_level'] ?? null" />
                 <x-vital-card type="temperature" :data="$vitalsData['temperature'] ?? null" />
@@ -159,10 +173,12 @@
             </div>
 
             {{-- Steps Progress --}}
-            <x-elderly-steps-card
-                :steps-data="$stepsData"
-                :google-fit-connected="$googleFitConnected"
-            />
+            <div class="relative z-10">
+                <x-elderly-steps-card
+                    :steps-data="$stepsData"
+                    :google-fit-connected="$googleFitConnected"
+                />
+            </div>
         </div>
 
         {{-- ═══════════════════════════════════════════════════════
@@ -170,6 +186,7 @@
              Quick-link action cards + upcoming events.
              ═══════════════════════════════════════════════════════ --}}
         <div x-show="isActive('activity')"
+             class="panel-shell panel-shell-activity p-4 md:p-5"
              x-cloak
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0 translate-y-2"
@@ -178,11 +195,14 @@
              role="tabpanel"
              aria-labelledby="tab-activity">
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="ambient-orb right-0 top-0 h-40 w-40 bg-rose-200/30"></div>
+            <div class="ambient-orb left-12 bottom-0 h-32 w-32 bg-indigo-200/25"></div>
+
+            <div class="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-4">
 
                 {{-- 1. WELLNESS CENTER --}}
-                <a href="{{ route('elderly.wellness.index') }}"
-                   class="card-gradient bg-gradient-to-br from-rose-500 to-pink-600 shadow-pink-200/50 p-6 min-h-[140px] flex flex-col justify-between text-white">
+                     <a href="{{ route('elderly.wellness.index') }}"
+                         class="card-gradient group bg-gradient-to-br from-rose-500 to-pink-600 p-6 min-h-[140px] flex flex-col justify-between text-white shadow-[0_30px_55px_-30px_rgba(225,29,72,0.7)]">
                     <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl" aria-hidden="true"></div>
                     <div class="relative z-10">
                         <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit mb-4">
@@ -197,8 +217,8 @@
                 </a>
 
                 {{-- 2. MY SCHEDULE --}}
-                <a href="{{ route('calendar.index') }}"
-                   class="card-gradient bg-gradient-to-br from-orange-400 to-amber-500 shadow-orange-200/50 p-6 min-h-[140px] flex flex-col justify-between text-white">
+                     <a href="{{ route('calendar.index') }}"
+                         class="card-gradient group bg-gradient-to-br from-orange-400 to-amber-500 p-6 min-h-[140px] flex flex-col justify-between text-white shadow-[0_30px_55px_-30px_rgba(249,115,22,0.66)]">
                     <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl" aria-hidden="true"></div>
                     <div class="relative z-10">
                         <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit mb-4">
@@ -213,8 +233,8 @@
                 </a>
 
                 {{-- 3. HEALTH ANALYTICS --}}
-                <a href="{{ route('elderly.vitals.analytics') }}"
-                   class="card-gradient bg-gradient-to-br from-indigo-500 to-purple-600 shadow-purple-200/50 p-6 min-h-[140px] flex flex-col justify-between text-white">
+                     <a href="{{ route('elderly.vitals.analytics') }}"
+                         class="card-gradient group bg-gradient-to-br from-indigo-500 to-purple-600 p-6 min-h-[140px] flex flex-col justify-between text-white shadow-[0_30px_55px_-30px_rgba(99,102,241,0.66)]">
                     <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl" aria-hidden="true"></div>
                     <div class="relative z-10">
                         <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit mb-4">
@@ -233,11 +253,11 @@
 
             {{-- Upcoming Events --}}
             @if(!empty($upcomingEvents) && count($upcomingEvents) > 0)
-                <div class="mt-6">
+                <div class="relative z-10 mt-6">
                     <h3 class="font-extrabold text-lg text-gray-900 mb-3">Upcoming Events</h3>
                     <div class="space-y-3">
                         @foreach($upcomingEvents as $event)
-                            <div class="card p-4 flex items-center gap-4">
+                            <div class="card-glass p-4 flex items-center gap-4">
                                 <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 font-extrabold text-sm flex-shrink-0">
                                     {{ $event->start_time->format('M') }}<br>{{ $event->start_time->format('d') }}
                                 </div>
