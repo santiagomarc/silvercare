@@ -166,10 +166,10 @@
 
             {{-- Vital Cards Grid --}}
             <div class="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 mt-5">
-                <x-vital-card type="blood_pressure" :data="$vitalsData['blood_pressure'] ?? null" />
-                <x-vital-card type="sugar_level" :data="$vitalsData['sugar_level'] ?? null" />
-                <x-vital-card type="temperature" :data="$vitalsData['temperature'] ?? null" />
-                <x-vital-card type="heart_rate" :data="$vitalsData['heart_rate'] ?? null" />
+                <x-vital-card type="blood_pressure" :metric-data="$vitalsData['blood_pressure'] ?? null" />
+                <x-vital-card type="sugar_level" :metric-data="$vitalsData['sugar_level'] ?? null" />
+                <x-vital-card type="temperature" :metric-data="$vitalsData['temperature'] ?? null" />
+                <x-vital-card type="heart_rate" :metric-data="$vitalsData['heart_rate'] ?? null" />
             </div>
 
             {{-- Steps Progress --}}
@@ -277,9 +277,6 @@
     {{-- ╔══════════════════════════════════════════════════════════╗
          ║  GLOBAL OVERLAYS & WIDGETS                              ║
          ╚══════════════════════════════════════════════════════════╝ --}}
-
-    {{-- Vital recording modal (listens for 'open-vital-modal' events) --}}
-    <x-vital-record-modal />
 
     {{-- Toast notification container --}}
     <div x-data class="toast-container" aria-live="polite" aria-atomic="true">

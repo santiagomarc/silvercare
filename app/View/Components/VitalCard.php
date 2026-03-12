@@ -9,7 +9,7 @@ use Illuminate\View\Component;
 class VitalCard extends Component
 {
     public string $type;
-    public ?array $data;
+    public ?array $metricData;
     public string $title;
     public string $unit;
     public string $icon;
@@ -22,10 +22,10 @@ class VitalCard extends Component
     /**
      * Create a new component instance.
      */
-    public function __construct(string $type, ?array $data = null)
+    public function __construct(string $type, ?array $metricData = null)
     {
         $this->type = $type;
-        $this->data = $data ?? ['recorded' => false];
+        $this->metricData = $metricData ?? ['recorded' => false];
         
         $this->setupVitalConfig();
         $this->calculateStatus();
@@ -75,12 +75,12 @@ class VitalCard extends Component
 
     private function calculateStatus(): void
     {
-        if (!($this->data['recorded'] ?? false)) {
+        if (!($this->metricData['recorded'] ?? false)) {
             return;
         }
 
-        $val = $this->data['value'] ?? null;
-        $valText = $this->data['value_text'] ?? null;
+        $val = $this->metricData['value'] ?? null;
+        $valText = $this->metricData['value_text'] ?? null;
 
         switch ($this->type) {
             case 'blood_pressure':

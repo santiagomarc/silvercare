@@ -25,7 +25,7 @@
     <nav class="bg-white shadow-md sticky top-0 z-40 border-b border-gray-200">
         <div class="max-w-[1600px] mx-auto px-6 lg:px-12 h-20 flex justify-between items-center">
             <div class="flex items-center gap-4">
-                <a href="{{ route('dashboard') }}" class="group flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all">
+                <a href="{{ route('dashboard', ['tab' => 'health']) }}" class="group flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all">
                     <svg class="w-5 h-5 text-gray-600 group-hover:text-gray-900 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
                     </svg>

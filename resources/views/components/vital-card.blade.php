@@ -1,69 +1,73 @@
 {{-- ============================================================
-     VitalCard — Displays a single vital measurement.
-     Clicking dispatches 'open-vital-modal' for recording.
-     ============================================================ --}}
+    VitalCard — Displays the latest vital measurement.
+    Entire card routes to the full vital page for history + recording.
+    ============================================================ --}}
 
 @php
+    $measuredAt = $metricData['measured_at'] ?? null;
+    if ($measuredAt && ! $measuredAt instanceof \Carbon\CarbonInterface) {
+        $measuredAt = \Carbon\Carbon::parse($measuredAt);
+    }
+    $hasRecordedValue = (bool) ($metricData['recorded'] ?? false);
+
     $surfaceTint = match ($type) {
-        'blood_pressure' => 'from-red-100/95 via-white/90 to-rose-100/75',
-        'sugar_level' => 'from-blue-100/95 via-white/90 to-cyan-100/75',
-        'temperature' => 'from-orange-100/95 via-white/90 to-amber-100/75',
-        'heart_rate' => 'from-rose-100/95 via-white/90 to-pink-100/75',
-        default => 'from-slate-100/95 via-white/90 to-slate-100/75',
+        'blood_pressure' => 'from-rose-50/55 via-white/95 to-white/95',
+        'sugar_level' => 'from-cyan-50/55 via-white/95 to-white/95',
+        'temperature' => 'from-amber-50/55 via-white/95 to-white/95',
+        'heart_rate' => 'from-pink-50/55 via-white/95 to-white/95',
+        default => 'from-slate-50/55 via-white/95 to-white/95',
     };
+
+    $sourceLabel = ($metricData['source'] ?? 'manual') === 'google_fit' ? 'Google Fit' : 'Manual Entry';
+    $sourceClasses = ($metricData['source'] ?? 'manual') === 'google_fit'
+        ? 'bg-blue-100 text-blue-700'
+        : 'bg-slate-100 text-slate-600';
 @endphp
 
-<div class="vital-card card-glass border-l-4 {{ $border }} p-6 h-48 flex flex-col justify-between group cursor-pointer transition-all hover:-translate-y-1 hover:shadow-[0_28px_50px_-30px_rgba(15,23,42,0.38)]"
-     @click="$dispatch('open-vital-modal', { type: '{{ $type }}' })"
-     role="button"
-     tabindex="0"
-     @keydown.enter="$dispatch('open-vital-modal', { type: '{{ $type }}' })"
-     aria-label="{{ ($data['recorded'] ?? false) ? 'Re-record ' . $title : 'Record ' . $title }}"
-     data-type="{{ $type }}">
+<a href="{{ $route }}"
+    class="vital-card card-glass relative block h-48 overflow-hidden rounded-[1.75rem] p-6 transition-all hover:-translate-y-1 hover:shadow-[0_20px_34px_-26px_rgba(15,23,42,0.18)]"
+   aria-label="Open {{ $title }} details"
+   data-type="{{ $type }}">
 
-    <div class="absolute inset-x-0 top-0 h-24 bg-gradient-to-br {{ $surfaceTint }} opacity-90" aria-hidden="true"></div>
-    <div class="absolute -right-8 top-0 h-24 w-24 rounded-full {{ $bg }} opacity-70 blur-2xl" aria-hidden="true"></div>
+     <div class="absolute inset-0 rounded-[1.75rem] bg-gradient-to-br {{ $surfaceTint }} opacity-95" aria-hidden="true"></div>
+     <div class="absolute left-3 top-3 h-20 w-20 rounded-full {{ $bg }} opacity-30 blur-2xl" aria-hidden="true"></div>
+    <div class="absolute inset-0 rounded-[1.75rem] ring-1 ring-inset ring-white/70" aria-hidden="true"></div>
 
-    <div class="relative z-10 flex justify-between items-start">
+    <div class="relative z-10 flex h-full flex-col justify-between">
+        <div class="flex justify-between items-start gap-3">
         <div class="w-12 h-12 {{ $bg }} rounded-2xl flex items-center justify-center {{ $color }} group-hover:scale-110 transition-transform shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
             {!! $icon !!}
         </div>
         <div class="flex items-center gap-1.5">
-            @if($data['recorded'] ?? false)
-                @if(($data['source'] ?? 'manual') === 'google_fit')
-                    <span class="badge badge-info text-xs">Google Fit</span>
-                @endif
+            @if($hasRecordedValue)
+                <span class="badge text-xs {{ $sourceClasses }}">{{ $sourceLabel }}</span>
                 @if($status)
                     <span class="badge text-xs {{ $status['bg'] }} {{ $status['text'] }}">{{ $status['label'] }}</span>
                 @endif
             @endif
-            <a href="{{ $route }}" @click.stop
-               class="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 hover:{{ $color }} hover:bg-gray-200 transition-colors"
-               aria-label="View {{ $title }} history"
-               title="View history">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-            </a>
+        </div>
+
+        </div>
+
+        <div>
+            <h4 class="font-extrabold text-gray-500 text-sm uppercase tracking-wide mb-1">{{ $title }}</h4>
+
+            @if($hasRecordedValue)
+                <div class="flex items-baseline gap-2">
+                    <span class="text-3xl font-black text-gray-900">
+                        {{ $type === 'blood_pressure' ? $metricData['value_text'] : ($type === 'temperature' ? number_format($metricData['value'], 1) : intval($metricData['value'])) }}
+                    </span>
+                    <span class="text-base font-bold text-gray-400">{{ $unit }}</span>
+                </div>
+                <p class="mt-1 text-sm font-bold text-gray-500">
+                    {{ $measuredAt?->format('g:i A') }}
+                </p>
+                <p class="mt-1 text-xs font-semibold text-green-700">Recorded today</p>
+            @else
+                <div class="mt-2 rounded-2xl border-2 border-dashed border-gray-300 bg-white/70 px-4 py-4 text-center text-sm font-bold text-gray-500 transition-colors group-hover:border-gray-400 group-hover:text-gray-700">
+                    <span aria-hidden="true">+</span> Record Now
+                </div>
+            @endif
         </div>
     </div>
-
-    <div class="relative z-10">
-        <h4 class="font-extrabold text-gray-500 text-sm uppercase tracking-wide mb-1">{{ $title }}</h4>
-
-        @if($data['recorded'] ?? false)
-            <div class="flex items-baseline gap-2">
-                <span class="text-3xl font-black text-gray-900">
-                    {{ $type === 'blood_pressure' ? $data['value_text'] : ($type === 'temperature' ? number_format($data['value'], 1) : intval($data['value'])) }}
-                </span>
-                <span class="text-base font-bold text-gray-400">{{ $unit }}</span>
-            </div>
-            <p class="text-sm font-bold text-gray-400 mt-1">
-                {{ $data['measured_at']?->format('g:i A') }}
-                <span class="text-xs ml-1 {{ $color }} opacity-0 group-hover:opacity-100 transition-opacity">· tap to re-record</span>
-            </p>
-        @else
-            <div class="w-full py-3 mt-1 rounded-xl border-2 border-dashed border-gray-300 text-gray-400 font-bold text-sm group-hover:{{ $border }} group-hover:{{ $color }} transition-colors flex items-center justify-center gap-2">
-                <span aria-hidden="true">+</span> Record
-            </div>
-        @endif
-    </div>
-</div>
+</a>
