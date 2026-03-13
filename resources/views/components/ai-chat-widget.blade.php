@@ -200,7 +200,10 @@
     {{-- Companion Panel --}}
     <section
         x-show="isOpen"
-        class="ai-glass-shell pointer-events-auto absolute inset-0 z-50 flex flex-col overflow-hidden sm:inset-8 sm:rounded-[2.2rem] md:inset-x-16 md:inset-y-10 lg:right-10 lg:left-auto lg:w-[35rem]"
+        class="ai-glass-shell pointer-events-auto absolute z-50 flex flex-col overflow-hidden transition-all duration-500 ease-in-out transform"
+        :class="isExpanded
+            ? 'inset-2 sm:inset-6 md:inset-8 lg:inset-y-8 lg:inset-x-4 lg:mx-auto lg:w-full lg:max-w-5xl rounded-2xl sm:rounded-[2.2rem]'
+            : 'inset-0 sm:inset-8 sm:rounded-[2.2rem] md:inset-x-16 md:inset-y-10 lg:inset-y-8 lg:right-10 lg:left-auto lg:w-[35rem] lg:mx-0 rounded-none sm:rounded-[2.2rem]'"
         x-transition:enter="transition ease-out duration-450"
         x-transition:enter-start="opacity-0 translate-y-8 scale-95"
         x-transition:enter-end="opacity-100 translate-y-0 scale-100"
@@ -219,28 +222,39 @@
                     <div class="relative h-12 w-12 rounded-2xl border bg-white/80 p-2 shadow-sm" style="border-color: color-mix(in srgb, var(--ai-accent) 20%, #ffffff 80%);">
                         <div class="ai-orb h-full w-full rounded-xl" style="background: radial-gradient(circle at 35% 25%, #ffffff 0%, var(--ai-accent-soft) 45%, color-mix(in srgb, var(--ai-highlight) 20%, #ffffff 80%) 100%);"></div>
                     </div>
-                    <div>
-                        <h2 class="text-2xl font-extrabold tracking-tight text-slate-900">SilverCare Companion</h2>
-                        <p class="text-sm font-semibold" :style="`color:${isStreaming ? 'var(--ai-accent)' : '#64748b'}`" x-text="isStreaming ? 'Composing a response...' : 'Warm, clear, and practical guidance'">
-                        </p>
+                    <div class="flex flex-col justify-center">
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-2xl font-extrabold tracking-tight text-slate-900">Silvia</h2>
+                            <span x-show="isStreaming" class="text-xs font-bold uppercase tracking-wider" style="color: var(--ai-accent);">Composing...</span>
+                        </div>
                     </div>
                 </div>
 
                 <div class="flex items-center gap-2">
                     <button
                         @click="cycleTheme()"
-                        class="rounded-full border bg-white/85 px-4 py-2 text-xs font-bold uppercase tracking-wide text-slate-600 transition hover:bg-white"
+                        class="rounded-full border bg-white/85 p-3 text-slate-600 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
                         style="border-color: color-mix(in srgb, var(--ai-highlight) 18%, #e2e8f0 82%);"
                         title="Switch style"
                     >
-                        <span x-text="themeLabel"></span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M7 12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                        </svg>
                     </button>
-                    <button @click="startNewSession()" class="rounded-full border bg-white/85 p-3 text-slate-600 transition hover:bg-white" style="border-color: #e2e8f0;" aria-label="Start new session">
+                    <button @click="isExpanded = !isExpanded" class="hidden sm:block rounded-full border bg-white/85 p-3 text-slate-600 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md" style="border-color: #e2e8f0;" :title="isExpanded ? 'Shrink panel' : 'Expand panel'">
+                        <svg x-show="!isExpanded" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                        </svg>
+                        <svg x-show="isExpanded" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display:none;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+                        </svg>
+                    </button>
+                    <button @click="startNewSession()" class="rounded-full border bg-white/85 p-3 text-slate-600 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md" style="border-color: #e2e8f0;" aria-label="Start new session">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
                     </button>
-                    <button @click="closeChat()" class="rounded-full border bg-white/85 p-3 text-slate-600 transition hover:bg-white" style="border-color: #e2e8f0;" aria-label="Close panel">
+                    <button @click="closeChat()" class="rounded-full border bg-white/85 p-3 text-slate-600 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md" style="border-color: #e2e8f0;" aria-label="Close panel">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -339,8 +353,6 @@
                     </button>
                 </div>
             </form>
-
-            <p class="mt-3 text-center text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Accessible focus • Gentle motion • Practical answers</p>
         </footer>
     </section>
 </div>
@@ -375,6 +387,7 @@
     document.addEventListener('alpine:init', () => {
         Alpine.data('aiCompanion', () => ({
             isOpen: false,
+            isExpanded: false,
             messages: [],
             input: '',
             isLoading: false,
@@ -423,6 +436,7 @@
 
             closeChat() {
                 this.isOpen = false;
+                this.isExpanded = false;
             },
 
             scrollToBottom() {
