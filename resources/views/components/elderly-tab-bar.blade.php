@@ -12,7 +12,6 @@
         :tabindex="isActive('today') ? 0 : -1"
         @click="switchTab('today')"
         class="tab-btn"
-        :class="isActive('today') && 'bg-white/90 text-navy shadow-[0_14px_28px_-20px_rgba(37,99,235,0.38)]'"
         id="tab-today"
         aria-controls="panel-today"
     >
@@ -28,7 +27,6 @@
         :tabindex="isActive('health') ? 0 : -1"
         @click="switchTab('health')"
         class="tab-btn"
-        :class="isActive('health') && 'bg-white/90 text-navy shadow-[0_14px_28px_-20px_rgba(37,99,235,0.38)]'"
         id="tab-health"
         aria-controls="panel-health"
     >
@@ -44,7 +42,6 @@
         :tabindex="isActive('activity') ? 0 : -1"
         @click="switchTab('activity')"
         class="tab-btn"
-        :class="isActive('activity') && 'bg-white/90 text-navy shadow-[0_14px_28px_-20px_rgba(37,99,235,0.38)]'"
         id="tab-activity"
         aria-controls="panel-activity"
     >

@@ -158,7 +158,7 @@
                             Google Fit Connected
                         </span>
                     @endif
-                    <span class="badge text-xs border border-white/80 bg-white/75 text-slate-600 shadow-[0_16px_28px_-22px_rgba(15,23,42,0.35)]">
+                    <span class="badge text-base px-4 py-2 border border-white/80 bg-white/75 text-slate-700 shadow-[0_16px_28px_-22px_rgba(15,23,42,0.35)]">
                         {{ $completedVitals }}/{{ $totalRequiredVitals }} recorded
                     </span>
                 </div>
