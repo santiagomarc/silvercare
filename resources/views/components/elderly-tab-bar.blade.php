@@ -5,7 +5,42 @@
 
 @props(['activeTab' => 'today'])
 
-<div class="tab-bar mb-6" role="tablist" aria-label="Dashboard sections">
+<div
+    class="tab-bar mb-6 relative isolate"
+    role="tablist"
+    aria-label="Dashboard sections"
+    x-data="{
+        pillLeft: 0,
+        pillWidth: 0,
+        pillHeight: 0,
+        pillTop: 0,
+        updatePill() {
+            const activeEl = this.$el.querySelector('[aria-selected=\'true\']');
+            if (activeEl) {
+                this.pillLeft = activeEl.offsetLeft;
+                this.pillWidth = activeEl.offsetWidth;
+                this.pillHeight = activeEl.offsetHeight;
+                this.pillTop = activeEl.offsetTop;
+            }
+        }
+    }"
+    x-init="
+        $nextTick(() => updatePill());
+        $watch('activeTab', () => { $nextTick(() => updatePill()) });
+    "
+    @resize.window="updatePill()"
+>
+    <!-- Sliding Pill Indicator -->
+    <div
+        class="absolute rounded-[2rem] bg-indigo-600 transition-all duration-300 z-0 pointer-events-none"
+        style="transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);"
+        :style="`left: ${pillLeft}px; top: ${pillTop}px; width: ${pillWidth}px; height: ${pillHeight}px;`"
+        :class="[
+            pillWidth === 0 ? 'opacity-0' : 'opacity-100 shadow-[0_12px_24px_-10px_rgba(79,70,229,0.5),_0_4px_6px_-4px_rgba(79,70,229,0.3)]',
+            isSwitching ? 'scale-y-[0.85] scale-x-[1.05] bg-indigo-500' : 'scale-100'
+        ]"
+    ></div>
+
     <button
         role="tab"
         :aria-selected="isActive('today') ? 'true' : 'false'"

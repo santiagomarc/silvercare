@@ -6,6 +6,7 @@
 export default function dashboardTabs(initialTab = 'today') {
     return {
         activeTab: initialTab,
+        isSwitching: false,
 
         init() {
             const queryTab = new URLSearchParams(window.location.search).get('tab');
@@ -15,7 +16,17 @@ export default function dashboardTabs(initialTab = 'today') {
         },
 
         switchTab(tab) {
-            this.activeTab = tab;
+            if (this.activeTab === tab) return;
+            
+            // Trigger "squish" animation
+            this.isSwitching = true;
+            setTimeout(() => {
+                this.activeTab = tab;
+            }, 100); // Small delay to let the droplet squish before moving
+
+            setTimeout(() => {
+                this.isSwitching = false;
+            }, 300); // Release the squish as it slides
 
             const url = new URL(window.location.href);
             url.searchParams.set('tab', tab);

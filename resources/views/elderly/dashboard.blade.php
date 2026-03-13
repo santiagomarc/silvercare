@@ -80,22 +80,27 @@
         <x-elderly-tab-bar />
 
         {{-- ═══════════════════════════════════════════════════════
-             TAB PANEL: TODAY
-             Tasks, medications, mood, and garden progress.
+             TAB PANELS WRAPPER (Grid-stacked for smooth cross-fade)
              ═══════════════════════════════════════════════════════ --}}
-        <div x-show="isActive('today')"
-             class="panel-shell panel-shell-today p-4 md:p-5"
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="opacity-0 translate-y-2"
-             x-transition:enter-end="opacity-100 translate-y-0"
-             id="panel-today"
-             role="tabpanel"
-             aria-labelledby="tab-today">
+        <div class="grid relative items-start">
 
-            <div class="ambient-orb -right-6 -top-6 h-36 w-36 bg-amber-200/35"></div>
-            <div class="ambient-orb -left-8 bottom-0 h-32 w-32 bg-sky-200/25"></div>
+            {{-- TAB PANEL: TODAY --}}
+            <div x-show="isActive('today')"
+                 class="col-start-1 row-start-1 panel-shell panel-shell-today p-4 md:p-5"
+                 x-transition:enter="transition duration-500 delay-100 ease-out"
+                 x-transition:enter-start="opacity-0 translate-y-4 scale-[0.98]"
+                 x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                 x-transition:leave="transition duration-300 ease-in absolute w-full left-0 top-0"
+                 x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                 x-transition:leave-end="opacity-0 -translate-y-4 scale-[0.98]"
+                 id="panel-today"
+                 role="tabpanel"
+                 aria-labelledby="tab-today">
 
-            <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="ambient-orb -right-6 -top-6 h-36 w-36 bg-amber-200/35"></div>
+                <div class="ambient-orb -left-8 bottom-0 h-32 w-32 bg-sky-200/25"></div>
+
+                <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6">
 
                 {{-- LEFT COLUMN: Mood + Medications --}}
                 <div class="lg:col-span-7 space-y-6">
@@ -128,21 +133,21 @@
             </div>
         </div>
 
-        {{-- ═══════════════════════════════════════════════════════
-             TAB PANEL: HEALTH
-             Vital cards, Google Fit steps.
-             ═══════════════════════════════════════════════════════ --}}
-        <div x-show="isActive('health')"
-             class="panel-shell panel-shell-health p-4 md:p-5"
-             x-cloak
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="opacity-0 translate-y-2"
-             x-transition:enter-end="opacity-100 translate-y-0"
-             id="panel-health"
-             role="tabpanel"
-             aria-labelledby="tab-health">
+            {{-- TAB PANEL: HEALTH --}}
+            <div x-show="isActive('health')"
+                 class="col-start-1 row-start-1 panel-shell panel-shell-health p-4 md:p-5"
+                 x-cloak
+                 x-transition:enter="transition duration-500 delay-100 ease-out"
+                 x-transition:enter-start="opacity-0 translate-y-4 scale-[0.98]"
+                 x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                 x-transition:leave="transition duration-300 ease-in absolute w-full left-0 top-0"
+                 x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                 x-transition:leave-end="opacity-0 -translate-y-4 scale-[0.98]"
+                 id="panel-health"
+                 role="tabpanel"
+                 aria-labelledby="tab-health">
 
-            <div class="ambient-orb right-2 top-2 h-36 w-36 bg-sky-200/30"></div>
+                <div class="ambient-orb right-2 top-2 h-36 w-36 bg-sky-200/30"></div>
             <div class="ambient-orb left-10 bottom-0 h-28 w-28 bg-indigo-200/25"></div>
 
             {{-- Health Vitals Header --}}
@@ -181,21 +186,21 @@
             </div>
         </div>
 
-        {{-- ═══════════════════════════════════════════════════════
-             TAB PANEL: ACTIVITY
-             Quick-link action cards + upcoming events.
-             ═══════════════════════════════════════════════════════ --}}
-        <div x-show="isActive('activity')"
-             class="panel-shell panel-shell-activity p-4 md:p-5"
-             x-cloak
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="opacity-0 translate-y-2"
-             x-transition:enter-end="opacity-100 translate-y-0"
-             id="panel-activity"
-             role="tabpanel"
-             aria-labelledby="tab-activity">
+            {{-- TAB PANEL: ACTIVITY --}}
+            <div x-show="isActive('activity')"
+                 class="col-start-1 row-start-1 panel-shell panel-shell-activity p-4 md:p-5"
+                 x-cloak
+                 x-transition:enter="transition duration-500 delay-100 ease-out"
+                 x-transition:enter-start="opacity-0 translate-y-4 scale-[0.98]"
+                 x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                 x-transition:leave="transition duration-300 ease-in absolute w-full left-0 top-0"
+                 x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                 x-transition:leave-end="opacity-0 -translate-y-4 scale-[0.98]"
+                 id="panel-activity"
+                 role="tabpanel"
+                 aria-labelledby="tab-activity">
 
-            <div class="ambient-orb right-0 top-0 h-40 w-40 bg-rose-200/30"></div>
+                <div class="ambient-orb right-0 top-0 h-40 w-40 bg-rose-200/30"></div>
             <div class="ambient-orb left-12 bottom-0 h-32 w-32 bg-indigo-200/25"></div>
 
             <div class="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -271,6 +276,8 @@
                 </div>
             @endif
         </div>
+
+        </div> {{-- END TAB PANELS WRAPPER --}}
 
     </main>
 

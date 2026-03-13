@@ -200,17 +200,17 @@
     {{-- Companion Panel --}}
     <section
         x-show="isOpen"
-        class="ai-glass-shell pointer-events-auto absolute z-50 flex flex-col overflow-hidden transition-all duration-500 ease-in-out transform"
+        class="ai-glass-shell pointer-events-auto absolute z-50 flex flex-col overflow-hidden transition-all duration-500 origin-bottom-right"
+        style="transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); display: none;"
         :class="isExpanded
-            ? 'inset-2 sm:inset-6 md:inset-8 lg:inset-y-8 lg:inset-x-4 lg:mx-auto lg:w-full lg:max-w-5xl rounded-2xl sm:rounded-[2.2rem]'
-            : 'inset-0 sm:inset-8 sm:rounded-[2.2rem] md:inset-x-16 md:inset-y-10 lg:inset-y-8 lg:right-10 lg:left-auto lg:w-[35rem] lg:mx-0 rounded-none sm:rounded-[2.2rem]'"
-        x-transition:enter="transition ease-out duration-450"
-        x-transition:enter-start="opacity-0 translate-y-8 scale-95"
-        x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-        x-transition:leave="transition ease-in duration-250"
-        x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-        x-transition:leave-end="opacity-0 translate-y-8 scale-95"
-        style="display: none;"
+            ? 'inset-2 sm:inset-6 md:inset-8 lg:top-8 lg:bottom-8 lg:right-10 lg:left-auto lg:w-[calc(100vw-5rem)] lg:max-w-[80rem] rounded-2xl sm:rounded-[2.2rem]'
+            : 'inset-0 sm:inset-8 sm:rounded-[2.2rem] md:inset-x-16 md:inset-y-10 lg:top-8 lg:bottom-8 lg:right-10 lg:left-auto lg:w-[35rem] lg:max-w-none rounded-none sm:rounded-[2.2rem]'"
+        x-transition:enter="transition duration-500"
+        x-transition:enter-start="opacity-0 scale-[0.85] translate-y-8"
+        x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-300"
+        x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+        x-transition:leave-end="opacity-0 scale-[0.85] translate-y-8"
     >
         <div class="ai-noise"></div>
         <div class="ai-aurora"></div>
