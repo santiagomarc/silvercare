@@ -13,6 +13,12 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
         taken: takenDoses,
         total: totalDoses,
 
+        init() {
+            window.addEventListener('ai-medication-logged', (event) => {
+                this._applyAiMedicationLog(event.detail || {});
+            });
+        },
+
         get progress() {
             return this.total > 0 ? Math.round((this.taken / this.total) * 100) : 0;
         },
@@ -141,6 +147,42 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
                     title.classList.remove('line-through', 'opacity-75');
                 }
             }
+        },
+
+        _applyAiMedicationLog(action) {
+            const medicationId = String(action.medication_id || '');
+            const scheduledTime = action.scheduled_time;
+
+            if (!medicationId || !scheduledTime) {
+                return;
+            }
+
+            const selector = `.medication-entry[data-medication-id="${CSS.escape(medicationId)}"][data-time="${CSS.escape(scheduledTime)}"]`;
+            const entry = document.querySelector(selector);
+
+            if (!entry) {
+                return;
+            }
+
+            if (entry.dataset.taken === 'true') {
+                return;
+            }
+
+            entry.dataset.taken = 'true';
+            entry.dataset.canTake = 'false';
+            entry.dataset.canUndo = action.taken_late ? 'false' : 'true';
+
+            this.taken = Math.min(this.total, this.taken + 1);
+
+            this._updateEntryAppearance(entry, action.taken_late ? 'taken-late' : 'taken');
+            createConfetti(entry);
+
+            const toast = Alpine.store('toast');
+            toast?.success('Medication logged by Silvia');
+
+            window.dispatchEvent(new CustomEvent('progress-updated', {
+                detail: { medications: this.taken, medicationTotal: this.total }
+            }));
         },
     };
 }

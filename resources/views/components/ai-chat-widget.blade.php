@@ -579,6 +579,8 @@
                                         this.messages[aiIdx].streaming = false;
                                     }
                                     this.isStreaming = false;
+                                } else if (payload.type === 'action') {
+                                    this.handleAction(payload.action);
                                 } else if (payload.type === 'error') {
                                     this.messages.push({ role: 'ai', content: payload.content });
                                     this.isStreaming = false;
@@ -615,11 +617,27 @@
                     if (data.success) {
                         this.sessionId = data.session_id;
                         this.messages.push({ role: 'ai', content: data.message });
+
+                        if (Array.isArray(data.actions)) {
+                            data.actions.forEach(action => this.handleAction(action));
+                        }
                     } else {
                         this.messages.push({ role: 'ai', content: 'Connection issue.' });
                     }
                 } catch (_e) {
                     this.messages.push({ role: 'ai', content: 'Connection issue.' });
+                }
+            },
+
+            handleAction(action) {
+                if (!action || typeof action !== 'object') {
+                    return;
+                }
+
+                if (action.type === 'medication_logged') {
+                    window.dispatchEvent(new CustomEvent('ai-medication-logged', {
+                        detail: action,
+                    }));
                 }
             }
         }));

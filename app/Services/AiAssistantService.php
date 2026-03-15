@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Log;
 class AiAssistantService
 {
     protected NotificationService $notificationService;
+    protected array $actionEvents = [];
 
     /**
      * Emergency keywords that trigger caregiver alerts.
@@ -66,6 +67,8 @@ class AiAssistantService
      */
     public function chat(User $user, string $userMessage, ChatSession $session): string
     {
+        $this->actionEvents = [];
+
         // 1. Persist user message
         $session->messages()->create([
             'role' => 'user',
@@ -116,6 +119,8 @@ class AiAssistantService
      */
     public function chatStream(User $user, string $userMessage, ChatSession $session): \Generator
     {
+        $this->actionEvents = [];
+
         // 1. Persist user message
         $session->messages()->create([
             'role' => 'user',
@@ -143,23 +148,38 @@ class AiAssistantService
                 foreach ($parts as $part) {
                     if ($part->functionCall) {
                         $functionCallOutput .= $this->executeFunctionCall($user, $part->functionCall);
+                        foreach ($this->consumeActionEvents() as $event) {
+                            yield [
+                                'type' => 'action',
+                                'action' => $event,
+                            ];
+                        }
                     } elseif ($part->text) {
                         $chunk = $part->text;
                         $fullResponse .= $chunk;
-                        yield $chunk;
+                        yield [
+                            'type' => 'chunk',
+                            'content' => $chunk,
+                        ];
                     }
                 }
             }
             
             if ($functionCallOutput) {
                 $fullResponse .= $functionCallOutput;
-                yield $functionCallOutput;
+                yield [
+                    'type' => 'chunk',
+                    'content' => $functionCallOutput,
+                ];
             }
         } catch (\Exception $e) {
             Log::error('Gemini Stream Error: ' . $e->getMessage());
             $fallback = "I'm sorry, I'm having a little trouble right now. Please try again in a moment.";
             $fullResponse = $fallback;
-            yield $fallback;
+            yield [
+                'type' => 'chunk',
+                'content' => $fallback,
+            ];
         }
 
         // 6. Persist the full AI response
@@ -372,6 +392,10 @@ PROMPT;
                                 type: DataType::INTEGER,
                                 description: 'The ID of the medication to log as taken.'
                             ),
+                            'scheduled_time' => new Schema(
+                                type: DataType::STRING,
+                                description: 'Optional scheduled time in HH:mm format (24-hour).'
+                            ),
                         ],
                         required: ['medication_id']
                     )
@@ -446,6 +470,11 @@ PROMPT;
                         $task->category ?? 'General'
                     );
 
+                    $this->pushActionEvent([
+                        'type' => 'task_completed',
+                        'task_id' => $task->id,
+                    ]);
+
                     return "\n\n✅ *Task \"{$task->task}\" marked as done!*";
                 }
             } catch (\Exception $e) {
@@ -461,19 +490,34 @@ PROMPT;
                     ->first();
 
                 if ($medication) {
+                    $now = Carbon::now();
+                    $scheduledDateTime = $this->resolveMedicationScheduledTime(
+                        $medication,
+                        $profile->id,
+                        $args['scheduled_time'] ?? null,
+                        $now
+                    );
+
                     MedicationLog::updateOrCreate([
                         'elderly_id' => $profile->id,
                         'medication_id' => $medication->id,
-                        'scheduled_time' => Carbon::now(),
+                        'scheduled_time' => $scheduledDateTime,
                     ], [
                         'is_taken' => true,
-                        'taken_at' => Carbon::now(),
+                        'taken_at' => $now,
                     ]);
 
                     $this->notificationService->createMedicationTakenNotification(
                         $profile->id,
                         $medication->name
                     );
+
+                    $this->pushActionEvent([
+                        'type' => 'medication_logged',
+                        'medication_id' => $medication->id,
+                        'scheduled_time' => $scheduledDateTime->format('H:i'),
+                        'taken_late' => $now->gt($scheduledDateTime->copy()->addMinutes(60)),
+                    ]);
 
                     return "\n\n💊 *{$medication->name} logged as taken!*";
                 }
@@ -791,5 +835,77 @@ PROMPT;
         }
 
         return blank($value) ? $fallback : (string) $value;
+    }
+
+    /**
+     * Return action events emitted during the latest AI response and clear the queue.
+     */
+    public function consumeActionEvents(): array
+    {
+        $events = $this->actionEvents;
+        $this->actionEvents = [];
+
+        return $events;
+    }
+
+    /**
+     * Queue a frontend action event to be returned with chat responses.
+     */
+    private function pushActionEvent(array $event): void
+    {
+        $this->actionEvents[] = $event;
+    }
+
+    /**
+     * Resolve which scheduled dose slot to mark as taken so UI check-off stays in sync.
+     */
+    private function resolveMedicationScheduledTime(Medication $medication, int $elderlyProfileId, mixed $requestedTime, Carbon $now): Carbon
+    {
+        $today = $now->copy()->startOfDay();
+
+        if (is_string($requestedTime) && preg_match('/^([01]?\d|2[0-3]):[0-5]\d$/', $requestedTime) === 1) {
+            return Carbon::parse($today->format('Y-m-d') . ' ' . $requestedTime);
+        }
+
+        $times = collect($medication->times_of_day ?? [])
+            ->filter(fn ($time) => is_string($time) && preg_match('/^([01]?\d|2[0-3]):[0-5]\d$/', $time) === 1)
+            ->values();
+
+        if ($times->isEmpty()) {
+            return $now;
+        }
+
+        $scheduledSlots = $times
+            ->map(fn (string $time) => Carbon::parse($today->format('Y-m-d') . ' ' . $time))
+            ->values();
+
+        $takenTimeKeys = MedicationLog::query()
+            ->where('elderly_id', $elderlyProfileId)
+            ->where('medication_id', $medication->id)
+            ->whereDate('scheduled_time', $today)
+            ->where('is_taken', true)
+            ->get(['scheduled_time'])
+            ->map(fn (MedicationLog $log) => $log->scheduled_time->format('H:i'))
+            ->values();
+
+        $untakenSlots = $scheduledSlots
+            ->reject(fn (Carbon $slot) => $takenTimeKeys->contains($slot->format('H:i')))
+            ->values();
+
+        // Prefer doses that are due now or soon (within +60m), then nearest untaken slot.
+        $dueOrNearSlots = $untakenSlots
+            ->filter(fn (Carbon $slot) => $slot->lte($now->copy()->addMinutes(60)))
+            ->values();
+
+        $candidates = $dueOrNearSlots->isNotEmpty()
+            ? $dueOrNearSlots
+            : ($untakenSlots->isNotEmpty() ? $untakenSlots : $scheduledSlots);
+
+        /** @var Carbon $nearest */
+        $nearest = $candidates
+            ->sortBy(fn (Carbon $slot) => $slot->diffInMinutes($now))
+            ->first();
+
+        return $nearest ?? $now;
     }
 }

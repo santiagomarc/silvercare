@@ -45,6 +45,7 @@ class AiAssistantController extends Controller
                 'success' => true,
                 'message' => $response,
                 'session_id' => $session->id,
+                'actions' => $this->aiService->consumeActionEvents(),
             ]);
         } catch (\Exception $e) {
             Log::error('AI Chat Error: ' . $e->getMessage());
@@ -78,8 +79,26 @@ class AiAssistantController extends Controller
             try {
                 $generator = $this->aiService->chatStream($user, $userMessage, $session);
 
-                foreach ($generator as $chunk) {
-                    echo "data: " . json_encode(['type' => 'chunk', 'content' => $chunk]) . "\n\n";
+                foreach ($generator as $payload) {
+                    if (is_array($payload) && ($payload['type'] ?? null) === 'action') {
+                        echo "data: " . json_encode([
+                            'type' => 'action',
+                            'action' => $payload['action'] ?? null,
+                        ]) . "\n\n";
+                        ob_flush();
+                        flush();
+                        continue;
+                    }
+
+                    $content = is_array($payload)
+                        ? ($payload['content'] ?? '')
+                        : (string) $payload;
+
+                    if ($content === '') {
+                        continue;
+                    }
+
+                    echo "data: " . json_encode(['type' => 'chunk', 'content' => $content]) . "\n\n";
                     ob_flush();
                     flush();
                 }
