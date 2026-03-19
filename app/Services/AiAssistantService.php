@@ -79,7 +79,7 @@ class AiAssistantService
         $this->detectEmergency($user, $userMessage);
 
         // 3. Build context
-        $systemPrompt = $this->buildElderlySystemPrompt($user);
+        $systemPrompt = $this->buildElderlySystemPrompt($user, $userMessage);
         $conversationHistory = $this->buildConversationHistory($session);
 
         // 4. Call Gemini
@@ -131,7 +131,7 @@ class AiAssistantService
         $this->detectEmergency($user, $userMessage);
 
         // 3. Build context
-        $systemPrompt = $this->buildElderlySystemPrompt($user);
+        $systemPrompt = $this->buildElderlySystemPrompt($user, $userMessage);
         $conversationHistory = $this->buildConversationHistory($session);
 
         // 4. Stream from Gemini
@@ -257,7 +257,7 @@ class AiAssistantService
     /**
      * Build the system prompt for elderly user conversations.
      */
-    protected function buildElderlySystemPrompt(User $user): string
+    protected function buildElderlySystemPrompt(User $user, string $userMessage = ''): string
     {
         $today = Carbon::now();
         $dayName = $today->format('l');
@@ -267,6 +267,9 @@ class AiAssistantService
         $medications = $this->buildMedicationContext($profile->id, $today, $dayName);
         $tasks = $this->buildTaskContext($profile->id, $today);
         $latestVitals = $this->buildVitalsContext($profile->id, $today->copy()->subDay());
+        $weeklyVitals = $this->messageWantsWeeklyVitals($userMessage)
+            ? $this->buildWeeklyVitalsTrendContext($profile->id, $today->copy()->subDays(7), $today)
+            : '';
         $medicalInfo = $this->buildMedicalInfoContext($profile);
 
         return <<<PROMPT
@@ -285,6 +288,9 @@ USER: {$user->name}
 === RECENT VITAL SIGNS (last 24h) ===
 {$latestVitals}
 
+=== WEEKLY VITAL TRENDS (last 7 days) ===
+{$weeklyVitals}
+
 === INSTRUCTIONS ===
 1. Be conversational, warm, and encouraging. Use simple language.
 2. When the user asks about their medications or tasks, reference the real data above.
@@ -294,6 +300,7 @@ USER: {$user->name}
 6. If the user asks you to mark a task as done, use the `mark_task_complete` tool.
 7. If the user asks you to log a medication as taken, use the `log_medication` tool.
 8. Keep answers concise (2-4 paragraphs max) unless the user asks for detail.
+9. If the user asks about "this week", "past week", or trends, prioritize the WEEKLY VITAL TRENDS section instead of saying data is unavailable.
 PROMPT;
     }
 
@@ -759,6 +766,49 @@ PROMPT;
 
                 return "• {$type}: {$value}{$unit} (at " . Carbon::parse($latest->measured_at)->format('g:i A') . ")";
             })->implode("\n");
+    }
+
+    private function buildWeeklyVitalsTrendContext(int $elderlyProfileId, Carbon $windowStart, Carbon $windowEnd): string
+    {
+        $summary = HealthMetric::where('elderly_id', $elderlyProfileId)
+            ->whereBetween('measured_at', [$windowStart, $windowEnd])
+            ->orderBy('measured_at', 'asc')
+            ->get()
+            ->groupBy('type')
+            ->map(function ($records, $type) {
+                $numericRecords = $records->filter(fn (HealthMetric $metric) => $metric->value !== null)->values();
+                $latest = $records->last();
+                $latestVal = $latest->value_text ?? $latest->value;
+                $unit = $latest->unit ? " {$latest->unit}" : '';
+                $count = $records->count();
+
+                if ($numericRecords->count() < 2) {
+                    return "• {$type}: {$count} readings | Latest: {$latestVal}{$unit}";
+                }
+
+                $first = (float) $numericRecords->first()->value;
+                $last = (float) $numericRecords->last()->value;
+                $avg = round($numericRecords->avg('value'), 1);
+                $min = $numericRecords->min('value');
+                $max = $numericRecords->max('value');
+                $direction = $last > $first
+                    ? 'upward'
+                    : ($last < $first ? 'downward' : 'stable');
+
+                return "• {$type}: {$count} readings | Avg: {$avg}{$unit} | Range: {$min}-{$max}{$unit} | Trend: {$direction} | Latest: {$latestVal}{$unit}";
+            })
+            ->implode("\n");
+
+        return $summary !== '' ? $summary : '• No vitals recorded in the last 7 days.';
+    }
+
+    private function messageWantsWeeklyVitals(string $userMessage): bool
+    {
+        if ($userMessage === '') {
+            return false;
+        }
+
+        return preg_match('/\b(week|weekly|past week|this week|7 days|trend|trends|analy[sz]e)\b/i', $userMessage) === 1;
     }
 
     private function buildMedicalInfoContext($profile): string
