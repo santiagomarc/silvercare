@@ -267,9 +267,13 @@ class AiAssistantService
         $medications = $this->buildMedicationContext($profile->id, $today, $dayName);
         $tasks = $this->buildTaskContext($profile->id, $today);
         $latestVitals = $this->buildVitalsContext($profile->id, $today->copy()->subDay());
-        $weeklyVitals = $this->messageWantsWeeklyVitals($userMessage)
-            ? $this->buildWeeklyVitalsTrendContext($profile->id, $today->copy()->subDays(7), $today)
-            : '';
+        $vitalsRange = $this->resolveVitalsDateRange($userMessage, $today);
+        $rangeLabel = $vitalsRange['label'];
+        $rangeVitals = $this->buildRangeVitalsTrendContext(
+            $profile->id,
+            $vitalsRange['start'],
+            $vitalsRange['end']
+        );
         $medicalInfo = $this->buildMedicalInfoContext($profile);
 
         return <<<PROMPT
@@ -288,8 +292,8 @@ USER: {$user->name}
 === RECENT VITAL SIGNS (last 24h) ===
 {$latestVitals}
 
-=== WEEKLY VITAL TRENDS (last 7 days) ===
-{$weeklyVitals}
+=== VITAL TRENDS ({$rangeLabel}) ===
+{$rangeVitals}
 
 === INSTRUCTIONS ===
 1. Be conversational, warm, and encouraging. Use simple language.
@@ -300,7 +304,7 @@ USER: {$user->name}
 6. If the user asks you to mark a task as done, use the `mark_task_complete` tool.
 7. If the user asks you to log a medication as taken, use the `log_medication` tool.
 8. Keep answers concise (2-4 paragraphs max) unless the user asks for detail.
-9. If the user asks about "this week", "past week", or trends, prioritize the WEEKLY VITAL TRENDS section instead of saying data is unavailable.
+9. If the user asks for vitals analysis over any date range (for example week, month, 3 months, last N days, since, or between dates), prioritize the VITAL TRENDS section and analyze that requested window.
 PROMPT;
     }
 
@@ -768,7 +772,7 @@ PROMPT;
             })->implode("\n");
     }
 
-    private function buildWeeklyVitalsTrendContext(int $elderlyProfileId, Carbon $windowStart, Carbon $windowEnd): string
+    private function buildRangeVitalsTrendContext(int $elderlyProfileId, Carbon $windowStart, Carbon $windowEnd): string
     {
         $summary = HealthMetric::where('elderly_id', $elderlyProfileId)
             ->whereBetween('measured_at', [$windowStart, $windowEnd])
@@ -799,16 +803,147 @@ PROMPT;
             })
             ->implode("\n");
 
-        return $summary !== '' ? $summary : '• No vitals recorded in the last 7 days.';
+        return $summary !== '' ? $summary : '• No vitals recorded in the selected date range.';
     }
 
-    private function messageWantsWeeklyVitals(string $userMessage): bool
+    private function resolveVitalsDateRange(string $userMessage, Carbon $referenceDate): array
     {
-        if ($userMessage === '') {
-            return false;
+        $defaultStart = $referenceDate->copy()->subDays(7)->startOfDay();
+        $defaultEnd = $referenceDate->copy()->endOfDay();
+
+        $message = strtolower(trim($userMessage));
+        if ($message === '') {
+            return [
+                'start' => $defaultStart,
+                'end' => $defaultEnd,
+                'label' => 'last 7 days',
+            ];
         }
 
-        return preg_match('/\b(week|weekly|past week|this week|7 days|trend|trends|analy[sz]e)\b/i', $userMessage) === 1;
+        if (preg_match('/\b(today)\b/i', $message) === 1) {
+            return [
+                'start' => $referenceDate->copy()->startOfDay(),
+                'end' => $referenceDate->copy()->endOfDay(),
+                'label' => 'today',
+            ];
+        }
+
+        if (preg_match('/\b(yesterday)\b/i', $message) === 1) {
+            $yesterday = $referenceDate->copy()->subDay();
+
+            return [
+                'start' => $yesterday->copy()->startOfDay(),
+                'end' => $yesterday->copy()->endOfDay(),
+                'label' => 'yesterday',
+            ];
+        }
+
+        if (preg_match('/\b(last|past)\s+(\d{1,3})\s+(day|days|week|weeks|month|months)\b/i', $message, $matches) === 1) {
+            $amount = max(1, min((int) $matches[2], 365));
+            $unit = strtolower($matches[3]);
+
+            $start = match ($unit) {
+                'day', 'days' => $referenceDate->copy()->subDays($amount),
+                'week', 'weeks' => $referenceDate->copy()->subWeeks($amount),
+                default => $referenceDate->copy()->subMonths($amount),
+            };
+
+            return [
+                'start' => $start->startOfDay(),
+                'end' => $referenceDate->copy()->endOfDay(),
+                'label' => "last {$amount} {$unit}",
+            ];
+        }
+
+        if (preg_match('/\b(this\s+week|past\s+week|last\s+week|weekly|week|7\s+days)\b/i', $message) === 1) {
+            return [
+                'start' => $referenceDate->copy()->subDays(7)->startOfDay(),
+                'end' => $referenceDate->copy()->endOfDay(),
+                'label' => 'last 7 days',
+            ];
+        }
+
+        if (preg_match('/\b(this\s+month|past\s+month|last\s+month|month|30\s+days)\b/i', $message) === 1) {
+            return [
+                'start' => $referenceDate->copy()->subMonth()->startOfDay(),
+                'end' => $referenceDate->copy()->endOfDay(),
+                'label' => 'last 1 month',
+            ];
+        }
+
+        if (preg_match('/\b(last\s+3\s+months|past\s+3\s+months|3\s+months|90\s+days)\b/i', $message) === 1) {
+            return [
+                'start' => $referenceDate->copy()->subMonths(3)->startOfDay(),
+                'end' => $referenceDate->copy()->endOfDay(),
+                'label' => 'last 3 months',
+            ];
+        }
+
+        if (preg_match('/\bfrom\s+(.+?)\s+to\s+(.+)$/i', $userMessage, $matches) === 1) {
+            $start = $this->safeParseDate($matches[1]);
+            $end = $this->safeParseDate($matches[2]);
+
+            if ($start && $end) {
+                if ($start->gt($end)) {
+                    [$start, $end] = [$end, $start];
+                }
+
+                return [
+                    'start' => $start->startOfDay(),
+                    'end' => $end->endOfDay(),
+                    'label' => $start->format('M j, Y') . ' to ' . $end->format('M j, Y'),
+                ];
+            }
+        }
+
+        if (preg_match('/\bbetween\s+(.+?)\s+and\s+(.+)$/i', $userMessage, $matches) === 1) {
+            $start = $this->safeParseDate($matches[1]);
+            $end = $this->safeParseDate($matches[2]);
+
+            if ($start && $end) {
+                if ($start->gt($end)) {
+                    [$start, $end] = [$end, $start];
+                }
+
+                return [
+                    'start' => $start->startOfDay(),
+                    'end' => $end->endOfDay(),
+                    'label' => $start->format('M j, Y') . ' to ' . $end->format('M j, Y'),
+                ];
+            }
+        }
+
+        if (preg_match('/\bsince\s+(.+)$/i', $userMessage, $matches) === 1) {
+            $start = $this->safeParseDate($matches[1]);
+            if ($start) {
+                return [
+                    'start' => $start->startOfDay(),
+                    'end' => $referenceDate->copy()->endOfDay(),
+                    'label' => 'since ' . $start->format('M j, Y'),
+                ];
+            }
+        }
+
+        return [
+            'start' => $defaultStart,
+            'end' => $defaultEnd,
+            'label' => 'last 7 days',
+        ];
+    }
+
+    private function safeParseDate(string $dateText): ?Carbon
+    {
+        $dateText = trim($dateText, " \t\n\r\0\x0B,.");
+
+        if ($dateText === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($dateText);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     private function buildMedicalInfoContext($profile): string
