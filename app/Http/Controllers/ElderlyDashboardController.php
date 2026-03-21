@@ -33,6 +33,7 @@ class ElderlyDashboardController extends Controller
         }
 
         $data = $this->dashboardService->getDashboardData($elderlyId, $user->id);
+        $data['linkedCaregiver'] = $user->profile?->caregiver;
 
         return view('elderly.dashboard', $data);
     }
@@ -48,6 +49,7 @@ class ElderlyDashboardController extends Controller
             'stepsData' => null, 'takenMedicationDoses' => 0, 'totalMedicationDoses' => 0,
             'medicationProgress' => 0, 'dailyGoalsProgress' => 0, 'googleFitConnected' => false,
             'todayMood' => 3, 'upcomingEvents' => [], 'unreadNotifications' => 0,
+            'linkedCaregiver' => null,
         ];
     }
 

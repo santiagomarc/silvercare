@@ -63,6 +63,22 @@
                 <form method="POST" action="{{ route('login') }}" class="space-y-6">
                     @csrf
 
+                    <!-- Google Sign-In -->
+                    <div class="fade-in-section transition-delay-300">
+                        <a href="{{ route('auth.google.redirect') }}" class="w-full inline-flex items-center justify-center gap-3 border-2 border-gray-200 hover:border-[#000080] bg-white py-3 rounded-xl font-bold text-gray-800 transition-all duration-200">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
+                                <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.2-1.4 3.4-5.5 3.4-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 2.9 14.6 2 12 2 6.5 2 2 6.5 2 12s4.5 10 10 10c5.8 0 9.7-4.1 9.7-9.9 0-.7-.1-1.3-.2-1.9H12z"/>
+                            </svg>
+                            Continue with Google
+                        </a>
+                    </div>
+
+                    <div class="flex items-center gap-3 fade-in-section transition-delay-300">
+                        <div class="h-px flex-1 bg-gray-200"></div>
+                        <span class="text-xs font-semibold tracking-wider text-gray-500">OR SIGN IN WITH EMAIL</span>
+                        <div class="h-px flex-1 bg-gray-200"></div>
+                    </div>
+
                     <!-- Email -->
                     <div class="fade-in-section transition-delay-300">
                         <label for="email" class="block text-sm font-bold text-gray-700 mb-2">Email Address</label>

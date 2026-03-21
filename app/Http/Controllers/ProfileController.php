@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\UserProfile;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Redirect;
 
 class ProfileController extends Controller
 {
@@ -48,9 +50,13 @@ class ProfileController extends Controller
 
         // 2. Update User Table (Name/Email)
        
+        $nextEmail = $request->email ?? $user->email;
+        $emailChanged = $nextEmail !== $user->email;
+
         $user->update([
-            'name'  => $request->name,
-            'email' => $request->email ?? $user->email, 
+            'name' => $request->name,
+            'email' => $nextEmail,
+            'email_verified_at' => $emailChanged ? null : $user->email_verified_at,
         ]);
 
         // 3. Process Array Fields
@@ -81,7 +87,7 @@ class ProfileController extends Controller
             ]
         );
 
-        return back()->with('status', 'profile-updated');
+        return redirect()->route('profile.edit')->with('status', 'profile-updated');
     }
 
     /**
@@ -142,6 +148,28 @@ class ProfileController extends Controller
     /**
      * Helper to turn comma-separated string into array
      */
+    /**
+     * Delete the authenticated user's account.
+     */
+    public function destroy(Request $request): RedirectResponse
+    {
+        $request->validateWithBag('userDeletion', [
+            'password' => ['required', 'current_password'],
+        ]);
+
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        Auth::logout();
+
+        $user->delete();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return Redirect::to('/');
+    }
+
     private function processCommaSeparated($string)
     {
         if (empty($string)) return [];

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\LinkCode;
 use App\Models\HealthMetric;
 use App\Models\MedicationLog;
 use App\Models\Checklist;
@@ -15,6 +16,7 @@ class CaregiverDashboardController extends Controller
     public function index()
     {
         $caregiver = Auth::user()->profile;
+        $activeLinkCode = null;
         
         // Ensure the user has a profile
         if (!$caregiver) {
@@ -22,6 +24,14 @@ class CaregiverDashboardController extends Controller
         }
 
         $elderly = $caregiver->elderly;
+
+        if ($caregiver) {
+            $activeLinkCode = LinkCode::where('caregiver_profile_id', $caregiver->id)
+                ->whereNull('used_at')
+                ->where('expires_at', '>', now())
+                ->latest('id')
+                ->first();
+        }
 
         if (!$elderly) {
             return view('caregiver.dashboard', [
@@ -31,6 +41,7 @@ class CaregiverDashboardController extends Controller
                 'vitals' => [],
                 'recentActivity' => collect(),
                 'stats' => [],
+                'activeLinkCode' => $activeLinkCode,
             ]);
         }
 
@@ -108,7 +119,7 @@ class CaregiverDashboardController extends Controller
             $allergies = $medicalInfo['allergies'];
         }
 
-        return view('caregiver.dashboard', compact('elderly', 'elderlyUser', 'mood', 'vitals', 'recentActivity', 'stats', 'conditions', 'medications', 'allergies'));
+        return view('caregiver.dashboard', compact('elderly', 'elderlyUser', 'mood', 'vitals', 'recentActivity', 'stats', 'conditions', 'medications', 'allergies', 'activeLinkCode'));
     }
 
     /**

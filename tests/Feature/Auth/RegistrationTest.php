@@ -23,9 +23,24 @@ class RegistrationTest extends TestCase
             'email' => 'test@example.com',
             'password' => 'password',
             'password_confirmation' => 'password',
+            'user_type' => 'elderly',
         ]);
 
         $this->assertAuthenticated();
         $response->assertRedirect(route('dashboard', absolute: false));
+    }
+
+    public function test_caregivers_are_redirected_to_caregiver_dashboard_after_registration(): void
+    {
+        $response = $this->post('/register', [
+            'name' => 'Care Giver',
+            'email' => 'caregiver@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'user_type' => 'caregiver',
+        ]);
+
+        $this->assertAuthenticated();
+        $response->assertRedirect(route('caregiver.dashboard', absolute: false));
     }
 }

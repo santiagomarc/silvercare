@@ -63,6 +63,38 @@
 
         <x-flash-messages />
 
+        @if(!$linkedCaregiver)
+            <section class="mb-6 rounded-2xl border border-blue-200 bg-blue-50/80 backdrop-blur-sm p-5 shadow-sm">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-extrabold text-gray-900">Link Your Caregiver</h2>
+                        <p class="text-sm text-gray-600 mt-1">Ask your caregiver for a 6-digit PIN, then enter it below.</p>
+                    </div>
+
+                    <form method="POST" action="{{ route('elderly.link-caregiver') }}" class="flex items-center gap-2">
+                        @csrf
+                        <input
+                            type="text"
+                            name="code"
+                            inputmode="numeric"
+                            maxlength="6"
+                            pattern="[0-9]{6}"
+                            placeholder="000000"
+                            class="w-32 rounded-xl border-2 border-blue-200 bg-white px-3 py-2 text-center text-lg font-black tracking-[0.2em] text-gray-900 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20"
+                            required
+                        >
+                        <button type="submit" class="rounded-xl bg-[#000080] px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-900 transition-colors">
+                            Link
+                        </button>
+                    </form>
+                </div>
+
+                @error('code')
+                    <p class="mt-3 text-sm font-semibold text-red-600">{{ $message }}</p>
+                @enderror
+            </section>
+        @endif
+
         {{-- ╔══════════════════╗
              ║  HERO ACTION     ║
              ╚══════════════════╝ --}}

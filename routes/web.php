@@ -16,6 +16,7 @@ use App\Http\Controllers\WellnessController; // <--- ADDED THIS
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\AiAssistantController;
 use App\Http\Controllers\CaregiverAiController;
+use App\Http\Controllers\CareLinkController;
 use Illuminate\Support\Facades\Route;
 
 // Welcome landing page - redirect logged-in users to their dashboard
@@ -33,6 +34,7 @@ Route::post('/caregiver/set-password/{userId}', [CaregiverSetPasswordController:
 // Elderly Routes - Protected by 'elderly' middleware
 Route::middleware(['auth', 'verified', 'elderly'])->group(function () {
     Route::get('/dashboard', [ElderlyDashboardController::class, 'index'])->name('dashboard');
+    Route::post('/link-caregiver', [CareLinkController::class, 'link'])->name('elderly.link-caregiver');
     Route::get('/my-medications', [ElderlyDashboardController::class, 'medications'])->name('elderly.medications');
     Route::get('/my-checklists', [ElderlyDashboardController::class, 'checklists'])->name('elderly.checklists');
     Route::post('/my-checklists/{checklist}/toggle', [ElderlyDashboardController::class, 'toggleChecklist'])->name('elderly.checklists.toggle');
@@ -99,6 +101,7 @@ Route::middleware(['auth', 'verified', 'elderly'])->group(function () {
 // Caregiver Routes - Protected by 'caregiver' middleware
 Route::middleware(['auth', 'verified', 'caregiver'])->prefix('caregiver')->name('caregiver.')->group(function () {
     Route::get('/dashboard', [CaregiverDashboardController::class, 'index'])->name('dashboard');
+    Route::post('/link-code', [CareLinkController::class, 'generate'])->name('link-code.generate');
     
     Route::get('/profile', [CaregiverProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [CaregiverProfileController::class, 'update'])->name('profile.update');

@@ -3,8 +3,10 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use App\Models\UserProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 class RedirectBasedOnRole
@@ -20,12 +22,18 @@ class RedirectBasedOnRole
             $user = Auth::user();
             $profile = $user->profile;
 
+            if (! $profile) {
+                $profile = UserProfile::create([
+                    'user_id' => $user->id,
+                    'user_type' => 'elderly',
+                    'username' => Str::slug($user->name) ?: ('user-' . $user->id),
+                    'profile_completed' => false,
+                    'is_active' => true,
+                ]);
+            }
+
             if ($profile) {
                 if ($profile->user_type === 'elderly') {
-                    // Check if profile is completed
-                    if (!$profile->profile_completed) {
-                        return redirect()->route('profile.completion');
-                    }
                     return redirect()->route('dashboard');
                 } elseif ($profile->user_type === 'caregiver') {
                     return redirect()->route('caregiver.dashboard');

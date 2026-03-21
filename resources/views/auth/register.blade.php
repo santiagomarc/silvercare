@@ -50,7 +50,7 @@
                 <p class="text-gray-600 font-medium">Join SilverCare today</p>
             </div>
 
-            <form method="POST" action="{{ route('register') }}" x-data="{ addCaregiver: false }" class="space-y-6">
+            <form method="POST" action="{{ route('register') }}" class="space-y-6">
                 @csrf
 
                 <!-- Show all errors at top -->
@@ -74,11 +74,35 @@
                     </div>
                 @endif
 
+                <!-- Google Sign-In -->
+                <div class="fade-in-section transition-delay-200">
+                    <a href="{{ route('auth.google.redirect') }}" class="w-full inline-flex items-center justify-center gap-3 border-2 border-gray-200 hover:border-[#000080] bg-white py-3 rounded-xl font-bold text-gray-800 transition-all duration-200">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
+                            <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.2-1.4 3.4-5.5 3.4-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 2.9 14.6 2 12 2 6.5 2 2 6.5 2 12s4.5 10 10 10c5.8 0 9.7-4.1 9.7-9.9 0-.7-.1-1.3-.2-1.9H12z"/>
+                        </svg>
+                        Continue with Google
+                    </a>
+                </div>
+
+                <div class="flex items-center gap-3 fade-in-section transition-delay-300">
+                    <div class="h-px flex-1 bg-gray-200"></div>
+                    <span class="text-xs font-semibold tracking-wider text-gray-500">OR SIGN UP WITH EMAIL</span>
+                    <div class="h-px flex-1 bg-gray-200"></div>
+                </div>
+
                 <!-- Two Column Layout for Fields -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 fade-in-section transition-delay-200">
-                    
-                    <!-- Left Column -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 fade-in-section transition-delay-400">
                     <div class="space-y-5">
+                        <div>
+                            <label for="user_type" class="block text-sm font-bold text-gray-700 mb-2">I am signing up as</label>
+                            <select id="user_type" name="user_type" required
+                                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium">
+                                <option value="">Select role</option>
+                                <option value="elderly" {{ old('user_type') == 'elderly' ? 'selected' : '' }}>Elderly / Patient</option>
+                                <option value="caregiver" {{ old('user_type') == 'caregiver' ? 'selected' : '' }}>Caregiver</option>
+                            </select>
+                        </div>
+
                         <div>
                             <label for="name" class="block text-sm font-bold text-gray-700 mb-2">Full Name</label>
                             <input id="name" type="text" name="name" value="{{ old('name') }}" required autofocus
@@ -94,10 +118,19 @@
                         </div>
 
                         <div>
-                            <label for="phone_number" class="block text-sm font-bold text-gray-700 mb-2">Phone Number</label>
-                            <input id="phone_number" type="tel" name="phone_number" value="{{ old('phone_number') }}" required
+                            <label for="phone_number" class="block text-sm font-bold text-gray-700 mb-2">Phone Number (optional)</label>
+                            <input id="phone_number" type="tel" name="phone_number" value="{{ old('phone_number') }}"
                                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium"
                                    placeholder="+1234567890">
+                        </div>
+                    </div>
+
+                    <div class="space-y-5">
+                        <div>
+                            <label for="username" class="block text-sm font-bold text-gray-700 mb-2">Username (optional)</label>
+                            <input id="username" type="text" name="username" value="{{ old('username') }}"
+                                   class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium"
+                                   placeholder="johndoe123">
                         </div>
 
                         <div>
@@ -106,40 +139,6 @@
                                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium"
                                    placeholder="Enter password">
                         </div>
-                    </div>
-
-                    <!-- Right Column -->
-                    <div class="space-y-5">
-                        <div>
-                            <label for="username" class="block text-sm font-bold text-gray-700 mb-2">Username</label>
-                            <input id="username" type="text" name="username" value="{{ old('username') }}" required
-                                   class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium"
-                                   placeholder="johndoe123">
-                        </div>
-
-                        <div>
-                            <label for="sex" class="block text-sm font-bold text-gray-700 mb-2">Sex</label>
-                            <select id="sex" name="sex" required
-                                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium">
-                                <option value="">Select</option>
-                                <option value="Male" {{ old('sex') == 'Male' ? 'selected' : '' }}>Male</option>
-                                <option value="Female" {{ old('sex') == 'Female' ? 'selected' : '' }}>Female</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label for="address" class="block text-sm font-bold text-gray-700 mb-2">Address</label>
-                            <input id="address" type="text" name="address" value="{{ old('address') }}"
-                                   class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium"
-                                   placeholder="123 Main St, City">
-                        </div>
-
-                        <div>
-                            <label for="age" class="block text-sm font-bold text-gray-700 mb-2">Age</label>
-                            <input id="age" type="number" name="age" value="{{ old('age') }}" min="1" max="150"
-                                   class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium"
-                                   placeholder="65">
-                        </div>
 
                         <div>
                             <label for="password_confirmation" class="block text-sm font-bold text-gray-700 mb-2">Confirm Password</label>
@@ -147,82 +146,13 @@
                                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium"
                                    placeholder="Confirm password">
                         </div>
-                    </div>
-
-                </div>
-
-                <!-- Divider -->
-                <div class="border-t-2 border-gray-100 my-6"></div>
-
-                <!-- Caregiver Checkbox (Full Width, Centered) -->
-                <div class="flex justify-center fade-in-section transition-delay-400">
-                    <label class="flex items-center gap-3 p-4 bg-blue-50 rounded-lg cursor-pointer border-2 border-transparent hover:border-[#000080] transition-all duration-200 max-w-md w-full">
-                        <input type="checkbox" name="add_caregiver" value="1" x-model="addCaregiver"
-                               class="w-5 h-5 rounded border-gray-300 text-[#000080] focus:ring-[#000080]">
-                        <div>
-                            <span class="text-sm font-bold text-gray-900">I have a caregiver</span>
-                            <p class="text-xs text-gray-600 font-medium">They'll receive a password reset email</p>
-                        </div>
-                    </label>
-                </div>
-
-                <!-- Caregiver Details (Conditional, Centered) -->
-                <div x-show="addCaregiver" 
-                     x-transition:enter="transition ease-out duration-300"
-                     x-transition:enter-start="opacity-0 transform scale-95"
-                     x-transition:enter-end="opacity-100 transform scale-100"
-                     class="max-w-2xl mx-auto space-y-5 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border-2 border-[#000080]/20">
-                    
-                    <h3 class="font-bold text-xl text-gray-900 text-center mb-4">Caregiver Information</h3>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div>
-                            <label for="caregiver_name" class="block text-sm font-bold text-gray-700 mb-2">Caregiver's Full Name</label>
-                            <input id="caregiver_name" type="text" name="caregiver_name" value="{{ old('caregiver_name') }}"
-                                   class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium bg-white"
-                                   placeholder="Jane Doe">
-                        </div>
 
                         <div>
-                            <label for="caregiver_email" class="block text-sm font-bold text-gray-700 mb-2">Caregiver's Email</label>
-                            <input id="caregiver_email" type="email" name="caregiver_email" value="{{ old('caregiver_email') }}"
-                                   class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium bg-white"
-                                   placeholder="caregiver@example.com">
+                            <label for="age" class="block text-sm font-bold text-gray-700 mb-2">Age (optional)</label>
+                            <input id="age" type="number" name="age" value="{{ old('age') }}" min="1" max="150"
+                                   class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium"
+                                   placeholder="65">
                         </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div>
-                            <label for="caregiver_phone" class="block text-sm font-bold text-gray-700 mb-2">Caregiver's Phone</label>
-                            <input id="caregiver_phone" type="tel" name="caregiver_phone" value="{{ old('caregiver_phone') }}"
-                                   class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium bg-white"
-                                   placeholder="+1234567890">
-                        </div>
-
-                        <div>
-                            <label for="caregiver_age" class="block text-sm font-bold text-gray-700 mb-2">Caregiver's Age</label>
-                            <input id="caregiver_age" type="number" name="caregiver_age" value="{{ old('caregiver_age') }}" min="1" max="150"
-                                   class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium bg-white"
-                                   placeholder="45">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label for="caregiver_address" class="block text-sm font-bold text-gray-700 mb-2">Caregiver's Address</label>
-                        <input id="caregiver_address" type="text" name="caregiver_address" value="{{ old('caregiver_address') }}"
-                               class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium bg-white"
-                               placeholder="123 Main St, City">
-                    </div>
-
-                    <div>
-                        <label for="caregiver_relationship" class="block text-sm font-bold text-gray-700 mb-2">Relationship</label>
-                        <select id="caregiver_relationship" name="caregiver_relationship"
-                                class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium bg-white">
-                            <option value="">Select relationship</option>
-                            <option value="Spouse" {{ old('caregiver_relationship') == 'Spouse' ? 'selected' : '' }}>Spouse</option>
-                            <option value="Child" {{ old('caregiver_relationship') == 'Child' ? 'selected' : '' }}>Child</option>
-                            <option value="Professional Caregiver" {{ old('caregiver_relationship') == 'Professional Caregiver' ? 'selected' : '' }}>Professional Caregiver</option>
-                        </select>
                     </div>
                 </div>
 

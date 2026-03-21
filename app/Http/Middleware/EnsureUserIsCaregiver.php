@@ -2,9 +2,11 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\UserProfile;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureUserIsCaregiver
@@ -23,17 +25,25 @@ class EnsureUserIsCaregiver
 
         $profile = $user->profile;
 
+        if (! $profile) {
+            $profile = UserProfile::create([
+                'user_id' => $user->id,
+                'user_type' => 'caregiver',
+                'username' => Str::slug($user->name) ?: ('user-' . $user->id),
+                'profile_completed' => true,
+                'is_active' => true,
+            ]);
+        }
+
         if (!$profile || $profile->user_type !== 'caregiver') {
             // Redirect elderly to their dashboard
             if ($profile && $profile->user_type === 'elderly') {
                 return redirect()->route('dashboard')
                     ->with('error', 'You do not have access to the caregiver interface.');
             }
-            
-            // No profile - go to login
-            Auth::logout();
-            return redirect()->route('login')
-                ->with('error', 'Your account is not properly configured.');
+
+            return redirect()->route('welcome')
+                ->with('error', 'Account role is not configured for caregiver access.');
         }
 
         return $next($request);

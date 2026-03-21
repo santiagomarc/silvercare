@@ -33,7 +33,22 @@
                     </div>
                     <div class="ml-4">
                         <h3 class="text-lg font-[800] text-yellow-800">No Elderly Assigned</h3>
-                        <p class="text-sm text-yellow-700 mt-1">No elderly profile is currently associated with your account. Please contact support or complete the setup.</p>
+                        <p class="text-sm text-yellow-700 mt-1">Generate a 6-digit PIN and share it with your patient. They can enter it in their dashboard to link accounts instantly.</p>
+
+                        @if(session('link_code') || $activeLinkCode)
+                            <div class="mt-4 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 border border-yellow-200">
+                                <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Active PIN</span>
+                                <span class="text-2xl font-black tracking-[0.2em] text-gray-900">{{ session('link_code', $activeLinkCode?->code) }}</span>
+                            </div>
+                            <p class="text-xs text-yellow-700 mt-2">Expires: {{ optional($activeLinkCode?->expires_at)->format('M d, Y h:i A') }}</p>
+                        @endif
+
+                        <form method="POST" action="{{ route('caregiver.link-code.generate') }}" class="mt-4">
+                            @csrf
+                            <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-[#000080] px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-900 transition-colors">
+                                {{ $activeLinkCode ? 'Show Active PIN' : 'Generate Linking PIN' }}
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
