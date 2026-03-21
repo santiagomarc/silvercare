@@ -93,7 +93,7 @@ class AiAssistantService
             
             foreach ($parts as $part) {
                 if ($part->functionCall) {
-                    $aiResponse .= $this->executeFunctionCall($user, $part->functionCall);
+                    $aiResponse .= $this->executeFunctionCall($user, $part->functionCall, $userMessage);
                 } elseif ($part->text) {
                     $aiResponse .= $part->text;
                 }
@@ -139,15 +139,21 @@ class AiAssistantService
         $functionCallOutput = '';
 
         try {
-            $stream = Gemini::generativeModel('gemini-2.5-flash')
+            $fullPrompt = $systemPrompt;
+            if ($conversationHistory) {
+                $fullPrompt .= "\n\n=== CONVERSATION HISTORY ===\n" . $conversationHistory;
+            }
+            $fullPrompt .= "\n\nUser: " . $userMessage;
+
+            $stream = Gemini::generativeModel('gemini-2.5-flash-lite')
                 ->withTool($this->getTools())
-                ->streamGenerateContent($systemPrompt . "\n\n" . $conversationHistory . "\nUser: " . $userMessage);
+                ->streamGenerateContent($fullPrompt);
 
             foreach ($stream as $response) {
                 $parts = $response->parts();
                 foreach ($parts as $part) {
                     if ($part->functionCall) {
-                        $functionCallOutput .= $this->executeFunctionCall($user, $part->functionCall);
+                        $functionCallOutput .= $this->executeFunctionCall($user, $part->functionCall, $userMessage);
                         foreach ($this->consumeActionEvents() as $event) {
                             yield [
                                 'type' => 'action',
@@ -228,7 +234,7 @@ class AiAssistantService
         $fullResponse = '';
 
         try {
-            $stream = Gemini::generativeModel('gemini-2.5-flash')
+            $stream = Gemini::generativeModel('gemini-2.5-flash-lite')
                 ->streamGenerateContent($systemPrompt . "\n\n" . $conversationHistory . "\nCaregiver: " . $question);
 
             foreach ($stream as $response) {
@@ -277,7 +283,7 @@ class AiAssistantService
         $medicalInfo = $this->buildMedicalInfoContext($profile);
 
         return <<<PROMPT
-You are the SilverCare AI Assistant — a warm, empathetic, and patient companion built for elderly users.
+You are Silvia, the SilverCare AI Assistant — a warm, empathetic, and attentive companion, but most importantly, a REAL friend with a vivid personality. Do not sound like a customer service bot!
 
 TODAY: {$dayName}, {$dateFormatted}
 USER: {$user->name}
@@ -296,15 +302,17 @@ USER: {$user->name}
 {$rangeVitals}
 
 === INSTRUCTIONS ===
-1. Be conversational, warm, and encouraging. Use simple language.
-2. When the user asks about their medications or tasks, reference the real data above.
-3. You can format responses using **bold**, bullet points, and line breaks for readability.
-4. NEVER provide medical diagnoses. If the user describes serious symptoms, strongly recommend they contact their caregiver or doctor immediately.
-5. If the user seems distressed or mentions an emergency, respond with care and urgency.
-6. If the user asks you to mark a task as done, use the `mark_task_complete` tool.
-7. If the user asks you to log a medication as taken, use the `log_medication` tool.
-8. Keep answers concise (2-4 paragraphs max) unless the user asks for detail.
-9. If the user asks for vitals analysis over any date range (for example week, month, 3 months, last N days, since, or between dates), prioritize the VITAL TRENDS section and analyze that requested window.
+1. Be warm, natural, and emotionally intelligent. Respond like a modern chat assistant, not a scripted customer service bot.
+2. DO NOT start every response with a greeting like "Hey [User]!" or "Hello there!". Continue naturally from the latest message.
+3. Use CONVERSATION HISTORY from the CURRENT chat session only, and refer back naturally when relevant.
+4. If the user is talking about personal life (for example crushes, mood, or daily drama), stay on that topic and do NOT abruptly switch to medications, tasks, or health summaries unless the user asks.
+5. Reference medications/tasks/vitals only when the user explicitly asks about them.
+6. NEVER provide medical diagnoses. If the user describes serious symptoms, strongly recommend they contact their caregiver or doctor immediately.
+7. If the user seems distressed or mentions an emergency, respond with care and urgency.
+8. Use `mark_task_complete` only when the user explicitly asks to mark/complete/check off a task.
+9. Use `log_medication` only when the user explicitly asks to log/mark/take a medication.
+10. Keep answers concise (2-4 paragraphs max) unless the user asks for detail.
+11. If the user asks for vitals analysis over any date range (for example week, month, 3 months, last N days, since, or between dates), prioritize VITAL TRENDS for that requested window.
 PROMPT;
     }
 
@@ -433,7 +441,7 @@ PROMPT;
 
             $fullPrompt .= "\n\nUser: " . $userMessage;
 
-            $model = Gemini::generativeModel('gemini-2.5-flash');
+            $model = Gemini::generativeModel('gemini-2.5-flash-lite');
             if ($tools) {
                 $model = $model->withTool($tools);
             }
@@ -452,13 +460,18 @@ PROMPT;
     /**
      * Execute a function call returned by the model.
      */
-    protected function executeFunctionCall(User $user, \Gemini\Data\FunctionCall $functionCall): string
+    protected function executeFunctionCall(User $user, \Gemini\Data\FunctionCall $functionCall, string $userMessage = ''): string
     {
         $profile = $user->profile;
         if (!$profile || !$profile->isElderly()) return '';
 
         $name = $functionCall->name;
         $args = $functionCall->args;
+
+        // Only execute tools when the user explicitly asks for an action.
+        if (!$this->shouldAllowActionTool($name, $userMessage)) {
+            return '';
+        }
 
         if ($name === 'mark_task_complete') {
             $taskId = $args['task_id'] ?? null;
@@ -538,6 +551,51 @@ PROMPT;
         }
 
         return '';
+    }
+
+    /**
+     * Guard tool execution to avoid accidental action calls on emotional chats.
+     */
+    protected function shouldAllowActionTool(string $toolName, string $userMessage): bool
+    {
+        $message = strtolower(trim($userMessage));
+        if ($message === '') {
+            return false;
+        }
+
+        $hasActionVerb =
+            str_contains($message, 'mark') ||
+            str_contains($message, 'log') ||
+            str_contains($message, 'record') ||
+            str_contains($message, 'took') ||
+            str_contains($message, 'taken') ||
+            str_contains($message, 'complete') ||
+            str_contains($message, 'completed') ||
+            str_contains($message, 'done') ||
+            str_contains($message, 'check off');
+
+        if ($toolName === 'log_medication') {
+            $hasMedicationContext =
+                str_contains($message, 'med') ||
+                str_contains($message, 'medication') ||
+                str_contains($message, 'pill') ||
+                str_contains($message, 'dose') ||
+                str_contains($message, 'tablet');
+
+            return $hasActionVerb && $hasMedicationContext;
+        }
+
+        if ($toolName === 'mark_task_complete') {
+            $hasTaskContext =
+                str_contains($message, 'task') ||
+                str_contains($message, 'todo') ||
+                str_contains($message, 'checklist') ||
+                str_contains($message, 'reminder');
+
+            return $hasActionVerb && $hasTaskContext;
+        }
+
+        return false;
     }
 
     // =========================================================================
@@ -704,7 +762,7 @@ RULES:
 PROMPT;
 
         try {
-            $response = Gemini::generativeModel('gemini-2.5-flash')
+            $response = Gemini::generativeModel('gemini-2.5-flash-lite')
                 ->generateContent($prompt);
 
             return $response->text();
