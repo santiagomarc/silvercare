@@ -33,7 +33,7 @@
     <div class="relative z-10 overflow-y-auto no-scrollbar space-y-2">
         @forelse($medications as $medication)
             @php
-                $medTimes = $medication->times_of_day ?? [];
+                $medTimes = $medication->scheduleTimesForDate(now());
             @endphp
             @foreach($medTimes as $time)
                 @php

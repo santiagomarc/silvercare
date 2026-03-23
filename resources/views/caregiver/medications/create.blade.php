@@ -77,7 +77,7 @@
                     <input type="text" name="name" id="name" value="{{ old('name') }}" class="w-full rounded-xl border-2 border-gray-100 bg-gray-50 px-4 py-3.5 font-[600] text-gray-900 transition-all focus:border-blue-500 focus:bg-white focus:ring-0 outline-none" placeholder="e.g. Lisinopril, Metformin" required>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <!-- Dosage -->
                     <div>
                         <label for="dosage" class="block text-xs font-[800] uppercase tracking-wider text-gray-400 mb-2">Dosage <span class="text-red-500">*</span></label>
@@ -99,6 +99,12 @@
                         <label for="start_date" class="block text-xs font-[800] uppercase tracking-wider text-gray-400 mb-2">Start Date</label>
                         <input type="date" name="start_date" id="start_date" value="{{ old('start_date', date('Y-m-d')) }}" class="w-full rounded-xl border-2 border-gray-100 bg-gray-50 px-4 py-3.5 font-[600] text-gray-900 transition-all focus:border-blue-500 focus:bg-white focus:ring-0 outline-none">
                     </div>
+
+                    <!-- End Date -->
+                    <div>
+                        <label for="end_date" class="block text-xs font-[800] uppercase tracking-wider text-gray-400 mb-2">End Date</label>
+                        <input type="date" name="end_date" id="end_date" value="{{ old('end_date') }}" class="w-full rounded-xl border-2 border-gray-100 bg-gray-50 px-4 py-3.5 font-[600] text-gray-900 transition-all focus:border-blue-500 focus:bg-white focus:ring-0 outline-none">
+                    </div>
                 </div>
             </div>
 
@@ -111,8 +117,19 @@
                     <h3 class="font-[800] text-xl text-gray-900">Schedule</h3>
                 </div>
 
-                <!-- Days of Week -->
+                <!-- Schedule Type -->
                 <div class="mb-6">
+                    <label for="schedule_type" class="block text-xs font-[800] uppercase tracking-wider text-gray-400 mb-2">Schedule Type <span class="text-red-500">*</span></label>
+                    <select name="schedule_type" id="schedule_type" class="w-full rounded-xl border-2 border-gray-100 bg-gray-50 px-4 py-3.5 font-[700] text-gray-900 transition-all focus:border-green-500 focus:bg-white focus:ring-0 outline-none">
+                        @php $scheduleType = old('schedule_type', 'daily'); @endphp
+                        <option value="daily" {{ $scheduleType === 'daily' ? 'selected' : '' }}>Daily (Every day)</option>
+                        <option value="weekly" {{ $scheduleType === 'weekly' ? 'selected' : '' }}>Weekly (Selected days)</option>
+                        <option value="specific_date" {{ $scheduleType === 'specific_date' ? 'selected' : '' }}>Specific date(s)</option>
+                    </select>
+                </div>
+
+                <!-- Days of Week -->
+                <div class="mb-6" id="weeklyScheduleSection">
                     <label class="block text-xs font-[800] uppercase tracking-wider text-gray-400 mb-3">Recurrence Days <span class="text-red-500">*</span></label>
                     <div class="flex flex-wrap gap-2">
                         @php
@@ -137,11 +154,27 @@
                     </div>
                 </div>
 
+                <!-- Specific Dates -->
+                <div class="mb-6 hidden" id="specificDatesSection">
+                    <label class="block text-xs font-[800] uppercase tracking-wider text-gray-400 mb-3">Specific Date(s) <span class="text-red-500">*</span></label>
+
+                    <div id="specificDateContainer" data-initial-dates='@json(old('specific_dates', []))' class="flex flex-wrap gap-2 mb-4"></div>
+
+                    <div class="flex items-center gap-3">
+                        <input type="date" id="newSpecificDateInput" class="rounded-xl border-2 border-gray-100 bg-gray-50 px-4 py-3 font-[600] text-gray-900 focus:border-indigo-500 focus:bg-white focus:ring-0 outline-none">
+                        <button type="button" onclick="addSpecificDate()" class="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-500 to-blue-600 text-white rounded-xl font-[700] shadow-md hover:-translate-y-0.5 transition-all">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            Add Date
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2">Use this for one-off or limited-date medication plans.</p>
+                </div>
+
                 <!-- Time Slots -->
                 <div>
                     <label class="block text-xs font-[800] uppercase tracking-wider text-gray-400 mb-3">Time Slots <span class="text-red-500">*</span></label>
                     
-                    <div id="timeSlotContainer" class="flex flex-wrap gap-2 mb-4">
+                    <div id="timeSlotContainer" data-initial-times='@json(old('times_of_day', []))' class="flex flex-wrap gap-2 mb-4">
                         <!-- Time slots will be added here -->
                     </div>
                     
@@ -207,12 +240,11 @@
     </main>
 
     <script>
-        let timeSlots = [];
+        const timeSlotContainer = document.getElementById('timeSlotContainer');
+        const specificDateContainer = document.getElementById('specificDateContainer');
 
-        @if(old('times_of_day'))
-            timeSlots = @json(old('times_of_day'));
-            renderTimeSlots();
-        @endif
+        let timeSlots = JSON.parse(timeSlotContainer.dataset.initialTimes || '[]');
+        let specificDates = JSON.parse(specificDateContainer.dataset.initialDates || '[]');
 
         function addTimeSlot() {
             const input = document.getElementById('newTimeInput');
@@ -239,6 +271,31 @@
             renderTimeSlots();
         }
 
+        function addSpecificDate() {
+            const input = document.getElementById('newSpecificDateInput');
+            const value = input.value;
+
+            if (!value) {
+                alert('Please select a date first');
+                return;
+            }
+
+            if (specificDates.includes(value)) {
+                alert('This date already exists');
+                return;
+            }
+
+            specificDates.push(value);
+            specificDates.sort();
+            renderSpecificDates();
+            input.value = '';
+        }
+
+        function removeSpecificDate(dateValue) {
+            specificDates = specificDates.filter(d => d !== dateValue);
+            renderSpecificDates();
+        }
+
         function renderTimeSlots() {
             const container = document.getElementById('timeSlotContainer');
             container.innerHTML = '';
@@ -256,6 +313,30 @@
                     <span class="font-[700]">${formatTime(time)}</span>
                     <input type="hidden" name="times_of_day[]" value="${time}">
                     <button type="button" onclick="removeTimeSlot('${time}')" class="ml-3 text-amber-400 hover:text-red-500 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function renderSpecificDates() {
+            const container = document.getElementById('specificDateContainer');
+            container.innerHTML = '';
+
+            if (specificDates.length === 0) {
+                container.innerHTML = '<p class="text-sm text-gray-400 italic">No specific dates added yet</p>';
+                return;
+            }
+
+            specificDates.forEach(dateValue => {
+                const div = document.createElement('div');
+                div.className = 'inline-flex items-center bg-gradient-to-r from-indigo-50 to-blue-50 text-indigo-700 px-4 py-2.5 rounded-xl border border-indigo-100';
+                div.innerHTML = `
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <span class="font-[700]">${new Date(dateValue + 'T00:00:00').toLocaleDateString()}</span>
+                    <input type="hidden" name="specific_dates[]" value="${dateValue}">
+                    <button type="button" onclick="removeSpecificDate('${dateValue}')" class="ml-3 text-indigo-400 hover:text-red-500 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                 `;
@@ -286,11 +367,32 @@
             document.querySelectorAll('input[name="days_of_week[]"]').forEach(cb => cb.checked = false);
         }
 
+        function toggleScheduleSections() {
+            const type = document.getElementById('schedule_type').value;
+            const weekly = document.getElementById('weeklyScheduleSection');
+            const specific = document.getElementById('specificDatesSection');
+
+            weekly.classList.toggle('hidden', type !== 'weekly');
+            specific.classList.toggle('hidden', type !== 'specific_date');
+        }
+
+        document.getElementById('schedule_type').addEventListener('change', toggleScheduleSections);
+
         document.getElementById('medicationForm').addEventListener('submit', function(e) {
-            const checkedDays = document.querySelectorAll('input[name="days_of_week[]"]:checked');
-            if (checkedDays.length === 0) {
+            const scheduleType = document.getElementById('schedule_type').value;
+
+            if (scheduleType === 'weekly') {
+                const checkedDays = document.querySelectorAll('input[name="days_of_week[]"]:checked');
+                if (checkedDays.length === 0) {
+                    e.preventDefault();
+                    alert('Please select at least one day for weekly schedule');
+                    return;
+                }
+            }
+
+            if (scheduleType === 'specific_date' && specificDates.length === 0) {
                 e.preventDefault();
-                alert('Please select at least one day for the medication schedule');
+                alert('Please add at least one specific date');
                 return;
             }
             
@@ -302,6 +404,8 @@
         });
 
         renderTimeSlots();
+        renderSpecificDates();
+        toggleScheduleSections();
     </script>
 
 </body>

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Medication;
 use App\Models\MedicationLog;
+use App\Models\MedicationSchedule;
 use App\Models\UserProfile;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -16,23 +17,29 @@ class MedicationService
      */
     public function addMedicationSchedule(array $data): Medication
     {
-        return Medication::create([
-            'elderly_id' => $data['elderly_id'],
-            'caregiver_id' => $data['caregiver_id'],
-            'name' => $data['name'],
-            'dosage' => $data['dosage'],
-            'dosage_unit' => $data['dosage_unit'] ?? 'mg',
-            'instructions' => $data['instructions'] ?? null,
-            'days_of_week' => $data['days_of_week'] ?? null, // [1,3,5] for Mon,Wed,Fri
-            'specific_dates' => $data['specific_dates'] ?? null, // ['2025-12-25'] for one-time
-            'times_of_day' => $data['times_of_day'], // ['09:00', '21:00']
-            'start_date' => $data['start_date'],
-            'end_date' => $data['end_date'] ?? null,
-            'is_active' => $data['is_active'] ?? true,
-            'track_inventory' => $data['track_inventory'] ?? false,
-            'current_stock' => $data['current_stock'] ?? 0,
-            'low_stock_threshold' => $data['low_stock_threshold'] ?? 5,
-        ]);
+        return DB::transaction(function () use ($data) {
+            $medication = Medication::create([
+                'elderly_id' => $data['elderly_id'],
+                'caregiver_id' => $data['caregiver_id'],
+                'name' => $data['name'],
+                'dosage' => $data['dosage'],
+                'dosage_unit' => $data['dosage_unit'] ?? 'mg',
+                'instructions' => $data['instructions'] ?? null,
+                'days_of_week' => $data['days_of_week'] ?? null,
+                'specific_dates' => $data['specific_dates'] ?? null,
+                'times_of_day' => $data['times_of_day'],
+                'start_date' => $data['start_date'],
+                'end_date' => $data['end_date'] ?? null,
+                'is_active' => $data['is_active'] ?? true,
+                'track_inventory' => $data['track_inventory'] ?? false,
+                'current_stock' => $data['current_stock'] ?? 0,
+                'low_stock_threshold' => $data['low_stock_threshold'] ?? 5,
+            ]);
+
+            $this->syncSchedules($medication, $data);
+
+            return $medication->load('schedules');
+        });
     }
 
     /**
@@ -40,23 +47,27 @@ class MedicationService
      */
     public function updateMedicationSchedule(Medication $medication, array $data): Medication
     {
-        $medication->update([
-            'name' => $data['name'] ?? $medication->name,
-            'dosage' => $data['dosage'] ?? $medication->dosage,
-            'dosage_unit' => $data['dosage_unit'] ?? $medication->dosage_unit,
-            'instructions' => $data['instructions'] ?? $medication->instructions,
-            'days_of_week' => $data['days_of_week'] ?? $medication->days_of_week,
-            'specific_dates' => $data['specific_dates'] ?? $medication->specific_dates,
-            'times_of_day' => $data['times_of_day'] ?? $medication->times_of_day,
-            'start_date' => $data['start_date'] ?? $medication->start_date,
-            'end_date' => $data['end_date'] ?? $medication->end_date,
-            'is_active' => $data['is_active'] ?? $medication->is_active,
-            'track_inventory' => $data['track_inventory'] ?? $medication->track_inventory,
-            'current_stock' => $data['current_stock'] ?? $medication->current_stock,
-            'low_stock_threshold' => $data['low_stock_threshold'] ?? $medication->low_stock_threshold,
-        ]);
+        return DB::transaction(function () use ($medication, $data) {
+            $medication->update([
+                'name' => $data['name'] ?? $medication->name,
+                'dosage' => $data['dosage'] ?? $medication->dosage,
+                'dosage_unit' => $data['dosage_unit'] ?? $medication->dosage_unit,
+                'instructions' => $data['instructions'] ?? $medication->instructions,
+                'days_of_week' => $data['days_of_week'] ?? $medication->days_of_week,
+                'specific_dates' => $data['specific_dates'] ?? $medication->specific_dates,
+                'times_of_day' => $data['times_of_day'] ?? $medication->times_of_day,
+                'start_date' => $data['start_date'] ?? $medication->start_date,
+                'end_date' => $data['end_date'] ?? $medication->end_date,
+                'is_active' => $data['is_active'] ?? $medication->is_active,
+                'track_inventory' => $data['track_inventory'] ?? $medication->track_inventory,
+                'current_stock' => $data['current_stock'] ?? $medication->current_stock,
+                'low_stock_threshold' => $data['low_stock_threshold'] ?? $medication->low_stock_threshold,
+            ]);
 
-        return $medication;
+            $this->syncSchedules($medication, $data);
+
+            return $medication->load('schedules');
+        });
     }
 
     /**
@@ -80,7 +91,7 @@ class MedicationService
                 $query->whereNull('end_date')
                     ->orWhereDate('end_date', '>=', Carbon::today());
             })
-            ->with(['elderly', 'caregiver', 'logs' => function ($query) {
+            ->with(['elderly', 'caregiver', 'schedules', 'logs' => function ($query) {
                 $query->whereDate('scheduled_time', Carbon::today());
             }])
             ->get();
@@ -92,7 +103,7 @@ class MedicationService
     public function getMedicationSchedulesForElderly(int $elderlyProfileId, int $limit = 100): Collection
     {
         return Medication::where('elderly_id', $elderlyProfileId)
-            ->with(['elderly', 'caregiver'])
+            ->with(['elderly', 'caregiver', 'schedules'])
             ->orderBy('created_at', 'desc')
             ->limit($limit)
             ->get();
@@ -104,8 +115,6 @@ class MedicationService
     public function getTodaysDoses(int $elderlyProfileId): Collection
     {
         $today = Carbon::today();
-        $dayOfWeek = $today->dayOfWeek; // 0 = Sunday, 1 = Monday, etc.
-
         return Medication::where('elderly_id', $elderlyProfileId)
             ->where('is_active', true)
             ->whereDate('start_date', '<=', $today)
@@ -113,14 +122,10 @@ class MedicationService
                 $query->whereNull('end_date')
                     ->orWhereDate('end_date', '>=', $today);
             })
-            ->where(function ($query) use ($dayOfWeek, $today) {
-                // Recurring: check days_of_week
-                $query->whereJsonContains('days_of_week', (string)$dayOfWeek)
-                    // OR one-time: check specific_dates
-                    ->orWhereJsonContains('specific_dates', $today->format('Y-m-d'));
-            })
-            ->with('logs')
-            ->get();
+            ->with(['schedules', 'logs'])
+            ->get()
+            ->filter(fn (Medication $medication) => $medication->isScheduledForDate($today))
+            ->values();
     }
 
     /**
@@ -165,6 +170,72 @@ class MedicationService
             ->whereDate('scheduled_time', Carbon::today())
             ->with('medication')
             ->get();
+    }
+
+    private function syncSchedules(Medication $medication, array $data): void
+    {
+        $scheduleType = $data['schedule_type'] ?? $medication->primaryScheduleType();
+        $times = collect($data['times_of_day'] ?? [])
+            ->filter(fn ($time) => is_string($time) && $time !== '')
+            ->unique()
+            ->sort()
+            ->values();
+
+        $daysOfWeek = collect($data['days_of_week'] ?? [])
+            ->filter(fn ($day) => is_string($day) && $day !== '')
+            ->unique()
+            ->values()
+            ->all();
+
+        $specificDates = collect($data['specific_dates'] ?? [])
+            ->filter(fn ($date) => is_string($date) && $date !== '')
+            ->unique()
+            ->sort()
+            ->values();
+
+        $medication->schedules()->delete();
+
+        if ($times->isEmpty()) {
+            return;
+        }
+
+        $rows = [];
+        foreach ($times as $time) {
+            if ($scheduleType === 'specific_date') {
+                foreach ($specificDates as $specificDate) {
+                    $rows[] = [
+                        'schedule_type' => 'specific_date',
+                        'days_of_week' => null,
+                        'specific_date' => $specificDate,
+                        'time_of_day' => $time,
+                    ];
+                }
+
+                continue;
+            }
+
+            $rows[] = [
+                'schedule_type' => $scheduleType === 'weekly' ? 'weekly' : 'daily',
+                'days_of_week' => $scheduleType === 'weekly' ? $daysOfWeek : null,
+                'specific_date' => null,
+                'time_of_day' => $time,
+            ];
+        }
+
+        if (!empty($rows)) {
+            $medication->schedules()->createMany($rows);
+        }
+
+        // Keep legacy JSON fields in sync during transition.
+        $legacyDays = $scheduleType === 'weekly' ? $daysOfWeek : null;
+        $legacyDates = $scheduleType === 'specific_date' ? $specificDates->all() : null;
+
+        $medication->forceFill([
+            'frequency' => $scheduleType,
+            'days_of_week' => $legacyDays,
+            'specific_dates' => $legacyDates,
+            'times_of_day' => $times->all(),
+        ])->saveQuietly();
     }
 
     /**

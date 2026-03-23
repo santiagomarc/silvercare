@@ -9,7 +9,7 @@ class MedicationPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->profile !== null;
+        return $user->profile?->isCaregiver() === true || $user->profile?->isElderly() === true;
     }
 
     public function create(User $user): bool

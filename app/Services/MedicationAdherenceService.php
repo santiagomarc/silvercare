@@ -8,21 +8,32 @@ use Carbon\Carbon;
 class MedicationAdherenceService
 {
     /**
-     * Calculate a 7-day medication adherence summary for an elderly profile.
+     * Backward-compatible weekly summary.
      *
      * @param  \App\Models\UserProfile  $elderly
      * @return array{totalMedications: int, totalScheduled: int, totalTaken: int, adherenceRate: int|null, lowStockCount: int, medications: array}
      */
     public function weekSummary($elderly): array
     {
-        $medications = $elderly->trackedMedications()->where('is_active', true)->get();
-        $last7Days = Carbon::today()->subDays(6);
+        return $this->summary($elderly, 7);
+    }
+
+    /**
+     * Calculate medication adherence summary for configurable lookback windows.
+     *
+     * @param  \App\Models\UserProfile  $elderly
+     * @return array{totalMedications: int, totalScheduled: int, totalTaken: int, adherenceRate: int|null, lowStockCount: int, medications: array}
+     */
+    public function summary($elderly, int $lookbackDays = 30): array
+    {
+        $days = max(1, $lookbackDays);
+        $medications = $elderly->trackedMedications()->where('is_active', true)->with('schedules')->get();
+        $startDate = Carbon::today()->subDays($days - 1);
         $today = Carbon::today();
 
-        // Pre-fetch ALL taken logs for the 7-day window in one query
         $medIds = $medications->pluck('id');
         $allLogs = MedicationLog::whereIn('medication_id', $medIds)
-            ->whereDate('scheduled_time', '>=', $last7Days)
+            ->whereDate('scheduled_time', '>=', $startDate)
             ->whereDate('scheduled_time', '<=', $today)
             ->where('is_taken', true)
             ->get()
@@ -37,9 +48,9 @@ class MedicationAdherenceService
             $scheduled = 0;
             $taken = 0;
 
-            for ($date = $last7Days->copy(); $date->lte($today); $date->addDay()) {
+            for ($date = $startDate->copy(); $date->lte($today); $date->addDay()) {
                 if ($this->isScheduledForDate($med, $date)) {
-                    $doseCount = count($med->times_of_day ?? []);
+                    $doseCount = count($med->scheduleTimesForDate($date));
                     $scheduled += $doseCount;
 
                     $key = $med->id . '_' . $date->format('Y-m-d');
@@ -77,8 +88,6 @@ class MedicationAdherenceService
 
     private function isScheduledForDate($medication, Carbon $date): bool
     {
-        $daysOfWeek = $medication->days_of_week ?? [];
-
-        return empty($daysOfWeek) || in_array($date->format('l'), $daysOfWeek, true);
+        return $medication->isScheduledForDate($date);
     }
 }

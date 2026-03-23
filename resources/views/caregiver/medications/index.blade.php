@@ -72,6 +72,15 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             @forelse($medications as $medication)
             <div class="bg-white rounded-[24px] shadow-md border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 group">
+                @php
+                    $scheduleType = $medication->primaryScheduleType();
+                    $weeklyDays = $medication->weeklyDays();
+                    $specificDates = $medication->specificScheduleDates();
+                    $displayTimes = $medication->scheduleTimesForDate(now());
+                    if (empty($displayTimes)) {
+                        $displayTimes = $medication->times_of_day ?? [];
+                    }
+                @endphp
                 <!-- Card Header with Gradient -->
                 <div class="relative p-5 bg-gradient-to-br from-blue-50 to-indigo-50">
                     <div class="absolute top-0 right-0 -mt-4 -mr-4 w-20 h-20 bg-blue-100 rounded-full opacity-50"></div>
@@ -106,13 +115,13 @@
                     </div>
 
                     <!-- Days of Week -->
-                    @if(!empty($medication->days_of_week))
+                    @if($scheduleType === 'weekly')
                         <div class="mb-4">
                             <p class="text-[10px] font-[800] uppercase tracking-wider text-gray-400 mb-2">Schedule</p>
                             <div class="flex flex-wrap gap-1.5">
                                 @foreach(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as $index => $shortDay)
                                     @php $fullDay = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][$index]; @endphp
-                                    <span class="px-2.5 py-1 text-[11px] font-[700] rounded-full {{ in_array($fullDay, $medication->days_of_week) ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400' }}">
+                                    <span class="px-2.5 py-1 text-[11px] font-[700] rounded-full {{ in_array($fullDay, $weeklyDays, true) ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400' }}">
                                         {{ $shortDay }}
                                     </span>
                                 @endforeach
@@ -120,12 +129,32 @@
                         </div>
                     @endif
 
+                    @if($scheduleType === 'daily')
+                        <div class="mb-4">
+                            <p class="text-[10px] font-[800] uppercase tracking-wider text-gray-400 mb-2">Schedule</p>
+                            <span class="px-2.5 py-1 text-[11px] font-[700] rounded-full bg-blue-100 text-blue-700">Every Day</span>
+                        </div>
+                    @endif
+
+                    @if($scheduleType === 'specific_date')
+                        <div class="mb-4">
+                            <p class="text-[10px] font-[800] uppercase tracking-wider text-gray-400 mb-2">Scheduled Dates</p>
+                            <div class="flex flex-wrap gap-1.5">
+                                @foreach($specificDates as $specificDate)
+                                    <span class="px-2.5 py-1 text-[11px] font-[700] rounded-full bg-indigo-100 text-indigo-700">
+                                        {{ \Carbon\Carbon::parse($specificDate)->format('M j') }}
+                                    </span>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
                     <!-- Times of Day -->
-                    @if(!empty($medication->times_of_day))
+                    @if(!empty($displayTimes))
                         <div class="mb-4">
                             <p class="text-[10px] font-[800] uppercase tracking-wider text-gray-400 mb-2">Times</p>
                             <div class="flex flex-wrap gap-2">
-                                @foreach($medication->times_of_day as $time)
+                                @foreach($displayTimes as $time)
                                     <span class="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-amber-50 to-orange-50 text-amber-700 text-xs font-[700] rounded-xl border border-amber-100">
                                         <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                         {{ \Carbon\Carbon::parse($time)->format('g:i A') }}

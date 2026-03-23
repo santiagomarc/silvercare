@@ -8,18 +8,17 @@ use App\Models\MedicationLog;
 use App\Models\Checklist;
 use App\Models\HealthMetric;
 use App\Services\ElderlyDashboardService;
+use App\Services\MedicationWindowService;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
 class ElderlyDashboardController extends Controller
 {
-    /**
-     * Grace period in minutes for taking medication (1 hour before and after scheduled time)
-     */
-    const MEDICATION_GRACE_MINUTES = 60;
-
-    public function __construct(protected ElderlyDashboardService $dashboardService)
+    public function __construct(
+        protected ElderlyDashboardService $dashboardService,
+        protected MedicationWindowService $windowService
+    )
     {
     }
 
@@ -68,6 +67,7 @@ class ElderlyDashboardController extends Controller
             $medications = Medication::where('elderly_id', $elderlyId)
                 ->where('is_active', true)
                 ->orderBy('name')
+                ->with('schedules')
                 ->get();
 
             // Get today's medication logs
@@ -154,18 +154,22 @@ class ElderlyDashboardController extends Controller
 
         $scheduledTime = $request->validated('time');
         $now = Carbon::now();
-        $today = Carbon::today();
+        $validTimes = $medication->scheduleTimesForDate(Carbon::today());
 
-        // Create the scheduled datetime for today
-        $scheduledDateTime = Carbon::parse($today->format('Y-m-d') . ' ' . $scheduledTime);
+        if (!in_array($scheduledTime, $validTimes, true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This medication is not scheduled at the selected time today.',
+            ], 422);
+        }
 
-        // Check if within the 1-hour grace period (1 hour before to 1 hour after)
-        $windowStart = $scheduledDateTime->copy()->subMinutes(self::MEDICATION_GRACE_MINUTES);
-        $windowEnd = $scheduledDateTime->copy()->addMinutes(self::MEDICATION_GRACE_MINUTES);
-
-        $isWithinWindow = $now->between($windowStart, $windowEnd);
-        $isPastWindow = $now->gt($windowEnd);
-        $isBeforeWindow = $now->lt($windowStart);
+        $window = $this->windowService->forToday($scheduledTime, $now);
+        $scheduledDateTime = $window['scheduled_time'];
+        $windowStart = $window['window_start'];
+        $windowEnd = $window['window_end'];
+        $isWithinWindow = $window['is_within_window'];
+        $isPastWindow = $window['is_past_window'];
+        $isBeforeWindow = $window['is_before_window'];
 
         // Determine status
         $status = 'pending';
@@ -186,7 +190,22 @@ class ElderlyDashboardController extends Controller
             ], 400);
         }
 
-        // Create or update the medication log
+        $existingLog = MedicationLog::where('elderly_id', $elderlyId)
+            ->where('medication_id', $medication->id)
+            ->where('scheduled_time', $scheduledDateTime)
+            ->first();
+
+        if ($existingLog?->is_taken) {
+            return response()->json([
+                'success' => true,
+                'is_taken' => true,
+                'taken_at' => $existingLog->taken_at?->toISOString(),
+                'taken_late' => $existingLog->taken_at?->gt($windowEnd) ?? false,
+                'status' => $existingLog->taken_at?->gt($windowEnd) ? 'taken_late' : 'taken',
+                'message' => 'Medication already marked as taken.',
+            ]);
+        }
+
         $log = MedicationLog::updateOrCreate(
             [
                 'elderly_id' => $elderlyId,
@@ -198,6 +217,10 @@ class ElderlyDashboardController extends Controller
                 'taken_at' => $now,
             ]
         );
+
+        if ($medication->track_inventory && $medication->current_stock > 0) {
+            $medication->decrement('current_stock');
+        }
 
         // Create notification for medication taken (with late flag)
         app(NotificationService::class)->createMedicationTakenNotification(
@@ -226,12 +249,19 @@ class ElderlyDashboardController extends Controller
 
         $scheduledTime = $request->validated('time');
         $now = Carbon::now();
-        $today = Carbon::today();
-        $scheduledDateTime = Carbon::parse($today->format('Y-m-d') . ' ' . $scheduledTime);
+        $validTimes = $medication->scheduleTimesForDate(Carbon::today());
 
-        // Check if we're still within the grace period window
-        $windowEnd = $scheduledDateTime->copy()->addMinutes(self::MEDICATION_GRACE_MINUTES);
-        $isPastWindow = $now->gt($windowEnd);
+        if (!in_array($scheduledTime, $validTimes, true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This medication is not scheduled at the selected time today.',
+            ], 422);
+        }
+
+        $window = $this->windowService->forToday($scheduledTime, $now);
+        $scheduledDateTime = $window['scheduled_time'];
+        $windowEnd = $window['window_end'];
+        $isPastWindow = $window['is_past_window'];
 
         // Find the existing log
         $log = MedicationLog::where('elderly_id', $elderlyId)
@@ -250,6 +280,9 @@ class ElderlyDashboardController extends Controller
 
         // Delete the log if it exists
         if ($log) {
+            if ($medication->track_inventory && $log->is_taken) {
+                $medication->increment('current_stock');
+            }
             $log->delete();
         }
 
@@ -265,26 +298,17 @@ class ElderlyDashboardController extends Controller
      */
     public static function canTakeDose(string $scheduledTime): array
     {
-        $now = Carbon::now();
-        $today = Carbon::today();
-        $scheduledDateTime = Carbon::parse($today->format('Y-m-d') . ' ' . $scheduledTime);
-
-        $windowStart = $scheduledDateTime->copy()->subMinutes(self::MEDICATION_GRACE_MINUTES);
-        $windowEnd = $scheduledDateTime->copy()->addMinutes(self::MEDICATION_GRACE_MINUTES);
-
-        $isWithinWindow = $now->between($windowStart, $windowEnd);
-        $isPastWindow = $now->gt($windowEnd);
-        $isBeforeWindow = $now->lt($windowStart);
+        $window = app(MedicationWindowService::class)->forToday($scheduledTime);
 
         return [
-            'can_take' => $isWithinWindow || $isPastWindow,
-            'is_within_window' => $isWithinWindow,
-            'is_past_window' => $isPastWindow,
-            'is_before_window' => $isBeforeWindow,
-            'is_late' => $isPastWindow,
-            'window_start' => $windowStart,
-            'window_end' => $windowEnd,
-            'scheduled_time' => $scheduledDateTime,
+            'can_take' => $window['can_take'],
+            'is_within_window' => $window['is_within_window'],
+            'is_past_window' => $window['is_past_window'],
+            'is_before_window' => $window['is_before_window'],
+            'is_late' => $window['is_past_window'],
+            'window_start' => $window['window_start'],
+            'window_end' => $window['window_end'],
+            'scheduled_time' => $window['scheduled_time'],
         ];
     }
 

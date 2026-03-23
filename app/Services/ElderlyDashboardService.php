@@ -69,11 +69,12 @@ class ElderlyDashboardService
     {
         $medications = Medication::where('elderly_id', $elderlyId)
             ->where('is_active', true)
+            ->with('schedules')
             ->get();
 
-        $todayName = Carbon::now()->format('l');
-        $todayMedications = $medications->filter(function ($med) use ($todayName) {
-            return empty($med->days_of_week) || in_array($todayName, $med->days_of_week);
+        $today = Carbon::today();
+        $todayMedications = $medications->filter(function (Medication $med) use ($today) {
+            return $med->isScheduledForDate($today);
         });
 
         $medicationLogs = MedicationLog::where('elderly_id', $elderlyId)
@@ -129,9 +130,10 @@ class ElderlyDashboardService
     {
         $total = 0;
         $taken = 0;
+        $today = Carbon::today();
 
         foreach ($todayMedications as $med) {
-            $times = $med->times_of_day ?? [];
+            $times = $med->scheduleTimesForDate($today);
             $total += count($times);
             foreach ($times as $time) {
                 $logKey = $this->doseLogKey($med->id, $time);

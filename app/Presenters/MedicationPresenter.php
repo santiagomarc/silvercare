@@ -3,7 +3,7 @@
 namespace App\Presenters;
 
 use App\Models\MedicationLog;
-use Carbon\Carbon;
+use App\Services\MedicationWindowService;
 
 class MedicationPresenter
 {
@@ -12,18 +12,15 @@ class MedicationPresenter
      */
     public static function getDoseStatus(string $time, ?MedicationLog $log): array
     {
-        $now = now();
-        $scheduledTime = Carbon::parse(today()->format('Y-m-d') . ' ' . $time);
-        $windowStart = $scheduledTime->copy();
-        $windowEnd = $scheduledTime->copy()->addMinutes(60);
-        
-        $isWithinWindow = $now->between($windowStart, $windowEnd);
-        $isPastWindow = $now->gt($windowEnd);
+        $window = app(MedicationWindowService::class)->forToday($time);
+        $windowEnd = $window['window_end'];
+        $isWithinWindow = $window['is_within_window'];
+        $isPastWindow = $window['is_past_window'];
         $isTaken = $log?->is_taken ?? false;
         $takenAt = $log?->taken_at;
-        
-        $canTake = $isWithinWindow || $isPastWindow;
-        $canUndo = !$isPastWindow;
+
+        $canTake = $window['can_take'];
+        $canUndo = $window['can_undo'];
         
         if ($isTaken) {
             $wasLate = $takenAt && $takenAt->gt($windowEnd);

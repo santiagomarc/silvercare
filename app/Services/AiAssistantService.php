@@ -711,9 +711,10 @@ PROMPT;
         // --- Medications due today ---
         $medications = Medication::where('elderly_id', $profile->id)
             ->where('is_active', true)
+            ->with('schedules')
             ->get()
-            ->map(function ($med) {
-                $times = $med->times_of_day ?? [];
+            ->map(function (Medication $med) use ($today) {
+                $times = $med->scheduleTimesForDate($today);
                 $timeStr = implode(', ', $times);
                 return "• {$med->name} ({$med->dosage}) — {$timeStr}";
             })->implode("\n");
@@ -776,8 +777,9 @@ PROMPT;
     {
         $medications = Medication::where('elderly_id', $elderlyProfileId)
             ->where('is_active', true)
+            ->with('schedules')
             ->get()
-            ->filter(fn (Medication $medication) => empty($medication->days_of_week) || in_array($dayName, $medication->days_of_week, true));
+            ->filter(fn (Medication $medication) => $medication->isScheduledForDate($today));
 
         $todayLogs = MedicationLog::whereIn('medication_id', $medications->pluck('id'))
             ->where('elderly_id', $elderlyProfileId)
@@ -787,7 +789,7 @@ PROMPT;
             ->groupBy('medication_id');
 
         return $medications->map(function (Medication $medication) use ($todayLogs) {
-            $timesStr = implode(', ', $medication->times_of_day ?? []);
+            $timesStr = implode(', ', $medication->scheduleTimesForDate(now()));
             $takenLogs = ($todayLogs->get($medication->id) ?? collect())
                 ->pluck('scheduled_time')
                 ->map(fn ($time) => Carbon::parse($time)->format('H:i'))
@@ -1110,7 +1112,7 @@ PROMPT;
             return Carbon::parse($today->format('Y-m-d') . ' ' . $requestedTime);
         }
 
-        $times = collect($medication->times_of_day ?? [])
+        $times = collect($medication->scheduleTimesForDate($today))
             ->filter(fn ($time) => is_string($time) && preg_match('/^([01]?\d|2[0-3]):[0-5]\d$/', $time) === 1)
             ->values();
 
