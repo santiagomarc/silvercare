@@ -88,7 +88,7 @@
         <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-[24px] p-6 mb-6 shadow-lg shadow-green-200/50">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div class="text-white">
-                    <h3 class="font-[800] text-lg">Today's Progress</h3>
+                    <h3 class="font-[800] text-lg">Overall Progress</h3>
                     <p class="text-green-100 text-sm font-medium">{{ $completed }} of {{ $total }} tasks completed</p>
                 </div>
                 <div class="flex items-center gap-4">

@@ -18,9 +18,18 @@
 
         @forelse($groupedChecklists as $date => $dayChecklists)
             @php
-                $header = \App\Presenters\ChecklistPresenter::dateHeader($date);
-                $isToday = $header['isToday'];
-                $isPast  = $header['isPast'];
+                if ($date === 'no-date') {
+                    $header = [
+                        'label' => 'No Due Date',
+                        'css' => 'bg-slate-500 text-white',
+                        'isToday' => false,
+                        'isPast' => false,
+                    ];
+                } else {
+                    $header = \App\Presenters\ChecklistPresenter::dateHeader($date);
+                }
+
+                $isPast = $header['isPast'];
             @endphp
             
             <div class="mb-8">
@@ -59,7 +68,7 @@
                                         {{ $checklist->task }}
                                     </h3>
                                     <div class="flex flex-wrap items-center gap-2 mt-1">
-                                        <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">{{ $checklist->category }}</span>
+                                        <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">{{ $checklist->category ?? 'General' }}</span>
                                         @if($checklist->due_time)
                                             <span class="text-sm text-gray-500">🕐 {{ \Carbon\Carbon::parse($checklist->due_time)->format('g:i A') }}</span>
                                         @endif

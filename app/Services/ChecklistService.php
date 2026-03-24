@@ -83,6 +83,7 @@ class ChecklistService
         return Checklist::where('elderly_id', $elderlyProfileId)
             ->orderBy('is_completed', 'asc')
             ->orderBy('due_date', 'asc')
+            ->orderBy('due_time', 'asc')
             ->get();
     }
 

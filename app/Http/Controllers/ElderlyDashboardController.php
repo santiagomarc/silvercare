@@ -93,7 +93,11 @@ class ElderlyDashboardController extends Controller
         $checklists = collect();
         if ($elderlyId) {
             $checklists = Checklist::where('elderly_id', $elderlyId)
-                ->whereDate('due_date', '>=', Carbon::today()->subDays(7))
+                ->where(function ($query) {
+                    $query->where('is_completed', false)
+                        ->orWhereDate('due_date', '>=', Carbon::today()->subDays(7));
+                })
+                ->orderBy('is_completed')
                 ->orderBy('due_date')
                 ->orderBy('due_time')
                 ->get();
@@ -101,7 +105,7 @@ class ElderlyDashboardController extends Controller
 
         // Group by date
         $groupedChecklists = $checklists->groupBy(function ($item) {
-            return $item->due_date->format('Y-m-d');
+            return $item->due_date?->format('Y-m-d') ?? 'no-date';
         });
 
         return view('elderly.checklists', compact('checklists', 'groupedChecklists', 'unreadNotifications'));
