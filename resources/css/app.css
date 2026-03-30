@@ -145,13 +145,14 @@
     }
     .tab-btn[aria-selected="true"] {
         @apply text-white;
-        transform: translateY(-2px) scale(1.01);
+        transform: translateY(-2px) scale(1.05); /* Added subtle scale-up */
+        filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1)); /* Added subtle shadow to selected text and icon */
     }
     .tab-btn svg {
-        transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 280ms ease;
+        transition: transform 350ms cubic-bezier(0.22, 1, 0.36, 1), opacity 350ms ease, color 350ms ease;
     }
     .tab-btn[aria-selected="true"] svg {
-        transform: scale(1.08);
+        transform: scale(1.15); /* Increased scale of active icon */
     }
 
     /* Medication dose states */
