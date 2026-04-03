@@ -14,10 +14,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Register custom middleware aliases
         $middleware->alias([
-            'elderly' => \App\Http\Middleware\EnsureUserIsElderly::class,
-            'caregiver' => \App\Http\Middleware\EnsureUserIsCaregiver::class,
-            'role.redirect' => \App\Http\Middleware\RedirectBasedOnRole::class,
-            'prevent.back' => \App\Http\Middleware\PreventBackHistory::class,
+            'elderly'          => \App\Http\Middleware\EnsureUserIsElderly::class,
+            'caregiver'        => \App\Http\Middleware\EnsureUserIsCaregiver::class,
+            'role.redirect'    => \App\Http\Middleware\RedirectBasedOnRole::class,
+            'prevent.back'     => \App\Http\Middleware\PreventBackHistory::class,
+            'profile.complete' => \App\Http\Middleware\EnsureProfileCompleted::class,
         ]);
 
         // Apply prevent back history to all authenticated routes

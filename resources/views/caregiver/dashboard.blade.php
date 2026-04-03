@@ -31,27 +31,64 @@
                             <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
                         </svg>
                     </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-[800] text-yellow-800">No Elderly Assigned</h3>
-                        <p class="text-sm text-yellow-700 mt-1">Generate a 6-digit PIN and share it with your patient. They can enter it in their dashboard to link accounts instantly.</p>
+                    <div class="ml-4 flex-1">
+                        <h3 class="text-lg font-[800] text-yellow-800">No Patient Assigned Yet</h3>
+                        <p class="text-sm text-yellow-700 mt-1">Generate a linking PIN and share it with your patient. They can scan the QR code or enter the PIN on their dashboard to link instantly.</p>
 
                         @if(session('link_code') || $activeLinkCode)
-                            <div class="mt-4 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 border border-yellow-200">
-                                <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Active PIN</span>
-                                <span class="text-2xl font-black tracking-[0.2em] text-gray-900">{{ session('link_code', $activeLinkCode?->code) }}</span>
+                            @php $displayCode = session('link_code', $activeLinkCode?->code); @endphp
+                            <div class="mt-5 flex flex-col sm:flex-row gap-5 items-start">
+                                {{-- QR Code --}}
+                                @if(session('link_qr_svg'))
+                                    <div class="flex-shrink-0 rounded-xl border-2 border-yellow-200 bg-white p-3 shadow-sm">
+                                        {!! session('link_qr_svg') !!}
+                                        <p class="text-center text-[10px] text-gray-400 font-semibold mt-1 uppercase tracking-wide">Scan with phone</p>
+                                    </div>
+                                @endif
+
+                                {{-- PIN + Actions --}}
+                                <div class="flex flex-col gap-3" x-data="{ copied: false }">
+                                    <div class="inline-flex items-center gap-3 rounded-xl bg-white px-4 py-3 border border-yellow-200 shadow-sm">
+                                        <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">PIN</span>
+                                        <span id="link-pin" class="text-2xl font-black tracking-[0.2em] text-gray-900">{{ $displayCode }}</span>
+                                    </div>
+                                    <p class="text-xs text-yellow-700">Expires: {{ optional($activeLinkCode?->expires_at)->format('M d, Y h:i A') }}</p>
+                                    <div class="flex gap-2 flex-wrap">
+                                        <button
+                                            @click="navigator.clipboard.writeText('{{ $displayCode }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                                            class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-bold bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                                        >
+                                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                            </svg>
+                                            <span x-text="copied ? '✓ Copied!' : 'Copy PIN'"></span>
+                                        </button>
+                                        @if(isset($_SERVER['HTTP_HOST']))
+                                        <a
+                                            href="mailto:?subject=SilverCare%20Linking%20PIN&body=Your%20SilverCare%20linking%20PIN%20is%3A%20{{ $displayCode }}%0A%0AEnter%20it%20on%20your%20dashboard%20at%20{{ url('/dashboard') }}"
+                                            class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-bold bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                                        >
+                                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                            </svg>
+                                            Share via Email
+                                        </a>
+                                        @endif
+                                    </div>
+                                </div>
                             </div>
-                            <p class="text-xs text-yellow-700 mt-2">Expires: {{ optional($activeLinkCode?->expires_at)->format('M d, Y h:i A') }}</p>
                         @endif
 
                         <form method="POST" action="{{ route('caregiver.link-code.generate') }}" class="mt-4">
                             @csrf
                             <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-[#000080] px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-900 transition-colors">
-                                {{ $activeLinkCode ? 'Show Active PIN' : 'Generate Linking PIN' }}
+                                {{ $activeLinkCode ? '↻ Refresh PIN & QR Code' : 'Generate Linking PIN & QR Code' }}
                             </button>
                         </form>
                     </div>
                 </div>
             </div>
+
         @else
 
         <!-- ============================================ -->

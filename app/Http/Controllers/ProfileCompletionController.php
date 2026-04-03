@@ -88,11 +88,17 @@ class ProfileCompletionController extends Controller
             'profile_completed' => true,
         ]);
 
-        return redirect()->route('dashboard')->with('success', 'Profile completed successfully!');
+        return $this->redirectToDashboard($profile->user_type)
+            ->with('success', 'Profile completed successfully!');
     }
 
     /**
-     * Skip profile completion (mark as completed but without data).
+     * Skip profile completion for now.
+     *
+     * Sets profile_skipped = true so the middleware does not redirect the user
+     * again. Their dashboard will show a nudge banner to encourage completion.
+     * profile_completed intentionally stays false so we can distinguish between
+     * "genuinely done" and "skipped" in reporting and nudge logic.
      */
     public function skip(): RedirectResponse
     {
@@ -100,10 +106,11 @@ class ProfileCompletionController extends Controller
         $profile = $user->profile;
 
         $profile->update([
-            'profile_completed' => true,
+            'profile_skipped' => true,
         ]);
 
-        return redirect()->route('dashboard')->with('info', 'Profile completion skipped. You can complete it later from your settings.');
+        return $this->redirectToDashboard($profile->user_type)
+            ->with('info', 'Profile completion skipped. You can complete it later from your settings.');
     }
 
     /**

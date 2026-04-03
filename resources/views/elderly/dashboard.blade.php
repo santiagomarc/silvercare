@@ -64,36 +64,162 @@
         <x-flash-messages />
 
         @if(!$linkedCaregiver)
-            <section class="mb-6 rounded-2xl border border-blue-200 bg-blue-50/80 backdrop-blur-sm p-5 shadow-sm">
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div>
+            {{-- ── LINK CAREGIVER SECTION ─────────────────────────────────────── --}}
+            <section
+                class="mb-6 rounded-2xl border border-blue-200 bg-blue-50/80 backdrop-blur-sm p-5 shadow-sm"
+                x-data="{
+                    pin: '',
+                    step: 'enter',
+                    loading: false,
+                    error: '',
+                    caregiver: null,
+                    async validatePin() {
+                        if (this.pin.length !== 6) { this.error = 'Please enter all 6 digits.'; return; }
+                        this.loading = true;
+                        this.error = '';
+                        try {
+                            const res = await fetch('{{ route('elderly.validate-link-code') }}', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                    'Accept': 'application/json',
+                                },
+                                body: JSON.stringify({ code: this.pin }),
+                            });
+                            const data = await res.json();
+                            if (data.valid) {
+                                this.caregiver = data;
+                                this.step = 'confirm';
+                            } else {
+                                this.error = data.message;
+                            }
+                        } catch (e) {
+                            this.error = 'Something went wrong. Please try again.';
+                        } finally {
+                            this.loading = false;
+                        }
+                    },
+                    reset() { this.step = 'enter'; this.pin = ''; this.error = ''; this.caregiver = null; }
+                }"
+            >
+                <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                    <div class="flex-1">
                         <h2 class="text-lg font-extrabold text-gray-900">Link Your Caregiver</h2>
                         <p class="text-sm text-gray-600 mt-1">Ask your caregiver for a 6-digit PIN, then enter it below.</p>
                     </div>
 
-                    <form method="POST" action="{{ route('elderly.link-caregiver') }}" class="flex items-center gap-2">
-                        @csrf
-                        <input
-                            type="text"
-                            name="code"
-                            inputmode="numeric"
-                            maxlength="6"
-                            pattern="[0-9]{6}"
-                            placeholder="000000"
-                            class="w-32 rounded-xl border-2 border-blue-200 bg-white px-3 py-2 text-center text-lg font-black tracking-[0.2em] text-gray-900 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20"
-                            required
-                        >
-                        <button type="submit" class="rounded-xl bg-[#000080] px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-900 transition-colors">
-                            Link
-                        </button>
-                    </form>
+                    {{-- STEP 1: PIN entry --}}
+                    <div x-show="step === 'enter'" class="flex flex-col gap-2 items-start">
+                        <div class="flex items-center gap-2">
+                            <input
+                                type="text"
+                                x-model="pin"
+                                inputmode="numeric"
+                                maxlength="6"
+                                pattern="[0-9]{6}"
+                                placeholder="000000"
+                                @keyup.enter="validatePin()"
+                                class="w-32 rounded-xl border-2 border-blue-200 bg-white px-3 py-2 text-center text-lg font-black tracking-[0.2em] text-gray-900 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20"
+                            >
+                            <button
+                                @click="validatePin()"
+                                :disabled="loading || pin.length !== 6"
+                                class="rounded-xl bg-[#000080] px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            >
+                                <span x-show="!loading">Verify PIN</span>
+                                <span x-show="loading" class="flex items-center gap-1.5">
+                                    <svg class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                    </svg>
+                                    Checking...
+                                </span>
+                            </button>
+                        </div>
+                        <p x-show="error" x-text="error" class="text-sm font-semibold text-red-600 mt-1"></p>
+                    </div>
+
+                    {{-- STEP 2: Confirm caregiver preview --}}
+                    <div x-show="step === 'confirm'" x-cloak class="w-full">
+                        <div class="rounded-xl border border-blue-300 bg-white p-4 shadow-sm">
+                            <p class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-3">Confirm connection with:</p>
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-[#000080] font-black text-xl flex-shrink-0">
+                                    <template x-if="caregiver?.caregiver_avatar">
+                                        <img :src="caregiver.caregiver_avatar" class="w-full h-full rounded-full object-cover">
+                                    </template>
+                                    <template x-if="!caregiver?.caregiver_avatar">
+                                        <span x-text="caregiver?.caregiver_name?.[0] ?? '?'"></span>
+                                    </template>
+                                </div>
+                                <div>
+                                    <p class="font-extrabold text-gray-900" x-text="caregiver?.caregiver_name ?? ''"></p>
+                                    <p class="text-xs text-gray-500" x-text="caregiver?.caregiver_role ?? 'Caregiver'"></p>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <form method="POST" action="{{ route('elderly.confirm-link') }}" class="flex-1">
+                                    @csrf
+                                    <input type="hidden" name="code" :value="caregiver?.code">
+                                    <button type="submit"
+                                        class="w-full rounded-xl bg-[#000080] px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-900 transition-colors">
+                                        ✓ Yes, Link to This Caregiver
+                                    </button>
+                                </form>
+                                <button @click="reset()"
+                                    class="rounded-xl border-2 border-gray-200 px-4 py-2.5 text-sm font-bold text-gray-600 hover:border-gray-300 transition-colors">
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 @error('code')
                     <p class="mt-3 text-sm font-semibold text-red-600">{{ $message }}</p>
                 @enderror
             </section>
+        @else
+            {{-- ── CONNECTED STATUS ─────────────────────────────────────────────── --}}
+            <section
+                class="mb-6 rounded-2xl border border-green-200 bg-green-50/70 backdrop-blur-sm p-4 shadow-sm"
+                x-data="{ confirming: false }"
+            >
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center text-green-700 flex-shrink-0">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-extrabold text-gray-900">
+                                Connected to {{ $linkedCaregiver->user?->name ?? $linkedCaregiver->username ?? 'Your Caregiver' }}
+                            </p>
+                            <p class="text-xs text-gray-500">Your caregiver can see your health data</p>
+                        </div>
+                    </div>
+                    {{-- Unlink: two-tap confirm --}}
+                    <div>
+                        <button
+                            x-show="!confirming"
+                            @click="confirming = true"
+                            class="text-xs text-gray-400 hover:text-red-500 font-semibold transition-colors"
+                        >Unlink</button>
+                        <div x-show="confirming" x-cloak class="flex items-center gap-2">
+                            <span class="text-xs text-gray-600 font-medium">Are you sure?</span>
+                            <form method="POST" action="{{ route('elderly.unlink-caregiver') }}">
+                                @csrf
+                                <button type="submit" class="text-xs font-bold text-red-600 hover:text-red-700">Yes, unlink</button>
+                            </form>
+                            <button @click="confirming = false" class="text-xs font-bold text-gray-500 hover:text-gray-700">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
         @endif
+
 
         {{-- ╔══════════════════╗
              ║  HERO ACTION     ║

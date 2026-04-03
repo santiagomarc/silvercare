@@ -32,9 +32,13 @@ Route::post('/caregiver/set-password/{userId}', [CaregiverSetPasswordController:
     ->name('caregiver.password.store');
 
 // Elderly Routes - Protected by 'elderly' middleware
-Route::middleware(['auth', 'verified', 'elderly'])->group(function () {
+Route::middleware(['auth', 'verified', 'elderly', 'profile.complete'])->group(function () {
     Route::get('/dashboard', [ElderlyDashboardController::class, 'index'])->name('dashboard');
-    Route::post('/link-caregiver', [CareLinkController::class, 'link'])->name('elderly.link-caregiver');
+
+    // Caregiver Linking — Two-step: validate PIN (AJAX), then confirm
+    Route::post('/link-caregiver/validate', [CareLinkController::class, 'validateCode'])->name('elderly.validate-link-code');
+    Route::post('/link-caregiver/confirm', [CareLinkController::class, 'confirmLink'])->name('elderly.confirm-link');
+    Route::post('/link-caregiver/unlink', [CareLinkController::class, 'unlink'])->name('elderly.unlink-caregiver');
     Route::get('/my-medications', [ElderlyDashboardController::class, 'medications'])->name('elderly.medications');
     Route::get('/my-checklists', [ElderlyDashboardController::class, 'checklists'])->name('elderly.checklists');
     Route::post('/my-checklists/{checklist}/toggle', [ElderlyDashboardController::class, 'toggleChecklist'])->name('elderly.checklists.toggle');
@@ -99,7 +103,7 @@ Route::middleware(['auth', 'verified', 'elderly'])->group(function () {
 });
 
 // Caregiver Routes - Protected by 'caregiver' middleware
-Route::middleware(['auth', 'verified', 'caregiver'])->prefix('caregiver')->name('caregiver.')->group(function () {
+Route::middleware(['auth', 'verified', 'caregiver', 'profile.complete'])->prefix('caregiver')->name('caregiver.')->group(function () {
     Route::get('/dashboard', [CaregiverDashboardController::class, 'index'])->name('dashboard');
     Route::post('/link-code', [CareLinkController::class, 'generate'])->name('link-code.generate');
     

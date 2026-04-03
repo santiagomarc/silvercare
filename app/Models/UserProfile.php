@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class UserProfile extends Model
 {
@@ -39,6 +38,7 @@ class UserProfile extends Model
         'relationship',
         'caregiver_id',
         'profile_completed',
+        'profile_skipped',
         'is_active',
         'last_login_at',
     ];
@@ -54,6 +54,7 @@ class UserProfile extends Model
         'emergency_contact'  => 'array',
         'medical_info'       => 'array',
         'profile_completed'  => 'boolean',
+        'profile_skipped'    => 'boolean',
         'is_active'          => 'boolean',
         'last_login_at'      => 'datetime',
     ];
@@ -95,9 +96,26 @@ class UserProfile extends Model
         return $this->belongsTo(UserProfile::class, 'caregiver_id');
     }
 
-    public function elderly(): HasOne
+    /**
+     * All elderly patients assigned to this caregiver.
+     * Changed from HasOne → HasMany to support multi-patient caregivers.
+     *
+     * NOTE: The caregiver dashboard currently calls ->elderly (as a HasOne property).
+     * Until that dashboard is refactored, use ->elderly()->first() for backwards
+     * compatibility, or access via $caregiver->elderlyPatients->first().
+     */
+    public function elderlyPatients(): HasMany
     {
-        return $this->hasOne(UserProfile::class, 'caregiver_id');
+        return $this->hasMany(UserProfile::class, 'caregiver_id');
+    }
+
+    /**
+     * @deprecated Use elderlyPatients() for multi-patient support.
+     * Kept temporarily so the caregiver dashboard does not break before its refactor.
+     */
+    public function elderly(): HasMany
+    {
+        return $this->hasMany(UserProfile::class, 'caregiver_id');
     }
 
     public function isElderly(): bool

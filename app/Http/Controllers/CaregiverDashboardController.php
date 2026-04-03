@@ -20,10 +20,13 @@ class CaregiverDashboardController extends Controller
         
         // Ensure the user has a profile
         if (!$caregiver) {
-            return redirect()->route('profile.complete');
+            return redirect()->route('profile.completion');
         }
 
-        $elderly = $caregiver->elderly;
+        // HasMany: grab the first linked elderly patient.
+        // When the caregiver dashboard is refactored for multi-patient,
+        // this will iterate over ->elderlyPatients instead.
+        $elderly = $caregiver->elderly()->first();
 
         if ($caregiver) {
             $activeLinkCode = LinkCode::where('caregiver_profile_id', $caregiver->id)
