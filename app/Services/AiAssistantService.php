@@ -568,34 +568,19 @@ PROMPT;
             str_contains($message, 'log') ||
             str_contains($message, 'record') ||
             str_contains($message, 'took') ||
+            str_contains($message, 'take') ||
             str_contains($message, 'taken') ||
             str_contains($message, 'complete') ||
             str_contains($message, 'completed') ||
             str_contains($message, 'done') ||
-            str_contains($message, 'check off');
+            str_contains($message, 'finish') ||
+            str_contains($message, 'finished') ||
+            str_contains($message, 'did') ||
+            str_contains($message, 'check');
 
-        if ($toolName === 'log_medication') {
-            $hasMedicationContext =
-                str_contains($message, 'med') ||
-                str_contains($message, 'medication') ||
-                str_contains($message, 'pill') ||
-                str_contains($message, 'dose') ||
-                str_contains($message, 'tablet');
-
-            return $hasActionVerb && $hasMedicationContext;
-        }
-
-        if ($toolName === 'mark_task_complete') {
-            $hasTaskContext =
-                str_contains($message, 'task') ||
-                str_contains($message, 'todo') ||
-                str_contains($message, 'checklist') ||
-                str_contains($message, 'reminder');
-
-            return $hasActionVerb && $hasTaskContext;
-        }
-
-        return false;
+        // If the LLM determined it should fire the tool and we have a basic action verb, allow it.
+        // It's too restrictive to require specific nouns since users use brand names.
+        return $hasActionVerb;
     }
 
     // =========================================================================
@@ -635,7 +620,7 @@ PROMPT;
                 'type' => 'emergency_alert',
                 'title' => '🚨 Emergency Alert from ' . $user->name,
                 'message' => "{$user->name} may need urgent help. They mentioned: \"{$message}\" (detected: {$matchedKeyword})",
-                'severity' => 'critical',
+                'severity' => 'negative',
                 'metadata' => [
                     'source' => 'ai_chat',
                     'keyword' => $matchedKeyword,
@@ -1108,7 +1093,7 @@ PROMPT;
     {
         $today = $now->copy()->startOfDay();
 
-        if (is_string($requestedTime) && preg_match('/^([01]?\d|2[0-3]):[0-5]\d$/', $requestedTime) === 1) {
+        if (is_string($requestedTime) && preg_match('/^([01]?\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/', $requestedTime) === 1) {
             return Carbon::parse($today->format('Y-m-d') . ' ' . $requestedTime);
         }
 

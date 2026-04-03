@@ -3,7 +3,13 @@
      Wraps in x-data="checklistTracker(completed, total)".
      ============================================================ --}}
 
-<div x-data="checklistTracker({{ $completedCount }}, {{ $totalCount }})"
+<style>
+    .hide-completed-tasks .checklist-item[data-completed="true"] {
+        display: none !important;
+    }
+</style>
+
+<div x-data="{ ...checklistTracker({{ $completedCount }}, {{ $totalCount }}), showCompleted: true }"
     class="surface-sky relative overflow-hidden p-6"
      role="region"
      aria-label="Today's tasks">
@@ -16,9 +22,17 @@
         <div class="flex justify-between items-center mb-4">
             <div>
                 <h3 class="font-extrabold text-lg text-gray-900">Today's Tasks</h3>
-                <p class="text-xs text-gray-400 font-medium">
-                    <span x-text="completed"></span>/<span x-text="total"></span> completed
-                </p>
+                <div class="flex items-center gap-2">
+                    <p class="text-xs text-gray-400 font-medium">
+                        <span x-text="completed"></span>/<span x-text="total"></span> completed
+                    </p>
+                    <button
+                        x-show="completed > 0"
+                        @click="showCompleted = !showCompleted"
+                        class="text-[10px] font-bold text-[#000080]/70 hover:text-[#000080] bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded transition-colors"
+                        x-text="showCompleted ? 'Hide Completed' : 'Show Completed'">
+                    </button>
+                </div>
             </div>
             <a href="{{ route('elderly.checklists') }}"
                class="text-xs font-bold text-navy hover:underline flex items-center gap-1">
@@ -33,7 +47,7 @@
                  :style="'width:' + progress + '%'"></div>
         </div>
 
-        <div class="space-y-2">
+        <div class="space-y-2" :class="{ 'hide-completed-tasks': !showCompleted }">
             @php
                 $categoryIcons = [
                     'Health' => '❤️', 'Exercise' => '🏃', 'Nutrition' => '🍎',

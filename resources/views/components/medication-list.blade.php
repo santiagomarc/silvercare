@@ -3,7 +3,13 @@
      Wraps in x-data="medicationTracker(taken, total)".
      ============================================================ --}}
 
-<div x-data="medicationTracker({{ $takenDoses }}, {{ $totalDoses }})"
+<style>
+    .hide-completed-meds .medication-entry[data-taken="true"] {
+        display: none !important;
+    }
+</style>
+
+<div x-data="{ ...medicationTracker({{ $takenDoses }}, {{ $totalDoses }}), showCompleted: true }"
     class="bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 rounded-card p-6 text-white flex flex-col relative overflow-hidden shadow-[0_30px_55px_-30px_rgba(5,150,105,0.62)]"
      role="region"
      aria-label="Today's medications">
@@ -14,9 +20,17 @@
     <div class="relative z-10 flex justify-between items-center mb-2">
         <div>
             <h3 class="font-extrabold text-lg">Today's Medications</h3>
-            <p class="text-white/70 text-xs font-medium">
-                <span x-text="taken"></span>/<span x-text="total"></span> doses taken
-            </p>
+            <div class="flex items-center gap-2 mt-0.5">
+                <p class="text-white/70 text-xs font-medium">
+                    <span x-text="taken"></span>/<span x-text="total"></span> doses taken
+                </p>
+                <button
+                    x-show="taken > 0"
+                    @click="showCompleted = !showCompleted"
+                    class="text-[10px] font-bold text-white/90 hover:text-white bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded transition-colors"
+                    x-text="showCompleted ? 'Hide Taken' : 'Show Taken'">
+                </button>
+            </div>
         </div>
         <a href="{{ route('elderly.medications') }}"
            class="text-xs font-bold text-white/90 flex items-center gap-1 hover:text-white bg-white/20 px-3 py-1.5 rounded-full transition-colors">
@@ -30,7 +44,7 @@
         <div class="progress-fill bg-white" :style="'width:' + progress + '%'"></div>
     </div>
 
-    <div class="relative z-10 overflow-y-auto no-scrollbar space-y-2">
+    <div class="relative z-10 overflow-y-auto no-scrollbar space-y-2" :class="{ 'hide-completed-meds': !showCompleted }">
         @forelse($medications as $medication)
             @php
                 $medTimes = $medication->scheduleTimesForDate(now());
@@ -63,9 +77,14 @@
                                 <h4 data-med-name class="font-extrabold text-gray-900 text-sm truncate {{ $status['isTaken'] ? 'line-through' : '' }}">
                                     {{ $medication->name }}
                                 </h4>
-                                <span class="text-xs font-bold text-gray-500 flex-shrink-0">
-                                    {{ \Carbon\Carbon::parse($time)->format('g:i A') }}
-                                </span>
+                                <div class="text-right flex-shrink-0">
+                                    <span class="text-xs font-bold text-gray-500 block">
+                                        {{ \Carbon\Carbon::parse($time)->format('g:i A') }}
+                                    </span>
+                                    <span class="text-[10px] text-gray-400 font-semibold block leading-tight">
+                                        {{ \Carbon\Carbon::parse(today()->format('Y-m-d').' '.$time)->diffForHumans() }}
+                                    </span>
+                                </div>
                             </div>
                             <div class="flex items-center justify-between mt-0.5">
                                 <p class="text-gray-500 text-xs font-medium">

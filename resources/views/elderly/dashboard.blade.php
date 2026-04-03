@@ -63,6 +63,43 @@
 
         <x-flash-messages />
 
+        {{-- ╔══════════════════════════════╗
+             ║  ONBOARDING NUDGE BANNER     ║
+             ╚══════════════════════════════╝ --}}
+        @if(Auth::user()->profile?->profile_skipped && !Auth::user()->profile?->profile_completed)
+            <div class="mb-5 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50/70 backdrop-blur-sm px-5 py-4 shadow-sm"
+                 x-data="{ dismissed: false }"
+                 x-show="!dismissed"
+                 x-transition>
+                <div class="flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-extrabold text-gray-900">Complete your health profile</p>
+                            <p class="text-xs text-gray-500 mt-0.5">Add your medical info so your caregiver can help you better.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <a href="{{ route('profile.completion') }}"
+                           class="rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-4 py-2 transition-colors shadow-sm">
+                            Complete Now →
+                        </a>
+                        <button @click="dismissed = true"
+                                class="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                                aria-label="Dismiss">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         @if(!$linkedCaregiver)
             {{-- ── LINK CAREGIVER SECTION ─────────────────────────────────────── --}}
             <section
@@ -220,6 +257,31 @@
             </section>
         @endif
 
+        {{-- ╔══════════════════╗
+             ║  GREETING BANNER ║
+             ╚══════════════════╝ --}}
+        @php
+            $hour = now()->timezone(config('app.timezone', 'Asia/Manila'))->hour;
+            $greeting = 'Good evening';
+            if ($hour < 12) {
+                $greeting = 'Good morning';
+            } elseif ($hour < 17) {
+                $greeting = 'Good afternoon';
+            }
+            $firstName = explode(' ', Auth::user()->name)[0];
+        @endphp
+        <div class="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-2 relative z-10">
+            <div>
+                <h2 class="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
+                    {{ $greeting }}, <span class="text-[#000080]">{{ $firstName }}</span> <span class="text-2xl" aria-hidden="true">👋</span>
+                </h2>
+                <p class="text-gray-500 font-medium text-sm mt-1">Let's check in on your health today.</p>
+            </div>
+            <div class="hidden sm:block md:text-right">
+                <p class="text-xs font-bold text-[#000080]/60 uppercase tracking-widest leading-none">{{ now()->timezone(config('app.timezone', 'Asia/Manila'))->format('l') }}</p>
+                <p class="text-lg font-extrabold text-[#000080] leading-none mt-1">{{ now()->timezone(config('app.timezone', 'Asia/Manila'))->format('M j, Y') }}</p>
+            </div>
+        </div>
 
         {{-- ╔══════════════════╗
              ║  HERO ACTION     ║
@@ -460,6 +522,9 @@
             </div>
         </template>
     </div>
+
+    {{-- SOS Emergency Button --}}
+    @include('components.sos-button', ['linkedCaregiver' => $linkedCaregiver ?? null])
 
     {{-- AI Assistant Chat Widget --}}
     <x-ai-chat-widget />

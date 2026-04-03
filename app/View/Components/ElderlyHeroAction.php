@@ -16,7 +16,7 @@ use Carbon\Carbon;
  */
 class ElderlyHeroAction extends Component
 {
-    public string $actionType;   // 'medication' | 'vital' | 'checklist' | 'done'
+    public string $actionType;   // 'medication' | 'vital' | 'checklist' | 'done' | 'upcoming'
     public string $headline;
     public string $subtext;
     public string $ctaLabel;
@@ -24,6 +24,10 @@ class ElderlyHeroAction extends Component
     public string $gradient;     // Tailwind gradient classes
     public string $icon;
     public int    $overallProgress;
+
+    // Medication-specific context for inline "I Took It" button
+    public ?int    $medicationId = null;
+    public ?string $scheduledTime = null;
 
     public function __construct(
         Collection $medications,
@@ -41,7 +45,8 @@ class ElderlyHeroAction extends Component
         // 1. Check for overdue or active medications
         $now = Carbon::now();
         foreach ($meds as $med) {
-            foreach (($med->times_of_day ?? []) as $time) {
+            $times = $med->scheduleTimesForDate(today());
+            foreach ($times as $time) {
                 $logKey = $med->id . '_' . $time;
                 $log = $logs->get($logKey);
                 if ($log && $log->is_taken) continue;
@@ -51,24 +56,28 @@ class ElderlyHeroAction extends Component
                 $windowEnd   = $scheduled->copy()->addMinutes(60);
 
                 if ($now->between($windowStart, $windowEnd)) {
-                    $this->actionType = 'medication';
-                    $this->headline   = 'Time to take ' . $med->name;
-                    $this->subtext    = $med->dosage . ' — scheduled for ' . $scheduled->format('g:i A');
-                    $this->ctaLabel   = 'View Medications';
-                    $this->ctaAction  = "switchTab('today')";
-                    $this->gradient   = 'from-green-500 to-emerald-600';
-                    $this->icon       = '💊';
+                    $this->actionType    = 'medication';
+                    $this->headline      = 'Time to take ' . $med->name;
+                    $this->subtext       = $med->dosage . ' — scheduled for ' . $scheduled->format('g:i A');
+                    $this->ctaLabel      = 'View Medications';
+                    $this->ctaAction     = "switchTab('today')";
+                    $this->gradient      = 'from-green-500 to-emerald-600';
+                    $this->icon          = '💊';
+                    $this->medicationId  = $med->id;
+                    $this->scheduledTime = $time;
                     return;
                 }
 
                 if ($now->gt($windowEnd)) {
-                    $this->actionType = 'medication';
-                    $this->headline   = 'Missed: ' . $med->name;
-                    $this->subtext    = $med->dosage . ' was due at ' . $scheduled->format('g:i A');
-                    $this->ctaLabel   = 'View Medications';
-                    $this->ctaAction  = "switchTab('today')";
-                    $this->gradient   = 'from-red-500 to-rose-600';
-                    $this->icon       = '⚠️';
+                    $this->actionType    = 'medication';
+                    $this->headline      = 'Missed: ' . $med->name;
+                    $this->subtext       = $med->dosage . ' was due at ' . $scheduled->format('g:i A');
+                    $this->ctaLabel      = 'View Medications';
+                    $this->ctaAction     = "switchTab('today')";
+                    $this->gradient      = 'from-red-500 to-rose-600';
+                    $this->icon          = '⚠️';
+                    $this->medicationId  = $med->id;
+                    $this->scheduledTime = $time;
                     return;
                 }
             }
@@ -107,7 +116,38 @@ class ElderlyHeroAction extends Component
             return;
         }
 
-        // 4. All done!
+        // 4. Upcoming medications (if any are left for today)
+        $nextMedTime = null;
+        $nextMed = null;
+        foreach ($meds as $med) {
+            $futureTimes = $med->scheduleTimesForDate(today());
+            foreach ($futureTimes as $time) {
+                $logKey = $med->id . '_' . $time;
+                $log = $logs->get($logKey);
+                if ($log && $log->is_taken) continue;
+
+                $scheduled = Carbon::parse(today()->format('Y-m-d') . ' ' . $time);
+                if ($scheduled->isFuture()) {
+                    if (!$nextMedTime || $scheduled->lt($nextMedTime)) {
+                        $nextMedTime = $scheduled;
+                        $nextMed = $med;
+                    }
+                }
+            }
+        }
+
+        if ($nextMed && $nextMedTime) {
+            $this->actionType = 'upcoming';
+            $this->headline   = 'Next up: ' . $nextMed->name;
+            $this->subtext    = $nextMed->dosage . ' — in ' . $nextMedTime->diffForHumans(null, true);
+            $this->ctaLabel   = 'View Medications';
+            $this->ctaAction  = "switchTab('today')";
+            $this->gradient   = 'from-indigo-500 to-blue-600';
+            $this->icon       = '⏳';
+            return;
+        }
+
+        // 5. All done!
         $this->actionType = 'done';
         $this->headline   = 'All caught up! Great job! 🎉';
         $this->subtext    = 'You\'ve completed all your tasks, medications, and vitals for today.';

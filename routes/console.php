@@ -14,3 +14,9 @@ Schedule::command('silvercare:send-reminders')
     ->between('08:00', '21:00')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/reminders.log'));
+
+// Check medication stock levels daily at 9 AM
+Schedule::command('medications:check-stock')
+    ->dailyAt('09:00')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/stock-alerts.log'));

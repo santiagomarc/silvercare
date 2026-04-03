@@ -70,6 +70,7 @@ class Medication extends Model
                 ->filter(fn (MedicationSchedule $schedule) => $schedule->appliesToDate($date))
                 ->pluck('time_of_day')
                 ->filter(fn ($time) => is_string($time) && $time !== '')
+                ->map(fn ($time) => Carbon::parse($time)->format('H:i'))
                 ->unique()
                 ->sort()
                 ->values()
@@ -82,6 +83,7 @@ class Medication extends Model
 
         return collect($this->times_of_day ?? [])
             ->filter(fn ($time) => is_string($time) && $time !== '')
+            ->map(fn ($time) => Carbon::parse($time)->format('H:i'))
             ->unique()
             ->sort()
             ->values()

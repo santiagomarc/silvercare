@@ -17,6 +17,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\AiAssistantController;
 use App\Http\Controllers\CaregiverAiController;
 use App\Http\Controllers\CareLinkController;
+use App\Http\Controllers\SosController;
 use Illuminate\Support\Facades\Route;
 
 // Welcome landing page - redirect logged-in users to their dashboard
@@ -100,6 +101,9 @@ Route::middleware(['auth', 'verified', 'elderly', 'profile.complete'])->group(fu
     Route::post('/notifications/clear-all', [NotificationController::class, 'clearAll'])->name('elderly.notifications.clear-all');
     Route::get('/notifications/unread-count', [NotificationController::class, 'getUnreadCount'])->name('elderly.notifications.unread-count');
     Route::get('/notifications/latest', [NotificationController::class, 'getLatest'])->name('elderly.notifications.latest');
+
+    // SOS Emergency
+    Route::post('/sos', [SosController::class, 'trigger'])->name('elderly.sos');
 });
 
 // Caregiver Routes - Protected by 'caregiver' middleware

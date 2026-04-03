@@ -58,6 +58,20 @@
                         </span>
                     @endif
                 </a>
+
+                {{-- Caregiver Connection Status --}}
+                @php $linkedCg = Auth::user()->profile?->caregiver; @endphp
+                @if($linkedCg)
+                    <div class="hidden md:flex items-center gap-1.5 rounded-xl border border-green-100 bg-green-50/80 px-3 py-1.5 text-xs font-bold text-green-700" title="Connected to {{ $linkedCg->user?->name ?? 'Caregiver' }}">
+                        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0"></span>
+                        <span class="truncate max-w-[100px]">{{ $linkedCg->user?->name ?? 'Caregiver' }}</span>
+                    </div>
+                @else
+                    <div class="hidden md:flex items-center gap-1.5 rounded-xl border border-amber-100 bg-amber-50/80 px-3 py-1.5 text-xs font-bold text-amber-700" title="No caregiver linked">
+                        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        <span>No caregiver</span>
+                    </div>
+                @endif
             @endif
 
             {{-- Profile Link --}}
