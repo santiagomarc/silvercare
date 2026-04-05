@@ -44,6 +44,9 @@ export default function moodTracker(initialMood = 3) {
                 });
                 if (resp.ok) {
                     this.saved = true;
+                    window.dispatchEvent(new CustomEvent('mood-logged', {
+                        detail: { value: this.value },
+                    }));
                     setTimeout(() => { this.saved = false; }, 2000);
                 }
             } catch (e) {

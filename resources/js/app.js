@@ -11,6 +11,7 @@ import gardenWellness     from './components/garden-wellness.js';
 import dashboardTabs      from './components/dashboard-tabs.js';
 import googleFitSync      from './components/google-fit-sync.js';
 import heroAction         from './components/hero-action.js';
+import actionQueue        from './components/action-queue.js';
 
 // ── Register global store ────────────────────────────────────────
 Alpine.store('toast', toastStore);
@@ -23,6 +24,7 @@ Alpine.data('gardenWellness',    (c, m, v)        => gardenWellness(c, m, v));
 Alpine.data('dashboardTabs',     (tab)            => dashboardTabs(tab));
 Alpine.data('googleFitSync',     ()               => googleFitSync());
 Alpine.data('heroAction',        (opts)           => heroAction(opts));
+Alpine.data('actionQueue',       (steps, total)   => actionQueue(steps, total));
 
 window.Alpine = Alpine;
 Alpine.start();

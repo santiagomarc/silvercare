@@ -20,6 +20,42 @@ export default function checklistTracker(completedCount = 0, totalCount = 0) {
                     this.expanded = false;
                 }
             });
+
+            window.addEventListener('action-queue-task-completed', (e) => {
+                const taskId = String(e.detail?.taskId || '');
+                if (!taskId) return;
+
+                const selector = `.checklist-item[data-id="${CSS.escape(taskId)}"]`;
+                const item = document.querySelector(selector);
+                if (!item) return;
+                if (item.dataset.completed === 'true') return;
+
+                item.dataset.completed = 'true';
+                item.classList.add('bg-green-50/50', 'border-green-200', 'opacity-75');
+                item.classList.remove('bg-white', 'border-gray-100', 'hover:border-green-200', 'hover:bg-green-50/30');
+
+                const btn = item.querySelector('.checkbox-btn');
+                if (btn) {
+                    btn.classList.remove('bg-white', 'border-gray-300', 'hover:border-green-400');
+                    btn.classList.add('bg-green-500', 'border-green-500');
+                }
+
+                const checkIcon = item.querySelector('.check-icon');
+                if (checkIcon) {
+                    checkIcon.classList.remove('opacity-0', 'scale-0');
+                    checkIcon.classList.add('opacity-100', 'scale-100');
+                }
+
+                const taskText = item.querySelector('.task-text');
+                if (taskText) {
+                    taskText.classList.add('line-through', 'text-gray-400');
+                }
+
+                this.completed = Math.min(this.total, this.completed + 1);
+                window.dispatchEvent(new CustomEvent('progress-updated', {
+                    detail: { checklists: this.completed, checklistTotal: this.total }
+                }));
+            });
         },
 
         get progress() {

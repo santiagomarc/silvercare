@@ -366,37 +366,66 @@
                 <div class="ambient-orb -right-6 -top-6 h-36 w-36 bg-amber-200/35"></div>
                 <div class="ambient-orb -left-8 bottom-0 h-32 w-32 bg-sky-200/25"></div>
 
-                <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-                {{-- LEFT COLUMN: Mood + Medications --}}
-                <div class="lg:col-span-7 space-y-6">
-                    <x-elderly-mood-tracker :initial-mood="$todayMood" />
-
-                    <x-medication-list
+                <div class="relative z-10 space-y-5">
+                    {{-- PHASE 5A: Sequential one-at-a-time queue --}}
+                    <x-action-queue
                         :medications="$todayMedications"
-                        :logs="$medicationLogs"
-                    />
-                </div>
-
-                {{-- RIGHT COLUMN: Garden + Tasks --}}
-                <div class="lg:col-span-5 space-y-5">
-                    <x-elderly-garden
-                        :completed-checklists="$completedChecklists"
-                        :total-checklists="$totalChecklists"
-                        :taken-medication-doses="$takenMedicationDoses"
-                        :total-medication-doses="$totalMedicationDoses"
-                        :completed-vitals="$completedVitals"
-                        :total-required-vitals="$totalRequiredVitals"
-                    />
-
-                    <x-task-list
+                        :medication-logs="$medicationLogs"
+                        :vitals-data="$vitalsData"
                         :checklists="$todayChecklists"
-                        :completed-count="$completedChecklists"
-                        :total-count="$totalChecklists"
+                        :mood-recorded="$moodRecordedToday"
                     />
-                </div>
 
-            </div>
+                    {{-- Optional details: preserve full cards but keep them collapsed by default --}}
+                    <section
+                        x-data="{ showDetails: false }"
+                        @action-queue-open-details.window="showDetails = true; $nextTick(() => document.getElementById('today-details')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));"
+                        class="rounded-2xl border border-white/65 bg-white/55 backdrop-blur-sm p-4"
+                    >
+                        <button
+                            @click="showDetails = !showDetails"
+                            class="w-full flex items-center justify-between rounded-xl bg-white/80 hover:bg-white text-gray-700 px-4 py-3 text-sm font-bold border border-gray-100 transition-colors"
+                        >
+                            <span x-show="!showDetails">Show Full Today Details</span>
+                            <span x-show="showDetails">Hide Full Today Details</span>
+                            <svg class="w-4 h-4 transition-transform" :class="showDetails ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+
+                        <div id="today-details" x-show="showDetails" x-collapse class="pt-4">
+                            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                {{-- LEFT COLUMN: Mood + Medications --}}
+                                <div class="lg:col-span-7 space-y-6">
+                                    <x-elderly-mood-tracker :initial-mood="$todayMood" />
+
+                                    <x-medication-list
+                                        :medications="$todayMedications"
+                                        :logs="$medicationLogs"
+                                    />
+                                </div>
+
+                                {{-- RIGHT COLUMN: Garden + Tasks --}}
+                                <div class="lg:col-span-5 space-y-5">
+                                    <x-elderly-garden
+                                        :completed-checklists="$completedChecklists"
+                                        :total-checklists="$totalChecklists"
+                                        :taken-medication-doses="$takenMedicationDoses"
+                                        :total-medication-doses="$totalMedicationDoses"
+                                        :completed-vitals="$completedVitals"
+                                        :total-required-vitals="$totalRequiredVitals"
+                                    />
+
+                                    <x-task-list
+                                        :checklists="$todayChecklists"
+                                        :completed-count="$completedChecklists"
+                                        :total-count="$totalChecklists"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
         </div>
 
             {{-- TAB PANEL: HEALTH --}}
