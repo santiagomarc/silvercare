@@ -11,6 +11,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class SendWeeklyHealthReports extends Command
@@ -44,57 +45,75 @@ class SendWeeklyHealthReports extends Command
         }
 
         $sent = 0;
+        $failed = 0;
 
         foreach ($caregivers as $caregiver) {
-            $caregiverUser = $caregiver->user;
-            if (!$caregiverUser || empty($caregiverUser->email)) {
-                continue;
-            }
-
-            foreach ($caregiver->elderlyPatients as $elderly) {
-                $elderlyUser = $elderly->user;
-                if (!$elderlyUser) {
+            try {
+                $caregiverUser = $caregiver->user;
+                if (!$caregiverUser || empty($caregiverUser->email)) {
                     continue;
                 }
 
-                $periods = ['7days' => Carbon::now()->subDays(7)];
-                $analyticsData = $analyticsService->getAnalyticsData($elderly->id, $periods);
-                $health = $analyticsService->calculateHealthScore($analyticsData);
-                $readings = $analyticsService->getReadingCounts($elderly->id);
-                $medicationSummary = $adherenceService->weekSummary($elderly);
-                $taskSummary = $this->taskSummary($elderly->id);
+                foreach ($caregiver->elderlyPatients as $elderly) {
+                    try {
+                        $elderlyUser = $elderly->user;
+                        if (!$elderlyUser) {
+                            continue;
+                        }
 
-                $pdfBinary = Pdf::loadView('caregiver.analytics_pdf', [
-                    'elderly' => $elderly,
-                    'elderlyUser' => $elderlyUser,
-                    'analyticsData' => $analyticsData,
-                    'healthScore' => $health['score'],
-                    'healthLabel' => $health['label'],
-                    'healthFactors' => $health['factors'],
-                    'totalReadings' => $readings['total'],
-                    'readingsThisWeek' => $readings['thisWeek'],
-                    'medicationSummary' => $medicationSummary,
-                    'taskSummary' => $taskSummary,
-                ])->output();
+                        $periods = ['7days' => Carbon::now()->subDays(7)];
+                        $analyticsData = $analyticsService->getAnalyticsData($elderly->id, $periods);
+                        $health = $analyticsService->calculateHealthScore($analyticsData);
+                        $readings = $analyticsService->getReadingCounts($elderly->id);
+                        $medicationSummary = $adherenceService->weekSummary($elderly);
+                        $taskSummary = $this->taskSummary($elderly->id);
 
-                $filename = 'SilverCare_Weekly_Health_Report_'
-                    . Str::slug($elderlyUser->name ?: 'patient')
-                    . '_'
-                    . now()->format('Y-m-d')
-                    . '.pdf';
+                        $pdfBinary = Pdf::loadView('caregiver.analytics_pdf', [
+                            'elderly' => $elderly,
+                            'elderlyUser' => $elderlyUser,
+                            'analyticsData' => $analyticsData,
+                            'healthScore' => $health['score'],
+                            'healthLabel' => $health['label'],
+                            'healthFactors' => $health['factors'],
+                            'totalReadings' => $readings['total'],
+                            'readingsThisWeek' => $readings['thisWeek'],
+                            'medicationSummary' => $medicationSummary,
+                            'taskSummary' => $taskSummary,
+                        ])->output();
 
-                Mail::to($caregiverUser->email)->send(new WeeklyHealthReport(
-                    caregiverUser: $caregiverUser,
-                    elderlyProfile: $elderly,
-                    pdfBinary: $pdfBinary,
-                    filename: $filename,
-                ));
+                        $filename = 'SilverCare_Weekly_Health_Report_'
+                            . Str::slug($elderlyUser->name ?: 'patient')
+                            . '_'
+                            . now()->format('Y-m-d')
+                            . '.pdf';
 
-                $sent++;
+                        Mail::to($caregiverUser->email)->send(new WeeklyHealthReport(
+                            caregiverUser: $caregiverUser,
+                            elderlyProfile: $elderly,
+                            pdfBinary: $pdfBinary,
+                            filename: $filename,
+                        ));
+
+                        $sent++;
+                    } catch (\Throwable $exception) {
+                        $failed++;
+                        Log::warning('Failed to send weekly health report for patient', [
+                            'caregiver_profile_id' => $caregiver->id,
+                            'elderly_profile_id' => $elderly->id,
+                            'error' => $exception->getMessage(),
+                        ]);
+                    }
+                }
+            } catch (\Throwable $exception) {
+                $failed++;
+                Log::warning('Failed weekly report processing for caregiver', [
+                    'caregiver_profile_id' => $caregiver->id,
+                    'error' => $exception->getMessage(),
+                ]);
             }
         }
 
-        $this->info("Weekly reports sent: {$sent}");
+        $this->info("Weekly reports sent: {$sent}; failed: {$failed}");
 
         return Command::SUCCESS;
     }

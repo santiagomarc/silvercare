@@ -10,14 +10,20 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class CareMessageController extends Controller
 {
-    public function caregiverIndex(Request $request): View
+    public function caregiverIndex(Request $request): View|RedirectResponse
     {
         $caregiver = Auth::user()?->profile;
         abort_unless($caregiver && $caregiver->isCaregiver(), 403);
+
+        if (!$this->isMessagingTableReady()) {
+            return redirect()->route('caregiver.dashboard')
+                ->with('error', 'Messaging is temporarily unavailable. Please run database migrations.');
+        }
 
         [$elderlyPatients, $selectedElderly] = $this->resolveCaregiverSelection(
             $caregiver,
@@ -51,6 +57,10 @@ class CareMessageController extends Controller
     {
         $caregiver = Auth::user()?->profile;
         abort_unless($caregiver && $caregiver->isCaregiver(), 403);
+
+        if (!$this->isMessagingTableReady()) {
+            return back()->with('error', 'Messaging is temporarily unavailable. Please run database migrations.');
+        }
 
         $validated = $request->validate([
             'elderly_id' => ['required', 'integer', 'exists:user_profiles,id'],
@@ -90,10 +100,15 @@ class CareMessageController extends Controller
             ->with('success', 'Message sent.');
     }
 
-    public function elderlyIndex(): View
+    public function elderlyIndex(): View|RedirectResponse
     {
         $elderly = Auth::user()?->profile;
         abort_unless($elderly && $elderly->isElderly(), 403);
+
+        if (!$this->isMessagingTableReady()) {
+            return redirect()->route('dashboard')
+                ->with('error', 'Messaging is temporarily unavailable. Please run database migrations.');
+        }
 
         $caregiver = $elderly->caregiver()->with('user')->first();
         $unreadNotifications = Notification::where('elderly_id', $elderly->id)
@@ -128,6 +143,10 @@ class CareMessageController extends Controller
     {
         $elderly = Auth::user()?->profile;
         abort_unless($elderly && $elderly->isElderly(), 403);
+
+        if (!$this->isMessagingTableReady()) {
+            return back()->with('error', 'Messaging is temporarily unavailable. Please run database migrations.');
+        }
 
         $caregiver = $elderly->caregiver;
         if (!$caregiver) {
@@ -171,10 +190,19 @@ class CareMessageController extends Controller
 
     private function markMessagesAsRead(int $caregiverId, int $elderlyId, int $senderProfileId): void
     {
+        if (!$this->isMessagingTableReady()) {
+            return;
+        }
+
         CareMessage::where('caregiver_id', $caregiverId)
             ->where('elderly_id', $elderlyId)
             ->where('sender_profile_id', $senderProfileId)
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
+    }
+
+    private function isMessagingTableReady(): bool
+    {
+        return Schema::hasTable('care_messages');
     }
 }

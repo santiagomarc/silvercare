@@ -13,7 +13,7 @@ class NotificationService
      */
     public function createNotification(array $data): Notification
     {
-        return Notification::create([
+        $payload = [
             'elderly_id' => $data['elderly_id'],
             'type' => $data['type'], // medication_reminder, medication_taken, medication_missed, health_alert, etc.
             'title' => $data['title'],
@@ -21,7 +21,19 @@ class NotificationService
             'severity' => $data['severity'] ?? 'reminder', // positive, negative, reminder, warning
             'metadata' => $data['metadata'] ?? null, // JSON data
             'custom_id' => $data['custom_id'] ?? null, // For duplicate prevention
-        ]);
+        ];
+
+        if (!empty($payload['custom_id'])) {
+            return Notification::firstOrCreate(
+                [
+                    'elderly_id' => $payload['elderly_id'],
+                    'custom_id' => $payload['custom_id'],
+                ],
+                $payload
+            );
+        }
+
+        return Notification::create($payload);
     }
 
     /**

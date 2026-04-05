@@ -8,6 +8,7 @@ use App\Models\UserProfile;
 use App\Services\NotificationService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 
 class SendAppointmentReminders extends Command
 {
@@ -44,52 +45,62 @@ class SendAppointmentReminders extends Command
         }
 
         $sent = 0;
+        $failed = 0;
 
         foreach ($events as $event) {
-            $profile = UserProfile::where('user_id', $event->user_id)
-                ->where('user_type', 'elderly')
-                ->first();
+            try {
+                $profile = UserProfile::where('user_id', $event->user_id)
+                    ->where('user_type', 'elderly')
+                    ->first();
 
-            if (!$profile) {
-                continue;
-            }
+                if (!$profile || !$event->start_time) {
+                    continue;
+                }
 
-            $customId = sprintf(
-                'appointment_reminder_%d_%s',
-                $event->id,
-                $event->start_time->format('YmdHi')
-            );
+                $customId = sprintf(
+                    'appointment_reminder_%d_%s',
+                    $event->id,
+                    $event->start_time->format('YmdHi')
+                );
 
-            $alreadySent = Notification::where('custom_id', $customId)->exists();
-            if ($alreadySent) {
-                continue;
-            }
+                $alreadySent = Notification::where('custom_id', $customId)->exists();
+                if ($alreadySent) {
+                    continue;
+                }
 
-            $minutesLeft = max(1, $now->diffInMinutes($event->start_time));
-            $title = $event->type === 'Appointment'
-                ? 'Upcoming appointment reminder'
-                : 'Upcoming schedule reminder';
+                $minutesLeft = max(1, $now->diffInMinutes($event->start_time));
+                $title = $event->type === 'Appointment'
+                    ? 'Upcoming appointment reminder'
+                    : 'Upcoming schedule reminder';
 
-            $notificationService->createNotification([
-                'elderly_id' => $profile->id,
-                'type' => 'appointment_reminder',
-                'title' => $title,
-                'message' => sprintf('%s starts in about %d minute(s) at %s.', $event->title, $minutesLeft, $event->start_time->format('g:i A')),
-                'severity' => 'reminder',
-                'custom_id' => $customId,
-                'metadata' => [
+                $notificationService->createNotification([
+                    'elderly_id' => $profile->id,
+                    'type' => 'appointment_reminder',
+                    'title' => $title,
+                    'message' => sprintf('%s starts in about %d minute(s) at %s.', $event->title, $minutesLeft, $event->start_time->format('g:i A')),
+                    'severity' => 'reminder',
+                    'custom_id' => $customId,
+                    'metadata' => [
+                        'event_id' => $event->id,
+                        'event_type' => $event->type,
+                        'starts_at' => $event->start_time->toIso8601String(),
+                        'starts_at_human' => $event->start_time->format('M j, g:i A'),
+                        'minutes_left' => $minutesLeft,
+                    ],
+                ]);
+
+                $sent++;
+            } catch (\Throwable $exception) {
+                $failed++;
+                Log::warning('Failed to send appointment reminder', [
                     'event_id' => $event->id,
-                    'event_type' => $event->type,
-                    'starts_at' => $event->start_time->toIso8601String(),
-                    'starts_at_human' => $event->start_time->format('M j, g:i A'),
-                    'minutes_left' => $minutesLeft,
-                ],
-            ]);
-
-            $sent++;
+                    'user_id' => $event->user_id,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
         }
 
-        $this->info("Appointment reminders sent: {$sent}");
+        $this->info("Appointment reminders sent: {$sent}; failed: {$failed}");
 
         return Command::SUCCESS;
     }
