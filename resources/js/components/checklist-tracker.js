@@ -12,6 +12,15 @@ export default function checklistTracker(completedCount = 0, totalCount = 0) {
     return {
         completed: completedCount,
         total: totalCount,
+        expanded: completedCount < totalCount,
+
+        init() {
+            this.$watch('completed', (value) => {
+                if (this.total > 0 && value >= this.total) {
+                    this.expanded = false;
+                }
+            });
+        },
 
         get progress() {
             return this.total > 0 ? Math.round((this.completed / this.total) * 100) : 0;

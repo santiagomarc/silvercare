@@ -3,13 +3,7 @@
      Wraps in x-data="medicationTracker(taken, total)".
      ============================================================ --}}
 
-<style>
-    .hide-completed-meds .medication-entry[data-taken="true"] {
-        display: none !important;
-    }
-</style>
-
-<div x-data="{ ...medicationTracker({{ $takenDoses }}, {{ $totalDoses }}), showCompleted: true }"
+<div x-data="medicationTracker({{ $takenDoses }}, {{ $totalDoses }})"
     class="bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 rounded-card p-6 text-white flex flex-col relative overflow-hidden shadow-[0_30px_55px_-30px_rgba(5,150,105,0.62)]"
      role="region"
      aria-label="Today's medications">
@@ -20,17 +14,9 @@
     <div class="relative z-10 flex justify-between items-center mb-2">
         <div>
             <h3 class="font-extrabold text-lg">Today's Medications</h3>
-            <div class="flex items-center gap-2 mt-0.5">
-                <p class="text-white/70 text-xs font-medium">
-                    <span x-text="taken"></span>/<span x-text="total"></span> doses taken
-                </p>
-                <button
-                    x-show="taken > 0"
-                    @click="showCompleted = !showCompleted"
-                    class="text-[10px] font-bold text-white/90 hover:text-white bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded transition-colors"
-                    x-text="showCompleted ? 'Hide Taken' : 'Show Taken'">
-                </button>
-            </div>
+            <p class="text-white/70 text-xs font-medium">
+                <span x-text="taken"></span>/<span x-text="total"></span> doses taken
+            </p>
         </div>
         <a href="{{ route('elderly.medications') }}"
            class="text-xs font-bold text-white/90 flex items-center gap-1 hover:text-white bg-white/20 px-3 py-1.5 rounded-full transition-colors">
@@ -44,7 +30,18 @@
         <div class="progress-fill bg-white" :style="'width:' + progress + '%'"></div>
     </div>
 
-    <div class="relative z-10 overflow-y-auto no-scrollbar space-y-2" :class="{ 'hide-completed-meds': !showCompleted }">
+    {{-- Auto-collapsed summary once all doses are taken --}}
+    <div x-show="!expanded && total > 0 && taken >= total" x-cloak
+         class="relative z-10 rounded-xl border border-white/30 bg-white/20 px-3 py-2 flex items-center justify-between">
+        <p class="text-sm font-extrabold text-white">✅ Medications — All taken</p>
+        <button @click="expanded = true" class="text-xs font-bold text-white/90 hover:text-white transition-colors flex items-center gap-1">
+            Expand
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </button>
+    </div>
+
+    <div x-show="expanded || !(total > 0 && taken >= total)"
+         class="relative z-10 overflow-y-auto no-scrollbar space-y-2">
         @forelse($medications as $medication)
             @php
                 $medTimes = $medication->scheduleTimesForDate(now());
@@ -55,7 +52,41 @@
                     $log = $logs->get($logKey);
                     $status = \App\Presenters\MedicationPresenter::getDoseStatus($time, $log);
                 @endphp
-                <div x-data="{ expanded: false }"
+                <div x-data="{
+                        expanded: false,
+                        relativeText: '',
+                        ticker: null,
+                        init() {
+                            this.updateRelative();
+                            this.ticker = setInterval(() => this.updateRelative(), 60000);
+                        },
+                        destroy() {
+                            if (this.ticker) clearInterval(this.ticker);
+                        },
+                        updateRelative() {
+                            const now = new Date();
+                            const target = new Date('{{ now()->toDateString() }}T{{ \Carbon\Carbon::parse($time)->format('H:i:s') }}');
+                            const minutes = Math.round((target.getTime() - now.getTime()) / 60000);
+
+                            if (Math.abs(minutes) < 1) {
+                                this.relativeText = 'now';
+                                return;
+                            }
+
+                            if (Math.abs(minutes) < 60) {
+                                this.relativeText = minutes > 0
+                                    ? ('in ' + minutes + ' min')
+                                    : (Math.abs(minutes) + ' min ago');
+                                return;
+                            }
+
+                            const hours = Math.round(Math.abs(minutes) / 60);
+                            const unit = hours === 1 ? 'hour' : 'hours';
+                            this.relativeText = minutes > 0
+                                ? ('in ' + hours + ' ' + unit)
+                                : (hours + ' ' + unit + ' ago');
+                        }
+                    }"
                      class="medication-entry rounded-xl border p-3 transition-all duration-300 cursor-pointer active:scale-[0.98] hover:shadow-lg backdrop-blur-sm {{ $status['bg'] }} {{ $status['isTaken'] ? 'opacity-75' : '' }}"
                      style="box-shadow: inset 0 1px 0 rgba(255,255,255,0.35);"
                      data-medication-id="{{ $medication->id }}"
@@ -81,9 +112,7 @@
                                     <span class="text-xs font-bold text-gray-500 block">
                                         {{ \Carbon\Carbon::parse($time)->format('g:i A') }}
                                     </span>
-                                    <span class="text-[10px] text-gray-400 font-semibold block leading-tight">
-                                        {{ \Carbon\Carbon::parse(today()->format('Y-m-d').' '.$time)->diffForHumans() }}
-                                    </span>
+                                    <span class="text-[11px] font-semibold text-gray-400" x-text="relativeText"></span>
                                 </div>
                             </div>
                             <div class="flex items-center justify-between mt-0.5">

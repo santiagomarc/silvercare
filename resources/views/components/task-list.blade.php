@@ -3,13 +3,7 @@
      Wraps in x-data="checklistTracker(completed, total)".
      ============================================================ --}}
 
-<style>
-    .hide-completed-tasks .checklist-item[data-completed="true"] {
-        display: none !important;
-    }
-</style>
-
-<div x-data="{ ...checklistTracker({{ $completedCount }}, {{ $totalCount }}), showCompleted: true }"
+<div x-data="checklistTracker({{ $completedCount }}, {{ $totalCount }})"
     class="surface-sky relative overflow-hidden p-6"
      role="region"
      aria-label="Today's tasks">
@@ -22,17 +16,9 @@
         <div class="flex justify-between items-center mb-4">
             <div>
                 <h3 class="font-extrabold text-lg text-gray-900">Today's Tasks</h3>
-                <div class="flex items-center gap-2">
-                    <p class="text-xs text-gray-400 font-medium">
-                        <span x-text="completed"></span>/<span x-text="total"></span> completed
-                    </p>
-                    <button
-                        x-show="completed > 0"
-                        @click="showCompleted = !showCompleted"
-                        class="text-[10px] font-bold text-[#000080]/70 hover:text-[#000080] bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded transition-colors"
-                        x-text="showCompleted ? 'Hide Completed' : 'Show Completed'">
-                    </button>
-                </div>
+                <p class="text-xs text-gray-400 font-medium">
+                    <span x-text="completed"></span>/<span x-text="total"></span> completed
+                </p>
             </div>
             <a href="{{ route('elderly.checklists') }}"
                class="text-xs font-bold text-navy hover:underline flex items-center gap-1">
@@ -47,7 +33,17 @@
                  :style="'width:' + progress + '%'"></div>
         </div>
 
-        <div class="space-y-2" :class="{ 'hide-completed-tasks': !showCompleted }">
+        {{-- Auto-collapsed summary once all tasks are done --}}
+        <div x-show="!expanded && total > 0 && completed >= total" x-cloak
+             class="rounded-xl border border-blue-100 bg-white/80 px-3 py-2 mb-3 flex items-center justify-between">
+            <p class="text-sm font-extrabold text-emerald-700">✅ Tasks — All completed</p>
+            <button @click="expanded = true" class="text-xs font-bold text-[#000080] hover:text-blue-900 transition-colors flex items-center gap-1">
+                Expand
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+        </div>
+
+        <div class="space-y-2" x-show="expanded || !(total > 0 && completed >= total)">
             @php
                 $categoryIcons = [
                     'Health' => '❤️', 'Exercise' => '🏃', 'Nutrition' => '🍎',

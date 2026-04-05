@@ -12,10 +12,17 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
     return {
         taken: takenDoses,
         total: totalDoses,
+        expanded: takenDoses < totalDoses,
 
         init() {
             window.addEventListener('ai-medication-logged', (event) => {
                 this._applyAiMedicationLog(event.detail || {});
+            });
+
+            this.$watch('taken', (value) => {
+                if (this.total > 0 && value >= this.total) {
+                    this.expanded = false;
+                }
             });
         },
 

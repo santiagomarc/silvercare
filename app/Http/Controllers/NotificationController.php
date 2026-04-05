@@ -22,6 +22,7 @@ class NotificationController extends Controller
 
         // Get notifications for the current user
         $notifications = Notification::where('elderly_id', $profile->id)
+            ->where('type', '!=', 'medication_refill_caregiver')
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
@@ -42,10 +43,13 @@ class NotificationController extends Controller
 
         // Get counts
         $unreadCount = Notification::where('elderly_id', $profile->id)
+            ->where('type', '!=', 'medication_refill_caregiver')
             ->where('is_read', false)
             ->count();
 
-        $totalCount = Notification::where('elderly_id', $profile->id)->count();
+        $totalCount = Notification::where('elderly_id', $profile->id)
+            ->where('type', '!=', 'medication_refill_caregiver')
+            ->count();
 
         return view('elderly.notifications.index', compact(
             'notifications',
@@ -117,6 +121,7 @@ class NotificationController extends Controller
         $user = Auth::user();
         
         $count = Notification::where('elderly_id', $user->profile->id)
+            ->where('type', '!=', 'medication_refill_caregiver')
             ->where('is_read', false)
             ->count();
 

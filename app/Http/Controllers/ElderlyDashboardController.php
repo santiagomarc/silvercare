@@ -47,7 +47,7 @@ class ElderlyDashboardController extends Controller
             'totalRequiredVitals' => 4, 'vitalsProgress' => 0, 'vitalsData' => [],
             'stepsData' => null, 'takenMedicationDoses' => 0, 'totalMedicationDoses' => 0,
             'medicationProgress' => 0, 'dailyGoalsProgress' => 0, 'googleFitConnected' => false,
-            'todayMood' => 3, 'upcomingEvents' => [], 'unreadNotifications' => 0,
+            'todayMood' => 3, 'moodRecordedToday' => false, 'upcomingEvents' => [], 'unreadNotifications' => 0,
             'linkedCaregiver' => null,
         ];
     }
@@ -319,6 +319,7 @@ class ElderlyDashboardController extends Controller
     private function unreadNotificationsCount(int $elderlyId): int
     {
         return \App\Models\Notification::where('elderly_id', $elderlyId)
+            ->where('type', '!=', 'medication_refill_caregiver')
             ->where('is_read', false)
             ->count();
     }

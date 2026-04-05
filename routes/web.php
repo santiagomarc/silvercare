@@ -36,6 +36,11 @@ Route::post('/caregiver/set-password/{userId}', [CaregiverSetPasswordController:
 Route::middleware(['auth', 'verified', 'elderly', 'profile.complete'])->group(function () {
     Route::get('/dashboard', [ElderlyDashboardController::class, 'index'])->name('dashboard');
 
+    // Signed QR link entry (prefills caregiver PIN confirmation flow)
+    Route::get('/link', [CareLinkController::class, 'openSignedLink'])
+        ->middleware('signed')
+        ->name('elderly.link');
+
     // Caregiver Linking — Two-step: validate PIN (AJAX), then confirm
     Route::post('/link-caregiver/validate', [CareLinkController::class, 'validateCode'])->name('elderly.validate-link-code');
     Route::post('/link-caregiver/confirm', [CareLinkController::class, 'confirmLink'])->name('elderly.confirm-link');

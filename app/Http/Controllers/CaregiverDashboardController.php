@@ -10,6 +10,8 @@ use App\Models\MedicationLog;
 use App\Models\Checklist;
 use App\Models\Notification;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\URL;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class CaregiverDashboardController extends Controller
 {
@@ -17,6 +19,8 @@ class CaregiverDashboardController extends Controller
     {
         $caregiver = Auth::user()->profile;
         $activeLinkCode = null;
+        $activeLinkQrSvg = null;
+        $activeLinkSignedUrl = null;
         
         // Ensure the user has a profile
         if (!$caregiver) {
@@ -34,6 +38,23 @@ class CaregiverDashboardController extends Controller
                 ->where('expires_at', '>', now())
                 ->latest('id')
                 ->first();
+
+            if ($activeLinkCode) {
+                $activeLinkSignedUrl = URL::temporarySignedRoute(
+                    'elderly.link',
+                    $activeLinkCode->expires_at,
+                    [
+                        'code' => $activeLinkCode->code,
+                        'caregiver' => $caregiver->id,
+                    ]
+                );
+
+                $activeLinkQrSvg = (string) QrCode::format('svg')
+                    ->size(200)
+                    ->margin(1)
+                    ->errorCorrection('M')
+                    ->generate($activeLinkSignedUrl);
+            }
         }
 
         if (!$elderly) {
@@ -45,6 +66,8 @@ class CaregiverDashboardController extends Controller
                 'recentActivity' => collect(),
                 'stats' => [],
                 'activeLinkCode' => $activeLinkCode,
+                'activeLinkQrSvg' => $activeLinkQrSvg,
+                'activeLinkSignedUrl' => $activeLinkSignedUrl,
             ]);
         }
 
@@ -122,7 +145,7 @@ class CaregiverDashboardController extends Controller
             $allergies = $medicalInfo['allergies'];
         }
 
-        return view('caregiver.dashboard', compact('elderly', 'elderlyUser', 'mood', 'vitals', 'recentActivity', 'stats', 'conditions', 'medications', 'allergies', 'activeLinkCode'));
+        return view('caregiver.dashboard', compact('elderly', 'elderlyUser', 'mood', 'vitals', 'recentActivity', 'stats', 'conditions', 'medications', 'allergies', 'activeLinkCode', 'activeLinkQrSvg', 'activeLinkSignedUrl'));
     }
 
     /**

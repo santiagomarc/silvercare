@@ -29,7 +29,7 @@ class ElderlyDashboardService
         $checkProg    = $this->getChecklistProgress($checklists['todayChecklists']);
         $dailyGoals   = $this->calculateDailyGoals($checkProg, $medProgress, $vitals['vitalsProgress']);
         $stepsData    = $this->getStepsData($elderlyId);
-        $todayMood    = $this->getMoodData($elderlyId);
+        $moodData     = $this->getMoodData($elderlyId);
         $upcomingEvents       = $this->getUpcomingEvents($userId);
         $unreadNotifications  = $this->getUnreadNotificationCount($elderlyId);
         $googleFitConnected   = GoogleFitToken::where('user_id', $userId)->exists();
@@ -55,7 +55,8 @@ class ElderlyDashboardService
             'medicationProgress'   => $medProgress['progress'],
             'dailyGoalsProgress'   => $dailyGoals,
             'googleFitConnected'   => $googleFitConnected,
-            'todayMood'            => $todayMood,
+            'todayMood'            => $moodData['value'],
+            'moodRecordedToday'    => $moodData['recorded'],
             'upcomingEvents'       => $upcomingEvents,
             'unreadNotifications'  => $unreadNotifications,
         ];
@@ -198,14 +199,17 @@ class ElderlyDashboardService
         ];
     }
 
-    private function getMoodData(int $elderlyId): int
+    private function getMoodData(int $elderlyId): array
     {
         $moodMetric = HealthMetric::where('elderly_id', $elderlyId)
             ->where('type', 'mood')
             ->whereDate('measured_at', Carbon::today())
             ->first();
 
-        return $moodMetric ? (int) $moodMetric->value : 3;
+        return [
+            'value' => $moodMetric ? (int) $moodMetric->value : 3,
+            'recorded' => $moodMetric !== null,
+        ];
     }
 
     private function getUpcomingEvents(int $userId): array|\Illuminate\Support\Collection
@@ -228,6 +232,7 @@ class ElderlyDashboardService
     private function getUnreadNotificationCount(int $elderlyId): int
     {
         return Notification::where('elderly_id', $elderlyId)
+            ->where('type', '!=', 'medication_refill_caregiver')
             ->where('is_read', false)
             ->count();
     }

@@ -12,6 +12,9 @@ class NotificationPresenter
         'medication_taken'      => ['icon' => '💊', 'color' => 'green'],
         'medication_taken_late' => ['icon' => '⚠️', 'color' => 'amber'],
         'medication_missed'     => ['icon' => '❌', 'color' => 'red'],
+        'medication_refill'     => ['icon' => '💊', 'color' => 'amber'],
+        'medication_refill_caregiver' => ['icon' => '🧑‍⚕️', 'color' => 'amber'],
+        'caregiver_unlinked'    => ['icon' => '🔗', 'color' => 'amber'],
         'task_completed'        => ['icon' => '✅', 'color' => 'green'],
         'vitals_recorded'       => ['icon' => '📊', 'color' => 'blue'],
         'daily_reminder'        => ['icon' => '🔔', 'color' => 'blue'],
@@ -61,6 +64,9 @@ class NotificationPresenter
             'medication_taken'      => "{$firstName} took " . ($meta['medicationName'] ?? 'medication'),
             'medication_taken_late' => "{$firstName} took " . ($meta['medicationName'] ?? 'medication') . ' (late)',
             'medication_missed'     => "{$firstName} missed " . ($meta['medicationName'] ?? 'medication'),
+            'medication_refill'     => "{$firstName} is low on " . ($meta['medication_name'] ?? 'medication'),
+            'medication_refill_caregiver' => "{$firstName} needs refill: " . ($meta['medication_name'] ?? 'medication'),
+            'caregiver_unlinked'    => "{$firstName} unlinked a caregiver",
             'task_completed'        => "{$firstName} completed " . ($meta['taskName'] ?? 'a task'),
             'vitals_recorded'       => "{$firstName} recorded " . ($meta['vitalType'] ?? 'vital'),
             'daily_reminder'        => "Reminder sent to {$firstName}",
@@ -80,6 +86,9 @@ class NotificationPresenter
             'medication_taken', 'medication_taken_late' => isset($meta['takenAt'])
                 ? Carbon::parse($meta['takenAt'])->format('g:i A')
                 : 'Dose recorded',
+            'medication_refill', 'medication_refill_caregiver' => isset($meta['days_remaining'])
+                ? '~' . $meta['days_remaining'] . ' day(s) left'
+                : 'Refill soon',
             'medication_missed' => $meta['scheduledTime'] ?? 'Scheduled dose',
             'vitals_recorded'   => ($meta['value'] ?? '') ?: ucfirst(str_replace('_', ' ', $meta['vitalType'] ?? '')),
             'task_completed'    => ucfirst($meta['category'] ?? 'Task'),

@@ -54,7 +54,10 @@ export default function heroAction({ progress = 0, actionType = 'done', medicati
 
                 if (data.is_taken) {
                     this.taken = true;
-                    this.heroHeadline = '✅ ' + this.heroHeadline.replace('Time to take ', '').replace('Missed: ', '') + ' — Done!';
+                    this.heroHeadline = '✅ ' + this.heroHeadline
+                        .replace('Time to take ', '')
+                        .replace('Missed: ', '')
+                        .replace('Overdue: ', '') + ' — Done!';
                     this.heroSubtext = 'Great job! Check below for your next action.';
 
                     // Trigger confetti on the hero card itself

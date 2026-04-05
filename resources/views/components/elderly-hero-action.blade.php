@@ -102,5 +102,8 @@
             <div class="progress-fill bg-white transition-all duration-700 ease-out"
                  :style="'width:' + currentProgress + '%'"></div>
         </div>
+        <p class="mt-2 text-white/85 text-xs font-semibold">
+            Next up: {{ $nextUp }}
+        </p>
     </div>
 </div>

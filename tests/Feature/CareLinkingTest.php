@@ -6,6 +6,7 @@ use App\Models\LinkCode;
 use App\Models\User;
 use App\Models\UserProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class CareLinkingTest extends TestCase
@@ -152,6 +153,11 @@ class CareLinkingTest extends TestCase
 
         $response->assertRedirect();
         $this->assertNull($elderlyProfile->fresh()->caregiver_id);
+
+        $this->assertDatabaseHas('notifications', [
+            'elderly_id' => $elderlyProfile->id,
+            'type' => 'caregiver_unlinked',
+        ]);
     }
 
     public function test_unlink_when_not_linked_is_graceful(): void
@@ -164,6 +170,22 @@ class CareLinkingTest extends TestCase
         // Should not crash — just redirect with info message
         $response->assertRedirect();
         $response->assertSessionHas('info');
+    }
+
+    public function test_signed_qr_link_prefills_dashboard_link_code(): void
+    {
+        [, $caregiverProfile] = $this->makeCaregiverWithCode('777777');
+        [$elderlyUser] = $this->makeElderlyUser();
+
+        $signedUrl = URL::temporarySignedRoute('elderly.link', now()->addMinutes(15), [
+            'code' => '777777',
+            'caregiver' => $caregiverProfile->id,
+        ]);
+
+        $response = $this->actingAs($elderlyUser)->get($signedUrl);
+
+        $response->assertRedirect(route('dashboard'));
+        $response->assertSessionHas('prefill_link_code', '777777');
     }
 }
 

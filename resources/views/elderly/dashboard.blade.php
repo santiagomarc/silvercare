@@ -66,7 +66,16 @@
         {{-- ╔══════════════════════════════╗
              ║  ONBOARDING NUDGE BANNER     ║
              ╚══════════════════════════════╝ --}}
-        @if(Auth::user()->profile?->profile_skipped && !Auth::user()->profile?->profile_completed)
+        @php
+            $dashboardProfile = Auth::user()->profile;
+            $personalStepComplete = filled($dashboardProfile?->age) && filled($dashboardProfile?->weight) && filled($dashboardProfile?->height);
+            $emergencyStepComplete = filled($dashboardProfile?->emergency_name) && filled($dashboardProfile?->emergency_phone) && filled($dashboardProfile?->emergency_relationship);
+            $medicalStepComplete = !empty($dashboardProfile?->medical_conditions ?? [])
+                || !empty($dashboardProfile?->medications ?? [])
+                || !empty($dashboardProfile?->allergies ?? []);
+            $showProfileNudge = $dashboardProfile && ($dashboardProfile->profile_skipped || !($personalStepComplete && $emergencyStepComplete && $medicalStepComplete));
+        @endphp
+        @if($showProfileNudge)
             <div class="mb-5 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50/70 backdrop-blur-sm px-5 py-4 shadow-sm"
                  x-data="{ dismissed: false }"
                  x-show="!dismissed"
@@ -80,7 +89,12 @@
                         </div>
                         <div>
                             <p class="text-sm font-extrabold text-gray-900">Complete your health profile</p>
-                            <p class="text-xs text-gray-500 mt-0.5">Add your medical info so your caregiver can help you better.</p>
+                            <p class="text-xs text-gray-500 mt-0.5">
+                                Complete your profile:
+                                <span class="font-bold {{ $personalStepComplete ? 'text-emerald-700' : 'text-gray-500' }}">{{ $personalStepComplete ? '☑' : '☐' }} Personal</span>
+                                <span class="font-bold {{ $emergencyStepComplete ? 'text-emerald-700' : 'text-gray-500' }}">{{ $emergencyStepComplete ? '☑' : '☐' }} Emergency</span>
+                                <span class="font-bold {{ $medicalStepComplete ? 'text-emerald-700' : 'text-gray-500' }}">{{ $medicalStepComplete ? '☑' : '☐' }} Medical</span>
+                            </p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0">
@@ -103,13 +117,19 @@
         @if(!$linkedCaregiver)
             {{-- ── LINK CAREGIVER SECTION ─────────────────────────────────────── --}}
             <section
+                id="link-caregiver-card"
                 class="mb-6 rounded-2xl border border-blue-200 bg-blue-50/80 backdrop-blur-sm p-5 shadow-sm"
                 x-data="{
-                    pin: '',
+                    pin: @js(session('prefill_link_code', '')),
                     step: 'enter',
                     loading: false,
                     error: '',
                     caregiver: null,
+                    init() {
+                        if (this.pin && this.pin.length === 6) {
+                            this.$nextTick(() => this.validatePin());
+                        }
+                    },
                     async validatePin() {
                         if (this.pin.length !== 6) { this.error = 'Please enter all 6 digits.'; return; }
                         this.loading = true;
@@ -261,7 +281,8 @@
              ║  GREETING BANNER ║
              ╚══════════════════╝ --}}
         @php
-            $hour = now()->timezone(config('app.timezone', 'Asia/Manila'))->hour;
+            $dashboardNow = now()->timezone(config('app.timezone', 'Asia/Manila'));
+            $hour = $dashboardNow->hour;
             $greeting = 'Good evening';
             if ($hour < 12) {
                 $greeting = 'Good morning';
@@ -269,13 +290,37 @@
                 $greeting = 'Good afternoon';
             }
             $firstName = explode(' ', Auth::user()->name)[0];
+
+            $nextDoseTime = null;
+            foreach (($todayMedications ?? collect()) as $medication) {
+                foreach ($medication->scheduleTimesForDate(\Carbon\Carbon::today()) as $scheduledTime) {
+                    $logKey = $medication->id . '_' . \Carbon\Carbon::parse($scheduledTime)->format('H:i');
+                    $doseLog = $medicationLogs->get($logKey);
+                    if ($doseLog?->is_taken) {
+                        continue;
+                    }
+
+                    $candidate = \Carbon\Carbon::parse(
+                        $dashboardNow->toDateString() . ' ' . $scheduledTime,
+                        config('app.timezone', 'Asia/Manila')
+                    );
+
+                    if ($candidate->greaterThan($dashboardNow) && (!$nextDoseTime || $candidate->lt($nextDoseTime))) {
+                        $nextDoseTime = $candidate;
+                    }
+                }
+            }
+
+            $nextMedicationLine = $nextDoseTime
+                ? 'Next medication ' . $nextDoseTime->diffForHumans($dashboardNow)
+                : "Let's check in on your health today.";
         @endphp
         <div class="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-2 relative z-10">
             <div>
                 <h2 class="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
                     {{ $greeting }}, <span class="text-[#000080]">{{ $firstName }}</span> <span class="text-2xl" aria-hidden="true">👋</span>
                 </h2>
-                <p class="text-gray-500 font-medium text-sm mt-1">Let's check in on your health today.</p>
+                <p class="text-gray-500 font-medium text-sm mt-1">{{ $nextMedicationLine }}</p>
             </div>
             <div class="hidden sm:block md:text-right">
                 <p class="text-xs font-bold text-[#000080]/60 uppercase tracking-widest leading-none">{{ now()->timezone(config('app.timezone', 'Asia/Manila'))->format('l') }}</p>
@@ -291,6 +336,7 @@
             :medication-logs="$medicationLogs"
             :vitals-data="$vitalsData"
             :checklists="$todayChecklists"
+            :mood-recorded="$moodRecordedToday"
             :daily-goals-progress="$dailyGoalsProgress"
         />
 

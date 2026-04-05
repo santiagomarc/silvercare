@@ -30,6 +30,7 @@ class NotificationService
     public function getNotificationsForElderly(int $elderlyProfileId, int $limit = 50): Collection
     {
         return Notification::where('elderly_id', $elderlyProfileId)
+            ->where('type', '!=', 'medication_refill_caregiver')
             ->orderBy('created_at', 'desc')
             ->limit($limit)
             ->get();
@@ -41,6 +42,7 @@ class NotificationService
     public function getNotificationsByType(int $elderlyProfileId, string $type): Collection
     {
         return Notification::where('elderly_id', $elderlyProfileId)
+            ->where('type', '!=', 'medication_refill_caregiver')
             ->where('type', $type)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -52,6 +54,7 @@ class NotificationService
     public function getNotificationsBySeverity(int $elderlyProfileId, string $severity): Collection
     {
         return Notification::where('elderly_id', $elderlyProfileId)
+            ->where('type', '!=', 'medication_refill_caregiver')
             ->where('severity', $severity)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -63,6 +66,7 @@ class NotificationService
     public function getTodaysNotifications(int $elderlyProfileId): Collection
     {
         return Notification::where('elderly_id', $elderlyProfileId)
+            ->where('type', '!=', 'medication_refill_caregiver')
             ->whereDate('created_at', Carbon::today())
             ->orderBy('created_at', 'desc')
             ->get();

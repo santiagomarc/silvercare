@@ -60,6 +60,9 @@ class CheckMedicationStock extends Command
                     ? floor($medication->current_stock / $dailyDoses)
                     : $medication->current_stock;
 
+                $caregiverProfile = $profile->caregiver;
+                $caregiverName = $caregiverProfile?->user?->name ?? 'Caregiver';
+
                 // Create notification for elderly user
                 try {
                     $this->notificationService->createNotification([
@@ -73,8 +76,29 @@ class CheckMedicationStock extends Command
                             'medication_name' => $medication->name,
                             'current_stock' => $medication->current_stock,
                             'days_remaining' => $daysLeft,
+                            'audience' => 'elderly',
                         ],
                     ]);
+
+                    // Create caregiver-facing notification for dashboard activity stream
+                    if ($caregiverProfile) {
+                        $this->notificationService->createNotification([
+                            'elderly_id' => $profile->id,
+                            'type' => 'medication_refill_caregiver',
+                            'title' => '🧑‍⚕️ Patient Low Stock: ' . $medication->name,
+                            'message' => "{$profile->user?->name} is running low on {$medication->name} ({$medication->current_stock} doses left, ~{$daysLeft} day(s)).",
+                            'severity' => $daysLeft <= 1 ? 'negative' : 'warning',
+                            'metadata' => [
+                                'medication_id' => $medication->id,
+                                'medication_name' => $medication->name,
+                                'current_stock' => $medication->current_stock,
+                                'days_remaining' => $daysLeft,
+                                'caregiver_profile_id' => $caregiverProfile->id,
+                                'caregiver_name' => $caregiverName,
+                                'audience' => 'caregiver',
+                            ],
+                        ]);
+                    }
 
                     $alertCount++;
                     $this->line("  ⚠️  {$medication->name} ({$profile->user?->name}): {$medication->current_stock} doses left (~{$daysLeft} days)");

@@ -36,12 +36,16 @@
                         <p class="text-sm text-yellow-700 mt-1">Generate a linking PIN and share it with your patient. They can scan the QR code or enter the PIN on their dashboard to link instantly.</p>
 
                         @if(session('link_code') || $activeLinkCode)
-                            @php $displayCode = session('link_code', $activeLinkCode?->code); @endphp
+                            @php
+                                $displayCode = session('link_code', $activeLinkCode?->code);
+                                $qrSvg = session('link_qr_svg', $activeLinkQrSvg ?? null);
+                                $shareUrl = session('link_signed_url', $activeLinkSignedUrl ?? null);
+                            @endphp
                             <div class="mt-5 flex flex-col sm:flex-row gap-5 items-start">
                                 {{-- QR Code --}}
-                                @if(session('link_qr_svg'))
+                                @if($qrSvg)
                                     <div class="flex-shrink-0 rounded-xl border-2 border-yellow-200 bg-white p-3 shadow-sm">
-                                        {!! session('link_qr_svg') !!}
+                                        {!! $qrSvg !!}
                                         <p class="text-center text-[10px] text-gray-400 font-semibold mt-1 uppercase tracking-wide">Scan with phone</p>
                                     </div>
                                 @endif
@@ -63,9 +67,20 @@
                                             </svg>
                                             <span x-text="copied ? '✓ Copied!' : 'Copy PIN'"></span>
                                         </button>
+                                        @if($shareUrl)
+                                            <button
+                                                @click="navigator.clipboard.writeText('{{ $shareUrl }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                                                class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-bold bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                                            >
+                                                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 010 5.656l-3 3a4 4 0 11-5.656-5.656l1.5-1.5m6.656-1.5l1.5-1.5a4 4 0 115.656 5.656l-3 3a4 4 0 01-5.656 0"/>
+                                                </svg>
+                                                Copy Link
+                                            </button>
+                                        @endif
                                         @if(isset($_SERVER['HTTP_HOST']))
                                         <a
-                                            href="mailto:?subject=SilverCare%20Linking%20PIN&body=Your%20SilverCare%20linking%20PIN%20is%3A%20{{ $displayCode }}%0A%0AEnter%20it%20on%20your%20dashboard%20at%20{{ url('/dashboard') }}"
+                                            href="mailto:?subject=SilverCare%20Caregiver%20Link&body=Use%20this%20secure%20link%20to%20connect%20with%20me%20on%20SilverCare%3A%0A%0A{{ urlencode($shareUrl ?? url('/dashboard')) }}%0A%0AOr%20enter%20this%20PIN%3A%20{{ $displayCode }}"
                                             class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-bold bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
                                         >
                                             <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
