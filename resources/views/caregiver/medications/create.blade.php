@@ -38,7 +38,7 @@
             </div>
             
             <div class="flex items-center gap-4">
-                <a href="{{ route('caregiver.medications.index') }}" class="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-sm transition-colors">
+                <a href="{{ route('caregiver.medications.index', ['elderly' => $selectedElderly->id]) }}" class="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-sm transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                     <span class="hidden sm:inline">Back</span>
                 </a>
@@ -59,8 +59,16 @@
             </div>
         @endif
 
+        @if(($elderlyPatients ?? collect())->count() > 1)
+            <div class="mb-6 rounded-2xl border border-blue-100 bg-blue-50/80 p-4 shadow-sm">
+                <p class="text-sm font-bold text-blue-900">Creating medication for {{ $selectedElderly->user?->name ?? 'selected patient' }}</p>
+                <p class="text-xs text-blue-700 mt-0.5">Go back and switch patient from the medications list if needed.</p>
+            </div>
+        @endif
+
         <form method="POST" action="{{ route('caregiver.medications.store') }}" id="medicationForm">
             @csrf
+            <input type="hidden" name="elderly_id" value="{{ $selectedElderly->id }}">
 
             <!-- CARD 1: Basic Info -->
             <div class="bg-white rounded-[24px] p-6 md:p-8 shadow-md border border-gray-100 mb-6">
@@ -228,7 +236,7 @@
 
             <!-- ACTION BUTTONS -->
             <div class="flex items-center justify-end gap-4">
-                <a href="{{ route('caregiver.medications.index') }}" class="px-6 py-3 rounded-xl font-[700] text-gray-600 bg-gray-100 hover:bg-gray-200 transition-all">
+                <a href="{{ route('caregiver.medications.index', ['elderly' => $selectedElderly->id]) }}" class="px-6 py-3 rounded-xl font-[700] text-gray-600 bg-gray-100 hover:bg-gray-200 transition-all">
                     Cancel
                 </a>
                 <button type="submit" class="group flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-[700] shadow-lg shadow-blue-200 hover:-translate-y-0.5 transition-all">

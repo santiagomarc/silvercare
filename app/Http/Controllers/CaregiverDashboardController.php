@@ -15,7 +15,7 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class CaregiverDashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $caregiver = Auth::user()->profile;
         $activeLinkCode = null;
@@ -27,10 +27,13 @@ class CaregiverDashboardController extends Controller
             return redirect()->route('profile.completion');
         }
 
-        // HasMany: grab the first linked elderly patient.
-        // When the caregiver dashboard is refactored for multi-patient,
-        // this will iterate over ->elderlyPatients instead.
-        $elderly = $caregiver->elderly()->first();
+        $elderlyPatients = $caregiver->elderlyPatients()->with('user')->orderBy('id')->get();
+        $requestedElderlyId = $request->integer('elderly');
+        $elderly = $requestedElderlyId
+            ? $elderlyPatients->firstWhere('id', $requestedElderlyId)
+            : null;
+        $elderly = $elderly ?? $elderlyPatients->first();
+        $selectedElderlyId = $elderly?->id;
 
         if ($caregiver) {
             $activeLinkCode = LinkCode::where('caregiver_profile_id', $caregiver->id)
@@ -60,6 +63,8 @@ class CaregiverDashboardController extends Controller
         if (!$elderly) {
             return view('caregiver.dashboard', [
                 'elderly' => null,
+                'elderlyPatients' => $elderlyPatients,
+                'selectedElderlyId' => null,
                 'elderlyUser' => null,
                 'mood' => null,
                 'vitals' => [],
@@ -145,7 +150,7 @@ class CaregiverDashboardController extends Controller
             $allergies = $medicalInfo['allergies'];
         }
 
-        return view('caregiver.dashboard', compact('elderly', 'elderlyUser', 'mood', 'vitals', 'recentActivity', 'stats', 'conditions', 'medications', 'allergies', 'activeLinkCode', 'activeLinkQrSvg', 'activeLinkSignedUrl'));
+        return view('caregiver.dashboard', compact('elderly', 'elderlyPatients', 'selectedElderlyId', 'elderlyUser', 'mood', 'vitals', 'recentActivity', 'stats', 'conditions', 'medications', 'allergies', 'activeLinkCode', 'activeLinkQrSvg', 'activeLinkSignedUrl'));
     }
 
     /**

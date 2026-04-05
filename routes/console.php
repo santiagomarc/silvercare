@@ -20,3 +20,15 @@ Schedule::command('medications:check-stock')
     ->dailyAt('09:00')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/stock-alerts.log'));
+
+// Check upcoming appointments/reminders every 15 minutes
+Schedule::command('appointments:send-reminders')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/appointment-reminders.log'));
+
+// Send weekly PDF reports every Monday morning
+Schedule::command('reports:send-weekly-health')
+    ->weeklyOn(1, '07:30')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/weekly-health-reports.log'));

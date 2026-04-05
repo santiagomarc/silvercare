@@ -5,6 +5,7 @@
  * The modal Blade markup lives in <x-vital-record-modal>.
  */
 import Alpine from 'alpinejs';
+import { sendJsonRequest } from '../utils/offline-queue.js';
 
 const VITAL_CONFIGS = {
     blood_pressure: {
@@ -38,6 +39,13 @@ export default function vitalRecorder() {
         diastolic: '',
         notes: '',
         submitting: false,
+        voiceSupported: false,
+        voiceListening: false,
+        recognition: null,
+
+        init() {
+            this.voiceSupported = Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
+        },
 
         openModal(type) {
             this.type = type;
@@ -58,7 +66,88 @@ export default function vitalRecorder() {
         },
 
         closeModal() {
+            if (this.voiceListening) {
+                this.stopVoiceCapture();
+            }
             this.open = false;
+        },
+
+        startVoiceCapture() {
+            const toast = Alpine.store('toast');
+
+            if (!this.voiceSupported) {
+                toast?.info('Voice input is not supported on this browser.');
+                return;
+            }
+
+            if (this.voiceListening) {
+                this.stopVoiceCapture();
+                return;
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            this.recognition = new SpeechRecognition();
+            this.recognition.lang = 'en-US';
+            this.recognition.interimResults = false;
+            this.recognition.maxAlternatives = 1;
+
+            this.recognition.onstart = () => {
+                this.voiceListening = true;
+            };
+
+            this.recognition.onresult = (event) => {
+                const transcript = event.results?.[0]?.[0]?.transcript || '';
+                this.applyVoiceTranscript(transcript);
+            };
+
+            this.recognition.onerror = () => {
+                toast?.error('Could not capture voice input. Please try again.');
+            };
+
+            this.recognition.onend = () => {
+                this.voiceListening = false;
+            };
+
+            this.recognition.start();
+        },
+
+        stopVoiceCapture() {
+            if (this.recognition && this.voiceListening) {
+                this.recognition.stop();
+            }
+            this.voiceListening = false;
+        },
+
+        applyVoiceTranscript(transcript) {
+            const toast = Alpine.store('toast');
+            const spoken = String(transcript || '').toLowerCase().trim();
+
+            if (!spoken) {
+                toast?.info('No voice input detected.');
+                return;
+            }
+
+            if (this.config?.isBP) {
+                const bpMatch = spoken.match(/(\d{2,3})\s*(?:over|\/|and)\s*(\d{2,3})/i);
+                if (!bpMatch) {
+                    toast?.info('Try saying blood pressure like "120 over 80".');
+                    return;
+                }
+
+                this.systolic = bpMatch[1];
+                this.diastolic = bpMatch[2];
+                toast?.success('Blood pressure captured from voice.');
+                return;
+            }
+
+            const numberMatch = spoken.match(/\d+(?:\.\d+)?/);
+            if (!numberMatch) {
+                toast?.info('Try saying a numeric value like "72" or "36.5".');
+                return;
+            }
+
+            this.value = numberMatch[0];
+            toast?.success(`${this.config?.name || 'Value'} captured from voice.`);
         },
 
         async submit() {
@@ -83,19 +172,18 @@ export default function vitalRecorder() {
                     ? { type: this.type, value_text: `${this.systolic}/${this.diastolic}`, notes: this.notes || null }
                     : { type: this.type, value: parseFloat(this.value), notes: this.notes || null };
 
-                const resp = await fetch('/my-vitals', {
+                const result = await sendJsonRequest('/my-vitals', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                    body: JSON.stringify(payload),
+                    body: payload,
                 });
 
-                const data = await resp.json();
-                if (!resp.ok) throw new Error(data.message || 'Failed to save');
+                if (result.queued) {
+                    this.closeModal();
+                    toast?.info(`${this.config.name} saved offline. It will sync automatically.`);
+                    return;
+                }
+
+                if (!result.ok) throw new Error(result.data?.message || 'Failed to save');
 
                 this.closeModal();
                 toast?.success(`${this.config.name} recorded!`);

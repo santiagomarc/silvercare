@@ -12,6 +12,39 @@ import dashboardTabs      from './components/dashboard-tabs.js';
 import googleFitSync      from './components/google-fit-sync.js';
 import heroAction         from './components/hero-action.js';
 import actionQueue        from './components/action-queue.js';
+import { initOfflineQueue } from './utils/offline-queue.js';
+
+// ── Theme bootstrap (5H: Dark Mode Toggle) ──────────────────────
+const preferredDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+const savedTheme = localStorage.getItem('silvercare-theme');
+const useDark = savedTheme === 'dark' || (!savedTheme && preferredDark);
+
+if (useDark) {
+	document.documentElement.classList.add('dark');
+}
+
+window.applySilverCareTheme = function applySilverCareTheme(theme) {
+	const normalized = theme === 'dark' ? 'dark' : 'light';
+	localStorage.setItem('silvercare-theme', normalized);
+	document.documentElement.classList.toggle('dark', normalized === 'dark');
+	return normalized === 'dark';
+};
+
+window.toggleSilverCareTheme = function toggleSilverCareTheme() {
+	const willUseDark = !document.documentElement.classList.contains('dark');
+	return window.applySilverCareTheme(willUseDark ? 'dark' : 'light');
+};
+
+// ── PWA bootstrap (5E: Offline support) ─────────────────────────
+if ('serviceWorker' in navigator) {
+	window.addEventListener('load', () => {
+		navigator.serviceWorker.register('/sw.js').catch((error) => {
+			console.warn('Service worker registration failed:', error);
+		});
+	});
+}
+
+initOfflineQueue();
 
 // ── Register global store ────────────────────────────────────────
 Alpine.store('toast', toastStore);

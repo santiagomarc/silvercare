@@ -26,11 +26,19 @@ class CaregiverAnalyticsController extends Controller
             return redirect()->route('profile.complete');
         }
 
-        $elderly = $caregiver->elderly;
+        $elderlyPatients = $caregiver->elderlyPatients()->with('user')->orderBy('id')->get();
+        $requestedElderlyId = request()->integer('elderly');
+        $elderly = $requestedElderlyId
+            ? $elderlyPatients->firstWhere('id', $requestedElderlyId)
+            : null;
+        $elderly = $elderly ?? $elderlyPatients->first();
+        $selectedElderlyId = $elderly?->id;
 
         if (!$elderly) {
             return view('caregiver.analytics', [
                 'elderly' => null,
+                'elderlyPatients' => $elderlyPatients,
+                'selectedElderlyId' => null,
                 'elderlyUser' => null,
                 'analyticsData' => [],
                 'healthScore' => 0,
@@ -73,6 +81,8 @@ class CaregiverAnalyticsController extends Controller
 
         return view('caregiver.analytics', compact(
             'elderly', 
+            'elderlyPatients',
+            'selectedElderlyId',
             'elderlyUser', 
             'analyticsData',
             'healthScore',
@@ -133,7 +143,7 @@ class CaregiverAnalyticsController extends Controller
     /**
      * Export analytics as PDF
      */
-    public function exportPdf()
+    public function exportPdf(Request $request)
     {
         $caregiver = Auth::user()->profile;
         
@@ -141,7 +151,12 @@ class CaregiverAnalyticsController extends Controller
             return redirect()->route('profile.complete');
         }
 
-        $elderly = $caregiver->elderly;
+        $elderlyPatients = $caregiver->elderlyPatients()->with('user')->orderBy('id')->get();
+        $requestedElderlyId = $request->integer('elderly');
+        $elderly = $requestedElderlyId
+            ? $elderlyPatients->firstWhere('id', $requestedElderlyId)
+            : null;
+        $elderly = $elderly ?? $elderlyPatients->first();
 
         if (!$elderly) {
             return back()->with('error', 'No elder assigned to generate report.');

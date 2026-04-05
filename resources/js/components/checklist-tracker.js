@@ -7,6 +7,7 @@
  */
 import Alpine from 'alpinejs';
 import { createConfetti } from './confetti.js';
+import { sendJsonRequest } from '../utils/offline-queue.js';
 
 export default function checklistTracker(completedCount = 0, totalCount = 0) {
     return {
@@ -71,18 +72,54 @@ export default function checklistTracker(completedCount = 0, totalCount = 0) {
             btn.disabled = true;
 
             try {
-                const resp = await fetch(`/my-checklists/${checklistId}/toggle`, {
+                const result = await sendJsonRequest(`/my-checklists/${checklistId}/toggle`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
+                    body: {},
                 });
 
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const data = await resp.json();
+                if (result.queued) {
+                    const nextCompleted = !isCompleted;
+
+                    if (nextCompleted) {
+                        item.dataset.completed = 'true';
+                        item.classList.add('bg-green-50/50', 'border-green-200', 'opacity-75');
+                        item.classList.remove('bg-white', 'border-gray-100', 'hover:border-green-200', 'hover:bg-green-50/30');
+                        btn.classList.remove('bg-white', 'border-gray-300', 'hover:border-green-400');
+                        btn.classList.add('bg-green-500', 'border-green-500');
+                        const checkIcon = btn.querySelector('.check-icon');
+                        if (checkIcon) {
+                            checkIcon.classList.remove('opacity-0', 'scale-0');
+                            checkIcon.classList.add('opacity-100', 'scale-100');
+                        }
+                        const taskText = item.querySelector('.task-text');
+                        if (taskText) taskText.classList.add('line-through', 'text-gray-400');
+                        this.completed++;
+                        createConfetti(btn);
+                    } else {
+                        item.dataset.completed = 'false';
+                        item.classList.remove('bg-green-50/50', 'border-green-200', 'opacity-75');
+                        item.classList.add('bg-white', 'border-gray-100');
+                        btn.classList.remove('bg-green-500', 'border-green-500');
+                        btn.classList.add('bg-white', 'border-gray-300', 'hover:border-green-400');
+                        const checkIcon = btn.querySelector('.check-icon');
+                        if (checkIcon) {
+                            checkIcon.classList.remove('opacity-100', 'scale-100');
+                            checkIcon.classList.add('opacity-0', 'scale-0');
+                        }
+                        const taskText = item.querySelector('.task-text');
+                        if (taskText) taskText.classList.remove('line-through', 'text-gray-400');
+                        this.completed--;
+                    }
+
+                    window.dispatchEvent(new CustomEvent('progress-updated', {
+                        detail: { checklists: this.completed, checklistTotal: this.total }
+                    }));
+                    Alpine.store('toast')?.info('Saved offline. Changes will sync automatically.');
+                    return;
+                }
+
+                if (!result.ok) throw new Error(result.data?.message || 'Failed to update');
+                const data = result.data || {};
 
                 if (data.is_completed) {
                     item.dataset.completed = 'true';

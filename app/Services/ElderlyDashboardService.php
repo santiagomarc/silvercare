@@ -28,6 +28,7 @@ class ElderlyDashboardService
         $medProgress  = $this->getMedicationProgress($medications['todayMedications'], $medications['medicationLogs']);
         $checkProg    = $this->getChecklistProgress($checklists['todayChecklists']);
         $dailyGoals   = $this->calculateDailyGoals($checkProg, $medProgress, $vitals['vitalsProgress']);
+        $gardenInsights = $this->getGardenInsights($elderlyId);
         $stepsData    = $this->getStepsData($elderlyId);
         $moodData     = $this->getMoodData($elderlyId);
         $upcomingEvents       = $this->getUpcomingEvents($userId);
@@ -54,6 +55,9 @@ class ElderlyDashboardService
             'totalMedicationDoses' => $medProgress['total'],
             'medicationProgress'   => $medProgress['progress'],
             'dailyGoalsProgress'   => $dailyGoals,
+            'gardenStreakDays'     => $gardenInsights['streakDays'],
+            'gardenIsWilting'      => $gardenInsights['isWilting'],
+            'gardenMissedCount'    => $gardenInsights['missedCount'],
             'googleFitConnected'   => $googleFitConnected,
             'todayMood'            => $moodData['value'],
             'moodRecordedToday'    => $moodData['recorded'],
@@ -177,6 +181,166 @@ class ElderlyDashboardService
         }
 
         return $totalWeight > 0 ? round($weightedProgress / $totalWeight) : 0;
+    }
+
+    /**
+     * Build Garden of Wellness state: streak progress + wilting signal.
+     */
+    private function getGardenInsights(int $elderlyId): array
+    {
+        $today = Carbon::today();
+        $start = $today->copy()->subDays(6);
+
+        $activeMedications = Medication::where('elderly_id', $elderlyId)
+            ->where('is_active', true)
+            ->with('schedules')
+            ->get();
+
+        $takenLogs = MedicationLog::where('elderly_id', $elderlyId)
+            ->whereDate('scheduled_time', '>=', $start)
+            ->whereDate('scheduled_time', '<=', $today)
+            ->where('is_taken', true)
+            ->get()
+            ->groupBy(fn ($log) => $log->medication_id . '_' . $log->scheduled_time->format('Y-m-d'));
+
+        $checklistsByDay = Checklist::where('elderly_id', $elderlyId)
+            ->whereDate('due_date', '>=', $start)
+            ->whereDate('due_date', '<=', $today)
+            ->get()
+            ->groupBy(fn ($task) => optional($task->due_date)->format('Y-m-d'));
+
+        $vitalsByDay = HealthMetric::where('elderly_id', $elderlyId)
+            ->whereIn('type', self::REQUIRED_VITALS)
+            ->whereDate('measured_at', '>=', $start)
+            ->whereDate('measured_at', '<=', $today)
+            ->get()
+            ->groupBy(fn ($metric) => $metric->measured_at->format('Y-m-d'));
+
+        $streakDays = 0;
+        for ($cursor = $today->copy(); $cursor->gte($start); $cursor->subDay()) {
+            $dayProgress = $this->calculateDayGoalProgress(
+                $cursor,
+                $activeMedications,
+                $takenLogs,
+                $checklistsByDay,
+                $vitalsByDay
+            );
+
+            if ($dayProgress >= 100) {
+                $streakDays++;
+                continue;
+            }
+
+            break;
+        }
+
+        $missedDoses = $this->countMissedDosesToday($today, $activeMedications, $takenLogs);
+        $overdueTasks = $this->countOverdueTasks($elderlyId);
+        $missedCount = $missedDoses + $overdueTasks;
+
+        return [
+            'streakDays' => $streakDays,
+            'isWilting' => $missedCount > 0,
+            'missedCount' => $missedCount,
+        ];
+    }
+
+    private function calculateDayGoalProgress(
+        Carbon $date,
+        Collection $activeMedications,
+        Collection $takenLogs,
+        Collection $checklistsByDay,
+        Collection $vitalsByDay,
+    ): int {
+        $dateKey = $date->format('Y-m-d');
+
+        $tasksForDay = $checklistsByDay->get($dateKey, collect());
+        $taskTotal = $tasksForDay->count();
+        $taskCompleted = $tasksForDay->where('is_completed', true)->count();
+        $taskProgress = $taskTotal > 0 ? round(($taskCompleted / $taskTotal) * 100) : 0;
+
+        $doseTotal = 0;
+        $doseTaken = 0;
+        foreach ($activeMedications as $medication) {
+            if (!$medication->isScheduledForDate($date)) {
+                continue;
+            }
+
+            $times = $medication->scheduleTimesForDate($date);
+            $scheduledDoses = count($times);
+            if ($scheduledDoses === 0) {
+                continue;
+            }
+
+            $doseTotal += $scheduledDoses;
+
+            $logKey = $medication->id . '_' . $dateKey;
+            $takenForDay = $takenLogs->get($logKey)?->count() ?? 0;
+            $doseTaken += min($takenForDay, $scheduledDoses);
+        }
+
+        $medicationProgress = $doseTotal > 0 ? round(($doseTaken / $doseTotal) * 100) : 0;
+
+        $recordedTypes = collect($vitalsByDay->get($dateKey, collect()))
+            ->pluck('type')
+            ->unique();
+        $vitalsProgress = count(self::REQUIRED_VITALS) > 0
+            ? round(($recordedTypes->count() / count(self::REQUIRED_VITALS)) * 100)
+            : 0;
+
+        return $this->calculateDailyGoals(
+            ['total' => $taskTotal, 'progress' => $taskProgress],
+            ['total' => $doseTotal, 'progress' => $medicationProgress],
+            $vitalsProgress
+        );
+    }
+
+    private function countMissedDosesToday(Carbon $today, Collection $activeMedications, Collection $takenLogs): int
+    {
+        $now = Carbon::now();
+        $timezone = config('app.timezone', 'Asia/Manila');
+        $todayKey = $today->format('Y-m-d');
+        $missed = 0;
+
+        foreach ($activeMedications as $medication) {
+            if (!$medication->isScheduledForDate($today)) {
+                continue;
+            }
+
+            $scheduledTimes = $medication->scheduleTimesForDate($today);
+            $takenForDay = collect($takenLogs->get($medication->id . '_' . $todayKey, collect()))
+                ->map(fn ($log) => $log->scheduled_time->format('H:i'));
+
+            foreach ($scheduledTimes as $time) {
+                $scheduledDateTime = Carbon::parse($today->toDateString() . ' ' . $time, $timezone);
+                $windowEnd = $scheduledDateTime->copy()->addHour();
+                $alreadyTaken = $takenForDay->contains(Carbon::parse($time)->format('H:i'));
+
+                if ($now->greaterThan($windowEnd) && !$alreadyTaken) {
+                    $missed++;
+                }
+            }
+        }
+
+        return $missed;
+    }
+
+    private function countOverdueTasks(int $elderlyId): int
+    {
+        $today = Carbon::today();
+        $currentTime = Carbon::now()->format('H:i:s');
+
+        return Checklist::where('elderly_id', $elderlyId)
+            ->where('is_completed', false)
+            ->where(function ($query) use ($today, $currentTime) {
+                $query->whereDate('due_date', '<', $today)
+                    ->orWhere(function ($todayQuery) use ($today, $currentTime) {
+                        $todayQuery->whereDate('due_date', $today)
+                            ->whereNotNull('due_time')
+                            ->where('due_time', '<', $currentTime);
+                    });
+            })
+            ->count();
     }
 
     private function getStepsData(int $elderlyId): ?array

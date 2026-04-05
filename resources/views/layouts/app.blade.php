@@ -4,12 +4,14 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        <meta name="theme-color" content="#000080">
 
         <title>{{ config('app.name', 'SilverCare') }}</title>
 
         <!-- Favicon -->
         <link rel="icon" type="image/png" href="{{ asset('assets/icons/silvercare.png') }}">
         <link rel="apple-touch-icon" href="{{ asset('assets/icons/silvercare.png') }}">
+        <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
 
         <!-- LOAD MONTSERRAT (Tailwind needs this to display the font correctly) -->
         <link rel="preconnect" href="https://fonts.googleapis.com">

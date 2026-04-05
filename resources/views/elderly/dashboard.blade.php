@@ -414,6 +414,9 @@
                                         :total-medication-doses="$totalMedicationDoses"
                                         :completed-vitals="$completedVitals"
                                         :total-required-vitals="$totalRequiredVitals"
+                                        :streak-days="$gardenStreakDays"
+                                        :is-wilting="$gardenIsWilting"
+                                        :missed-count="$gardenMissedCount"
                                     />
 
                                     <x-task-list
@@ -498,7 +501,7 @@
                 <div class="ambient-orb right-0 top-0 h-40 w-40 bg-rose-200/30"></div>
             <div class="ambient-orb left-12 bottom-0 h-32 w-32 bg-indigo-200/25"></div>
 
-            <div class="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="relative z-10 grid grid-cols-1 md:grid-cols-4 gap-4">
 
                 {{-- 1. WELLNESS CENTER --}}
                      <a href="{{ route('elderly.wellness.index') }}"
@@ -532,7 +535,23 @@
                     </div>
                 </a>
 
-                {{-- 3. HEALTH ANALYTICS --}}
+                {{-- 3. CARE MESSAGES --}}
+                     <a href="{{ route('elderly.messages.index') }}"
+                         class="card-gradient group bg-gradient-to-br from-indigo-500 to-sky-600 p-6 min-h-[140px] flex flex-col justify-between text-white shadow-[0_30px_55px_-30px_rgba(79,70,229,0.66)]">
+                    <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl" aria-hidden="true"></div>
+                    <div class="relative z-10">
+                        <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit mb-4">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h8m-8 4h5m-7 6l-3-3H3a2 2 0 01-2-2V7a2 2 0 012-2h18a2 2 0 012 2v8a2 2 0 01-2 2h-8l-5 5"></path></svg>
+                        </div>
+                        <h3 class="text-lg font-extrabold leading-tight">Care Messages</h3>
+                        <p class="text-indigo-100 text-sm font-medium mt-0.5">Message your caregiver</p>
+                    </div>
+                    <div class="absolute bottom-4 right-4 h-8 w-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-indigo-600 transition-all" aria-hidden="true">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                    </div>
+                </a>
+
+                {{-- 4. HEALTH ANALYTICS --}}
                      <a href="{{ route('elderly.vitals.analytics') }}"
                          class="card-gradient group bg-gradient-to-br from-indigo-500 to-purple-600 p-6 min-h-[140px] flex flex-col justify-between text-white shadow-[0_30px_55px_-30px_rgba(99,102,241,0.66)]">
                     <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl" aria-hidden="true"></div>
@@ -575,6 +594,19 @@
         </div> {{-- END TAB PANELS WRAPPER --}}
 
     </main>
+
+    {{-- Persistent mini widget across tabs (Phase 5B) --}}
+    <x-garden-pocket-widget
+        :completed-checklists="$completedChecklists"
+        :total-checklists="$totalChecklists"
+        :taken-medication-doses="$takenMedicationDoses"
+        :total-medication-doses="$totalMedicationDoses"
+        :completed-vitals="$completedVitals"
+        :total-required-vitals="$totalRequiredVitals"
+        :streak-days="$gardenStreakDays"
+        :is-wilting="$gardenIsWilting"
+        :missed-count="$gardenMissedCount"
+    />
 
     {{-- ╔══════════════════════════════════════════════════════════╗
          ║  GLOBAL OVERLAYS & WIDGETS                              ║

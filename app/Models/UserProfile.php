@@ -91,6 +91,21 @@ class UserProfile extends Model
         return $this->hasMany(Notification::class, 'elderly_id');
     }
 
+    public function careMessagesAsCaregiver(): HasMany
+    {
+        return $this->hasMany(CareMessage::class, 'caregiver_id');
+    }
+
+    public function careMessagesAsElderly(): HasMany
+    {
+        return $this->hasMany(CareMessage::class, 'elderly_id');
+    }
+
+    public function sentCareMessages(): HasMany
+    {
+        return $this->hasMany(CareMessage::class, 'sender_profile_id');
+    }
+
     public function caregiver(): BelongsTo
     {
         return $this->belongsTo(UserProfile::class, 'caregiver_id');

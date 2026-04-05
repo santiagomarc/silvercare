@@ -17,6 +17,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\AiAssistantController;
 use App\Http\Controllers\CaregiverAiController;
 use App\Http\Controllers\CareLinkController;
+use App\Http\Controllers\CareMessageController;
 use App\Http\Controllers\SosController;
 use Illuminate\Support\Facades\Route;
 
@@ -109,6 +110,10 @@ Route::middleware(['auth', 'verified', 'elderly', 'profile.complete'])->group(fu
 
     // SOS Emergency
     Route::post('/sos', [SosController::class, 'trigger'])->name('elderly.sos');
+
+    // Care Messages (elderly <-> caregiver)
+    Route::get('/messages', [CareMessageController::class, 'elderlyIndex'])->name('elderly.messages.index');
+    Route::post('/messages', [CareMessageController::class, 'elderlyStore'])->name('elderly.messages.store');
 });
 
 // Caregiver Routes - Protected by 'caregiver' middleware
@@ -125,6 +130,10 @@ Route::middleware(['auth', 'verified', 'caregiver', 'profile.complete'])->prefix
     Route::resource('medications', MedicationController::class);
     Route::resource('checklists', ChecklistController::class);
     Route::post('checklists/{checklist}/toggle', [ChecklistController::class, 'toggleComplete'])->name('checklists.toggle');
+
+    // Care Messages
+    Route::get('/messages', [CareMessageController::class, 'caregiverIndex'])->name('messages.index');
+    Route::post('/messages', [CareMessageController::class, 'caregiverStore'])->name('messages.store');
 
     // AI Analyst Routes (Caregiver) — rate-limited: 30 requests per minute
     Route::middleware('throttle:30,1')->group(function () {

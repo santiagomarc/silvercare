@@ -18,6 +18,8 @@ class NotificationPresenter
         'task_completed'        => ['icon' => '✅', 'color' => 'green'],
         'vitals_recorded'       => ['icon' => '📊', 'color' => 'blue'],
         'daily_reminder'        => ['icon' => '🔔', 'color' => 'blue'],
+        'appointment_reminder'  => ['icon' => '📅', 'color' => 'blue'],
+        'caregiver_message'     => ['icon' => '💬', 'color' => 'indigo'],
         'health_alert'          => ['icon' => '⚠️', 'color' => 'amber'],
     ];
 
@@ -70,6 +72,8 @@ class NotificationPresenter
             'task_completed'        => "{$firstName} completed " . ($meta['taskName'] ?? 'a task'),
             'vitals_recorded'       => "{$firstName} recorded " . ($meta['vitalType'] ?? 'vital'),
             'daily_reminder'        => "Reminder sent to {$firstName}",
+            'appointment_reminder'  => "Upcoming appointment for {$firstName}",
+            'caregiver_message'     => "New message for {$firstName}",
             'health_alert'          => "Health alert for {$firstName}",
             default                 => "{$firstName}: " . $notification->title,
         };
@@ -92,6 +96,8 @@ class NotificationPresenter
             'medication_missed' => $meta['scheduledTime'] ?? 'Scheduled dose',
             'vitals_recorded'   => ($meta['value'] ?? '') ?: ucfirst(str_replace('_', ' ', $meta['vitalType'] ?? '')),
             'task_completed'    => ucfirst($meta['category'] ?? 'Task'),
+            'appointment_reminder' => $meta['starts_at_human'] ?? 'Upcoming soon',
+            'caregiver_message' => $meta['preview'] ?? 'Message received',
             default             => ucfirst($notification->severity),
         };
     }

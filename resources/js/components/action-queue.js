@@ -3,6 +3,7 @@
  */
 import Alpine from 'alpinejs';
 import { createConfetti } from './confetti.js';
+import { sendJsonRequest } from '../utils/offline-queue.js';
 
 export default function actionQueue(initialSteps = [], initialTotal = null) {
     const normalized = Array.isArray(initialSteps) ? initialSteps : [];
@@ -70,19 +71,25 @@ export default function actionQueue(initialSteps = [], initialTotal = null) {
             this.busy = true;
 
             try {
-                const resp = await fetch(`/my-medications/${step.medication_id}/take`, {
+                const result = await sendJsonRequest(`/my-medications/${step.medication_id}/take`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Accept: 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                    body: JSON.stringify({ time: step.time }),
+                    body: { time: step.time },
                 });
 
-                const data = await resp.json();
-                if (!resp.ok || !data.is_taken) {
+                if (result.queued) {
+                    window.dispatchEvent(new CustomEvent('ai-medication-logged', {
+                        detail: {
+                            medication_id: step.medication_id,
+                            scheduled_time: step.time,
+                            taken_late: false,
+                        },
+                    }));
+                    Alpine.store('toast')?.info('Saved offline. Medication will sync automatically.');
+                    return;
+                }
+
+                const data = result.data || {};
+                if (!result.ok || !data.is_taken) {
                     Alpine.store('toast')?.error(data.message || 'Could not mark medication as taken.');
                     return;
                 }
@@ -108,17 +115,21 @@ export default function actionQueue(initialSteps = [], initialTotal = null) {
             this.busy = true;
 
             try {
-                const resp = await fetch(`/my-checklists/${step.task_id}/toggle`, {
+                const result = await sendJsonRequest(`/my-checklists/${step.task_id}/toggle`, {
                     method: 'POST',
-                    headers: {
-                        Accept: 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
+                    body: {},
                 });
 
-                const data = await resp.json();
-                if (!resp.ok || !data.is_completed) {
+                if (result.queued) {
+                    window.dispatchEvent(new CustomEvent('action-queue-task-completed', {
+                        detail: { taskId: step.task_id },
+                    }));
+                    Alpine.store('toast')?.info('Saved offline. Task completion will sync automatically.');
+                    return;
+                }
+
+                const data = result.data || {};
+                if (!result.ok || !data.is_completed) {
                     Alpine.store('toast')?.error(data.message || 'Could not complete task.');
                     return;
                 }

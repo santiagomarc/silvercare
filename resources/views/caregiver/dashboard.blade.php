@@ -106,6 +106,27 @@
 
         @else
 
+        @if(($elderlyPatients ?? collect())->count() > 1)
+            <div class="mb-5 rounded-2xl border border-blue-100 bg-blue-50/80 p-4 shadow-sm">
+                <form method="GET" action="{{ route('caregiver.dashboard') }}" class="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <label for="elderly" class="text-sm font-bold text-blue-900">Viewing patient</label>
+                    <select
+                        id="elderly"
+                        name="elderly"
+                        onchange="this.form.submit()"
+                        class="rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800"
+                    >
+                        @foreach(($elderlyPatients ?? collect()) as $patient)
+                            <option value="{{ $patient->id }}" @selected(($selectedElderlyId ?? null) === $patient->id)>
+                                {{ $patient->user?->name ?? ('Patient #' . $patient->id) }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <span class="text-xs font-semibold text-blue-700 sm:ml-auto">{{ ($elderlyPatients ?? collect())->count() }} linked patients</span>
+                </form>
+            </div>
+        @endif
+
         <!-- ============================================ -->
         <!-- TOP ROW: Elder Profile Card + Management Panel -->
         <!-- ============================================ -->
@@ -238,10 +259,10 @@
         <!-- ============================================ -->
         <!-- CARE MANAGEMENT PANEL (Action Buttons) -->
         <!-- ============================================ -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             
             <!-- Manage Medications -->
-            <a href="{{ route('caregiver.medications.index') }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
+            <a href="{{ route('caregiver.medications.index', ['elderly' => $selectedElderlyId]) }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
                 <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl"></div>
                 <div class="relative p-5 flex flex-col justify-between h-full z-10">
                     <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit">
@@ -258,7 +279,7 @@
             </a>
 
             <!-- Manage Checklists -->
-            <a href="{{ route('caregiver.checklists.index') }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg shadow-green-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
+            <a href="{{ route('caregiver.checklists.index', ['elderly' => $selectedElderlyId]) }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg shadow-green-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
                 <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl"></div>
                 <div class="relative p-5 flex flex-col justify-between h-full z-10">
                     <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit">
@@ -275,7 +296,7 @@
             </a>
 
             <!-- Health Analytics -->
-            <a href="{{ route('caregiver.analytics') }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 shadow-lg shadow-purple-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
+            <a href="{{ route('caregiver.analytics', ['elderly' => $selectedElderlyId]) }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 shadow-lg shadow-purple-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
                 <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl"></div>
                 <div class="relative p-5 flex flex-col justify-between h-full z-10">
                     <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit">
@@ -286,6 +307,23 @@
                         <p class="text-purple-100 text-xs font-medium mt-0.5">View insights</p>
                     </div>
                     <div class="absolute bottom-4 right-4 h-8 w-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-purple-600 transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Messages -->
+            <a href="{{ route('caregiver.messages.index', ['elderly' => $selectedElderlyId]) }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-sky-600 shadow-lg shadow-indigo-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
+                <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl"></div>
+                <div class="relative p-5 flex flex-col justify-between h-full z-10">
+                    <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h8m-8 4h5m-7 6l-3-3H3a2 2 0 01-2-2V7a2 2 0 012-2h18a2 2 0 012 2v8a2 2 0 01-2 2h-8l-5 5z"></path></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-[900] text-white leading-tight">Messages</h3>
+                        <p class="text-indigo-100 text-xs font-medium mt-0.5">Chat with patient</p>
+                    </div>
+                    <div class="absolute bottom-4 right-4 h-8 w-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-indigo-600 transition-all">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
                     </div>
                 </div>

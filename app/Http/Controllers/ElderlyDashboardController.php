@@ -47,6 +47,7 @@ class ElderlyDashboardController extends Controller
             'totalRequiredVitals' => 4, 'vitalsProgress' => 0, 'vitalsData' => [],
             'stepsData' => null, 'takenMedicationDoses' => 0, 'totalMedicationDoses' => 0,
             'medicationProgress' => 0, 'dailyGoalsProgress' => 0, 'googleFitConnected' => false,
+            'gardenStreakDays' => 0, 'gardenIsWilting' => false, 'gardenMissedCount' => 0,
             'todayMood' => 3, 'moodRecordedToday' => false, 'upcomingEvents' => [], 'unreadNotifications' => 0,
             'linkedCaregiver' => null,
         ];

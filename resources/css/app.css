@@ -21,6 +21,59 @@
         @apply font-sans text-gray-900 antialiased;
     }
 
+    html.dark body {
+        background-color: #0b1220;
+        color: #e2e8f0;
+    }
+
+    html.dark nav {
+        background-color: rgba(15, 23, 42, 0.86) !important;
+        border-color: rgba(148, 163, 184, 0.22) !important;
+    }
+
+    html.dark .bg-white {
+        background-color: rgba(15, 23, 42, 0.92) !important;
+    }
+
+    html.dark .bg-gray-50,
+    html.dark .bg-gray-100 {
+        background-color: rgba(30, 41, 59, 0.78) !important;
+    }
+
+    html.dark .border-gray-100,
+    html.dark .border-gray-200,
+    html.dark .border-white\/60,
+    html.dark .border-white\/70 {
+        border-color: rgba(148, 163, 184, 0.2) !important;
+    }
+
+    html.dark .text-gray-900 { color: #f1f5f9 !important; }
+    html.dark .text-gray-800 { color: #e2e8f0 !important; }
+    html.dark .text-gray-700 { color: #cbd5e1 !important; }
+    html.dark .text-gray-600,
+    html.dark .text-gray-500,
+    html.dark .text-gray-400 { color: #94a3b8 !important; }
+
+    html.dark .card,
+    html.dark .card-glass,
+    html.dark .surface-warm,
+    html.dark .surface-sky,
+    html.dark .surface-mint,
+    html.dark .panel-shell,
+    html.dark .surface-accent {
+        border-color: rgba(148, 163, 184, 0.24) !important;
+        box-shadow: 0 22px 48px -30px rgba(2, 6, 23, 0.82) !important;
+    }
+
+    html.dark .surface-warm,
+    html.dark .surface-sky,
+    html.dark .surface-mint,
+    html.dark .panel-shell-today,
+    html.dark .panel-shell-health,
+    html.dark .panel-shell-activity {
+        background: linear-gradient(145deg, rgba(15, 23, 42, 0.94), rgba(30, 41, 59, 0.9)) !important;
+    }
+
     /* Enforce visible focus rings globally */
     :focus-visible {
         @apply outline-2 outline-offset-2 outline-navy;

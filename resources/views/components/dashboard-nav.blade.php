@@ -60,6 +60,33 @@
                 </a>
             @endif
 
+            {{-- Messages (both roles) --}}
+            <a
+                href="{{ $isCaregiver ? route('caregiver.messages.index') : route('elderly.messages.index') }}"
+                class="relative rounded-xl border border-transparent p-2 transition-all group hover:border-white/70 hover:bg-white/60"
+                title="Messages"
+            >
+                <svg class="w-6 h-6 text-gray-600 group-hover:text-[#000080] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h8m-8 4h5m-7 6l-3-3H3a2 2 0 01-2-2V7a2 2 0 012-2h18a2 2 0 012 2v8a2 2 0 01-2 2h-8l-5 5z"/>
+                </svg>
+            </a>
+
+            {{-- Dark mode toggle --}}
+            <button
+                type="button"
+                x-data="{ dark: document.documentElement.classList.contains('dark') }"
+                @click="dark = window.toggleSilverCareTheme ? window.toggleSilverCareTheme() : dark"
+                class="rounded-xl border border-transparent p-2 transition-all hover:border-white/70 hover:bg-white/60"
+                :title="dark ? 'Switch to light mode' : 'Switch to dark mode'"
+            >
+                <svg x-show="!dark" class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646a9 9 0 1011.708 11.708z"/>
+                </svg>
+                <svg x-show="dark" x-cloak class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364 6.364l-1.414-1.414M7.05 7.05 5.636 5.636m12.728 0L16.95 7.05M7.05 16.95l-1.414 1.414M12 8a4 4 0 100 8 4 4 0 000-8z"/>
+                </svg>
+            </button>
+
             {{-- Connection Status Indicator (both roles) --}}
             @if(!$isCaregiver)
                 @php $linkedCg = Auth::user()->profile?->caregiver; @endphp

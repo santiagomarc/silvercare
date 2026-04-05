@@ -8,12 +8,16 @@
  *   initialChecklist:  { done: int, total: int }
  *   initialMeds:       { done: int, total: int }
  *   initialVitals:     { done: int, total: int }
+ *   meta:              { streakDays: int, isWilting: bool, missedCount: int }
  */
-export default function gardenWellness(checklists, meds, vitals) {
+export default function gardenWellness(checklists, meds, vitals, meta = {}) {
     return {
         checklists: { done: checklists.done, total: checklists.total },
         meds:       { done: meds.done,       total: meds.total       },
         vitals:     { done: vitals.done,      total: vitals.total     },
+        streakDays: Number(meta.streakDays || 0),
+        isWilting: Boolean(meta.isWilting || false),
+        missedCount: Number(meta.missedCount || 0),
 
         get overallProgress() {
             let weight = 0, weighted = 0;
@@ -33,6 +37,8 @@ export default function gardenWellness(checklists, meds, vitals) {
         },
 
         get stage() {
+            if (this.isWilting) return -1;
+
             const p = this.overallProgress;
             if (p >= 100) return 4;
             if (p >= 75)  return 3;
@@ -41,7 +47,40 @@ export default function gardenWellness(checklists, meds, vitals) {
             return 0;
         },
 
+        get streakLabel() {
+            if (this.streakDays <= 0) return 'No streak';
+            if (this.streakDays === 1) return '1-day streak';
+            return `${this.streakDays}-day streak`;
+        },
+
+        get streakDetail() {
+            if (this.isWilting) {
+                return this.missedCount > 0
+                    ? `${this.missedCount} missed item(s) today. Recover your streak by finishing upcoming steps.`
+                    : 'Your garden is wilting. Complete your next actions to recover it.';
+            }
+
+            if (this.streakDays <= 0) {
+                return 'Complete today\'s goals to start a new streak.';
+            }
+
+            return `Great momentum: ${this.streakLabel}!`;
+        },
+
+        get stageIcon() {
+            if (this.stage === -1) return '🥀';
+            if (this.stage === 0) return '🌰';
+            if (this.stage === 1) return '🌱';
+            if (this.stage === 2) return '🌿';
+            if (this.stage === 3) return '🌷';
+            return '🌸';
+        },
+
         get message() {
+            if (this.isWilting) {
+                return "Your plant is wilting. Let's recover it with one action at a time. 🌾";
+            }
+
             const msgs = [
                 "Your plant needs water. Let's do some tasks! 💧",
                 "It's sprouting! Good start! 🌿",
@@ -60,6 +99,13 @@ export default function gardenWellness(checklists, meds, vitals) {
                 if (d.checklistTotal !== undefined) this.checklists.total = d.checklistTotal;
                 if (d.medications !== undefined) this.meds.done = d.medications;
                 if (d.medicationTotal !== undefined) this.meds.total = d.medicationTotal;
+            });
+
+            window.addEventListener('garden-meta-updated', (e) => {
+                const d = e.detail || {};
+                if (d.streakDays !== undefined) this.streakDays = Number(d.streakDays || 0);
+                if (d.isWilting !== undefined) this.isWilting = Boolean(d.isWilting);
+                if (d.missedCount !== undefined) this.missedCount = Number(d.missedCount || 0);
             });
         },
     };

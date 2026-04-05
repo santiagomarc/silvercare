@@ -13,6 +13,13 @@ export default function dashboardTabs(initialTab = 'today') {
             if (queryTab && ['today', 'health', 'activity'].includes(queryTab)) {
                 this.activeTab = queryTab;
             }
+
+            window.addEventListener('switch-dashboard-tab', (event) => {
+                const tab = event.detail?.tab;
+                if (tab && ['today', 'health', 'activity'].includes(tab)) {
+                    this.switchTab(tab);
+                }
+            });
         },
 
         switchTab(tab) {
