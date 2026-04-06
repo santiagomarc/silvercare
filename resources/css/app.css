@@ -81,8 +81,8 @@
 
     /* Minimum touch-target for interactive elements */
     a, button, [role="button"], input[type="checkbox"], input[type="radio"], select {
-        min-height: 44px;
-        min-width: 44px;
+        min-height: 48px;
+        min-width: 48px;
     }
 
     /* Override for inline text links that shouldn't be 44px tall */

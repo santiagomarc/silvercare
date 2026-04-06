@@ -32,7 +32,7 @@
                         <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }}">
                             <div class="max-w-[85%] rounded-2xl px-4 py-3 {{ $isMine ? 'bg-emerald-600 text-white rounded-br-md' : 'bg-white text-gray-800 border border-gray-100 rounded-bl-md' }}">
                                 <p class="text-sm font-semibold leading-relaxed whitespace-pre-wrap">{{ $message->message }}</p>
-                                <p class="mt-2 text-[11px] {{ $isMine ? 'text-emerald-100' : 'text-gray-400' }}">
+                                <p class="mt-2 text-xs {{ $isMine ? 'text-emerald-100' : 'text-gray-400' }}">
                                     {{ $message->created_at->format('M j, g:i A') }}
                                 </p>
                             </div>

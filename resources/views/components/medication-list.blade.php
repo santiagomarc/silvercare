@@ -112,7 +112,7 @@
                                     <span class="text-xs font-bold text-gray-500 block">
                                         {{ \Carbon\Carbon::parse($time)->format('g:i A') }}
                                     </span>
-                                    <span class="text-[11px] font-semibold text-gray-400" x-text="relativeText"></span>
+                                    <span class="text-xs font-semibold text-gray-400" x-text="relativeText"></span>
                                 </div>
                             </div>
                             <div class="flex items-center justify-between mt-0.5">

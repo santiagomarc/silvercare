@@ -27,7 +27,7 @@
             <form action="{{ route('elderly.medications.undo', $medication) }}" method="POST">
                 @csrf
                 <input type="hidden" name="time" value="{{ $time }}">
-                <button type="submit" class="px-3 py-1.5 text-sm font-bold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                <button type="submit" class="px-4 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors min-h-touch min-w-touch">
                     Undo
                 </button>
             </form>
@@ -39,7 +39,7 @@
                 <input type="hidden" name="time" value="{{ $time }}">
                 <button type="submit" 
                     @disabled(!$canTake)
-                    class="px-4 py-1.5 text-sm font-bold text-white rounded-lg transition-colors {{ $canTake ? 'bg-blue-600 hover:bg-blue-700 shadow-md' : 'bg-gray-400 cursor-not-allowed' }}">
+                    class="px-5 py-2.5 text-sm font-bold text-white rounded-xl transition-colors min-h-touch {{ $canTake ? 'bg-blue-600 hover:bg-blue-700 shadow-md' : 'bg-gray-400 cursor-not-allowed' }}">
                     Take
                 </button>
             </form>

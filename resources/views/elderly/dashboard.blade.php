@@ -20,17 +20,30 @@
         }
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            height: 36px;
-            width: 36px;
+            height: 48px;
+            width: 48px;
             border-radius: 50%;
             background: #fff;
             border: 6px solid currentColor;
             cursor: pointer;
-            margin-top: -14px;
+            margin-top: -20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            transition: transform 0.1s ease;
+        }
+        input[type=range]::-moz-range-thumb {
+            height: 48px;
+            width: 48px;
+            border-radius: 50%;
+            background: #fff;
+            border: 6px solid currentColor;
+            cursor: pointer;
             box-shadow: 0 4px 10px rgba(0,0,0,0.15);
             transition: transform 0.1s ease;
         }
         input[type=range]:active::-webkit-slider-thumb {
+            transform: scale(1.2);
+        }
+        input[type=range]:active::-moz-range-thumb {
             transform: scale(1.2);
         }
         input[type=range]::-webkit-slider-runnable-track {
@@ -39,7 +52,17 @@
             background: #E5E7EB;
             border-radius: 999px;
         }
-        input[type=range]:focus { outline: none; }
+        input[type=range]::-moz-range-track {
+            width: 100%;
+            height: 8px;
+            background: #E5E7EB;
+            border-radius: 999px;
+        }
+        input[type=range]:focus-visible {
+            outline: 2px solid #3451d1;
+            outline-offset: 4px;
+            border-radius: 4px;
+        }
     </style>
     @endpush
 
@@ -84,8 +107,8 @@
                 </h2>
             </div>
             <div class="hidden sm:block md:text-right">
-                <p class="text-xs font-bold text-[#000080]/60 uppercase tracking-widest leading-none">{{ now()->timezone(config('app.timezone', 'Asia/Manila'))->format('l') }}</p>
-                <p class="text-lg font-extrabold text-[#000080] leading-none mt-1">{{ now()->timezone(config('app.timezone', 'Asia/Manila'))->format('M j, Y') }}</p>
+                <p class="text-xs font-bold text-[#000080]/60 uppercase tracking-widest leading-none">{{ $dashboardNow->format('l') }}</p>
+                <p class="text-lg font-extrabold text-[#000080] leading-none mt-1">{{ $dashboardNow->format('M j, Y') }}</p>
             </div>
         </div>
 
