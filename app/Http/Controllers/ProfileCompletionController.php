@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\ProfileCompletionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -9,6 +10,11 @@ use Illuminate\Http\RedirectResponse;
 
 class ProfileCompletionController extends Controller
 {
+    public function __construct(
+        protected ProfileCompletionService $profileCompletionService,
+    ) {
+    }
+
     /**
      * Display the profile completion form (3-step wizard).
      */
@@ -17,8 +23,10 @@ class ProfileCompletionController extends Controller
         $user = Auth::user();
         $profile = $user->profile;
 
-        // If already completed, redirect to dashboard
-        if ($profile && $profile->profile_completed) {
+        $completion = $this->profileCompletionService->evaluate($profile);
+
+        // If truly complete, redirect to dashboard
+        if ($completion['is_complete']) {
             return $this->redirectToDashboard($profile->user_type);
         }
 
@@ -84,9 +92,19 @@ class ProfileCompletionController extends Controller
             'medical_conditions' => $medicalConditions,
             'medications' => $medicationsArray,
             'allergies' => $allergiesArray,
-            
-            'profile_completed' => true,
         ]);
+
+        $completion = $this->profileCompletionService->evaluate($profile->fresh());
+
+        $profile->update([
+            'profile_completed' => $completion['is_complete'],
+            'profile_skipped' => false,
+        ]);
+
+        if (! $completion['is_complete']) {
+            return redirect()->route('profile.completion')
+                ->with('info', 'Please complete all profile sections before continuing.');
+        }
 
         return $this->redirectToDashboard($profile->user_type)
             ->with('success', 'Profile completed successfully!');

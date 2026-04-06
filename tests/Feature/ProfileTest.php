@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\UserProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -95,5 +96,41 @@ class ProfileTest extends TestCase
             ->assertRedirect('/profile');
 
         $this->assertNotNull($user->fresh());
+    }
+
+    public function test_profile_update_sets_profile_completed_when_all_required_sections_are_present(): void
+    {
+        $user = User::factory()->create();
+
+        UserProfile::create([
+            'user_id' => $user->id,
+            'user_type' => 'elderly',
+            'username' => 'profile-completion-sync',
+            'profile_completed' => false,
+            'profile_skipped' => true,
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($user)->patch('/profile', [
+            'name' => 'Test User',
+            'email' => $user->email,
+            'age' => 71,
+            'height' => 166,
+            'weight' => 69,
+            'emergency_name' => 'Emergency Contact',
+            'emergency_phone' => '+639189999999',
+            'emergency_relationship' => 'Son',
+            'medical_conditions' => 'Hypertension',
+            'medications' => '',
+            'allergies' => '',
+        ]);
+
+        $response->assertSessionHasNoErrors()->assertRedirect('/profile');
+
+        $this->assertDatabaseHas('user_profiles', [
+            'user_id' => $user->id,
+            'profile_completed' => true,
+            'profile_skipped' => false,
+        ]);
     }
 }

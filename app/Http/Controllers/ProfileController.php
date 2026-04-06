@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\UserProfile;
 use App\Models\User;
+use App\Services\ProfileCompletionService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -12,6 +13,11 @@ use Illuminate\Support\Facades\Redirect;
 
 class ProfileController extends Controller
 {
+    public function __construct(
+        protected ProfileCompletionService $profileCompletionService,
+    ) {
+    }
+
     /**
      * Display the user's profile form.
      */
@@ -65,7 +71,7 @@ class ProfileController extends Controller
         $allergies          = $this->processCommaSeparated($request->allergies);
 
         // 4. Update or Create Profile (Direct Model Access)
-        UserProfile::updateOrCreate(
+        $profile = UserProfile::updateOrCreate(
             ['user_id' => $user->id],
             [
                 'age'                    => $request->age,
@@ -86,6 +92,13 @@ class ProfileController extends Controller
                 'emergency_relationship' => $request->emergency_relationship,
             ]
         );
+
+        $completion = $this->profileCompletionService->evaluate($profile);
+
+        $profile->update([
+            'profile_completed' => $completion['is_complete'],
+            'profile_skipped' => $completion['is_complete'] ? false : (bool) ($profile->profile_skipped ?? false),
+        ]);
 
         return redirect()->route('profile.edit')->with('status', 'profile-updated');
     }

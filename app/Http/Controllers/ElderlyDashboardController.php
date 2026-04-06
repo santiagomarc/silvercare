@@ -9,6 +9,7 @@ use App\Models\Checklist;
 use App\Models\HealthMetric;
 use App\Services\ElderlyDashboardService;
 use App\Services\MedicationWindowService;
+use App\Services\ProfileCompletionService;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -17,7 +18,8 @@ class ElderlyDashboardController extends Controller
 {
     public function __construct(
         protected ElderlyDashboardService $dashboardService,
-        protected MedicationWindowService $windowService
+        protected MedicationWindowService $windowService,
+        protected ProfileCompletionService $profileCompletionService,
     )
     {
     }
@@ -32,7 +34,9 @@ class ElderlyDashboardController extends Controller
         }
 
         $data = $this->dashboardService->getDashboardData($elderlyId, $user->id);
-        $data['linkedCaregiver'] = $user->profile?->caregiver;
+        $profile = $user->profile;
+        $data['linkedCaregiver'] = $profile?->caregiver;
+        $data['profileCompletion'] = $this->profileCompletionService->evaluate($profile);
 
         return view('elderly.dashboard', $data);
     }
@@ -50,6 +54,12 @@ class ElderlyDashboardController extends Controller
             'gardenStreakDays' => 0, 'gardenIsWilting' => false, 'gardenMissedCount' => 0,
             'todayMood' => 3, 'moodRecordedToday' => false, 'upcomingEvents' => [], 'unreadNotifications' => 0,
             'linkedCaregiver' => null,
+            'profileCompletion' => [
+                'personal_complete' => false,
+                'emergency_complete' => false,
+                'medical_complete' => false,
+                'is_complete' => false,
+            ],
         ];
     }
 

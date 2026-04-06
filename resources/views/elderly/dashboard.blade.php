@@ -68,12 +68,16 @@
              ╚══════════════════════════════╝ --}}
         @php
             $dashboardProfile = Auth::user()->profile;
-            $personalStepComplete = filled($dashboardProfile?->age) && filled($dashboardProfile?->weight) && filled($dashboardProfile?->height);
-            $emergencyStepComplete = filled($dashboardProfile?->emergency_name) && filled($dashboardProfile?->emergency_phone) && filled($dashboardProfile?->emergency_relationship);
-            $medicalStepComplete = !empty($dashboardProfile?->medical_conditions ?? [])
-                || !empty($dashboardProfile?->medications ?? [])
-                || !empty($dashboardProfile?->allergies ?? []);
-            $showProfileNudge = $dashboardProfile && ($dashboardProfile->profile_skipped || !($personalStepComplete && $emergencyStepComplete && $medicalStepComplete));
+            $completion = $profileCompletion ?? [
+                'personal_complete' => false,
+                'emergency_complete' => false,
+                'medical_complete' => false,
+                'is_complete' => false,
+            ];
+            $personalStepComplete = $completion['personal_complete'];
+            $emergencyStepComplete = $completion['emergency_complete'];
+            $medicalStepComplete = $completion['medical_complete'];
+            $showProfileNudge = $dashboardProfile && !($completion['is_complete'] ?? false);
         @endphp
         @if($showProfileNudge)
             <div class="mb-5 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50/70 backdrop-blur-sm px-5 py-4 shadow-sm"
