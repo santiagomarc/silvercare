@@ -53,6 +53,7 @@ class DashboardActionQueueService
                         'tag' => 'Overdue',
                         'priority' => 'overdue',
                         'gradient' => 'from-red-600 to-rose-700',
+                        'gradient_style' => 'linear-gradient(140deg, rgba(185, 28, 28, 0.96) 0%, rgba(225, 29, 72, 0.9) 52%, rgba(251, 113, 133, 0.82) 100%)',
                         'icon' => '🚨',
                     ]);
                     continue;
@@ -63,6 +64,7 @@ class DashboardActionQueueService
                         'tag' => 'Medication',
                         'priority' => 'active',
                         'gradient' => 'from-sky-500 to-blue-700',
+                        'gradient_style' => 'linear-gradient(140deg, rgba(14, 165, 233, 0.95) 0%, rgba(59, 130, 246, 0.9) 54%, rgba(129, 140, 248, 0.82) 100%)',
                         'icon' => '💊',
                     ]);
                     continue;
@@ -73,6 +75,7 @@ class DashboardActionQueueService
                         'tag' => 'Upcoming',
                         'priority' => 'upcoming',
                         'gradient' => 'from-indigo-500 to-blue-700',
+                        'gradient_style' => 'linear-gradient(140deg, rgba(99, 102, 241, 0.94) 0%, rgba(79, 70, 229, 0.9) 54%, rgba(59, 130, 246, 0.82) 100%)',
                         'icon' => '⏰',
                     ]);
                 }
@@ -114,6 +117,7 @@ class DashboardActionQueueService
                 'tag' => 'Vital',
                 'route' => $vitalRoutes[$vitalType],
                 'gradient' => 'from-teal-600 to-cyan-700',
+                'gradient_style' => 'linear-gradient(140deg, rgba(15, 118, 110, 0.94) 0%, rgba(14, 116, 144, 0.9) 54%, rgba(6, 182, 212, 0.82) 100%)',
                 'icon' => '🩺',
             ];
         }
@@ -137,6 +141,7 @@ class DashboardActionQueueService
                 'subtitle' => $taskSubtitle,
                 'tag' => 'Task',
                 'gradient' => 'from-amber-600 to-orange-700',
+                'gradient_style' => 'linear-gradient(140deg, rgba(217, 119, 6, 0.94) 0%, rgba(234, 88, 12, 0.9) 54%, rgba(251, 146, 60, 0.82) 100%)',
                 'icon' => '📋',
             ];
         }
@@ -149,6 +154,7 @@ class DashboardActionQueueService
                 'subtitle' => 'A quick mood check helps track your wellness pattern.',
                 'tag' => 'Mood',
                 'gradient' => 'from-violet-600 to-purple-700',
+                'gradient_style' => 'linear-gradient(140deg, rgba(124, 58, 237, 0.94) 0%, rgba(109, 40, 217, 0.9) 54%, rgba(167, 139, 250, 0.82) 100%)',
                 'icon' => '😊',
             ];
         }
@@ -161,6 +167,7 @@ class DashboardActionQueueService
                 'subtitle' => "You've completed all your tasks, medications, and vitals for today.",
                 'tag' => 'Done',
                 'gradient' => 'from-emerald-600 to-green-700',
+                'gradient_style' => 'linear-gradient(140deg, rgba(5, 150, 105, 0.94) 0%, rgba(22, 163, 74, 0.9) 54%, rgba(52, 211, 153, 0.82) 100%)',
                 'icon' => '🎉',
             ]];
         }

@@ -11,7 +11,7 @@ class DashboardStructureTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_elderly_dashboard_does_not_render_legacy_connection_or_queue_sections(): void
+    public function miss_na_kita_baby_hindi_ko_na_kaya(): void
     {
         $caregiverUser = User::factory()->create();
         $caregiverProfile = UserProfile::create([

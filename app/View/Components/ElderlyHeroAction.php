@@ -26,6 +26,7 @@ class ElderlyHeroAction extends Component
     public string $headline;
     public string $subtext;
     public string $gradient;     // Tailwind gradient classes
+    public string $gradientStyle;
     public string $icon;
     public string $tag;
     public int    $overallProgress;
@@ -59,6 +60,7 @@ class ElderlyHeroAction extends Component
             'title' => 'All caught up! Great job! 🎉',
             'subtitle' => "You've completed all your tasks, medications, and vitals for today.",
             'gradient' => 'from-emerald-600 to-green-700',
+            'gradient_style' => 'linear-gradient(135deg, #059669 0%, #15803d 100%)',
             'icon' => '🎉',
             'tag' => 'Done',
         ];
@@ -67,6 +69,7 @@ class ElderlyHeroAction extends Component
         $this->headline = (string) ($current['title'] ?? 'All caught up! Great job! 🎉');
         $this->subtext = (string) ($current['subtitle'] ?? "You've completed all your tasks, medications, and vitals for today.");
         $this->gradient = (string) ($current['gradient'] ?? 'from-emerald-600 to-green-700');
+        $this->gradientStyle = (string) ($current['gradient_style'] ?? 'linear-gradient(135deg, #059669 0%, #15803d 100%)');
         $this->icon = (string) ($current['icon'] ?? '🎉');
         $this->tag = (string) ($current['tag'] ?? 'Done');
     }

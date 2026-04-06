@@ -47,6 +47,7 @@ export default function heroAction({ progress = 0, steps = [], initialTotal = nu
                 tag: 'Done',
                 icon: '🎉',
                 gradient: 'from-emerald-600 to-green-700',
+                gradient_style: 'linear-gradient(135deg, #059669 0%, #15803d 100%)',
             };
         },
 
@@ -82,8 +83,8 @@ export default function heroAction({ progress = 0, steps = [], initialTotal = nu
             return this.current.icon || '✅';
         },
 
-        get currentGradient() {
-            return this.current.gradient || 'from-emerald-600 to-green-700';
+        get currentGradientStyle() {
+            return this.current.gradient_style || 'linear-gradient(135deg, #059669 0%, #15803d 100%)';
         },
 
         get currentTypeLabel() {
