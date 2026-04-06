@@ -1,36 +1,17 @@
 <?php
 
-namespace App\View\Components;
+namespace App\Services;
 
 use Carbon\Carbon;
-use Closure;
-use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
-use Illuminate\View\Component;
 
-class ActionQueue extends Component
+class DashboardActionQueueService
 {
-    public array $steps = [];
-    public int $initialTotal = 0;
-
     /**
-     * Create a new component instance.
+     * @param array<string, mixed> $vitalsData
+     * @return array<int, array<string, mixed>>
      */
-    public function __construct(
-        Collection $medications,
-        Collection $medicationLogs,
-        array $vitalsData,
-        Collection $checklists,
-        bool $moodRecorded = false,
-    ) {
-        $this->steps = $this->buildSteps($medications, $medicationLogs, $vitalsData, $checklists, $moodRecorded);
-        $this->initialTotal = count($this->steps);
-    }
-
-    /**
-     * Build a one-at-a-time queue of actions for today.
-     */
-    private function buildSteps(
+    public function buildSteps(
         Collection $medications,
         Collection $medicationLogs,
         array $vitalsData,
@@ -42,6 +23,7 @@ class ActionQueue extends Component
 
         $overdueMeds = [];
         $activeMeds = [];
+        $upcomingMeds = [];
 
         foreach ($medications as $medication) {
             foreach ($medication->scheduleTimesForDate($today) as $time) {
@@ -56,29 +38,50 @@ class ActionQueue extends Component
                 $windowStart = $scheduled->copy()->subMinutes(60);
                 $windowEnd = $scheduled->copy()->addMinutes(60);
 
-                $item = [
+                $base = [
                     'id' => 'med-' . $medication->id . '-' . str_replace(':', '', $time),
                     'type' => 'medication',
                     'medication_id' => $medication->id,
                     'time' => $time,
                     'title' => 'Take ' . $medication->name,
                     'subtitle' => trim(($medication->dosage ? $medication->dosage . ' ' . ($medication->dosage_unit ?? '') . ' · ' : '') . 'Scheduled ' . $scheduled->format('g:i A')),
-                    'tag' => 'Medication',
-                    'priority' => 'active',
+                    'scheduled' => $scheduled->toIso8601String(),
                 ];
 
                 if ($now->gt($windowEnd)) {
-                    $item['tag'] = 'Overdue';
-                    $item['priority'] = 'overdue';
-                    $overdueMeds[] = array_merge($item, ['scheduled' => $scheduled->toIso8601String()]);
-                } elseif ($now->between($windowStart, $windowEnd)) {
-                    $activeMeds[] = array_merge($item, ['scheduled' => $scheduled->toIso8601String()]);
+                    $overdueMeds[] = array_merge($base, [
+                        'tag' => 'Overdue',
+                        'priority' => 'overdue',
+                        'gradient' => 'from-red-600 to-rose-700',
+                        'icon' => '🚨',
+                    ]);
+                    continue;
+                }
+
+                if ($now->between($windowStart, $windowEnd)) {
+                    $activeMeds[] = array_merge($base, [
+                        'tag' => 'Medication',
+                        'priority' => 'active',
+                        'gradient' => 'from-sky-500 to-blue-700',
+                        'icon' => '💊',
+                    ]);
+                    continue;
+                }
+
+                if ($scheduled->isFuture()) {
+                    $upcomingMeds[] = array_merge($base, [
+                        'tag' => 'Upcoming',
+                        'priority' => 'upcoming',
+                        'gradient' => 'from-indigo-500 to-blue-700',
+                        'icon' => '⏰',
+                    ]);
                 }
             }
         }
 
-        usort($overdueMeds, fn ($a, $b) => strcmp($a['scheduled'], $b['scheduled']));
-        usort($activeMeds, fn ($a, $b) => strcmp($a['scheduled'], $b['scheduled']));
+        usort($overdueMeds, fn ($a, $b) => strcmp((string) $a['scheduled'], (string) $b['scheduled']));
+        usort($activeMeds, fn ($a, $b) => strcmp((string) $a['scheduled'], (string) $b['scheduled']));
+        usort($upcomingMeds, fn ($a, $b) => strcmp((string) $a['scheduled'], (string) $b['scheduled']));
 
         $steps = array_merge($overdueMeds, $activeMeds);
 
@@ -110,6 +113,8 @@ class ActionQueue extends Component
                 'subtitle' => 'Quick check to keep your daily health log complete.',
                 'tag' => 'Vital',
                 'route' => $vitalRoutes[$vitalType],
+                'gradient' => 'from-teal-600 to-cyan-700',
+                'icon' => '🩺',
             ];
         }
 
@@ -131,6 +136,8 @@ class ActionQueue extends Component
                 'title' => $task->task,
                 'subtitle' => $taskSubtitle,
                 'tag' => 'Task',
+                'gradient' => 'from-amber-600 to-orange-700',
+                'icon' => '📋',
             ];
         }
 
@@ -141,17 +148,23 @@ class ActionQueue extends Component
                 'title' => "Log today's mood",
                 'subtitle' => 'A quick mood check helps track your wellness pattern.',
                 'tag' => 'Mood',
+                'gradient' => 'from-violet-600 to-purple-700',
+                'icon' => '😊',
             ];
         }
 
-        return array_values($steps);
-    }
+        if (empty($steps)) {
+            return [[
+                'id' => 'done',
+                'type' => 'done',
+                'title' => 'All caught up! Great job! 🎉',
+                'subtitle' => "You've completed all your tasks, medications, and vitals for today.",
+                'tag' => 'Done',
+                'gradient' => 'from-emerald-600 to-green-700',
+                'icon' => '🎉',
+            ]];
+        }
 
-    /**
-     * Get the view / contents that represent the component.
-     */
-    public function render(): View|Closure|string
-    {
-        return view('components.action-queue');
+        return array_values(array_merge($steps, $upcomingMeds));
     }
 }

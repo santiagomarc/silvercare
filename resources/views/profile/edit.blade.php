@@ -471,6 +471,140 @@
 
                 </div>
             </form>
+
+            @if($profile->isElderly())
+                <div class="mt-8 relative overflow-hidden bg-white rounded-[24px] p-8 shadow-sm border border-gray-100"
+                     x-data="{
+                        pin: @js(session('prefill_link_code', '')),
+                        step: 'enter',
+                        loading: false,
+                        error: '',
+                        caregiver: null,
+                        unlinkConfirming: false,
+                        init() {
+                            if (this.pin && this.pin.length === 6) {
+                                this.$nextTick(() => this.validatePin());
+                            }
+                        },
+                        async validatePin() {
+                            if (this.pin.length !== 6) { this.error = 'Please enter all 6 digits.'; return; }
+                            this.loading = true;
+                            this.error = '';
+                            try {
+                                const res = await fetch('{{ route('elderly.validate-link-code') }}', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                        'Accept': 'application/json',
+                                    },
+                                    body: JSON.stringify({ code: this.pin }),
+                                });
+                                const data = await res.json();
+                                if (data.valid) {
+                                    this.caregiver = data;
+                                    this.step = 'confirm';
+                                } else {
+                                    this.error = data.message || 'Invalid PIN.';
+                                }
+                            } catch (e) {
+                                this.error = 'Something went wrong. Please try again.';
+                            } finally {
+                                this.loading = false;
+                            }
+                        },
+                        reset() { this.step = 'enter'; this.pin = ''; this.error = ''; this.caregiver = null; }
+                    }">
+                    <div class="flex items-center gap-3 mb-5">
+                        <span class="text-2xl">🤝</span>
+                        <h3 class="font-[800] text-xl text-gray-900">Care Connection</h3>
+                    </div>
+
+                    @if($profile->caregiver)
+                        <div class="rounded-2xl border border-green-200 bg-green-50/70 p-4">
+                            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                <div>
+                                    <p class="text-sm font-extrabold text-gray-900">Connected to {{ $profile->caregiver->user?->name ?? $profile->caregiver->username ?? 'Your Caregiver' }}</p>
+                                    <p class="text-xs text-gray-500 mt-1">Manage unlinking here with password confirmation for account safety.</p>
+                                </div>
+
+                                <div x-data="{ showUnlink: false }" class="w-full md:w-auto">
+                                    <button x-show="!showUnlink"
+                                            @click="showUnlink = true"
+                                            class="w-full md:w-auto rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-700 hover:bg-red-100 transition-colors">
+                                        Unlink Caregiver
+                                    </button>
+
+                                    <div x-show="showUnlink" x-cloak class="rounded-xl border border-red-200 bg-white p-3">
+                                        <p class="text-xs font-semibold text-gray-600 mb-2">Confirm unlink by entering your password.</p>
+                                        <form method="POST" action="{{ route('elderly.unlink-caregiver') }}" class="space-y-2">
+                                            @csrf
+                                            <input type="password"
+                                                   name="password"
+                                                   required
+                                                   autocomplete="current-password"
+                                                   placeholder="Current password"
+                                                   class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-400 focus:ring-2 focus:ring-red-200">
+                                            @error('password')
+                                                <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
+                                            @enderror
+                                            <div class="flex items-center gap-2">
+                                                <button type="submit" class="rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white hover:bg-red-700">Confirm Unlink</button>
+                                                <button type="button" @click="showUnlink = false" class="rounded-lg border border-gray-200 px-3 py-2 text-xs font-bold text-gray-600">Cancel</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @else
+                        <div class="rounded-2xl border border-blue-200 bg-blue-50/80 p-4">
+                            <p class="text-sm font-extrabold text-gray-900">Link a caregiver</p>
+                            <p class="text-xs text-gray-500 mt-1">Enter your caregiver's 6-digit PIN and confirm the profile before connecting.</p>
+
+                            <div class="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
+                                <input type="text"
+                                       x-model="pin"
+                                       inputmode="numeric"
+                                       maxlength="6"
+                                       pattern="[0-9]{6}"
+                                       placeholder="000000"
+                                       @keyup.enter="validatePin()"
+                                       class="w-36 rounded-xl border border-blue-200 bg-white px-3 py-2 text-center text-lg font-black tracking-[0.2em] text-gray-900 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20">
+                                <button @click="validatePin()"
+                                        :disabled="loading || pin.length !== 6"
+                                        class="rounded-xl bg-[#000080] px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-900 transition-colors disabled:opacity-50">
+                                    <span x-show="!loading">Verify PIN</span>
+                                    <span x-show="loading">Checking...</span>
+                                </button>
+                            </div>
+
+                            <p x-show="error" x-text="error" class="mt-2 text-xs font-semibold text-red-600"></p>
+
+                            <div x-show="step === 'confirm'" x-cloak class="mt-3 rounded-xl border border-blue-200 bg-white p-4">
+                                <p class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-2">Confirm connection with:</p>
+                                <div class="flex items-center gap-3 mb-3">
+                                    <div class="w-11 h-11 rounded-full bg-blue-100 flex items-center justify-center text-[#000080] font-black text-lg">
+                                        <span x-text="caregiver?.caregiver_name?.[0] ?? '?'" aria-hidden="true"></span>
+                                    </div>
+                                    <div>
+                                        <p class="font-extrabold text-gray-900" x-text="caregiver?.caregiver_name ?? ''"></p>
+                                        <p class="text-xs text-gray-500" x-text="caregiver?.caregiver_role ?? 'Caregiver'"></p>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <form method="POST" action="{{ route('elderly.confirm-link') }}" class="flex-1">
+                                        @csrf
+                                        <input type="hidden" name="code" :value="caregiver?.code">
+                                        <button type="submit" class="w-full rounded-xl bg-[#000080] px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-900 transition-colors">✓ Link Caregiver</button>
+                                    </form>
+                                    <button type="button" @click="reset()" class="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-bold text-gray-600">Cancel</button>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            @endif
         </div>
     </div>
 

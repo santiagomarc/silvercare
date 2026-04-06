@@ -149,7 +149,9 @@ class CareLinkingTest extends TestCase
         $elderlyProfile->update(['caregiver_id' => $caregiverProfile->id]);
 
         $response = $this->actingAs($elderlyUser)
-            ->post(route('elderly.unlink-caregiver'));
+            ->post(route('elderly.unlink-caregiver'), [
+                'password' => 'password',
+            ]);
 
         $response->assertRedirect();
         $this->assertNull($elderlyProfile->fresh()->caregiver_id);
@@ -165,11 +167,31 @@ class CareLinkingTest extends TestCase
         [$elderlyUser] = $this->makeElderlyUser();
 
         $response = $this->actingAs($elderlyUser)
-            ->post(route('elderly.unlink-caregiver'));
+            ->post(route('elderly.unlink-caregiver'), [
+                'password' => 'password',
+            ]);
 
         // Should not crash — just redirect with info message
         $response->assertRedirect();
         $response->assertSessionHas('info');
+    }
+
+    public function test_elderly_cannot_unlink_with_wrong_password(): void
+    {
+        [, $caregiverProfile] = $this->makeCaregiverWithCode();
+        [$elderlyUser, $elderlyProfile] = $this->makeElderlyUser();
+
+        $elderlyProfile->update(['caregiver_id' => $caregiverProfile->id]);
+
+        $response = $this->actingAs($elderlyUser)
+            ->from(route('dashboard'))
+            ->post(route('elderly.unlink-caregiver'), [
+                'password' => 'wrong-password',
+            ]);
+
+        $response->assertRedirect(route('dashboard'));
+        $response->assertSessionHasErrors('password');
+        $this->assertSame($caregiverProfile->id, $elderlyProfile->fresh()->caregiver_id);
     }
 
     public function test_signed_qr_link_prefills_dashboard_link_code(): void
@@ -184,7 +206,7 @@ class CareLinkingTest extends TestCase
 
         $response = $this->actingAs($elderlyUser)->get($signedUrl);
 
-        $response->assertRedirect(route('dashboard'));
+        $response->assertRedirect(route('profile.edit'));
         $response->assertSessionHas('prefill_link_code', '777777');
     }
 }

@@ -87,33 +87,56 @@
                 </svg>
             </button>
 
-            {{-- Connection Status Indicator (both roles) --}}
+            {{-- Header SOS (elderly only when linked) --}}
             @if(!$isCaregiver)
                 @php $linkedCg = Auth::user()->profile?->caregiver; @endphp
                 @if($linkedCg)
-                    <div class="hidden md:flex items-center gap-1.5 rounded-xl border border-green-100 bg-green-50/80 px-3 py-1.5 text-xs font-bold text-green-700" title="Connected to {{ $linkedCg->user?->name ?? 'Caregiver' }}">
-                        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0"></span>
-                        <span class="truncate max-w-[130px]">👩‍⚕️ Connected to {{ $linkedCg->user?->name ?? 'Caregiver' }}</span>
-                    </div>
-                @else
-                    <a href="{{ route('dashboard') }}#link-caregiver-card"
-                       class="hidden md:flex items-center gap-1.5 rounded-xl border border-amber-100 bg-amber-50/80 px-3 py-1.5 text-xs font-bold text-amber-700 hover:bg-amber-100/80 transition-colors"
-                       title="No caregiver linked">
-                        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                        <span>⚠️ No caregiver linked — Link Now</span>
-                    </a>
-                @endif
-            @else
-                @php $linkedPatient = Auth::user()->profile?->elderlyPatients()->with('user')->first(); @endphp
-                @if($linkedPatient)
-                    <div class="hidden md:flex items-center gap-1.5 rounded-xl border border-green-100 bg-green-50/80 px-3 py-1.5 text-xs font-bold text-green-700" title="Caring for {{ $linkedPatient->user?->name ?? 'Patient' }}">
-                        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0"></span>
-                        <span class="truncate max-w-[140px]">👴 Caring for {{ $linkedPatient->user?->name ?? 'Patient' }}</span>
-                    </div>
-                @else
-                    <div class="hidden md:flex items-center gap-1.5 rounded-xl border border-amber-100 bg-amber-50/80 px-3 py-1.5 text-xs font-bold text-amber-700" title="No patient linked">
-                        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                        <span>⚠️ No patient linked</span>
+                    <div x-data="{
+                            confirming: false,
+                            sending: false,
+                            async sendSos() {
+                                if (this.sending) return;
+                                this.sending = true;
+                                try {
+                                    const resp = await fetch('{{ route('elderly.sos') }}', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'Accept': 'application/json',
+                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                        },
+                                    });
+                                    const data = await resp.json();
+                                    if (data.success) {
+                                        Alpine.store('toast')?.success('SOS sent to your caregiver!');
+                                        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                                    } else {
+                                        Alpine.store('toast')?.error(data.message || 'Failed to send SOS');
+                                    }
+                                } catch (e) {
+                                    Alpine.store('toast')?.error('Failed to send SOS. Try calling your caregiver.');
+                                } finally {
+                                    this.sending = false;
+                                    this.confirming = false;
+                                }
+                            }
+                        }"
+                        class="relative">
+                        <button x-show="!confirming"
+                                @click="confirming = true"
+                                class="rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-1.5 text-xs font-bold text-red-700 transition-colors">
+                            SOS
+                        </button>
+                        <div x-show="confirming" x-cloak class="absolute right-0 top-full mt-2 w-48 rounded-xl border border-red-200 bg-white p-3 shadow-lg z-50">
+                            <p class="text-xs font-semibold text-gray-600 mb-2">Send emergency alert now?</p>
+                            <div class="flex items-center gap-2">
+                                <button @click="sendSos()" :disabled="sending" class="rounded-lg bg-red-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-60">
+                                    <span x-show="!sending">Yes, send</span>
+                                    <span x-show="sending">Sending...</span>
+                                </button>
+                                <button @click="confirming = false" class="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-bold text-gray-600">Cancel</button>
+                            </div>
+                        </div>
                     </div>
                 @endif
             @endif

@@ -8,6 +8,7 @@ use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\URL;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
@@ -84,16 +85,16 @@ class CareLinkController extends Controller
             ->first();
 
         if (! $linkCode || ! $linkCode->caregiverProfile?->isCaregiver()) {
-            return redirect()->route('dashboard')
+            return redirect()->route('profile.edit')
                 ->withErrors(['code' => 'This QR code is invalid or expired. Please ask your caregiver for a new one.']);
         }
 
         if ((int) $validated['caregiver'] !== (int) $linkCode->caregiver_profile_id) {
-            return redirect()->route('dashboard')
+            return redirect()->route('profile.edit')
                 ->withErrors(['code' => 'This QR code does not match the caregiver profile.']);
         }
 
-        return redirect()->route('dashboard')
+        return redirect()->route('profile.edit')
             ->with('prefill_link_code', $linkCode->code)
             ->with('prefill_link_source', 'qr')
             ->with('info', 'Caregiver link verified. Please confirm to complete linking.');
@@ -182,6 +183,10 @@ class CareLinkController extends Controller
      */
     public function unlink(Request $request): RedirectResponse
     {
+        $request->validate([
+            'password' => ['required', 'string'],
+        ]);
+
         $profile = $request->user()?->profile;
 
         if (! $profile || ! $profile->isElderly()) {
@@ -190,6 +195,12 @@ class CareLinkController extends Controller
 
         if (! $profile->caregiver_id) {
             return back()->with('info', 'You are not currently linked to a caregiver.');
+        }
+
+        if (! Hash::check((string) $request->input('password'), (string) $request->user()?->password)) {
+            return back()
+                ->withErrors(['password' => 'The provided password is incorrect.'])
+                ->withInput();
         }
 
         $caregiver = $profile->caregiver;
