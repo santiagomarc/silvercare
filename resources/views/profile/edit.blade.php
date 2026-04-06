@@ -6,7 +6,7 @@
         </style>
     </head>
 
-    <div class="min-h-screen bg-[#EBEBEB] py-12 font-sans" x-data="{ editMode: false }">
+    <div class="min-h-screen bg-[#EBEBEB] py-12 font-sans" x-data="{ editMode: false, showLogoutConfirm: false }">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             
             <!-- HEADER SECTION -->
@@ -605,6 +605,62 @@
                     @endif
                 </div>
             @endif
+
+            <div class="mt-8 relative overflow-hidden bg-white rounded-[24px] p-8 shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between gap-4 flex-col sm:flex-row">
+                    <div>
+                        <h3 class="font-[800] text-xl text-gray-900">Account Session</h3>
+                        <p class="text-sm text-gray-500 font-medium">Sign out safely from your profile page to avoid accidental logout.</p>
+                    </div>
+                    <button
+                        type="button"
+                        @click="showLogoutConfirm = true"
+                        class="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-bold text-red-700 hover:bg-red-100 transition-colors"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                        Log Out
+                    </button>
+                </div>
+            </div>
+
+            <div
+                x-show="showLogoutConfirm"
+                x-cloak
+                x-transition.opacity
+                class="fixed inset-0 z-[80] flex items-center justify-center px-4"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="logout-confirm-title"
+            >
+                <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" @click="showLogoutConfirm = false"></div>
+
+                <div class="relative w-full max-w-md rounded-2xl border border-white/70 bg-white p-6 shadow-2xl">
+                    <h4 id="logout-confirm-title" class="text-xl font-[900] text-gray-900">Confirm logout</h4>
+                    <p class="mt-2 text-sm text-gray-600 font-medium">Are you sure you want to log out now?</p>
+
+                    <div class="mt-5 flex items-center justify-end gap-2">
+                        <button
+                            type="button"
+                            @click="showLogoutConfirm = false"
+                            class="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-bold text-gray-600 hover:bg-gray-50"
+                        >
+                            Cancel
+                        </button>
+
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button
+                                type="submit"
+                                class="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700"
+                            >
+                                Yes, log out
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

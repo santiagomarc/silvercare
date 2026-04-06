@@ -39,7 +39,9 @@
             <div class="h-6 w-[1px] bg-gray-200 hidden md:block"></div>
             <div class="hidden md:block">
                 <h2 class="text-lg font-[800] text-gray-900">{{ $title }}</h2>
-                <p class="text-xs text-gray-500 font-medium -mt-0.5">{{ $subtitle ?? now()->format('l, F j, Y') }}</p>
+                @if(!empty($subtitle))
+                    <p class="text-xs text-gray-500 font-medium -mt-0.5">{{ $subtitle }}</p>
+                @endif
             </div>
         </div>
 
@@ -157,17 +159,6 @@
                     <p class="text-[10px] text-gray-500 font-medium">{{ $roleLabel }}</p>
                 </div>
             </a>
-
-            {{-- Logout Button --}}
-            <form method="POST" action="{{ route('logout') }}" class="ml-1">
-                @csrf
-                <button type="submit" class="flex items-center gap-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-bold text-sm transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                    </svg>
-                    <span class="hidden sm:inline">Logout</span>
-                </button>
-            </form>
 
         </div>
     </div>

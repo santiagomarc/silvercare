@@ -3,7 +3,7 @@
      Shows current priority action, step meta, and coming-up preview.
      ============================================================ --}}
 
-<div class="hero-action mb-6"
+<div class="hero-action mb-4"
      role="status"
      aria-label="Next action: {{ $headline }}"
      x-data="heroAction({
@@ -24,7 +24,6 @@
     <div class="relative z-10 flex items-start justify-between gap-3 mb-4">
         <div>
             <h3 class="text-white text-sm font-black uppercase tracking-wider">Today's Priority Action</h3>
-            <p class="text-white/90 text-xs font-semibold">Single-card queue with context and coming-up actions.</p>
         </div>
         <template x-if="initialTotal > 0">
             <span class="hero-glass-chip px-3 py-1 text-xs font-bold text-white shadow-sm">
@@ -33,21 +32,20 @@
         </template>
     </div>
 
-    <div class="relative z-10 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-        {{-- Left: Icon + Text + badges --}}
+    <div class="relative z-10 flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+        {{-- Left: Icon + Text + badge --}}
         <div class="flex items-start gap-4 min-w-0">
-            <div class="text-4xl md:text-5xl flex-shrink-0" aria-hidden="true" x-text="currentIcon">{{ $icon }}</div>
+            <div class="text-3xl md:text-4xl flex-shrink-0" aria-hidden="true" x-text="currentIcon">{{ $icon }}</div>
             <div>
                 <div class="flex items-center gap-2 mb-1 flex-wrap">
-                    <span class="hero-glass-chip px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-white" x-text="currentTag">{{ $tag }}</span>
-                    <span class="hero-glass-chip px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white" x-text="currentTypeLabel">{{ $actionType }}</span>
+                    <span class="hero-glass-chip px-2.5 py-1 text-xs font-black uppercase tracking-wide text-white" x-text="currentTag || currentTypeLabel">{{ $tag ?: $actionType }}</span>
                 </div>
 
                 <h2 class="text-xl md:text-2xl font-extrabold text-white leading-tight"
                     x-text="currentTitle">
                     {{ $headline }}
                 </h2>
-                <p class="text-white/92 text-sm mt-1 max-w-xl" x-text="currentSubtitle">{{ $subtext }}</p>
+                <p class="text-white/92 text-sm mt-0.5 max-w-xl" x-text="currentSubtitle">{{ $subtext }}</p>
             </div>
         </div>
 
@@ -101,7 +99,7 @@
     </div>
 
     {{-- Progress mini-bar (real-time) --}}
-    <div class="relative z-10 mt-5">
+    <div class="relative z-10 mt-4">
         <div class="flex justify-between items-center mb-1.5">
             <span class="text-white/90 text-xs font-bold">Daily Progress</span>
             <span class="text-white font-extrabold text-sm" x-text="currentProgress + '%'">{{ $overallProgress }}%</span>
@@ -112,7 +110,7 @@
         </div>
     </div>
 
-    <div class="relative z-10 mt-4" x-show="nextPreview.length > 0">
+    <div class="relative z-10 mt-3 hidden md:block" x-show="nextPreview.length > 0">
         <p class="text-xs font-bold uppercase tracking-wider text-white/90 mb-2">Coming Up</p>
         <div class="space-y-2">
             <template x-for="(item, i) in nextPreview" :key="item.id">
@@ -121,7 +119,7 @@
                         <span class="text-white/85 mr-1">Step <span x-text="currentStepNumber + i + 1"></span>:</span>
                         <span x-text="item.title"></span>
                     </p>
-                    <span class="text-[10px] font-bold text-white/85 uppercase tracking-wide" x-text="item.tag"></span>
+                    <span class="text-xs font-bold text-white/85 uppercase tracking-wide" x-text="item.tag"></span>
                 </div>
             </template>
         </div>
