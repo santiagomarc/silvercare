@@ -9,6 +9,99 @@ use Illuminate\Support\Collection;
 class HealthAnalyticsService
 {
     /**
+     * Build steps analytics payload used by the elderly analytics dashboard.
+     */
+    public function getStepsAnalytics(int $elderlyId): array
+    {
+        $stepsData = [
+            'today' => null,
+            'week' => null,
+            'weeklyTotal' => 0,
+            'weeklyAvg' => 0,
+            'weeklyHistory' => [],
+        ];
+
+        $todaySteps = HealthMetric::where('elderly_id', $elderlyId)
+            ->where('type', 'steps')
+            ->whereDate('measured_at', Carbon::today())
+            ->orderBy('measured_at', 'desc')
+            ->first();
+
+        if ($todaySteps) {
+            $stepsData['today'] = [
+                'value' => (int) $todaySteps->value,
+                'goal' => 6000,
+                'source' => $todaySteps->source,
+                'synced_at' => $todaySteps->measured_at,
+            ];
+        }
+
+        $weeklySteps = HealthMetric::where('elderly_id', $elderlyId)
+            ->where('type', 'steps')
+            ->where('measured_at', '>=', Carbon::now()->subDays(7))
+            ->orderBy('measured_at', 'asc')
+            ->get();
+
+        if ($weeklySteps->isNotEmpty()) {
+            $stepsData['weeklyTotal'] = (int) $weeklySteps->sum('value');
+            $stepsData['weeklyAvg'] = (int) round($weeklySteps->avg('value'));
+            $stepsData['weeklyHistory'] = $weeklySteps->map(function ($step) {
+                return [
+                    'date' => $step->measured_at->format('M d'),
+                    'value' => (int) $step->value,
+                ];
+            })->toArray();
+        }
+
+        return $stepsData;
+    }
+
+    /**
+     * Calculate BMI data payload used by the elderly analytics dashboard.
+     */
+    public function calculateBmi(?float $weightKg, ?float $heightCm): array
+    {
+        $bmiData = [
+            'weight' => null,
+            'height' => null,
+            'bmi' => null,
+            'category' => null,
+            'color' => 'gray',
+        ];
+
+        if (!$weightKg || !$heightCm) {
+            return $bmiData;
+        }
+
+        $heightM = $heightCm / 100;
+        if ($heightM <= 0) {
+            return $bmiData;
+        }
+
+        $bmi = round($weightKg / ($heightM * $heightM), 1);
+
+        $bmiData['weight'] = $weightKg;
+        $bmiData['height'] = $heightCm;
+        $bmiData['bmi'] = $bmi;
+
+        if ($bmi < 18.5) {
+            $bmiData['category'] = 'Underweight';
+            $bmiData['color'] = 'blue';
+        } elseif ($bmi < 25) {
+            $bmiData['category'] = 'Normal';
+            $bmiData['color'] = 'green';
+        } elseif ($bmi < 30) {
+            $bmiData['category'] = 'Overweight';
+            $bmiData['color'] = 'amber';
+        } else {
+            $bmiData['category'] = 'Obese';
+            $bmiData['color'] = 'red';
+        }
+
+        return $bmiData;
+    }
+
+    /**
      * Fetch analytics data for an elderly user across multiple time periods.
      *
      * @param int   $elderlyId

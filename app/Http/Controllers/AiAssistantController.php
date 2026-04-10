@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ChatSession;
+use App\Http\Controllers\Concerns\ResolvesAiSession;
 use App\Services\AiAssistantService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -11,6 +11,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AiAssistantController extends Controller
 {
+    use ResolvesAiSession;
+
     protected AiAssistantService $aiService;
 
     public function __construct(AiAssistantService $aiService)
@@ -157,6 +159,7 @@ class AiAssistantController extends Controller
      */
     public function newSession()
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
         $session = $user->chatSessions()->create([
             'title' => 'Chat ' . now()->format('M j, Y g:i A'),
@@ -168,18 +171,4 @@ class AiAssistantController extends Controller
         ]);
     }
 
-    /**
-     * Resolve the chat session — reuse existing or create new.
-     */
-    protected function resolveSession($user, ?int $sessionId): ChatSession
-    {
-        if ($sessionId) {
-            $session = ChatSession::where('id', $sessionId)
-                ->where('user_id', $user->id)
-                ->first();
-            if ($session) return $session;
-        }
-
-        return $user->activeChatSession();
-    }
 }

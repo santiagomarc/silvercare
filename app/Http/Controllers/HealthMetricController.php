@@ -323,85 +323,13 @@ class HealthMetricController extends Controller
         $totalReadings    = $readings['total'];
         $readingsThisWeek = $readings['thisWeek'];
 
-        // Get Steps data for analytics
-        $stepsData = [
-            'today' => null,
-            'week' => null,
-            'weeklyTotal' => 0,
-            'weeklyAvg' => 0,
-            'weeklyHistory' => [],
-        ];
+        $stepsData = $this->analyticsService->getStepsAnalytics($elderlyId);
 
-        // Today's steps
-        $todaySteps = HealthMetric::where('elderly_id', $elderlyId)
-            ->where('type', 'steps')
-            ->whereDate('measured_at', Carbon::today())
-            ->orderBy('measured_at', 'desc')
-            ->first();
-
-        if ($todaySteps) {
-            $stepsData['today'] = [
-                'value' => (int) $todaySteps->value,
-                'goal' => 6000, // Default daily step goal for seniors
-                'source' => $todaySteps->source,
-                'synced_at' => $todaySteps->measured_at,
-            ];
-        }
-
-        // Weekly steps (last 7 days)
-        $weeklySteps = HealthMetric::where('elderly_id', $elderlyId)
-            ->where('type', 'steps')
-            ->where('measured_at', '>=', Carbon::now()->subDays(7))
-            ->orderBy('measured_at', 'asc')
-            ->get();
-
-        if ($weeklySteps->isNotEmpty()) {
-            $stepsData['weeklyTotal'] = (int) $weeklySteps->sum('value');
-            $stepsData['weeklyAvg'] = (int) round($weeklySteps->avg('value'));
-            $stepsData['weeklyHistory'] = $weeklySteps->map(function($step) {
-                return [
-                    'date' => $step->measured_at->format('M d'),
-                    'value' => (int) $step->value,
-                ];
-            })->toArray();
-        }
-
-        // Get BMI data (weight and height from profile)
         $userProfile = $user->profile;
-        $bmiData = [
-            'weight' => null,
-            'height' => null,
-            'bmi' => null,
-            'category' => null,
-            'color' => 'gray',
-        ];
-
-        if ($userProfile && $userProfile->weight && $userProfile->height) {
-            $weight = floatval($userProfile->weight); // kg
-            $height = floatval($userProfile->height) / 100; // convert cm to m
-
-            if ($height > 0) {
-                $bmi = round($weight / ($height * $height), 1);
-                $bmiData['weight'] = $weight;
-                $bmiData['height'] = $userProfile->height;
-                $bmiData['bmi'] = $bmi;
-
-                // Determine BMI category
-                if ($bmi < 18.5) {
-                    $bmiData['category'] = 'Underweight';
-                    $bmiData['color'] = 'blue';
-                } elseif ($bmi < 25) {
-                    $bmiData['category'] = 'Normal';
-                    $bmiData['color'] = 'green';
-                } elseif ($bmi < 30) {
-                    $bmiData['category'] = 'Overweight';
-                    $bmiData['color'] = 'amber';
-                } else {
-                    $bmiData['category'] = 'Obese';
-                    $bmiData['color'] = 'red';
-                }
-            }
-        }
+        $bmiData = $this->analyticsService->calculateBmi(
+            $userProfile ? floatval($userProfile->weight) : null,
+            $userProfile ? floatval($userProfile->height) : null,
+        );
 
         return view('elderly.vitals.analytics', compact(
             'analyticsData',

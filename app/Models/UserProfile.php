@@ -142,4 +142,83 @@ class UserProfile extends Model
     {
         return $this->user_type === 'caregiver';
     }
+
+    /**
+     * Resolve normalized medical conditions, including legacy medical_info fallback.
+     *
+     * @return array<int, string>
+     */
+    public function resolvedMedicalConditions(): array
+    {
+        return $this->resolveMedicalList('medical_conditions', 'conditions');
+    }
+
+    /**
+     * Resolve normalized medications list, including legacy medical_info fallback.
+     *
+     * @return array<int, string>
+     */
+    public function resolvedMedications(): array
+    {
+        return $this->resolveMedicalList('medications', 'medications');
+    }
+
+    /**
+     * Resolve normalized allergies list, including legacy medical_info fallback.
+     *
+     * @return array<int, string>
+     */
+    public function resolvedAllergies(): array
+    {
+        return $this->resolveMedicalList('allergies', 'allergies');
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function resolveMedicalList(string $attribute, string $legacyKey): array
+    {
+        $primary = $this->normalizeStringList($this->getAttribute($attribute));
+        if (!empty($primary)) {
+            return $primary;
+        }
+
+        $legacyInfo = $this->getAttribute('medical_info');
+        if (is_string($legacyInfo)) {
+            $legacyInfo = json_decode($legacyInfo, true) ?? [];
+        }
+
+        if (!is_array($legacyInfo)) {
+            return [];
+        }
+
+        return $this->normalizeStringList($legacyInfo[$legacyKey] ?? []);
+    }
+
+    /**
+     * Normalize arrays/JSON/CSV values into a clean string list.
+     *
+     * @return array<int, string>
+     */
+    private function normalizeStringList(mixed $value): array
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            if (is_array($decoded)) {
+                $value = $decoded;
+            } else {
+                $value = array_map('trim', explode(',', $value));
+            }
+        }
+
+        if (!is_array($value)) {
+            return [];
+        }
+
+        return collect($value)
+            ->map(fn ($item) => is_scalar($item) ? trim((string) $item) : '')
+            ->filter(fn ($item) => $item !== '')
+            ->values()
+            ->all();
+    }
 }
