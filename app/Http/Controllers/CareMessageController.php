@@ -111,8 +111,8 @@ class CareMessageController extends Controller
         }
 
         $caregiver = $elderly->caregiver()->with('user')->first();
-        $unreadNotifications = Notification::where('elderly_id', $elderly->id)
-            ->where('type', '!=', 'medication_refill_caregiver')
+        $unreadNotifications = Notification::forElderly()
+            ->where('elderly_id', $elderly->id)
             ->where('is_read', false)
             ->count();
 

@@ -330,7 +330,7 @@ class ElderlyDashboardController extends Controller
     private function unreadNotificationsCount(int $elderlyId): int
     {
         return \App\Models\Notification::where('elderly_id', $elderlyId)
-            ->where('type', '!=', 'medication_refill_caregiver')
+            ->forElderly()
             ->where('is_read', false)
             ->count();
     }

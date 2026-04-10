@@ -112,12 +112,21 @@ class MedicationController extends Controller
     {
         $this->authorize('update', $medication);
 
-        $this->medicationService->updateMedicationSchedule($medication, [
-            ...$request->validated(),
-            'track_inventory' => $request->boolean('track_inventory'),
-            'current_stock' => $request->integer('current_stock'),
-            'low_stock_threshold' => $request->integer('low_stock_threshold') ?: 5,
-        ]);
+        $payload = $request->validated();
+
+        if ($request->has('track_inventory')) {
+            $payload['track_inventory'] = $request->boolean('track_inventory');
+        }
+
+        if ($request->has('current_stock')) {
+            $payload['current_stock'] = $request->integer('current_stock');
+        }
+
+        if ($request->has('low_stock_threshold')) {
+            $payload['low_stock_threshold'] = $request->integer('low_stock_threshold') ?: 5;
+        }
+
+        $this->medicationService->updateMedicationSchedule($medication, $payload);
 
         $selectedElderlyId = $request->integer('elderly_id') ?: $medication->elderly_id;
 

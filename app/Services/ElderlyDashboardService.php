@@ -395,8 +395,8 @@ class ElderlyDashboardService
 
     private function getUnreadNotificationCount(int $elderlyId): int
     {
-        return Notification::where('elderly_id', $elderlyId)
-            ->where('type', '!=', 'medication_refill_caregiver')
+        return Notification::forElderly()
+            ->where('elderly_id', $elderlyId)
             ->where('is_read', false)
             ->count();
     }

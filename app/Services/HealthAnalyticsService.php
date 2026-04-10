@@ -21,22 +21,38 @@ class HealthAnalyticsService
         $types = $types ?? config('vitals.scorable_types');
         $allVitals = config('vitals');
 
+        $periodBoundaries = collect($periods)->mapWithKeys(
+            fn ($startDate, $periodKey) => [$periodKey => $startDate instanceof Carbon ? $startDate : Carbon::parse($startDate)]
+        );
+
+        $earliestStart = $periodBoundaries
+            ->sortBy(fn (Carbon $date) => $date->getTimestamp())
+            ->first();
+
+        $allMetrics = $earliestStart
+            ? HealthMetric::where('elderly_id', $elderlyId)
+                ->whereIn('type', $types)
+                ->where('measured_at', '>=', $earliestStart)
+                ->orderBy('measured_at', 'asc')
+                ->get()
+                ->groupBy('type')
+            : collect();
+
         $analyticsData = [];
 
         foreach ($types as $type) {
             $conf = $allVitals[$type] ?? [];
+            $typeMetrics = $allMetrics->get($type, collect());
 
             $data = [
                 'config' => $conf,
                 'type'   => $type,
             ];
 
-            foreach ($periods as $periodKey => $startDate) {
-                $metrics = HealthMetric::where('elderly_id', $elderlyId)
-                    ->where('type', $type)
-                    ->where('measured_at', '>=', $startDate)
-                    ->orderBy('measured_at', 'asc')
-                    ->get();
+            foreach ($periodBoundaries as $periodKey => $startDate) {
+                $metrics = $typeMetrics
+                    ->filter(fn ($metric) => $metric->measured_at->gte($startDate))
+                    ->values();
 
                 $periodData = [
                     'count'   => $metrics->count(),

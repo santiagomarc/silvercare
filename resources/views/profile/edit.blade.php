@@ -480,7 +480,6 @@
                         loading: false,
                         error: '',
                         caregiver: null,
-                        unlinkConfirming: false,
                         init() {
                             if (this.pin && this.pin.length === 6) {
                                 this.$nextTick(() => this.validatePin());

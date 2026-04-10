@@ -2,11 +2,11 @@
     Dashboard Navigation Component
     
     Shared nav bar for elderly and caregiver dashboard pages.
-    Handles logo, page title, notifications (elderly only), profile link, and logout.
+    Handles logo, page title, notifications (elderly only), profile link, and utilities.
 
     Props:
         - title: string — Page title displayed in the nav
-        - subtitle: string|null — Subtitle (defaults to current date)
+        - subtitle: string|null — Optional subtitle
         - role: 'elderly'|'caregiver' — Controls color scheme and feature visibility
         - unreadNotifications: int — Badge count for notification bell (elderly only)
 --}}

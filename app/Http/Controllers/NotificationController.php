@@ -20,9 +20,11 @@ class NotificationController extends Controller
         $user = Auth::user();
         $profile = $user->profile;
 
+        $baseQuery = Notification::forElderly()
+            ->where('elderly_id', $profile->id);
+
         // Get notifications for the current user
-        $notifications = Notification::where('elderly_id', $profile->id)
-            ->where('type', '!=', 'medication_refill_caregiver')
+        $notifications = (clone $baseQuery)
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
@@ -42,14 +44,11 @@ class NotificationController extends Controller
         });
 
         // Get counts
-        $unreadCount = Notification::where('elderly_id', $profile->id)
-            ->where('type', '!=', 'medication_refill_caregiver')
+        $unreadCount = (clone $baseQuery)
             ->where('is_read', false)
             ->count();
 
-        $totalCount = Notification::where('elderly_id', $profile->id)
-            ->where('type', '!=', 'medication_refill_caregiver')
-            ->count();
+        $totalCount = $notifications->total();
 
         return view('elderly.notifications.index', compact(
             'notifications',
@@ -77,7 +76,8 @@ class NotificationController extends Controller
 
         $user = Auth::user();
         
-        Notification::where('elderly_id', $user->profile->id)
+        Notification::forElderly()
+            ->where('elderly_id', $user->profile->id)
             ->where('is_read', false)
             ->update(['is_read' => true]);
 
@@ -105,7 +105,9 @@ class NotificationController extends Controller
 
         $user = Auth::user();
         
-        Notification::where('elderly_id', $user->profile->id)->delete();
+        Notification::forElderly()
+            ->where('elderly_id', $user->profile->id)
+            ->delete();
 
         return response()->json([
             'success' => true,
@@ -120,8 +122,8 @@ class NotificationController extends Controller
 
         $user = Auth::user();
         
-        $count = Notification::where('elderly_id', $user->profile->id)
-            ->where('type', '!=', 'medication_refill_caregiver')
+        $count = Notification::forElderly()
+            ->where('elderly_id', $user->profile->id)
             ->where('is_read', false)
             ->count();
 
