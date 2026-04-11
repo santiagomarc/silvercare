@@ -34,7 +34,8 @@ Route::post('/caregiver/set-password/{userId}', [CaregiverSetPasswordController:
     ->name('caregiver.password.store');
 
 // Elderly Routes - Protected by 'elderly' middleware
-Route::middleware(['auth', 'verified', 'elderly', 'profile.complete'])->group(function () {
+// M5 FIX: 'prevent.back' added here so no-cache headers only apply to authenticated pages.
+Route::middleware(['auth', 'verified', 'elderly', 'profile.complete', 'prevent.back'])->group(function () {
     Route::get('/dashboard', [ElderlyDashboardController::class, 'index'])->name('dashboard');
 
     // Signed QR link entry (prefills caregiver PIN confirmation flow)
@@ -118,7 +119,8 @@ Route::middleware(['auth', 'verified', 'elderly', 'profile.complete'])->group(fu
 });
 
 // Caregiver Routes - Protected by 'caregiver' middleware
-Route::middleware(['auth', 'verified', 'caregiver', 'profile.complete'])->prefix('caregiver')->name('caregiver.')->group(function () {
+// M5 FIX: 'prevent.back' added here so no-cache headers only apply to authenticated pages.
+Route::middleware(['auth', 'verified', 'caregiver', 'profile.complete', 'prevent.back'])->prefix('caregiver')->name('caregiver.')->group(function () {
     Route::get('/dashboard', [CaregiverDashboardController::class, 'index'])->name('dashboard');
     Route::post('/link-code', [CareLinkController::class, 'generate'])->name('link-code.generate');
     
@@ -146,7 +148,8 @@ Route::middleware(['auth', 'verified', 'caregiver', 'profile.complete'])->prefix
 });
 
 // Profile Completion Routes
-Route::middleware(['auth'])->group(function () {
+// M5 FIX: 'prevent.back' ensures the profile completion form is never served from browser cache.
+Route::middleware(['auth', 'prevent.back'])->group(function () {
     Route::get('/profile/completion', [ProfileCompletionController::class, 'show'])
         ->name('profile.completion');
     
@@ -157,7 +160,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('profile.completion.skip');
 });
 
-Route::middleware('auth')->group(function () {
+// Shared authenticated routes (profile, calendar) — M5 FIX: prevent.back added
+Route::middleware(['auth', 'prevent.back'])->group(function () {
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

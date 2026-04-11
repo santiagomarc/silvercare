@@ -396,14 +396,15 @@
 
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-1.5 ml-1">Date</label>
+                        <label class="block text-xs font-bold text-gray-500 mb-1.5 ml-1" for="dateInput">Date</label>
+                        {{-- M2 FIX: py-4 + min-h-[52px] ensures WCAG 2.5.8 ≥44px touch target --}}
                         <input type="date" id="dateInput" name="date" value="{{ now()->format('Y-m-d') }}"
-                            class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-{{ $config['color'] }}-500 focus:ring-0 font-semibold text-gray-900 cursor-pointer">
+                            class="w-full px-4 py-4 min-h-[52px] bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-{{ $config['color'] }}-500 focus:ring-0 font-semibold text-gray-900 cursor-pointer text-base">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-1.5 ml-1">Time</label>
+                        <label class="block text-xs font-bold text-gray-500 mb-1.5 ml-1" for="timeInput">Time</label>
                         <input type="time" id="timeInput" name="time" value="{{ now()->format('H:i') }}"
-                            class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-{{ $config['color'] }}-500 focus:ring-0 font-semibold text-gray-900 cursor-pointer">
+                            class="w-full px-4 py-4 min-h-[52px] bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-{{ $config['color'] }}-500 focus:ring-0 font-semibold text-gray-900 cursor-pointer text-base">
                     </div>
                 </div>
 

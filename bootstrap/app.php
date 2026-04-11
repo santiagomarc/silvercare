@@ -21,10 +21,14 @@ return Application::configure(basePath: dirname(__DIR__))
             'profile.complete' => \App\Http\Middleware\EnsureProfileCompleted::class,
         ]);
 
-        // Apply prevent back history to all authenticated routes
-        $middleware->appendToGroup('web', [
-            \App\Http\Middleware\PreventBackHistory::class,
-        ]);
+        // M5 FIX: Removed global append of PreventBackHistory to the 'web' group.
+        // It was applying no-cache headers to ALL routes including the public welcome
+        // page, login form, password reset, and static assets — causing unnecessary
+        // cache misses on slow connections for elderly users.
+        //
+        // Instead, PreventBackHistory is now applied via the 'prevent.back' alias
+        // directly on the authenticated route groups in routes/web.php.
+        // See: middleware(['auth', 'verified', ..., 'prevent.back']) groups.
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

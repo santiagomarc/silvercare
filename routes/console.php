@@ -32,3 +32,11 @@ Schedule::command('reports:send-weekly-health')
     ->weeklyOn(1, '07:30')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/weekly-health-reports.log'));
+
+// M1 FIX: Recycle recurring checklists — runs just after midnight each day.
+// Creates fresh 'pending' copies of recurring tasks so they appear in
+// getTodaysChecklist() for the new day without overwriting history.
+Schedule::command('checklists:recycle-recurring')
+    ->dailyAt('00:01')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/recurring-checklists.log'));
