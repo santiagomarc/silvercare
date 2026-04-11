@@ -16,6 +16,21 @@ class GoogleFitServiceTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_build_authorization_url_uses_provided_state(): void
+    {
+        config()->set('services.google.client_id', 'google-client-id-test');
+
+        $url = app(GoogleFitService::class)->buildAuthorizationUrl(
+            'https://example.test/google/callback',
+            'state-token-123'
+        );
+
+        $this->assertStringContainsString('https://accounts.google.com/o/oauth2/v2/auth?', $url);
+        $this->assertStringContainsString('client_id=google-client-id-test', $url);
+        $this->assertStringContainsString('redirect_uri=https%3A%2F%2Fexample.test%2Fgoogle%2Fcallback', $url);
+        $this->assertStringContainsString('state=state-token-123', $url);
+    }
+
     public function test_get_status_reports_connected_and_expiration_flags(): void
     {
         [$user] = $this->createElderlyUserWithProfile();

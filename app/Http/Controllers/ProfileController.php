@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Http\Requests\UploadProfilePhotoRequest;
 use App\Models\UserProfile;
 use App\Services\ProfileCompletionService;
 use Illuminate\Http\Request;
@@ -99,12 +100,8 @@ class ProfileController extends Controller
     /**
      * Upload profile photo
      */
-    public function uploadPhoto(Request $request)
+    public function uploadPhoto(UploadProfilePhotoRequest $request)
     {
-        $request->validate([
-            'profile_photo' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB max
-        ]);
-
         /** @var \App\Models\User $user */
         $user = Auth::user();
         $profile = UserProfile::where('user_id', $user->id)->first();

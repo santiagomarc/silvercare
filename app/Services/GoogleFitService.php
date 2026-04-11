@@ -24,7 +24,7 @@ class GoogleFitService
     /**
      * Build Google OAuth authorization URL.
      */
-    public function buildAuthorizationUrl(string $redirectUri): string
+    public function buildAuthorizationUrl(string $redirectUri, ?string $state = null): string
     {
         $params = http_build_query([
             'client_id' => config('services.google.client_id'),
@@ -33,7 +33,7 @@ class GoogleFitService
             'scope' => implode(' ', self::SCOPES),
             'access_type' => 'offline',
             'prompt' => 'consent',
-            'state' => csrf_token(),
+            'state' => $state ?? csrf_token(),
         ]);
 
         return "https://accounts.google.com/o/oauth2/v2/auth?{$params}";

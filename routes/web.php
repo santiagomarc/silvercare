@@ -73,6 +73,7 @@ Route::middleware(['auth', 'verified', 'elderly', 'profile.complete'])->group(fu
     // Google Fit Integration
     Route::get('/google-fit/connect', [GoogleFitController::class, 'connect'])->name('elderly.googlefit.connect');
     Route::get('/google-fit/callback', [GoogleFitController::class, 'callback'])->name('elderly.googlefit.callback');
+    Route::get('/google-fit/status', [GoogleFitController::class, 'status'])->name('elderly.googlefit.status');
     Route::post('/google-fit/sync', [GoogleFitController::class, 'sync'])->name('elderly.googlefit.sync');
     Route::post('/google-fit/disconnect', [GoogleFitController::class, 'disconnect'])->name('elderly.googlefit.disconnect');
 

@@ -6,6 +6,7 @@ use App\Services\GoogleFitService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class GoogleFitController extends Controller
 {
@@ -21,8 +22,11 @@ class GoogleFitController extends Controller
      */
     public function connect()
     {
+        $oauthState = Str::random(40);
+        session(['google_fit_oauth_state' => $oauthState]);
+
         return redirect(
-            $this->googleFitService->buildAuthorizationUrl(route('elderly.googlefit.callback'))
+            $this->googleFitService->buildAuthorizationUrl(route('elderly.googlefit.callback'), $oauthState)
         );
     }
 
@@ -32,6 +36,13 @@ class GoogleFitController extends Controller
     public function callback(Request $request)
     {
         $user = Auth::user();
+
+        $state = (string) $request->input('state', '');
+        $expectedState = (string) $request->session()->pull('google_fit_oauth_state', '');
+
+        if ($state === '' || $expectedState === '' || !hash_equals($expectedState, $state)) {
+            return redirect()->route('dashboard')->with('error', 'Invalid Google Fit authorization state. Please try again.');
+        }
 
         // Check for errors
         if ($request->has('error')) {
