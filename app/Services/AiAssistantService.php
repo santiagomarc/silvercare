@@ -79,7 +79,7 @@ class AiAssistantService
         $this->detectEmergency($user, $userMessage);
 
         // 3. Build context
-        $systemPrompt = $this->buildElderlySystemPrompt($user, $userMessage);
+        $systemPrompt = $this->buildElderlySystemPrompt($user, $userMessage, $session);
         $conversationHistory = $this->buildConversationHistory($session);
 
         // 4. Call Gemini
@@ -131,7 +131,7 @@ class AiAssistantService
         $this->detectEmergency($user, $userMessage);
 
         // 3. Build context
-        $systemPrompt = $this->buildElderlySystemPrompt($user, $userMessage);
+        $systemPrompt = $this->buildElderlySystemPrompt($user, $userMessage, $session);
         $conversationHistory = $this->buildConversationHistory($session);
 
         // 4. Stream from Gemini
@@ -263,24 +263,45 @@ class AiAssistantService
     /**
      * Build the system prompt for elderly user conversations.
      */
-    protected function buildElderlySystemPrompt(User $user, string $userMessage = ''): string
+    protected function buildElderlySystemPrompt(User $user, string $userMessage = '', ?ChatSession $session = null): string
     {
         $today = Carbon::now();
         $dayName = $today->format('l');
         $dateFormatted = $today->format('F j, Y');
         $profile = $user->profile;
-
-        $medications = $this->buildMedicationContext($profile->id, $today, $dayName);
-        $tasks = $this->buildTaskContext($profile->id, $today);
-        $latestVitals = $this->buildVitalsContext($profile->id, $today->copy()->subDay());
-        $vitalsRange = $this->resolveVitalsDateRange($userMessage, $today);
-        $rangeLabel = $vitalsRange['label'];
-        $rangeVitals = $this->buildRangeVitalsTrendContext(
-            $profile->id,
-            $vitalsRange['start'],
-            $vitalsRange['end']
-        );
         $medicalInfo = $this->buildMedicalInfoContext($profile);
+        $conversationState = $session
+            ? $this->buildConversationStateContext($session, $userMessage)
+            : 'No prior session context available.';
+        $shouldIncludeDutyContext = $this->shouldIncludeDutyContext($userMessage);
+
+        $dutyContext = "No health, medication, task, or vitals snapshot is injected for this turn because the user did not explicitly ask for it.";
+        if ($shouldIncludeDutyContext && $profile) {
+            $medications = $this->buildMedicationContext($profile->id, $today);
+            $tasks = $this->buildTaskContext($profile->id, $today);
+            $latestVitals = $this->buildVitalsContext($profile->id, $today->copy()->subDay());
+            $vitalsRange = $this->resolveVitalsDateRange($userMessage, $today);
+            $rangeLabel = $vitalsRange['label'];
+            $rangeVitals = $this->buildRangeVitalsTrendContext(
+                $profile->id,
+                $vitalsRange['start'],
+                $vitalsRange['end']
+            );
+
+            $dutyContext = <<<CONTEXT
+TODAY'S MEDICATIONS:
+{$medications}
+
+TODAY'S TASKS:
+{$tasks}
+
+RECENT VITAL SIGNS (last 24h):
+{$latestVitals}
+
+VITAL TRENDS ({$rangeLabel}):
+{$rangeVitals}
+CONTEXT;
+        }
 
         return <<<PROMPT
 You are Silvia, the SilverCare AI Assistant — a warm, empathetic, and attentive companion, but most importantly, a REAL friend with a vivid personality. Adopt a friendly, conversational, 'grandmotherly' tone. Speak as a close, caring friend. Match the user's length and energy; if they are brief, respond briefly.
@@ -289,31 +310,77 @@ TODAY: {$dayName}, {$dateFormatted}
 USER: {$user->name}
 {$medicalInfo}
 
-=== TODAY'S MEDICATIONS ===
-{$medications}
-
-=== TODAY'S TASKS ===
-{$tasks}
-
-=== RECENT VITAL SIGNS (last 24h) ===
-{$latestVitals}
-
-=== VITAL TRENDS ({$rangeLabel}) ===
-{$rangeVitals}
+=== CONVERSATION STATE ===
+{$conversationState}
 
 === INSTRUCTIONS ===
-1. Be warm, natural, and emotionally intelligent. 
-2. Continue naturally from the latest message. Do not start every message with a greeting.
-3. Use CONVERSATION HISTORY from the CURRENT chat session only.
-4. If the user is talking about personal life (for example crushes, mood, or daily drama), stay on that topic. Let the conversation flow naturally.
-5. Reference medications/tasks/vitals only when the user explicitly asks about them or if they ask if they can take an over-the-counter medicine (e.g. Advil), in which case, act as a Medication Interaction / OTC Safety Checker and cross-reference with their active medications.
-6. NEVER provide medical diagnoses. If the user describes serious symptoms or asks an unrelated complex medical question, calmly state that you are an assistant, not a doctor, and gently suggest they reach out to their caregiver or press the SOS button.
-7. If the user seems distressed or mentions an emergency, respond with care and urgency. Remind them their caregiver has been notified.
-8. Use `mark_task_complete` only when the user explicitly asks to mark/complete/check off a task.
-9. Use `log_medication` only when the user explicitly asks to log/mark/take a medication.
-10. Keep answers concise (2-4 paragraphs max) unless the user asks for detail.
-11. If the user asks for vitals analysis over any date range, prioritize VITAL TRENDS for that requested window.
+1. Be warm, natural, and emotionally intelligent.
+2. Continue naturally from the latest message and ongoing topic.
+3. If this is not the first exchange, do NOT greet again or re-introduce yourself.
+4. Avoid repetitive pet names (for example: sweetie, dear, my dear). Use them sparingly.
+5. If the user is talking about personal life, mood, boredom, hobbies, or daily life, stay on that topic.
+6. When asked for ideas (for example: "what should I do"), give practical everyday examples and keep it conversational.
+7. Reference medications, tasks, and vitals only when the user explicitly asks about them.
+8. Never provide medical diagnoses. If symptoms sound serious, say you are not a doctor and suggest contacting caregiver or using SOS.
+9. If the user seems distressed or mentions an emergency, respond with care and urgency and remind them caregiver has been notified.
+10. Use mark_task_complete only when the user explicitly asks to mark or complete a task.
+11. Use log_medication only when the user explicitly asks to log or mark a medication as taken.
+12. Keep answers concise (2-4 short paragraphs max) unless the user asks for more detail.
+13. If the user asks for vitals analysis over any date range, prioritize the requested date range.
+
+=== HEALTH AND DAILY DATA (USE ONLY IF EXPLICITLY REQUESTED) ===
+{$dutyContext}
 PROMPT;
+    }
+
+    private function buildConversationStateContext(ChatSession $session, string $currentMessage): string
+    {
+        $recentMessages = $session->recentMessages(8);
+        $totalMessages = $session->messages()->count();
+        $assistantHasResponded = $session->messages()->where('role', 'model')->exists();
+
+        $recentUserMessages = $recentMessages
+            ->where('role', 'user')
+            ->pluck('content')
+            ->values();
+
+        $latestUserMessage = $recentUserMessages->last() ?? $currentMessage;
+        $previousUserMessage = $recentUserMessages->count() > 1
+            ? $recentUserMessages->get($recentUserMessages->count() - 2)
+            : 'none';
+
+        $assistantGreetedRecently = $recentMessages
+            ->where('role', 'model')
+            ->contains(function (ChatMessage $message) {
+                $content = strtolower(trim($message->content));
+
+                return str_starts_with($content, 'hello')
+                    || str_starts_with($content, 'hi')
+                    || str_starts_with($content, 'hey');
+            });
+
+        $modeHint = $this->shouldIncludeDutyContext($currentMessage)
+            ? 'health_or_task_request'
+            : 'casual_conversation';
+
+        return implode("\n", [
+            "Messages in this session: {$totalMessages}",
+            'Assistant has already replied: ' . ($assistantHasResponded ? 'yes' : 'no'),
+            "Current user message: {$latestUserMessage}",
+            "Previous user message: {$previousUserMessage}",
+            "Mode hint: {$modeHint}",
+            'Assistant greeted recently: ' . ($assistantGreetedRecently ? 'yes' : 'no'),
+        ]);
+    }
+
+    private function shouldIncludeDutyContext(string $userMessage): bool
+    {
+        $message = strtolower(trim($userMessage));
+        if ($message === '') {
+            return false;
+        }
+
+        return preg_match('/\b(med(?:ication)?s?|pill(?:s)?|dose(?:s)?|tablet(?:s)?|task(?:s)?|todo|checklist(?:s)?|reminder(?:s)?|vitals?|blood pressure|heart rate|sugar|temperature|health|otc|advil|ibuprofen|aspirin|paracetamol|acetaminophen)\b/i', $message) === 1;
     }
 
     /**
@@ -369,16 +436,23 @@ PROMPT;
      */
     protected function buildConversationHistory(ChatSession $session): string
     {
-        $messages = $session->recentMessages(20);
+        $messages = $session->recentMessages(40);
 
         if ($messages->isEmpty()) {
             return '';
         }
 
         return $messages->map(function (ChatMessage $msg) {
-            $role = $msg->role === 'user' ? 'User' : 'Assistant';
-            return "{$role}: {$msg->content}";
-        })->implode("\n\n");
+            $role = match ($msg->role) {
+                'user' => 'User',
+                'model' => 'Silvia',
+                default => 'System',
+            };
+
+            $time = $msg->created_at?->format('H:i') ?? '--:--';
+
+            return "[{$time}] {$role}: {$msg->content}";
+        })->implode("\n");
     }
 
     /**
@@ -564,36 +638,20 @@ PROMPT;
             return false;
         }
 
-        $hasActionVerb =
-            str_contains($message, 'mark') ||
-            str_contains($message, 'log') ||
-            str_contains($message, 'record') ||
-            str_contains($message, 'took') ||
-            str_contains($message, 'taken') ||
-            str_contains($message, 'complete') ||
-            str_contains($message, 'completed') ||
-            str_contains($message, 'done') ||
-            str_contains($message, 'check off');
+        $hasDirectiveVerb = preg_match('/\b(mark|log|record|check\s*off|complete)\b/i', $message) === 1;
+        $hasMedicationTakenStatement = preg_match('/\b(i\s+(just\s+)?(took|have\s+taken)|i\'?ve\s+taken)\b/i', $message) === 1;
+        $hasTaskCompletionStatement = preg_match('/\b(i\s+(just\s+)?(completed|finished|did)|i\'?m\s+done\s+with)\b/i', $message) === 1;
 
         if ($toolName === 'log_medication') {
-            $hasMedicationContext =
-                str_contains($message, 'med') ||
-                str_contains($message, 'medication') ||
-                str_contains($message, 'pill') ||
-                str_contains($message, 'dose') ||
-                str_contains($message, 'tablet');
+            $hasMedicationContext = preg_match('/\b(med|medication|pill|dose|tablet)\b/i', $message) === 1;
 
-            return $hasActionVerb && $hasMedicationContext;
+            return ($hasDirectiveVerb || $hasMedicationTakenStatement) && $hasMedicationContext;
         }
 
         if ($toolName === 'mark_task_complete') {
-            $hasTaskContext =
-                str_contains($message, 'task') ||
-                str_contains($message, 'todo') ||
-                str_contains($message, 'checklist') ||
-                str_contains($message, 'reminder');
+            $hasTaskContext = preg_match('/\b(task|todo|checklist|reminder)\b/i', $message) === 1;
 
-            return $hasActionVerb && $hasTaskContext;
+            return ($hasDirectiveVerb || $hasTaskCompletionStatement) && $hasTaskContext;
         }
 
         return false;
@@ -774,13 +832,17 @@ PROMPT;
         }
     }
 
-    private function buildMedicationContext(int $elderlyProfileId, Carbon $today, string $dayName): string
+    private function buildMedicationContext(int $elderlyProfileId, Carbon $today): string
     {
         $medications = Medication::where('elderly_id', $elderlyProfileId)
             ->where('is_active', true)
             ->with('schedules')
             ->get()
             ->filter(fn (Medication $medication) => $medication->isScheduledForDate($today));
+
+        if ($medications->isEmpty()) {
+            return '- No active medications scheduled for today.';
+        }
 
         $todayLogs = MedicationLog::whereIn('medication_id', $medications->pluck('id'))
             ->where('elderly_id', $elderlyProfileId)
@@ -789,62 +851,59 @@ PROMPT;
             ->get()
             ->groupBy('medication_id');
 
-        return $medications->map(function (Medication $medication) use ($todayLogs) {
-            $timesStr = implode(', ', $medication->scheduleTimesForDate(now()));
+        return $medications->map(function (Medication $medication) use ($today, $todayLogs) {
+            $times = $medication->scheduleTimesForDate($today);
+            $timesStr = empty($times) ? 'No fixed schedule' : implode(', ', $times);
             $takenLogs = ($todayLogs->get($medication->id) ?? collect())
                 ->pluck('scheduled_time')
                 ->map(fn ($time) => Carbon::parse($time)->format('H:i'))
                 ->toArray();
 
-            $takenStr = count($takenLogs) > 0
-                ? ' [TAKEN: ' . implode(', ', $takenLogs) . ']'
-                : ' [NOT YET TAKEN]';
+            $takenSummary = count($takenLogs) > 0
+                ? 'Taken at: ' . implode(', ', $takenLogs)
+                : 'Not yet taken';
 
-            $data = [
-                'id' => $medication->id,
-                'med' => $medication->name,
-                'dose' => $medication->dosage,
-                'sched' => $timesStr,
-            ];
-            if (count($takenLogs) > 0) {
-                $data['taken'] = implode(',', $takenLogs);
-            }
-            return json_encode($data);
+            return "- #{$medication->id} {$medication->name} ({$medication->dosage}) at {$timesStr}. {$takenSummary}.";
         })->implode("\n");
     }
 
     private function buildTaskContext(int $elderlyProfileId, Carbon $date): string
     {
-        return Checklist::where('elderly_id', $elderlyProfileId)
+        $tasks = Checklist::where('elderly_id', $elderlyProfileId)
             ->whereDate('due_date', $date)
-            ->get()
-            ->map(function (Checklist $task) {
-                return json_encode([
-                    'id' => $task->id,
-                    'task' => $task->task,
-                    'done' => $task->is_completed ? 1 : 0,
-                    'pri' => $task->priority
-                ]);
-            })->implode("\n");
+            ->get();
+
+        if ($tasks->isEmpty()) {
+            return '- No tasks due today.';
+        }
+
+        return $tasks->map(function (Checklist $task) {
+            $status = $task->is_completed ? 'completed' : 'pending';
+            $priority = $task->priority ? "priority {$task->priority}" : 'no priority';
+
+            return "- #{$task->id} {$task->task} ({$priority}) - {$status}.";
+        })->implode("\n");
     }
 
     private function buildVitalsContext(int $elderlyProfileId, Carbon $windowStart): string
     {
-        return HealthMetric::where('elderly_id', $elderlyProfileId)
+        $grouped = HealthMetric::where('elderly_id', $elderlyProfileId)
             ->where('measured_at', '>=', $windowStart)
             ->orderBy('measured_at', 'desc')
             ->get()
-            ->groupBy('type')
-            ->map(function ($records, $type) {
+            ->groupBy('type');
+
+        if ($grouped->isEmpty()) {
+            return '- No vitals recorded in the last 24 hours.';
+        }
+
+        return $grouped->map(function ($records, $type) {
                 $latest = $records->first();
                 $value = $latest->value_text ?? $latest->value;
                 $unit = $latest->unit ? " {$latest->unit}" : '';
-                return json_encode([
-                    'type' => $type,
-                    'val' => $value,
-                    'unit' => trim($unit),
-                    'time' => Carbon::parse($latest->measured_at)->format('H:i')
-                ]);
+                $label = ucwords(str_replace('_', ' ', $type));
+
+                return "- {$label}: {$value}{$unit} at " . Carbon::parse($latest->measured_at)->format('H:i') . '.';
             })->implode("\n");
     }
 
@@ -861,18 +920,10 @@ PROMPT;
                 $latestVal = $latest->value_text ?? $latest->value;
                 $unit = $latest->unit ? " {$latest->unit}" : '';
                 $count = $records->count();
+                $label = ucwords(str_replace('_', ' ', $type));
 
                 if ($numericRecords->count() < 2) {
-                    return json_encode([
-                        'type' => $type,
-                        'cnt' => $count,
-                        'avg' => 'n/a',
-                        'min' => 'n/a',
-                        'max' => 'n/a',
-                        'trend' => 'n/a',
-                        'latest' => $latestVal,
-                        'unit' => trim($unit)
-                    ]);
+                    return "- {$label}: {$count} reading(s), latest {$latestVal}{$unit}.";
                 }
 
                 $first = (float) $numericRecords->first()->value;
@@ -884,16 +935,7 @@ PROMPT;
                     ? 'upward'
                     : ($last < $first ? 'downward' : 'stable');
 
-                return json_encode([
-                    'type' => $type,
-                    'cnt' => $count,
-                    'avg' => $avg,
-                    'min' => $min,
-                    'max' => $max,
-                    'trend' => $direction,
-                    'latest' => $latestVal,
-                    'unit' => trim($unit)
-                ]);
+                return "- {$label}: {$count} reading(s), avg {$avg}{$unit}, range {$min}-{$max}{$unit}, trend {$direction}, latest {$latestVal}{$unit}.";
             })
             ->implode("\n");
 

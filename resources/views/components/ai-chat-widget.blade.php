@@ -396,6 +396,7 @@
             sessionId: null,
             suggestedPrompts: [],
             historyLoaded: false,
+            sessionStorageKey: 'silvercare.elderly.ai.session_id',
             themeIndex: 0,
             themes: [
                 { key: 'ai-theme-coast', label: 'Coast' },
@@ -412,6 +413,8 @@
             },
 
             init() {
+                this.restoreSessionId();
+
                 this.$watch('isOpen', value => {
                     if (value && !this.historyLoaded) {
                         this.loadHistory();
@@ -450,6 +453,36 @@
                 return parseAiMarkdown(text);
             },
 
+            restoreSessionId() {
+                try {
+                    const stored = window.localStorage.getItem(this.sessionStorageKey);
+                    if (!stored) {
+                        return;
+                    }
+
+                    const parsed = Number.parseInt(stored, 10);
+                    if (Number.isInteger(parsed) && parsed > 0) {
+                        this.sessionId = parsed;
+                    }
+                } catch (_e) {
+                    // Ignore storage errors in private browsing contexts.
+                }
+            },
+
+            persistSessionId(sessionId) {
+                if (!Number.isInteger(sessionId) || sessionId <= 0) {
+                    return;
+                }
+
+                this.sessionId = sessionId;
+
+                try {
+                    window.localStorage.setItem(this.sessionStorageKey, String(sessionId));
+                } catch (_e) {
+                    // Ignore storage errors in private browsing contexts.
+                }
+            },
+
             async loadHistory() {
                 this.isLoadingHistory = true;
 
@@ -468,7 +501,7 @@
 
                     const data = await res.json();
                     if (data.success) {
-                        this.sessionId = data.session_id;
+                        this.persistSessionId(data.session_id);
                         this.messages = data.messages || [];
                         this.suggestedPrompts = data.suggested_prompts || [];
 
@@ -503,7 +536,7 @@
 
                     const data = await res.json();
                     if (data.success) {
-                        this.sessionId = data.session_id;
+                        this.persistSessionId(data.session_id);
                         this.messages = [];
                         this.loadHistory();
                     }
@@ -564,7 +597,7 @@
                             try {
                                 const payload = JSON.parse(line.substring(6));
                                 if (payload.type === 'session') {
-                                    this.sessionId = payload.session_id;
+                                    this.persistSessionId(payload.session_id);
                                 } else if (payload.type === 'chunk') {
                                     if (aiIdx === null) {
                                         this.messages.push({ role: 'ai', content: '', streaming: true });
@@ -615,7 +648,7 @@
 
                     const data = await res.json();
                     if (data.success) {
-                        this.sessionId = data.session_id;
+                        this.persistSessionId(data.session_id);
                         this.messages.push({ role: 'ai', content: data.message });
 
                         if (Array.isArray(data.actions)) {
