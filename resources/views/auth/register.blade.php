@@ -39,8 +39,8 @@
         <div class="w-full max-w-4xl bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] p-8 md:p-12">
             
             <!-- Header -->
-            <div class="text-center mb-8">
-                <a href="{{ route('welcome') }}" class="inline-flex items-center gap-2 text-gray-600 hover:text-[#000080] transition-colors mb-6">
+            <div class="relative text-center mb-8 pt-10">
+                <a href="{{ route('welcome') }}" class="absolute right-0 top-0 inline-flex items-center gap-2 text-gray-600 hover:text-[#000080] transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
@@ -135,30 +135,51 @@
 
                         <div>
                             <label for="password" class="block text-sm font-bold text-gray-700 mb-2">Password</label>
-                            <input id="password" type="password" name="password" required
-                                   class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium"
-                                   placeholder="Enter password">
+                            <div class="relative">
+                                <input id="password" type="password" name="password" required
+                                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium pr-12"
+                                    placeholder="Enter password">
+                                <button type="button"
+                                        onclick="togglePassword('password', this)"
+                                        class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 transition-colors duration-200">
+                                    <!-- Eye Open Icon (default) -->
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="eye-icon h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
 
                         <div>
                             <label for="password_confirmation" class="block text-sm font-bold text-gray-700 mb-2">Confirm Password</label>
-                            <input id="password_confirmation" type="password" name="password_confirmation" required
-                                   class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium"
-                                   placeholder="Confirm password">
+                            <div class="relative">
+                                <input id="password_confirmation" type="password" name="password_confirmation" required
+                                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium pr-12"
+                                    placeholder="Confirm password">
+                                <button type="button"
+                                        onclick="togglePassword('password_confirmation', this)"
+                                        class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 transition-colors duration-200">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="eye-icon h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
 
-                        <div>
+                        {{--<div>
                             <label for="age" class="block text-sm font-bold text-gray-700 mb-2">Age (optional)</label>
                             <input id="age" type="number" name="age" value="{{ old('age') }}" min="1" max="150"
                                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium"
                                    placeholder="65">
-                        </div>
+                        </div>--}}
                     </div>
                 </div>
 
                 <!-- Register Button (Centered) -->
                 <div class="pt-6 flex justify-center fade-in-section transition-delay-500">
-                    <button type="submit" class="group relative w-full max-w-md">
+                    <button type="submit" id="submit-btn" disabled class="group relative w-full max-w-md opacity-50 cursor-not-allowed">
                         <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[82px] opacity-50 blur transition duration-200 group-hover:opacity-75"></div>
                         <div class="relative w-full py-4 bg-[#000080] text-white font-[800] text-xl rounded-[82px] shadow-[0_8px_20px_rgba(0,0,128,0.3)] transition-all duration-300 transform group-hover:-translate-y-1 group-active:scale-95">
                             CREATE ACCOUNT
@@ -187,8 +208,8 @@
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         const delays = {
-                            'transition-delay-100': 100, 'transition-delay-200': 300, 'transition-delay-300': 500,
-                            'transition-delay-400': 600, 'transition-delay-500': 700, 'transition-delay-600': 800
+                            'transition-delay-100': 0, 'transition-delay-200': 100, 'transition-delay-300': 200,
+                            'transition-delay-400': 250, 'transition-delay-500': 300, 'transition-delay-600': 350
                         };
                         let delay = 0;
                         for (const [className, ms] of Object.entries(delays)) {
@@ -200,6 +221,55 @@
                 });
             }, observerOptions);
             document.querySelectorAll('.fade-in-section').forEach((section) => { observer.observe(section); });
+        });
+
+        function togglePassword(fieldId, btn) {
+            const input = document.getElementById(fieldId);
+            const isHidden = input.type === 'password';
+
+            // Toggle input type
+            input.type = isHidden ? 'text' : 'password';
+
+            // Swap icon
+            btn.innerHTML = isHidden ? `
+                <!-- Eye Slash (password visible) -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="eye-icon h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 4.411m0 0L21 21" />
+                </svg>
+            ` : `
+                <!-- Eye Open (password hidden) -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="eye-icon h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+            `;
+        }
+
+        function checkFormValidity() {
+            const role = document.getElementById('user_type').value;
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('password_confirmation').value;
+
+            const isValid = role !== '' && name !== '' && email !== '' && password !== '' && confirmPassword !== '';
+
+            const btn = document.getElementById('submit-btn');
+            if (isValid) {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const requiredFields = ['user_type', 'name', 'email', 'password', 'password_confirmation'];
+            requiredFields.forEach(id => {
+                document.getElementById(id).addEventListener('input', checkFormValidity);
+                document.getElementById(id).addEventListener('change', checkFormValidity);
+            });
         });
     </script>
 </body>

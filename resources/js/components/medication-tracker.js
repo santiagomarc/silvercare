@@ -7,15 +7,23 @@
  */
 import Alpine from 'alpinejs';
 import { createConfetti } from './confetti.js';
+import { sendJsonRequest } from '../utils/offline-queue.js';
 
 export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
     return {
         taken: takenDoses,
         total: totalDoses,
+        expanded: takenDoses < totalDoses,
 
         init() {
             window.addEventListener('ai-medication-logged', (event) => {
                 this._applyAiMedicationLog(event.detail || {});
+            });
+
+            this.$watch('taken', (value) => {
+                if (this.total > 0 && value >= this.total) {
+                    this.expanded = false;
+                }
             });
         },
 
@@ -28,6 +36,11 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
          * @param {HTMLElement} entry — the .medication-entry element
          */
         async toggleEntry(entry) {
+            // C1 CLIENT FIX: Processing guard prevents a second click from
+            // firing while the first request is still in-flight.
+            if (entry.dataset.processing === 'true') return;
+            entry.dataset.processing = 'true';
+
             const medicationId = entry.dataset.medicationId;
             const time = entry.dataset.time;
             const isTaken = entry.dataset.taken === 'true';
@@ -37,10 +50,12 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
 
             if (!canTake && !isTaken) {
                 toast?.info('Too early! Wait until the scheduled time window.');
+                entry.dataset.processing = 'false';
                 return;
             }
             if (isTaken && !canUndo) {
                 toast?.info('Cannot unmark — grace period has ended.');
+                entry.dataset.processing = 'false';
                 return;
             }
 
@@ -50,23 +65,35 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
                 : `/my-medications/${medicationId}/take`;
 
             try {
-                const resp = await fetch(endpoint, {
+                const result = await sendJsonRequest(endpoint, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                    body: JSON.stringify({ time }),
+                    body: { time },
                 });
 
-                if (!resp.ok) {
-                    const err = await resp.json();
-                    throw new Error(err.message || 'Failed to update');
+                if (result.queued) {
+                    if (!isTaken) {
+                        entry.dataset.taken = 'true';
+                        this.taken++;
+                        this._updateEntryAppearance(entry, 'taken');
+                        createConfetti(entry);
+                    } else {
+                        entry.dataset.taken = 'false';
+                        this.taken--;
+                        this._updateEntryAppearance(entry, this._computeStatus(time));
+                    }
+
+                    toast?.info('Saved offline. Changes will sync automatically.');
+                    window.dispatchEvent(new CustomEvent('progress-updated', {
+                        detail: { medications: this.taken, medicationTotal: this.total }
+                    }));
+                    return;
                 }
 
-                const data = await resp.json();
+                if (!result.ok) {
+                    throw new Error(result.data?.message || 'Failed to update');
+                }
+
+                const data = result.data || {};
 
                 if (data.is_taken) {
                     entry.dataset.taken = 'true';
@@ -91,6 +118,7 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
                 console.error('Medication toggle failed:', err);
                 toast?.error(err.message);
             } finally {
+                entry.dataset.processing = 'false';
                 entry.style.opacity = '';
             }
         },

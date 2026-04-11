@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ResolvesElderlyPatient;
 use App\Models\Medication;
 use App\Http\Requests\StoreMedicationRequest;
 use App\Http\Requests\UpdateMedicationRequest;
@@ -10,6 +11,8 @@ use Illuminate\Support\Facades\Auth;
 
 class MedicationController extends Controller
 {
+    use ResolvesElderlyPatient;
+
     public function __construct(protected MedicationService $medicationService)
     {
     }
@@ -22,15 +25,16 @@ class MedicationController extends Controller
         $this->authorize('viewAny', Medication::class);
 
         $caregiver = Auth::user()->profile;
-        $elderly = $caregiver->elderly;
+        $elderlyPatients = $this->caregiverPatients($caregiver);
+        $selectedElderly = $this->resolveSelectedPatient($elderlyPatients, request()->integer('elderly'));
 
-        if (!$elderly) {
+        if (!$selectedElderly) {
             return redirect()->route('caregiver.dashboard')->with('error', 'No elderly profile associated.');
         }
 
-        $medications = $this->medicationService->getMedicationSchedulesForElderly($elderly->id);
+        $medications = $this->medicationService->getMedicationSchedulesForElderly($selectedElderly->id);
 
-        return view('caregiver.medications.index', compact('medications'));
+        return view('caregiver.medications.index', compact('medications', 'elderlyPatients', 'selectedElderly'));
     }
 
     /**
@@ -40,7 +44,15 @@ class MedicationController extends Controller
     {
         $this->authorize('create', Medication::class);
 
-        return view('caregiver.medications.create');
+        $caregiver = Auth::user()->profile;
+        $elderlyPatients = $this->caregiverPatients($caregiver);
+        $selectedElderly = $this->resolveSelectedPatient($elderlyPatients, request()->integer('elderly'));
+
+        if (!$selectedElderly) {
+            return redirect()->route('caregiver.dashboard')->with('error', 'No elderly profile associated.');
+        }
+
+        return view('caregiver.medications.create', compact('elderlyPatients', 'selectedElderly'));
     }
 
     /**
@@ -51,14 +63,15 @@ class MedicationController extends Controller
         $this->authorize('create', Medication::class);
 
         $caregiver = Auth::user()->profile;
-        $elderly = $caregiver->elderly;
+        $elderlyPatients = $this->caregiverPatients($caregiver);
+        $selectedElderly = $this->resolveSelectedPatient($elderlyPatients, $request->integer('elderly_id'));
 
-        if (!$elderly) {
+        if (!$selectedElderly) {
             return redirect()->route('caregiver.dashboard')->with('error', 'No elderly profile associated.');
         }
 
         $this->medicationService->addMedicationSchedule([
-            'elderly_id' => $elderly->id,
+            'elderly_id' => $selectedElderly->id,
             'caregiver_id' => $caregiver->id,
             ...$request->validated(),
             'start_date' => $request->validated('start_date') ?? now(),
@@ -68,7 +81,8 @@ class MedicationController extends Controller
             'low_stock_threshold' => $request->integer('low_stock_threshold') ?: 5,
         ]);
 
-        return redirect()->route('caregiver.medications.index')->with('success', 'Medication added successfully.');
+        return redirect()->route('caregiver.medications.index', ['elderly' => $selectedElderly->id])
+            ->with('success', 'Medication added successfully.');
     }
 
     /**
@@ -86,7 +100,11 @@ class MedicationController extends Controller
     {
         $this->authorize('update', $medication);
 
-        return view('caregiver.medications.edit', compact('medication'));
+        $caregiver = Auth::user()->profile;
+        $elderlyPatients = $this->caregiverPatients($caregiver);
+        $selectedElderly = $this->resolveSelectedPatient($elderlyPatients, (int) $medication->elderly_id);
+
+        return view('caregiver.medications.edit', compact('medication', 'elderlyPatients', 'selectedElderly'));
     }
 
     /**
@@ -96,14 +114,26 @@ class MedicationController extends Controller
     {
         $this->authorize('update', $medication);
 
-        $this->medicationService->updateMedicationSchedule($medication, [
-            ...$request->validated(),
-            'track_inventory' => $request->boolean('track_inventory'),
-            'current_stock' => $request->integer('current_stock'),
-            'low_stock_threshold' => $request->integer('low_stock_threshold') ?: 5,
-        ]);
+        $payload = $request->validated();
 
-        return redirect()->route('caregiver.medications.index')->with('success', 'Medication updated successfully.');
+        if ($request->has('track_inventory')) {
+            $payload['track_inventory'] = $request->boolean('track_inventory');
+        }
+
+        if ($request->has('current_stock')) {
+            $payload['current_stock'] = $request->integer('current_stock');
+        }
+
+        if ($request->has('low_stock_threshold')) {
+            $payload['low_stock_threshold'] = $request->integer('low_stock_threshold') ?: 5;
+        }
+
+        $this->medicationService->updateMedicationSchedule($medication, $payload);
+
+        $selectedElderlyId = $request->integer('elderly_id') ?: $medication->elderly_id;
+
+        return redirect()->route('caregiver.medications.index', ['elderly' => $selectedElderlyId])
+            ->with('success', 'Medication updated successfully.');
     }
 
     /**
@@ -113,8 +143,12 @@ class MedicationController extends Controller
     {
         $this->authorize('delete', $medication);
 
+        $selectedElderlyId = request()->integer('elderly_id') ?: $medication->elderly_id;
+
         $this->medicationService->deleteMedicationSchedule($medication->id);
 
-        return redirect()->route('caregiver.medications.index')->with('success', 'Medication deleted successfully.');
+        return redirect()->route('caregiver.medications.index', ['elderly' => $selectedElderlyId])
+            ->with('success', 'Medication deleted successfully.');
     }
+
 }

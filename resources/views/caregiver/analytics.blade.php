@@ -36,14 +36,14 @@
                 </div>
                 
                 {{-- Export PDF Button --}}
-                <a href="{{ route('caregiver.analytics.export') }}" class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#000080] to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40">
+                <a href="{{ route('caregiver.analytics.export', ['elderly' => $selectedElderlyId]) }}" class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#000080] to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
                     <span class="hidden sm:inline">Export Report</span>
                 </a>
 
-                <a href="{{ route('caregiver.dashboard') }}" class="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-sm transition-colors">
+                <a href="{{ route('caregiver.dashboard', ['elderly' => $selectedElderlyId]) }}" class="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-sm transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                     <span class="hidden sm:inline">Back</span>
                 </a>
@@ -53,6 +53,26 @@
 
     {{-- Main Content --}}
     <main class="max-w-[1600px] mx-auto px-6 lg:px-12 py-6">
+
+        @if(($elderlyPatients ?? collect())->count() > 1)
+            <div class="mb-6 rounded-2xl border border-blue-100 bg-blue-50/80 p-4 shadow-sm">
+                <form method="GET" action="{{ route('caregiver.analytics') }}" class="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <label for="elderly" class="text-sm font-bold text-blue-900">Analytics for</label>
+                    <select
+                        id="elderly"
+                        name="elderly"
+                        onchange="this.form.submit()"
+                        class="rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800"
+                    >
+                        @foreach(($elderlyPatients ?? collect()) as $patient)
+                            <option value="{{ $patient->id }}" @selected(($selectedElderlyId ?? null) === $patient->id)>
+                                {{ $patient->user?->name ?? ('Patient #' . $patient->id) }}
+                            </option>
+                        @endforeach
+                    </select>
+                </form>
+            </div>
+        @endif
         
         @if(!$elderly)
             <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-2xl mb-6 shadow-sm">

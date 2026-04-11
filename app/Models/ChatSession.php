@@ -26,8 +26,15 @@ class ChatSession extends Model
     /**
      * Get the latest N messages for building Gemini conversation history.
      */
-    public function recentMessages(int $limit = 20)
+    public function recentMessages(int $limit = 40)
     {
-        return $this->messages()->latest()->limit($limit)->get()->reverse()->values();
+        return $this->messages()
+            ->reorder()
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get()
+            ->reverse()
+            ->values();
     }
 }

@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreProfileCompletionRequest;
+use App\Services\ProfileCompletionService;
+use App\Support\CommaSeparatedValueParser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -9,6 +12,11 @@ use Illuminate\Http\RedirectResponse;
 
 class ProfileCompletionController extends Controller
 {
+    public function __construct(
+        protected ProfileCompletionService $profileCompletionService,
+    ) {
+    }
+
     /**
      * Display the profile completion form (3-step wizard).
      */
@@ -17,8 +25,10 @@ class ProfileCompletionController extends Controller
         $user = Auth::user();
         $profile = $user->profile;
 
-        // If already completed, redirect to dashboard
-        if ($profile && $profile->profile_completed) {
+        $completion = $this->profileCompletionService->evaluate($profile);
+
+        // If truly complete, redirect to dashboard
+        if ($completion['is_complete']) {
             return $this->redirectToDashboard($profile->user_type);
         }
 
@@ -41,33 +51,17 @@ class ProfileCompletionController extends Controller
     /**
      * Handle profile completion submission.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreProfileCompletionRequest $request): RedirectResponse
     {
         $user = Auth::user();
         $profile = $user->profile;
 
-        // Validate the complete profile data
-        $validated = $request->validate([
-            // Step 1: Personal Details
-            'age' => ['nullable', 'integer', 'min:1', 'max:150'],
-            'weight' => ['nullable', 'numeric', 'min:1', 'max:500'],
-            'height' => ['nullable', 'numeric', 'min:1', 'max:300'],
-            
-            // Step 2: Emergency Contact
-            'emergency_name' => ['nullable', 'string', 'max:255'],
-            'emergency_phone' => ['nullable', 'string', 'max:20'],
-            'emergency_relationship' => ['nullable', 'string', 'max:255'],
-            
-            // Step 3: Medical Info
-            'conditions' => ['nullable', 'string'],
-            'medications' => ['nullable', 'string'],
-            'allergies' => ['nullable', 'string'],
-        ]);
+        $validated = $request->validated();
 
         // Prepare medical info as separate arrays
-        $medicalConditions = $validated['conditions'] ? array_values(array_filter(array_map('trim', explode(',', $validated['conditions'])))) : [];
-        $medicationsArray = $validated['medications'] ? array_values(array_filter(array_map('trim', explode(',', $validated['medications'])))) : [];
-        $allergiesArray = $validated['allergies'] ? array_values(array_filter(array_map('trim', explode(',', $validated['allergies'])))) : [];
+        $medicalConditions = CommaSeparatedValueParser::parse($validated['conditions'] ?? null);
+        $medicationsArray = CommaSeparatedValueParser::parse($validated['medications'] ?? null);
+        $allergiesArray = CommaSeparatedValueParser::parse($validated['allergies'] ?? null);
 
         // Update profile with individual columns (not legacy JSON fields)
         $profile->update([
@@ -84,15 +78,31 @@ class ProfileCompletionController extends Controller
             'medical_conditions' => $medicalConditions,
             'medications' => $medicationsArray,
             'allergies' => $allergiesArray,
-            
-            'profile_completed' => true,
         ]);
 
-        return redirect()->route('dashboard')->with('success', 'Profile completed successfully!');
+        $completion = $this->profileCompletionService->evaluate($profile->fresh());
+
+        $profile->update([
+            'profile_completed' => $completion['is_complete'],
+            'profile_skipped' => false,
+        ]);
+
+        if (! $completion['is_complete']) {
+            return redirect()->route('profile.completion')
+                ->with('info', 'Please complete all profile sections before continuing.');
+        }
+
+        return $this->redirectToDashboard($profile->user_type)
+            ->with('success', 'Profile completed successfully!');
     }
 
     /**
-     * Skip profile completion (mark as completed but without data).
+     * Skip profile completion for now.
+     *
+     * Sets profile_skipped = true so the middleware does not redirect the user
+     * again. Their dashboard will show a nudge banner to encourage completion.
+     * profile_completed intentionally stays false so we can distinguish between
+     * "genuinely done" and "skipped" in reporting and nudge logic.
      */
     public function skip(): RedirectResponse
     {
@@ -100,10 +110,11 @@ class ProfileCompletionController extends Controller
         $profile = $user->profile;
 
         $profile->update([
-            'profile_completed' => true,
+            'profile_skipped' => true,
         ]);
 
-        return redirect()->route('dashboard')->with('info', 'Profile completion skipped. You can complete it later from your settings.');
+        return $this->redirectToDashboard($profile->user_type)
+            ->with('info', 'Profile completion skipped. You can complete it later from your settings.');
     }
 
     /**

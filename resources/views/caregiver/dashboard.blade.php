@@ -31,28 +31,101 @@
                             <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
                         </svg>
                     </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-[800] text-yellow-800">No Elderly Assigned</h3>
-                        <p class="text-sm text-yellow-700 mt-1">Generate a 6-digit PIN and share it with your patient. They can enter it in their dashboard to link accounts instantly.</p>
+                    <div class="ml-4 flex-1">
+                        <h3 class="text-lg font-[800] text-yellow-800">No Patient Assigned Yet</h3>
+                        <p class="text-sm text-yellow-700 mt-1">Generate a linking PIN and share it with your patient. They can scan the QR code or enter the PIN on their dashboard to link instantly.</p>
 
                         @if(session('link_code') || $activeLinkCode)
-                            <div class="mt-4 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 border border-yellow-200">
-                                <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Active PIN</span>
-                                <span class="text-2xl font-black tracking-[0.2em] text-gray-900">{{ session('link_code', $activeLinkCode?->code) }}</span>
+                            @php
+                                $displayCode = session('link_code', $activeLinkCode?->code);
+                                $qrSvg = session('link_qr_svg', $activeLinkQrSvg ?? null);
+                                $shareUrl = session('link_signed_url', $activeLinkSignedUrl ?? null);
+                            @endphp
+                            <div class="mt-5 flex flex-col sm:flex-row gap-5 items-start">
+                                {{-- QR Code --}}
+                                @if($qrSvg)
+                                    <div class="flex-shrink-0 rounded-xl border-2 border-yellow-200 bg-white p-3 shadow-sm">
+                                        {!! $qrSvg !!}
+                                        <p class="text-center text-[10px] text-gray-400 font-semibold mt-1 uppercase tracking-wide">Scan with phone</p>
+                                    </div>
+                                @endif
+
+                                {{-- PIN + Actions --}}
+                                <div class="flex flex-col gap-3" x-data="{ copied: false }">
+                                    <div class="inline-flex items-center gap-3 rounded-xl bg-white px-4 py-3 border border-yellow-200 shadow-sm">
+                                        <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">PIN</span>
+                                        <span id="link-pin" class="text-2xl font-black tracking-[0.2em] text-gray-900">{{ $displayCode }}</span>
+                                    </div>
+                                    <p class="text-xs text-yellow-700">Expires: {{ optional($activeLinkCode?->expires_at)->format('M d, Y h:i A') }}</p>
+                                    <div class="flex gap-2 flex-wrap">
+                                        <button
+                                            @click="navigator.clipboard.writeText('{{ $displayCode }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                                            class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-bold bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                                        >
+                                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                            </svg>
+                                            <span x-text="copied ? '✓ Copied!' : 'Copy PIN'"></span>
+                                        </button>
+                                        @if($shareUrl)
+                                            <button
+                                                @click="navigator.clipboard.writeText('{{ $shareUrl }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                                                class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-bold bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                                            >
+                                                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 010 5.656l-3 3a4 4 0 11-5.656-5.656l1.5-1.5m6.656-1.5l1.5-1.5a4 4 0 115.656 5.656l-3 3a4 4 0 01-5.656 0"/>
+                                                </svg>
+                                                Copy Link
+                                            </button>
+                                        @endif
+                                        @if(isset($_SERVER['HTTP_HOST']))
+                                        <a
+                                            href="mailto:?subject=SilverCare%20Caregiver%20Link&body=Use%20this%20secure%20link%20to%20connect%20with%20me%20on%20SilverCare%3A%0A%0A{{ urlencode($shareUrl ?? url('/dashboard')) }}%0A%0AOr%20enter%20this%20PIN%3A%20{{ $displayCode }}"
+                                            class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-bold bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                                        >
+                                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                            </svg>
+                                            Share via Email
+                                        </a>
+                                        @endif
+                                    </div>
+                                </div>
                             </div>
-                            <p class="text-xs text-yellow-700 mt-2">Expires: {{ optional($activeLinkCode?->expires_at)->format('M d, Y h:i A') }}</p>
                         @endif
 
                         <form method="POST" action="{{ route('caregiver.link-code.generate') }}" class="mt-4">
                             @csrf
                             <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-[#000080] px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-900 transition-colors">
-                                {{ $activeLinkCode ? 'Show Active PIN' : 'Generate Linking PIN' }}
+                                {{ $activeLinkCode ? '↻ Refresh PIN & QR Code' : 'Generate Linking PIN & QR Code' }}
                             </button>
                         </form>
                     </div>
                 </div>
             </div>
+
         @else
+
+        @if(($elderlyPatients ?? collect())->count() > 1)
+            <div class="mb-5 rounded-2xl border border-blue-100 bg-blue-50/80 p-4 shadow-sm">
+                <form method="GET" action="{{ route('caregiver.dashboard') }}" class="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <label for="elderly" class="text-sm font-bold text-blue-900">Viewing patient</label>
+                    <select
+                        id="elderly"
+                        name="elderly"
+                        onchange="this.form.submit()"
+                        class="rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800"
+                    >
+                        @foreach(($elderlyPatients ?? collect()) as $patient)
+                            <option value="{{ $patient->id }}" @selected(($selectedElderlyId ?? null) === $patient->id)>
+                                {{ $patient->user?->name ?? ('Patient #' . $patient->id) }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <span class="text-xs font-semibold text-blue-700 sm:ml-auto">{{ ($elderlyPatients ?? collect())->count() }} linked patients</span>
+                </form>
+            </div>
+        @endif
 
         <!-- ============================================ -->
         <!-- TOP ROW: Elder Profile Card + Management Panel -->
@@ -186,10 +259,10 @@
         <!-- ============================================ -->
         <!-- CARE MANAGEMENT PANEL (Action Buttons) -->
         <!-- ============================================ -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             
             <!-- Manage Medications -->
-            <a href="{{ route('caregiver.medications.index') }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
+            <a href="{{ route('caregiver.medications.index', ['elderly' => $selectedElderlyId]) }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
                 <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl"></div>
                 <div class="relative p-5 flex flex-col justify-between h-full z-10">
                     <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit">
@@ -206,7 +279,7 @@
             </a>
 
             <!-- Manage Checklists -->
-            <a href="{{ route('caregiver.checklists.index') }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg shadow-green-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
+            <a href="{{ route('caregiver.checklists.index', ['elderly' => $selectedElderlyId]) }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg shadow-green-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
                 <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl"></div>
                 <div class="relative p-5 flex flex-col justify-between h-full z-10">
                     <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit">
@@ -223,7 +296,7 @@
             </a>
 
             <!-- Health Analytics -->
-            <a href="{{ route('caregiver.analytics') }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 shadow-lg shadow-purple-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
+            <a href="{{ route('caregiver.analytics', ['elderly' => $selectedElderlyId]) }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 shadow-lg shadow-purple-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
                 <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl"></div>
                 <div class="relative p-5 flex flex-col justify-between h-full z-10">
                     <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit">
@@ -234,6 +307,23 @@
                         <p class="text-purple-100 text-xs font-medium mt-0.5">View insights</p>
                     </div>
                     <div class="absolute bottom-4 right-4 h-8 w-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-purple-600 transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Messages -->
+            <a href="{{ route('caregiver.messages.index', ['elderly' => $selectedElderlyId]) }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-sky-600 shadow-lg shadow-indigo-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
+                <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl"></div>
+                <div class="relative p-5 flex flex-col justify-between h-full z-10">
+                    <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h8m-8 4h5m-7 6l-3-3H3a2 2 0 01-2-2V7a2 2 0 012-2h18a2 2 0 012 2v8a2 2 0 01-2 2h-8l-5 5z"></path></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-[900] text-white leading-tight">Messages</h3>
+                        <p class="text-indigo-100 text-xs font-medium mt-0.5">Chat with patient</p>
+                    </div>
+                    <div class="absolute bottom-4 right-4 h-8 w-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-indigo-600 transition-all">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
                     </div>
                 </div>

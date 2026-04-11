@@ -5,6 +5,7 @@
  *   initialMood: int (1-5, defaults to 3)
  */
 import Alpine from 'alpinejs';
+import { sendJsonRequest } from '../utils/offline-queue.js';
 
 const MOODS = [
     { emoji: '😢', label: 'Very Sad',    color: '#EF4444' },
@@ -32,20 +33,24 @@ export default function moodTracker(initialMood = 3) {
 
         async save() {
             try {
-                const resp = await fetch('/my-mood', {
+                const result = await sendJsonRequest('/my-mood', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                    body: JSON.stringify({ value: this.value }),
+                    body: { value: this.value },
                 });
-                if (resp.ok) {
+
+                if (result.ok || result.queued) {
                     this.saved = true;
+                    window.dispatchEvent(new CustomEvent('mood-logged', {
+                        detail: { value: this.value },
+                    }));
+                    if (result.queued) {
+                        Alpine.store('toast')?.info('Mood saved offline. It will sync when connection returns.');
+                    }
                     setTimeout(() => { this.saved = false; }, 2000);
+                    return;
                 }
+
+                Alpine.store('toast')?.error(result.data?.message || 'Failed to save mood');
             } catch (e) {
                 console.error('Mood save failed:', e);
                 Alpine.store('toast')?.error('Failed to save mood');

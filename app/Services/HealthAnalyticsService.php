@@ -9,6 +9,99 @@ use Illuminate\Support\Collection;
 class HealthAnalyticsService
 {
     /**
+     * Build steps analytics payload used by the elderly analytics dashboard.
+     */
+    public function getStepsAnalytics(int $elderlyId): array
+    {
+        $stepsData = [
+            'today' => null,
+            'week' => null,
+            'weeklyTotal' => 0,
+            'weeklyAvg' => 0,
+            'weeklyHistory' => [],
+        ];
+
+        $todaySteps = HealthMetric::where('elderly_id', $elderlyId)
+            ->where('type', 'steps')
+            ->whereDate('measured_at', Carbon::today())
+            ->orderBy('measured_at', 'desc')
+            ->first();
+
+        if ($todaySteps) {
+            $stepsData['today'] = [
+                'value' => (int) $todaySteps->value,
+                'goal' => 6000,
+                'source' => $todaySteps->source,
+                'synced_at' => $todaySteps->measured_at,
+            ];
+        }
+
+        $weeklySteps = HealthMetric::where('elderly_id', $elderlyId)
+            ->where('type', 'steps')
+            ->where('measured_at', '>=', Carbon::now()->subDays(7))
+            ->orderBy('measured_at', 'asc')
+            ->get();
+
+        if ($weeklySteps->isNotEmpty()) {
+            $stepsData['weeklyTotal'] = (int) $weeklySteps->sum('value');
+            $stepsData['weeklyAvg'] = (int) round($weeklySteps->avg('value'));
+            $stepsData['weeklyHistory'] = $weeklySteps->map(function ($step) {
+                return [
+                    'date' => $step->measured_at->format('M d'),
+                    'value' => (int) $step->value,
+                ];
+            })->toArray();
+        }
+
+        return $stepsData;
+    }
+
+    /**
+     * Calculate BMI data payload used by the elderly analytics dashboard.
+     */
+    public function calculateBmi(?float $weightKg, ?float $heightCm): array
+    {
+        $bmiData = [
+            'weight' => null,
+            'height' => null,
+            'bmi' => null,
+            'category' => null,
+            'color' => 'gray',
+        ];
+
+        if (!$weightKg || !$heightCm) {
+            return $bmiData;
+        }
+
+        $heightM = $heightCm / 100;
+        if ($heightM <= 0) {
+            return $bmiData;
+        }
+
+        $bmi = round($weightKg / ($heightM * $heightM), 1);
+
+        $bmiData['weight'] = $weightKg;
+        $bmiData['height'] = $heightCm;
+        $bmiData['bmi'] = $bmi;
+
+        if ($bmi < 18.5) {
+            $bmiData['category'] = 'Underweight';
+            $bmiData['color'] = 'blue';
+        } elseif ($bmi < 25) {
+            $bmiData['category'] = 'Normal';
+            $bmiData['color'] = 'green';
+        } elseif ($bmi < 30) {
+            $bmiData['category'] = 'Overweight';
+            $bmiData['color'] = 'amber';
+        } else {
+            $bmiData['category'] = 'Obese';
+            $bmiData['color'] = 'red';
+        }
+
+        return $bmiData;
+    }
+
+    /**
      * Fetch analytics data for an elderly user across multiple time periods.
      *
      * @param int   $elderlyId
@@ -21,22 +114,38 @@ class HealthAnalyticsService
         $types = $types ?? config('vitals.scorable_types');
         $allVitals = config('vitals');
 
+        $periodBoundaries = collect($periods)->mapWithKeys(
+            fn ($startDate, $periodKey) => [$periodKey => $startDate instanceof Carbon ? $startDate : Carbon::parse($startDate)]
+        );
+
+        $earliestStart = $periodBoundaries
+            ->sortBy(fn (Carbon $date) => $date->getTimestamp())
+            ->first();
+
+        $allMetrics = $earliestStart
+            ? HealthMetric::where('elderly_id', $elderlyId)
+                ->whereIn('type', $types)
+                ->where('measured_at', '>=', $earliestStart)
+                ->orderBy('measured_at', 'asc')
+                ->get()
+                ->groupBy('type')
+            : collect();
+
         $analyticsData = [];
 
         foreach ($types as $type) {
             $conf = $allVitals[$type] ?? [];
+            $typeMetrics = $allMetrics->get($type, collect());
 
             $data = [
                 'config' => $conf,
                 'type'   => $type,
             ];
 
-            foreach ($periods as $periodKey => $startDate) {
-                $metrics = HealthMetric::where('elderly_id', $elderlyId)
-                    ->where('type', $type)
-                    ->where('measured_at', '>=', $startDate)
-                    ->orderBy('measured_at', 'asc')
-                    ->get();
+            foreach ($periodBoundaries as $periodKey => $startDate) {
+                $metrics = $typeMetrics
+                    ->filter(fn ($metric) => $metric->measured_at->gte($startDate))
+                    ->values();
 
                 $periodData = [
                     'count'   => $metrics->count(),
@@ -81,40 +190,12 @@ class HealthAnalyticsService
             }
 
             $totalFactors++;
-            $score  = 0;
-            $status = 'unknown';
+            $evaluation = $type === 'blood_pressure'
+                ? $this->evaluateBloodPressureScore($sevenDay)
+                : $this->evaluateMetricScore($type, floatval($sevenDay['avg'] ?? 0));
 
-            switch ($type) {
-                case 'blood_pressure':
-                    $sys = $sevenDay['systolic_avg'] ?? 120;
-                    $dia = $sevenDay['diastolic_avg'] ?? 80;
-                    if ($sys < 120 && $dia < 80)      { $score = 100; $status = 'Optimal'; }
-                    elseif ($sys < 130 && $dia < 85)   { $score = 85;  $status = 'Normal'; }
-                    elseif ($sys < 140 && $dia < 90)   { $score = 70;  $status = 'Elevated'; }
-                    else                               { $score = 50;  $status = 'High'; }
-                    break;
-
-                case 'heart_rate':
-                    $hr = $sevenDay['avg'] ?? 72;
-                    if ($hr >= 60 && $hr <= 100)       { $score = 100; $status = 'Optimal'; }
-                    elseif ($hr >= 50 && $hr <= 110)   { $score = 80;  $status = 'Normal'; }
-                    else                               { $score = 60;  $status = 'Attention'; }
-                    break;
-
-                case 'temperature':
-                    $temp = $sevenDay['avg'] ?? 36.5;
-                    if ($temp >= 36.1 && $temp <= 37.2)  { $score = 100; $status = 'Normal'; }
-                    elseif ($temp >= 35.5 && $temp <= 37.8) { $score = 75; $status = 'Mild'; }
-                    else                                 { $score = 50;  $status = 'Attention'; }
-                    break;
-
-                case 'sugar_level':
-                    $sugar = $sevenDay['avg'] ?? 100;
-                    if ($sugar >= 70 && $sugar <= 100)   { $score = 100; $status = 'Optimal'; }
-                    elseif ($sugar >= 60 && $sugar <= 125) { $score = 80; $status = 'Normal'; }
-                    else                                 { $score = 60;  $status = 'Attention'; }
-                    break;
-            }
+            $score  = $evaluation['score'];
+            $status = $evaluation['status'];
 
             $healthScore += $score;
             $healthFactors[$type] = ['score' => $score, 'status' => $status];
@@ -141,6 +222,87 @@ class HealthAnalyticsService
             'factors'      => $healthFactors,
             'totalFactors' => $totalFactors,
         ];
+    }
+
+    /**
+     * Evaluate score and status for scalar metrics (heart rate, sugar, temperature).
+     */
+    private function evaluateMetricScore(string $type, float $value): array
+    {
+        $rules = config("vitals.{$type}.score_thresholds", []);
+        $default = ['score' => 0, 'status' => 'unknown'];
+
+        foreach ($rules as $rule) {
+            if (($rule['default'] ?? false) === true) {
+                $default = [
+                    'score' => intval($rule['score'] ?? 0),
+                    'status' => strval($rule['status'] ?? 'unknown'),
+                ];
+                continue;
+            }
+
+            if ($this->matchesScalarRule($value, $rule)) {
+                return [
+                    'score' => intval($rule['score'] ?? 0),
+                    'status' => strval($rule['status'] ?? 'unknown'),
+                ];
+            }
+        }
+
+        return $default;
+    }
+
+    /**
+     * Evaluate score and status for blood pressure using systolic and diastolic averages.
+     */
+    private function evaluateBloodPressureScore(array $sevenDay): array
+    {
+        $sys = floatval($sevenDay['systolic_avg'] ?? 120);
+        $dia = floatval($sevenDay['diastolic_avg'] ?? 80);
+
+        $rules = config('vitals.blood_pressure.score_thresholds', []);
+        $default = ['score' => 50, 'status' => 'High'];
+
+        foreach ($rules as $rule) {
+            if (($rule['default'] ?? false) === true) {
+                $default = [
+                    'score' => intval($rule['score'] ?? 50),
+                    'status' => strval($rule['status'] ?? 'High'),
+                ];
+                continue;
+            }
+
+            $maxSystolic = $rule['max_systolic'] ?? null;
+            $maxDiastolic = $rule['max_diastolic'] ?? null;
+
+            $matchesSystolic = $maxSystolic === null || $sys <= floatval($maxSystolic);
+            $matchesDiastolic = $maxDiastolic === null || $dia <= floatval($maxDiastolic);
+
+            if ($matchesSystolic && $matchesDiastolic) {
+                return [
+                    'score' => intval($rule['score'] ?? 0),
+                    'status' => strval($rule['status'] ?? 'unknown'),
+                ];
+            }
+        }
+
+        return $default;
+    }
+
+    /**
+     * Match a scalar value against a configurable min/max threshold rule.
+     */
+    private function matchesScalarRule(float $value, array $rule): bool
+    {
+        if (array_key_exists('min', $rule) && $value < floatval($rule['min'])) {
+            return false;
+        }
+
+        if (array_key_exists('max', $rule) && $value > floatval($rule['max'])) {
+            return false;
+        }
+
+        return array_key_exists('min', $rule) || array_key_exists('max', $rule);
     }
 
     /**

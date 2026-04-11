@@ -64,7 +64,9 @@ class MedicationService
                 'low_stock_threshold' => $data['low_stock_threshold'] ?? $medication->low_stock_threshold,
             ]);
 
-            $this->syncSchedules($medication, $data);
+            if ($this->shouldSyncSchedules($data)) {
+                $this->syncSchedules($medication, $data);
+            }
 
             return $medication->load('schedules');
         });
@@ -236,6 +238,17 @@ class MedicationService
             'specific_dates' => $legacyDates,
             'times_of_day' => $times->all(),
         ])->saveQuietly();
+    }
+
+    private function shouldSyncSchedules(array $data): bool
+    {
+        foreach (['schedule_type', 'times_of_day', 'days_of_week', 'specific_dates'] as $field) {
+            if (array_key_exists($field, $data)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

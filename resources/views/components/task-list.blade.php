@@ -28,12 +28,27 @@
         </div>
 
         {{-- Progress Bar --}}
-        <div class="progress-track bg-blue-100 mb-4">
+        <div class="progress-track bg-blue-100 mb-4" aria-hidden="true">
             <div class="progress-fill bg-gradient-to-r from-blue-400 to-blue-500"
+                 role="progressbar"
+                 :aria-valuenow="progress"
+                 aria-valuemin="0"
+                 aria-valuemax="100"
+                 :aria-label="'Tasks: ' + completed + ' of ' + total + ' completed'"
                  :style="'width:' + progress + '%'"></div>
         </div>
 
-        <div class="space-y-2">
+        {{-- Auto-collapsed summary once all tasks are done --}}
+        <div x-show="!expanded && total > 0 && completed >= total" x-cloak
+             class="rounded-xl border border-blue-100 bg-white/80 px-3 py-2 mb-3 flex items-center justify-between">
+            <p class="text-sm font-extrabold text-emerald-700">✅ Tasks — All completed</p>
+            <button @click="expanded = true" class="text-xs font-bold text-[#000080] hover:text-blue-900 transition-colors flex items-center gap-1">
+                Expand
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+        </div>
+
+        <div class="space-y-2" x-show="expanded || !(total > 0 && completed >= total)">
             @php
                 $categoryIcons = [
                     'Health' => '❤️', 'Exercise' => '🏃', 'Nutrition' => '🍎',

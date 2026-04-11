@@ -9,15 +9,19 @@ use App\Models\Checklist;
 use App\Models\HealthMetric;
 use App\Services\ElderlyDashboardService;
 use App\Services\MedicationWindowService;
+use App\Services\ProfileCompletionService;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class ElderlyDashboardController extends Controller
 {
     public function __construct(
         protected ElderlyDashboardService $dashboardService,
-        protected MedicationWindowService $windowService
+        protected MedicationWindowService $windowService,
+        protected ProfileCompletionService $profileCompletionService,
+        protected NotificationService $notificationService,
     )
     {
     }
@@ -32,7 +36,9 @@ class ElderlyDashboardController extends Controller
         }
 
         $data = $this->dashboardService->getDashboardData($elderlyId, $user->id);
-        $data['linkedCaregiver'] = $user->profile?->caregiver;
+        $profile = $user->profile;
+        $data['linkedCaregiver'] = $profile?->caregiver;
+        $data['profileCompletion'] = $this->profileCompletionService->evaluate($profile);
 
         return view('elderly.dashboard', $data);
     }
@@ -47,8 +53,15 @@ class ElderlyDashboardController extends Controller
             'totalRequiredVitals' => 4, 'vitalsProgress' => 0, 'vitalsData' => [],
             'stepsData' => null, 'takenMedicationDoses' => 0, 'totalMedicationDoses' => 0,
             'medicationProgress' => 0, 'dailyGoalsProgress' => 0, 'googleFitConnected' => false,
-            'todayMood' => 3, 'upcomingEvents' => [], 'unreadNotifications' => 0,
+            'gardenStreakDays' => 0, 'gardenIsWilting' => false, 'gardenMissedCount' => 0,
+            'todayMood' => 3, 'moodRecordedToday' => false, 'upcomingEvents' => [], 'unreadNotifications' => 0,
             'linkedCaregiver' => null,
+            'profileCompletion' => [
+                'personal_complete' => false,
+                'emergency_complete' => false,
+                'medical_complete' => false,
+                'is_complete' => false,
+            ],
         ];
     }
 
@@ -57,7 +70,7 @@ class ElderlyDashboardController extends Controller
         $user = Auth::user();
         $elderlyId = $user->profile?->id;
         $unreadNotifications = $elderlyId
-            ? $this->unreadNotificationsCount($elderlyId)
+            ? $this->notificationService->getUnreadCount($elderlyId)
             : 0;
 
         $medications = collect();
@@ -87,7 +100,7 @@ class ElderlyDashboardController extends Controller
         $user = Auth::user();
         $elderlyId = $user->profile?->id;
         $unreadNotifications = $elderlyId
-            ? $this->unreadNotificationsCount($elderlyId)
+            ? $this->notificationService->getUnreadCount($elderlyId)
             : 0;
 
         $checklists = collect();
@@ -128,7 +141,7 @@ class ElderlyDashboardController extends Controller
 
         // Create notification if task was completed
         if ($newStatus) {
-            app(NotificationService::class)->createTaskCompletedNotification(
+            $this->notificationService->createTaskCompletedNotification(
                 $elderlyId,
                 $checklist->task,
                 $checklist->category ?? 'General'
@@ -194,53 +207,60 @@ class ElderlyDashboardController extends Controller
             ], 400);
         }
 
-        $existingLog = MedicationLog::where('elderly_id', $elderlyId)
-            ->where('medication_id', $medication->id)
-            ->where('scheduled_time', $scheduledDateTime)
-            ->first();
+        // C1 FIX: Wrap in transaction + pessimistic lock to prevent race condition
+        // on rapid double-clicks which previously caused double stock decrements.
+        return DB::transaction(function () use (
+            $elderlyId, $medication, $scheduledDateTime, $now, $windowEnd, $takenLate, $status
+        ) {
+            $existingLog = MedicationLog::where('elderly_id', $elderlyId)
+                ->where('medication_id', $medication->id)
+                ->where('scheduled_time', $scheduledDateTime)
+                ->lockForUpdate()
+                ->first();
 
-        if ($existingLog?->is_taken) {
+            if ($existingLog?->is_taken) {
+                return response()->json([
+                    'success' => true,
+                    'is_taken' => true,
+                    'taken_at' => $existingLog->taken_at?->toISOString(),
+                    'taken_late' => $existingLog->taken_at?->gt($windowEnd) ?? false,
+                    'status' => $existingLog->taken_at?->gt($windowEnd) ? 'taken_late' : 'taken',
+                    'message' => 'Medication already marked as taken.',
+                ]);
+            }
+
+            $log = MedicationLog::updateOrCreate(
+                [
+                    'elderly_id' => $elderlyId,
+                    'medication_id' => $medication->id,
+                    'scheduled_time' => $scheduledDateTime,
+                ],
+                [
+                    'is_taken' => true,
+                    'taken_at' => $now,
+                ]
+            );
+
+            if ($medication->track_inventory && $medication->current_stock > 0) {
+                $medication->decrement('current_stock');
+            }
+
+            // Create notification for medication taken (with late flag)
+            $this->notificationService->createMedicationTakenNotification(
+                $elderlyId,
+                $medication->name,
+                $takenLate
+            );
+
             return response()->json([
                 'success' => true,
                 'is_taken' => true,
-                'taken_at' => $existingLog->taken_at?->toISOString(),
-                'taken_late' => $existingLog->taken_at?->gt($windowEnd) ?? false,
-                'status' => $existingLog->taken_at?->gt($windowEnd) ? 'taken_late' : 'taken',
-                'message' => 'Medication already marked as taken.',
+                'taken_at' => $log->taken_at->toISOString(),
+                'taken_late' => $takenLate,
+                'status' => $status,
+                'message' => $takenLate ? 'Medication marked as taken (late)' : 'Medication taken!',
             ]);
-        }
-
-        $log = MedicationLog::updateOrCreate(
-            [
-                'elderly_id' => $elderlyId,
-                'medication_id' => $medication->id,
-                'scheduled_time' => $scheduledDateTime,
-            ],
-            [
-                'is_taken' => true,
-                'taken_at' => $now,
-            ]
-        );
-
-        if ($medication->track_inventory && $medication->current_stock > 0) {
-            $medication->decrement('current_stock');
-        }
-
-        // Create notification for medication taken (with late flag)
-        app(NotificationService::class)->createMedicationTakenNotification(
-            $elderlyId,
-            $medication->name,
-            $takenLate
-        );
-
-        return response()->json([
-            'success' => true,
-            'is_taken' => true,
-            'taken_at' => $log->taken_at->toISOString(),
-            'taken_late' => $takenLate,
-            'status' => $status,
-            'message' => $takenLate ? 'Medication marked as taken (late)' : 'Medication taken!',
-        ]);
+        });
     }
 
     /**
@@ -316,10 +336,4 @@ class ElderlyDashboardController extends Controller
         ];
     }
 
-    private function unreadNotificationsCount(int $elderlyId): int
-    {
-        return \App\Models\Notification::where('elderly_id', $elderlyId)
-            ->where('is_read', false)
-            ->count();
-    }
 }

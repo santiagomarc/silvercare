@@ -87,13 +87,12 @@ class User extends Authenticatable
     }
 
     /**
-     * Get or create the active chat session for today.
+     * Get or create the active chat session.
      */
     public function activeChatSession(): ChatSession
     {
         return $this->chatSessions()
-            ->whereDate('created_at', now()->toDateString())
-            ->latest()
+            ->orderByDesc('id')
             ->first()
             ?? $this->chatSessions()->create([
                 'title' => 'Chat ' . now()->format('M j, Y'),

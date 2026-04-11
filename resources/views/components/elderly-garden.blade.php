@@ -10,13 +10,17 @@
     'totalMedicationDoses' => 0,
     'completedVitals' => 0,
     'totalRequiredVitals' => 0,
+    'streakDays' => 0,
+    'isWilting' => false,
+    'missedCount' => 0,
 ])
 
 <div
     x-data="gardenWellness(
         { done: {{ $completedChecklists }}, total: {{ $totalChecklists }} },
         { done: {{ $takenMedicationDoses }}, total: {{ $totalMedicationDoses }} },
-        { done: {{ $completedVitals }}, total: {{ $totalRequiredVitals }} }
+        { done: {{ $completedVitals }}, total: {{ $totalRequiredVitals }} },
+        { streakDays: {{ $streakDays }}, isWilting: {{ $isWilting ? 'true' : 'false' }}, missedCount: {{ $missedCount }} }
     )"
     class="surface-mint relative overflow-hidden p-5"
     role="region"
@@ -28,12 +32,25 @@
 
     <div class="flex items-center justify-between mb-3 relative z-10">
         <h3 class="font-extrabold text-base text-emerald-900">🌱 Your Garden</h3>
-        <span class="badge badge-success text-xs" x-text="overallProgress + '%'"></span>
+        <div class="flex items-center gap-2">
+            <span class="badge badge-success text-xs" x-text="overallProgress + '%'"></span>
+            <span class="badge text-xs" :class="isWilting ? 'badge-danger' : 'badge-info'" x-text="streakLabel"></span>
+        </div>
     </div>
 
     {{-- Plant SVG — single element with template switching --}}
     <div class="flex flex-col items-center relative z-10">
         <div class="w-20 h-20 flex items-center justify-center" aria-hidden="true">
+            {{-- Stage -1: Wilting --}}
+            <template x-if="stage === -1">
+                <svg viewBox="0 0 100 100" class="w-16 h-16 opacity-90">
+                    <path d="M30 80 L35 100 L65 100 L70 80 Z" fill="#A16207" stroke="#713F12" stroke-width="2"/>
+                    <path d="M50 80 Q48 62 54 48" stroke="#84CC16" stroke-width="4" fill="none"/>
+                    <path d="M54 58 Q72 62 68 74" stroke="#A3A3A3" stroke-width="3" fill="none"/>
+                    <path d="M52 60 Q34 62 36 74" stroke="#A3A3A3" stroke-width="3" fill="none"/>
+                    <circle cx="55" cy="43" r="8" fill="#FDE68A" stroke="#D97706" stroke-width="2"/>
+                </svg>
+            </template>
             {{-- Stage 0: Seed --}}
             <template x-if="stage === 0">
                 <svg viewBox="0 0 100 100" class="w-16 h-16 opacity-80">
@@ -84,6 +101,8 @@
 
     {{-- Message --}}
     <p class="text-center font-bold text-sm text-emerald-800 mt-2 leading-tight" x-text="message" role="status"></p>
+
+    <p class="text-center text-xs font-semibold mt-1" :class="isWilting ? 'text-red-700' : 'text-emerald-700'" x-text="streakDetail"></p>
 
     {{-- Water bar --}}
     <div class="progress-track mt-3 bg-white/50 border border-emerald-100">

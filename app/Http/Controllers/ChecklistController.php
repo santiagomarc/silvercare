@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ResolvesElderlyPatient;
 use App\Http\Requests\StoreChecklistRequest;
 use App\Http\Requests\UpdateChecklistRequest;
 use App\Models\Checklist;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\Auth;
 
 class ChecklistController extends Controller
 {
+    use ResolvesElderlyPatient;
+
     public function __construct(
         protected ChecklistService $checklistService,
         protected NotificationService $notificationService,
@@ -25,16 +28,17 @@ class ChecklistController extends Controller
         $this->authorize('viewAny', Checklist::class);
 
         $caregiver = Auth::user()->profile;
-        $elderly = $caregiver->elderly;
+        $elderlyPatients = $this->caregiverPatients($caregiver);
+        $selectedElderly = $this->resolveSelectedPatient($elderlyPatients, request()->integer('elderly'));
 
-        if (!$elderly) {
+        if (!$selectedElderly) {
             return redirect()->route('caregiver.dashboard')->with('error', 'No elderly profile associated.');
         }
 
         // Fetch tasks ordered by due_date and due_time
-        $checklists = $this->checklistService->getChecklistForElderly($elderly->id);
+        $checklists = $this->checklistService->getChecklistForElderly($selectedElderly->id);
 
-        return view('caregiver.checklists.index', compact('checklists'));
+        return view('caregiver.checklists.index', compact('checklists', 'elderlyPatients', 'selectedElderly'));
     }
 
     /**
@@ -44,7 +48,15 @@ class ChecklistController extends Controller
     {
         $this->authorize('create', Checklist::class);
 
-        return view('caregiver.checklists.create');
+        $caregiver = Auth::user()->profile;
+        $elderlyPatients = $this->caregiverPatients($caregiver);
+        $selectedElderly = $this->resolveSelectedPatient($elderlyPatients, request()->integer('elderly'));
+
+        if (!$selectedElderly) {
+            return redirect()->route('caregiver.dashboard')->with('error', 'No elderly profile associated.');
+        }
+
+        return view('caregiver.checklists.create', compact('elderlyPatients', 'selectedElderly'));
     }
 
     /**
@@ -55,20 +67,22 @@ class ChecklistController extends Controller
         $this->authorize('create', Checklist::class);
 
         $caregiver = Auth::user()->profile;
-        $elderly = $caregiver->elderly;
+        $elderlyPatients = $this->caregiverPatients($caregiver);
+        $selectedElderly = $this->resolveSelectedPatient($elderlyPatients, $request->integer('elderly_id'));
 
-        if (!$elderly) {
+        if (!$selectedElderly) {
             return redirect()->route('caregiver.dashboard')->with('error', 'No elderly profile associated.');
         }
 
         $this->checklistService->addChecklistItem([
-            'elderly_id' => $elderly->id,
+            'elderly_id' => $selectedElderly->id,
             'caregiver_id' => $caregiver->id,
             ...$request->validated(),
             'is_completed' => false,
         ]);
 
-        return redirect()->route('caregiver.checklists.index')->with('success', 'Task added successfully.');
+        return redirect()->route('caregiver.checklists.index', ['elderly' => $selectedElderly->id])
+            ->with('success', 'Task added successfully.');
     }
 
     /**
@@ -86,7 +100,11 @@ class ChecklistController extends Controller
     {
         $this->authorize('update', $checklist);
 
-        return view('caregiver.checklists.edit', compact('checklist'));
+        $caregiver = Auth::user()->profile;
+        $elderlyPatients = $this->caregiverPatients($caregiver);
+        $selectedElderly = $this->resolveSelectedPatient($elderlyPatients, (int) $checklist->elderly_id);
+
+        return view('caregiver.checklists.edit', compact('checklist', 'elderlyPatients', 'selectedElderly'));
     }
 
     /**
@@ -105,7 +123,10 @@ class ChecklistController extends Controller
             'completed_at' => $isCompleted && !$checklist->is_completed ? now() : ($isCompleted ? $checklist->completed_at : null),
         ]);
 
-        return redirect()->route('caregiver.checklists.index')->with('success', 'Task updated successfully.');
+        $selectedElderlyId = $request->integer('elderly_id') ?: $checklist->elderly_id;
+
+        return redirect()->route('caregiver.checklists.index', ['elderly' => $selectedElderlyId])
+            ->with('success', 'Task updated successfully.');
     }
 
     /**
@@ -130,7 +151,10 @@ class ChecklistController extends Controller
             );
         }
 
-        return redirect()->route('caregiver.checklists.index')->with('success', 'Task status updated.');
+        $selectedElderlyId = request()->integer('elderly_id') ?: $checklist->elderly_id;
+
+        return redirect()->route('caregiver.checklists.index', ['elderly' => $selectedElderlyId])
+            ->with('success', 'Task status updated.');
     }
 
     /**
@@ -140,8 +164,12 @@ class ChecklistController extends Controller
     {
         $this->authorize('delete', $checklist);
 
+        $selectedElderlyId = request()->integer('elderly_id') ?: $checklist->elderly_id;
+
         $this->checklistService->deleteChecklistItem($checklist->id);
 
-        return redirect()->route('caregiver.checklists.index')->with('success', 'Task deleted successfully.');
+        return redirect()->route('caregiver.checklists.index', ['elderly' => $selectedElderlyId])
+            ->with('success', 'Task deleted successfully.');
     }
+
 }

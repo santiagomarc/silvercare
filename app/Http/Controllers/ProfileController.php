@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\DeleteAccountRequest;
+use App\Http\Requests\ProfileUpdateRequest;
+use App\Http\Requests\UploadProfilePhotoRequest;
 use App\Models\UserProfile;
-use App\Models\User;
+use App\Support\CommaSeparatedValueParser;
+use App\Services\ProfileCompletionService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -12,10 +16,15 @@ use Illuminate\Support\Facades\Redirect;
 
 class ProfileController extends Controller
 {
+    public function __construct(
+        protected ProfileCompletionService $profileCompletionService,
+    ) {
+    }
+
     /**
      * Display the user's profile form.
      */
-    public function edit()
+    public function edit(\App\Services\NotificationService $notificationService)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
@@ -28,64 +37,66 @@ class ProfileController extends Controller
             $profile = new UserProfile();
         }
 
-        return view('profile.edit', compact('user', 'profile'));
+        $unreadNotifications = $profile->id ? $notificationService->getUnreadCount($profile->id) : 0;
+
+        return view('profile.edit', compact('user', 'profile', 'unreadNotifications'));
     }
 
     /**
      * Update the user's profile information.
      */
-    public function update(Request $request)
+    public function update(ProfileUpdateRequest $request)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        // 1. Validate
-        $request->validate([
-            'name'   => 'required|string|max:255',
-            'email'  => 'sometimes|required|email|max:255|unique:users,email,' . $user->id,
-            'age'    => 'nullable|integer',
-            'height' => 'nullable|numeric',
-            'weight' => 'nullable|numeric',
-        ]);
+        $validated = $request->validated();
 
         // 2. Update User Table (Name/Email)
        
-        $nextEmail = $request->email ?? $user->email;
+        $nextEmail = $validated['email'] ?? $user->email;
         $emailChanged = $nextEmail !== $user->email;
 
         $user->update([
-            'name' => $request->name,
+            'name' => $validated['name'],
             'email' => $nextEmail,
             'email_verified_at' => $emailChanged ? null : $user->email_verified_at,
         ]);
 
         // 3. Process Array Fields
-        $medical_conditions = $this->processCommaSeparated($request->medical_conditions);
-        $medications        = $this->processCommaSeparated($request->medications);
-        $allergies          = $this->processCommaSeparated($request->allergies);
+        $medical_conditions = CommaSeparatedValueParser::parse($validated['medical_conditions'] ?? null);
+        $medications        = CommaSeparatedValueParser::parse($validated['medications'] ?? null);
+        $allergies          = CommaSeparatedValueParser::parse($validated['allergies'] ?? null);
 
         // 4. Update or Create Profile (Direct Model Access)
-        UserProfile::updateOrCreate(
+        $profile = UserProfile::updateOrCreate(
             ['user_id' => $user->id],
             [
-                'age'                    => $request->age,
-                'sex'                    => $request->sex,
-                'height'                 => $request->height,
-                'weight'                 => $request->weight,
-                'phone_number'           => $request->phone_number,
-                'address'                => $request->address,
-                'username'               => $request->username ?? $user->name,
-                'relationship'           => $request->relationship,
+                'age'                    => $validated['age'] ?? null,
+                'sex'                    => $validated['sex'] ?? null,
+                'height'                 => $validated['height'] ?? null,
+                'weight'                 => $validated['weight'] ?? null,
+                'phone_number'           => $validated['phone_number'] ?? null,
+                'address'                => $validated['address'] ?? null,
+                'username'               => $validated['username'] ?? $user->name,
+                'relationship'           => $validated['relationship'] ?? null,
                 
                 'medical_conditions'     => $medical_conditions,
                 'medications'            => $medications,
                 'allergies'              => $allergies,
 
-                'emergency_name'         => $request->emergency_name,
-                'emergency_phone'        => $request->emergency_phone,
-                'emergency_relationship' => $request->emergency_relationship,
+                'emergency_name'         => $validated['emergency_name'] ?? null,
+                'emergency_phone'        => $validated['emergency_phone'] ?? null,
+                'emergency_relationship' => $validated['emergency_relationship'] ?? null,
             ]
         );
+
+        $completion = $this->profileCompletionService->evaluate($profile);
+
+        $profile->update([
+            'profile_completed' => $completion['is_complete'],
+            'profile_skipped' => $completion['is_complete'] ? false : (bool) ($profile->profile_skipped ?? false),
+        ]);
 
         return redirect()->route('profile.edit')->with('status', 'profile-updated');
     }
@@ -93,12 +104,8 @@ class ProfileController extends Controller
     /**
      * Upload profile photo
      */
-    public function uploadPhoto(Request $request)
+    public function uploadPhoto(UploadProfilePhotoRequest $request)
     {
-        $request->validate([
-            'profile_photo' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB max
-        ]);
-
         /** @var \App\Models\User $user */
         $user = Auth::user();
         $profile = UserProfile::where('user_id', $user->id)->first();
@@ -146,17 +153,10 @@ class ProfileController extends Controller
     }
 
     /**
-     * Helper to turn comma-separated string into array
-     */
-    /**
      * Delete the authenticated user's account.
      */
-    public function destroy(Request $request): RedirectResponse
+    public function destroy(DeleteAccountRequest $request): RedirectResponse
     {
-        $request->validateWithBag('userDeletion', [
-            'password' => ['required', 'current_password'],
-        ]);
-
         /** @var \App\Models\User $user */
         $user = $request->user();
 
@@ -170,9 +170,4 @@ class ProfileController extends Controller
         return Redirect::to('/');
     }
 
-    private function processCommaSeparated($string)
-    {
-        if (empty($string)) return [];
-        return array_values(array_filter(array_map('trim', explode(',', $string))));
-    }
 }

@@ -60,9 +60,18 @@
                     {{-- Blood Pressure (two inputs) --}}
                     <template x-if="config?.isBP">
                         <div class="mb-4">
-                            <label class="block text-sm font-bold text-gray-700 mb-2">
-                                Value <span class="text-gray-400" x-text="'(' + config.unit + ')'"></span>
-                            </label>
+                            <div class="flex items-center justify-between gap-2 mb-2">
+                                <label class="block text-sm font-bold text-gray-700">
+                                    Value <span class="text-gray-400" x-text="'(' + config.unit + ')'"></span>
+                                </label>
+                                <button
+                                    type="button"
+                                    x-show="voiceSupported"
+                                    @click="startVoiceCapture()"
+                                    class="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-bold text-gray-600 hover:border-gray-300"
+                                    x-text="voiceListening ? 'Stop Voice' : 'Use Voice'"
+                                ></button>
+                            </div>
                             <div class="flex gap-3 items-center">
                                 <div class="flex-1">
                                     <input
@@ -91,6 +100,9 @@
                                 </div>
                                 <span class="text-gray-400 font-bold self-start pt-4" x-text="config.unit"></span>
                             </div>
+                            <p x-show="voiceListening" class="text-xs text-emerald-600 font-semibold mt-2" x-cloak>
+                                Listening... Try saying "120 over 80".
+                            </p>
                             <p class="text-xs text-gray-400 mt-2" x-text="config.hint"></p>
                         </div>
                     </template>
@@ -98,9 +110,18 @@
                     {{-- Single value (sugar, temp, heart rate) --}}
                     <template x-if="config && !config.isBP">
                         <div class="mb-4">
-                            <label class="block text-sm font-bold text-gray-700 mb-2">
-                                Value <span class="text-gray-400" x-text="'(' + config.unit + ')'"></span>
-                            </label>
+                            <div class="flex items-center justify-between gap-2 mb-2">
+                                <label class="block text-sm font-bold text-gray-700">
+                                    Value <span class="text-gray-400" x-text="'(' + config.unit + ')'"></span>
+                                </label>
+                                <button
+                                    type="button"
+                                    x-show="voiceSupported"
+                                    @click="startVoiceCapture()"
+                                    class="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-bold text-gray-600 hover:border-gray-300"
+                                    x-text="voiceListening ? 'Stop Voice' : 'Use Voice'"
+                                ></button>
+                            </div>
                             <div class="relative">
                                 <input
                                     type="number"
@@ -115,6 +136,9 @@
                                 >
                                 <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold" x-text="config.unit"></span>
                             </div>
+                            <p x-show="voiceListening" class="text-xs text-emerald-600 font-semibold mt-2" x-cloak>
+                                Listening... Say the value now.
+                            </p>
                             <p class="text-xs text-gray-400 mt-2" x-text="config.hint"></p>
                         </div>
                     </template>

@@ -17,6 +17,8 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\AiAssistantController;
 use App\Http\Controllers\CaregiverAiController;
 use App\Http\Controllers\CareLinkController;
+use App\Http\Controllers\CareMessageController;
+use App\Http\Controllers\SosController;
 use Illuminate\Support\Facades\Route;
 
 // Welcome landing page - redirect logged-in users to their dashboard
@@ -32,9 +34,19 @@ Route::post('/caregiver/set-password/{userId}', [CaregiverSetPasswordController:
     ->name('caregiver.password.store');
 
 // Elderly Routes - Protected by 'elderly' middleware
-Route::middleware(['auth', 'verified', 'elderly'])->group(function () {
+// M5 FIX: 'prevent.back' added here so no-cache headers only apply to authenticated pages.
+Route::middleware(['auth', 'verified', 'elderly', 'profile.complete', 'prevent.back'])->group(function () {
     Route::get('/dashboard', [ElderlyDashboardController::class, 'index'])->name('dashboard');
-    Route::post('/link-caregiver', [CareLinkController::class, 'link'])->name('elderly.link-caregiver');
+
+    // Signed QR link entry (prefills caregiver PIN confirmation flow)
+    Route::get('/link', [CareLinkController::class, 'openSignedLink'])
+        ->middleware('signed')
+        ->name('elderly.link');
+
+    // Caregiver Linking — Two-step: validate PIN (AJAX), then confirm
+    Route::post('/link-caregiver/validate', [CareLinkController::class, 'validateCode'])->name('elderly.validate-link-code');
+    Route::post('/link-caregiver/confirm', [CareLinkController::class, 'confirmLink'])->name('elderly.confirm-link');
+    Route::post('/link-caregiver/unlink', [CareLinkController::class, 'unlink'])->name('elderly.unlink-caregiver');
     Route::get('/my-medications', [ElderlyDashboardController::class, 'medications'])->name('elderly.medications');
     Route::get('/my-checklists', [ElderlyDashboardController::class, 'checklists'])->name('elderly.checklists');
     Route::post('/my-checklists/{checklist}/toggle', [ElderlyDashboardController::class, 'toggleChecklist'])->name('elderly.checklists.toggle');
@@ -62,6 +74,7 @@ Route::middleware(['auth', 'verified', 'elderly'])->group(function () {
     // Google Fit Integration
     Route::get('/google-fit/connect', [GoogleFitController::class, 'connect'])->name('elderly.googlefit.connect');
     Route::get('/google-fit/callback', [GoogleFitController::class, 'callback'])->name('elderly.googlefit.callback');
+    Route::get('/google-fit/status', [GoogleFitController::class, 'status'])->name('elderly.googlefit.status');
     Route::post('/google-fit/sync', [GoogleFitController::class, 'sync'])->name('elderly.googlefit.sync');
     Route::post('/google-fit/disconnect', [GoogleFitController::class, 'disconnect'])->name('elderly.googlefit.disconnect');
 
@@ -96,10 +109,18 @@ Route::middleware(['auth', 'verified', 'elderly'])->group(function () {
     Route::post('/notifications/clear-all', [NotificationController::class, 'clearAll'])->name('elderly.notifications.clear-all');
     Route::get('/notifications/unread-count', [NotificationController::class, 'getUnreadCount'])->name('elderly.notifications.unread-count');
     Route::get('/notifications/latest', [NotificationController::class, 'getLatest'])->name('elderly.notifications.latest');
+
+    // SOS Emergency
+    Route::post('/sos', [SosController::class, 'trigger'])->name('elderly.sos');
+
+    // Care Messages (elderly <-> caregiver)
+    Route::get('/messages', [CareMessageController::class, 'elderlyIndex'])->name('elderly.messages.index');
+    Route::post('/messages', [CareMessageController::class, 'elderlyStore'])->name('elderly.messages.store');
 });
 
 // Caregiver Routes - Protected by 'caregiver' middleware
-Route::middleware(['auth', 'verified', 'caregiver'])->prefix('caregiver')->name('caregiver.')->group(function () {
+// M5 FIX: 'prevent.back' added here so no-cache headers only apply to authenticated pages.
+Route::middleware(['auth', 'verified', 'caregiver', 'profile.complete', 'prevent.back'])->prefix('caregiver')->name('caregiver.')->group(function () {
     Route::get('/dashboard', [CaregiverDashboardController::class, 'index'])->name('dashboard');
     Route::post('/link-code', [CareLinkController::class, 'generate'])->name('link-code.generate');
     
@@ -113,6 +134,10 @@ Route::middleware(['auth', 'verified', 'caregiver'])->prefix('caregiver')->name(
     Route::resource('checklists', ChecklistController::class);
     Route::post('checklists/{checklist}/toggle', [ChecklistController::class, 'toggleComplete'])->name('checklists.toggle');
 
+    // Care Messages
+    Route::get('/messages', [CareMessageController::class, 'caregiverIndex'])->name('messages.index');
+    Route::post('/messages', [CareMessageController::class, 'caregiverStore'])->name('messages.store');
+
     // AI Analyst Routes (Caregiver) — rate-limited: 30 requests per minute
     Route::middleware('throttle:30,1')->group(function () {
         Route::post('/ai-analyst/chat', [CaregiverAiController::class, 'chat'])->name('ai-analyst.chat');
@@ -123,7 +148,8 @@ Route::middleware(['auth', 'verified', 'caregiver'])->prefix('caregiver')->name(
 });
 
 // Profile Completion Routes
-Route::middleware(['auth'])->group(function () {
+// M5 FIX: 'prevent.back' ensures the profile completion form is never served from browser cache.
+Route::middleware(['auth', 'prevent.back'])->group(function () {
     Route::get('/profile/completion', [ProfileCompletionController::class, 'show'])
         ->name('profile.completion');
     
@@ -134,7 +160,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('profile.completion.skip');
 });
 
-Route::middleware('auth')->group(function () {
+// Shared authenticated routes (profile, calendar) — M5 FIX: prevent.back added
+Route::middleware(['auth', 'prevent.back'])->group(function () {
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

@@ -544,28 +544,28 @@
                             <div class="grid grid-cols-3 gap-3 mb-4">
                                 @if($type === 'blood_pressure')
                                     <div class="text-center bg-gray-50 rounded-xl p-3">
-                                        <p class="text-[10px] font-[700] text-gray-500 uppercase">Systolic Avg</p>
+                                        <p class="text-xs font-[700] text-gray-500 uppercase">Systolic Avg</p>
                                         <p class="text-xl font-[900] text-gray-900">{{ $data[$period]['systolic_avg'] ?? '-' }}</p>
                                     </div>
                                     <div class="text-center bg-gray-50 rounded-xl p-3">
-                                        <p class="text-[10px] font-[700] text-gray-500 uppercase">Diastolic Avg</p>
+                                        <p class="text-xs font-[700] text-gray-500 uppercase">Diastolic Avg</p>
                                         <p class="text-xl font-[900] text-gray-900">{{ $data[$period]['diastolic_avg'] ?? '-' }}</p>
                                     </div>
                                     <div class="text-center bg-gray-50 rounded-xl p-3">
-                                        <p class="text-[10px] font-[700] text-gray-500 uppercase">Readings</p>
+                                        <p class="text-xs font-[700] text-gray-500 uppercase">Readings</p>
                                         <p class="text-xl font-[900] text-gray-900">{{ $data[$period]['count'] }}</p>
                                     </div>
                                 @else
                                     <div class="text-center bg-gray-50 rounded-xl p-3">
-                                        <p class="text-[10px] font-[700] text-gray-500 uppercase">Average</p>
+                                        <p class="text-xs font-[700] text-gray-500 uppercase">Average</p>
                                         <p class="text-xl font-[900] text-gray-900">{{ $data[$period]['avg'] ?? '-' }}</p>
                                     </div>
                                     <div class="text-center bg-gray-50 rounded-xl p-3">
-                                        <p class="text-[10px] font-[700] text-gray-500 uppercase">Min / Max</p>
+                                        <p class="text-xs font-[700] text-gray-500 uppercase">Min / Max</p>
                                         <p class="text-lg font-[900] text-gray-900">{{ $data[$period]['min'] ?? '-' }}<span class="text-gray-400">/</span>{{ $data[$period]['max'] ?? '-' }}</p>
                                     </div>
                                     <div class="text-center bg-gray-50 rounded-xl p-3">
-                                        <p class="text-[10px] font-[700] text-gray-500 uppercase">Trend</p>
+                                        <p class="text-xs font-[700] text-gray-500 uppercase">Trend</p>
                                         @php
                                             $trend = $data[$period]['trend'] ?? 'stable';
                                             $trendIcon = $trend === 'increasing' ? '↗' : ($trend === 'decreasing' ? '↘' : '→');
@@ -580,7 +580,7 @@
                             @if($data[$period]['metrics']->count() > 0)
                             <div class="flex items-center justify-between py-3 px-4 bg-{{ $data['config']['color'] }}-50 rounded-xl border border-{{ $data['config']['color'] }}-100">
                                 <div>
-                                    <p class="text-[10px] font-[700] text-{{ $data['config']['color'] }}-600 uppercase">Latest Reading</p>
+                                    <p class="text-xs font-[700] text-{{ $data['config']['color'] }}-600 uppercase">Latest Reading</p>
                                     <p class="text-lg font-[900] text-gray-900">
                                         @if($type === 'blood_pressure')
                                             {{ $data[$period]['metrics']->first()->value_text }}
@@ -724,7 +724,7 @@
                 const date = new Date(m.measured_at);
                 const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                 const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-                const source = m.source === 'google_fit' ? '<span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">Google Fit</span>' : '';
+                const source = m.source === 'google_fit' ? '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">Google Fit</span>' : '';
                 return `
                     <div class="flex items-center justify-between py-4 border-b border-gray-100 last:border-0">
                         <div class="flex items-center gap-4">

@@ -26,11 +26,28 @@
     </div>
 
     {{-- Progress Bar --}}
-    <div class="relative z-10 progress-track bg-white/20 mb-4">
-        <div class="progress-fill bg-white" :style="'width:' + progress + '%'"></div>
+    <div class="relative z-10 progress-track bg-white/20 mb-4" aria-hidden="true">
+        <div class="progress-fill bg-white"
+             role="progressbar"
+             :aria-valuenow="progress"
+             aria-valuemin="0"
+             aria-valuemax="100"
+             :aria-label="'Medications: ' + taken + ' of ' + total + ' taken'"
+             :style="'width:' + progress + '%'"></div>
     </div>
 
-    <div class="relative z-10 overflow-y-auto no-scrollbar space-y-2">
+    {{-- Auto-collapsed summary once all doses are taken --}}
+    <div x-show="!expanded && total > 0 && taken >= total" x-cloak
+         class="relative z-10 rounded-xl border border-white/30 bg-white/20 px-3 py-2 flex items-center justify-between">
+        <p class="text-sm font-extrabold text-white">✅ Medications — All taken</p>
+        <button @click="expanded = true" class="text-xs font-bold text-white/90 hover:text-white transition-colors flex items-center gap-1">
+            Expand
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </button>
+    </div>
+
+    <div x-show="expanded || !(total > 0 && taken >= total)"
+         class="relative z-10 overflow-y-auto no-scrollbar space-y-2">
         @forelse($medications as $medication)
             @php
                 $medTimes = $medication->scheduleTimesForDate(now());
@@ -41,7 +58,41 @@
                     $log = $logs->get($logKey);
                     $status = \App\Presenters\MedicationPresenter::getDoseStatus($time, $log);
                 @endphp
-                <div x-data="{ expanded: false }"
+                <div x-data="{
+                        expanded: false,
+                        relativeText: '',
+                        ticker: null,
+                        init() {
+                            this.updateRelative();
+                            this.ticker = setInterval(() => this.updateRelative(), 60000);
+                        },
+                        destroy() {
+                            if (this.ticker) clearInterval(this.ticker);
+                        },
+                        updateRelative() {
+                            const now = new Date();
+                            const target = new Date('{{ now()->toDateString() }}T{{ \Carbon\Carbon::parse($time)->format('H:i:s') }}');
+                            const minutes = Math.round((target.getTime() - now.getTime()) / 60000);
+
+                            if (Math.abs(minutes) < 1) {
+                                this.relativeText = 'now';
+                                return;
+                            }
+
+                            if (Math.abs(minutes) < 60) {
+                                this.relativeText = minutes > 0
+                                    ? ('in ' + minutes + ' min')
+                                    : (Math.abs(minutes) + ' min ago');
+                                return;
+                            }
+
+                            const hours = Math.round(Math.abs(minutes) / 60);
+                            const unit = hours === 1 ? 'hour' : 'hours';
+                            this.relativeText = minutes > 0
+                                ? ('in ' + hours + ' ' + unit)
+                                : (hours + ' ' + unit + ' ago');
+                        }
+                    }"
                      class="medication-entry rounded-xl border p-3 transition-all duration-300 cursor-pointer active:scale-[0.98] hover:shadow-lg backdrop-blur-sm {{ $status['bg'] }} {{ $status['isTaken'] ? 'opacity-75' : '' }}"
                      style="box-shadow: inset 0 1px 0 rgba(255,255,255,0.35);"
                      data-medication-id="{{ $medication->id }}"
@@ -63,9 +114,12 @@
                                 <h4 data-med-name class="font-extrabold text-gray-900 text-sm truncate {{ $status['isTaken'] ? 'line-through' : '' }}">
                                     {{ $medication->name }}
                                 </h4>
-                                <span class="text-xs font-bold text-gray-500 flex-shrink-0">
-                                    {{ \Carbon\Carbon::parse($time)->format('g:i A') }}
-                                </span>
+                                <div class="text-right flex-shrink-0">
+                                    <span class="text-xs font-bold text-gray-500 block">
+                                        {{ \Carbon\Carbon::parse($time)->format('g:i A') }}
+                                    </span>
+                                    <span class="text-xs font-semibold text-gray-400" x-text="relativeText"></span>
+                                </div>
                             </div>
                             <div class="flex items-center justify-between mt-0.5">
                                 <p class="text-gray-500 text-xs font-medium">

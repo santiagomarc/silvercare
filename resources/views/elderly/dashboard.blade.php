@@ -20,17 +20,30 @@
         }
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            height: 36px;
-            width: 36px;
+            height: 48px;
+            width: 48px;
             border-radius: 50%;
             background: #fff;
             border: 6px solid currentColor;
             cursor: pointer;
-            margin-top: -14px;
+            margin-top: -20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            transition: transform 0.1s ease;
+        }
+        input[type=range]::-moz-range-thumb {
+            height: 48px;
+            width: 48px;
+            border-radius: 50%;
+            background: #fff;
+            border: 6px solid currentColor;
+            cursor: pointer;
             box-shadow: 0 4px 10px rgba(0,0,0,0.15);
             transition: transform 0.1s ease;
         }
         input[type=range]:active::-webkit-slider-thumb {
+            transform: scale(1.2);
+        }
+        input[type=range]:active::-moz-range-thumb {
             transform: scale(1.2);
         }
         input[type=range]::-webkit-slider-runnable-track {
@@ -39,7 +52,17 @@
             background: #E5E7EB;
             border-radius: 999px;
         }
-        input[type=range]:focus { outline: none; }
+        input[type=range]::-moz-range-track {
+            width: 100%;
+            height: 8px;
+            background: #E5E7EB;
+            border-radius: 999px;
+        }
+        input[type=range]:focus-visible {
+            outline: 2px solid #3451d1;
+            outline-offset: 4px;
+            border-radius: 4px;
+        }
     </style>
     @endpush
 
@@ -63,36 +86,85 @@
 
         <x-flash-messages />
 
-        @if(!$linkedCaregiver)
-            <section class="mb-6 rounded-2xl border border-blue-200 bg-blue-50/80 backdrop-blur-sm p-5 shadow-sm">
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div>
-                        <h2 class="text-lg font-extrabold text-gray-900">Link Your Caregiver</h2>
-                        <p class="text-sm text-gray-600 mt-1">Ask your caregiver for a 6-digit PIN, then enter it below.</p>
+        {{-- ╔══════════════════╗
+             ║  GREETING BANNER ║
+             ╚══════════════════╝ --}}
+        @php
+            $dashboardNow = now()->timezone(config('app.timezone', 'Asia/Manila'));
+            $hour = $dashboardNow->hour;
+            $greeting = 'Good evening';
+            if ($hour < 12) {
+                $greeting = 'Good morning';
+            } elseif ($hour < 17) {
+                $greeting = 'Good afternoon';
+            }
+            $firstName = explode(' ', Auth::user()->name)[0];
+        @endphp
+        <div class="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-2 relative z-10">
+            <div>
+                <h2 class="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
+                    {{ $greeting }}, <span class="text-[#000080]">{{ $firstName }}</span> <span class="text-2xl" aria-hidden="true">👋</span>
+                </h2>
+            </div>
+            <div class="hidden sm:block md:text-right">
+                <p class="text-xs font-bold text-[#000080]/60 uppercase tracking-widest leading-none">{{ $dashboardNow->format('l') }}</p>
+                <p class="text-lg font-extrabold text-[#000080] leading-none mt-1">{{ $dashboardNow->format('M j, Y') }}</p>
+            </div>
+        </div>
+
+        {{-- ╔══════════════════════════════╗
+             ║  ONBOARDING NUDGE BANNER     ║
+             ╚══════════════════════════════╝ --}}
+        @php
+            $dashboardProfile = Auth::user()->profile;
+            $completion = $profileCompletion ?? [
+                'personal_complete' => false,
+                'emergency_complete' => false,
+                'medical_complete' => false,
+                'is_complete' => false,
+            ];
+            $personalStepComplete = $completion['personal_complete'];
+            $emergencyStepComplete = $completion['emergency_complete'];
+            $medicalStepComplete = $completion['medical_complete'];
+            $showProfileNudge = $dashboardProfile && !($completion['is_complete'] ?? false);
+        @endphp
+        @if($showProfileNudge)
+            <div class="mb-5 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50/70 backdrop-blur-sm px-5 py-4 shadow-sm"
+                 x-data="{ dismissed: false }"
+                 x-show="!dismissed"
+                 x-transition>
+                <div class="flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-extrabold text-gray-900">Complete your health profile</p>
+                            <p class="text-xs text-gray-500 mt-0.5">
+                                Complete your profile:
+                                <span class="font-bold {{ $personalStepComplete ? 'text-emerald-700' : 'text-gray-500' }}">{{ $personalStepComplete ? '☑' : '☐' }} Personal</span>
+                                <span class="font-bold {{ $emergencyStepComplete ? 'text-emerald-700' : 'text-gray-500' }}">{{ $emergencyStepComplete ? '☑' : '☐' }} Emergency</span>
+                                <span class="font-bold {{ $medicalStepComplete ? 'text-emerald-700' : 'text-gray-500' }}">{{ $medicalStepComplete ? '☑' : '☐' }} Medical</span>
+                            </p>
+                        </div>
                     </div>
-
-                    <form method="POST" action="{{ route('elderly.link-caregiver') }}" class="flex items-center gap-2">
-                        @csrf
-                        <input
-                            type="text"
-                            name="code"
-                            inputmode="numeric"
-                            maxlength="6"
-                            pattern="[0-9]{6}"
-                            placeholder="000000"
-                            class="w-32 rounded-xl border-2 border-blue-200 bg-white px-3 py-2 text-center text-lg font-black tracking-[0.2em] text-gray-900 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20"
-                            required
-                        >
-                        <button type="submit" class="rounded-xl bg-[#000080] px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-900 transition-colors">
-                            Link
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <a href="{{ route('profile.completion') }}"
+                           class="rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-4 py-2 transition-colors shadow-sm">
+                            Complete Now →
+                        </a>
+                        <button @click="dismissed = true"
+                                class="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                                aria-label="Dismiss">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
                         </button>
-                    </form>
+                    </div>
                 </div>
-
-                @error('code')
-                    <p class="mt-3 text-sm font-semibold text-red-600">{{ $message }}</p>
-                @enderror
-            </section>
+            </div>
         @endif
 
         {{-- ╔══════════════════╗
@@ -103,6 +175,7 @@
             :medication-logs="$medicationLogs"
             :vitals-data="$vitalsData"
             :checklists="$todayChecklists"
+            :mood-recorded="$moodRecordedToday"
             :daily-goals-progress="$dailyGoalsProgress"
         />
 
@@ -132,37 +205,46 @@
                 <div class="ambient-orb -right-6 -top-6 h-36 w-36 bg-amber-200/35"></div>
                 <div class="ambient-orb -left-8 bottom-0 h-32 w-32 bg-sky-200/25"></div>
 
-                <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="relative z-10 space-y-5">
+                    <section class="rounded-2xl border border-white/65 bg-white/55 backdrop-blur-sm p-4">
+                        <div id="today-details" class="pt-1">
+                            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                {{-- LEFT COLUMN: Mood + Medications --}}
+                                <div class="lg:col-span-7 space-y-6">
+                                    <div id="today-mood-tracker">
+                                        <x-elderly-mood-tracker :initial-mood="$todayMood" />
+                                    </div>
 
-                {{-- LEFT COLUMN: Mood + Medications --}}
-                <div class="lg:col-span-7 space-y-6">
-                    <x-elderly-mood-tracker :initial-mood="$todayMood" />
+                                    <x-medication-list
+                                        :medications="$todayMedications"
+                                        :logs="$medicationLogs"
+                                    />
+                                </div>
 
-                    <x-medication-list
-                        :medications="$todayMedications"
-                        :logs="$medicationLogs"
-                    />
+                                {{-- RIGHT COLUMN: Garden + Tasks --}}
+                                <div class="lg:col-span-5 space-y-5">
+                                    <x-elderly-garden
+                                        :completed-checklists="$completedChecklists"
+                                        :total-checklists="$totalChecklists"
+                                        :taken-medication-doses="$takenMedicationDoses"
+                                        :total-medication-doses="$totalMedicationDoses"
+                                        :completed-vitals="$completedVitals"
+                                        :total-required-vitals="$totalRequiredVitals"
+                                        :streak-days="$gardenStreakDays"
+                                        :is-wilting="$gardenIsWilting"
+                                        :missed-count="$gardenMissedCount"
+                                    />
+
+                                    <x-task-list
+                                        :checklists="$todayChecklists"
+                                        :completed-count="$completedChecklists"
+                                        :total-count="$totalChecklists"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </section>
                 </div>
-
-                {{-- RIGHT COLUMN: Garden + Tasks --}}
-                <div class="lg:col-span-5 space-y-5">
-                    <x-elderly-garden
-                        :completed-checklists="$completedChecklists"
-                        :total-checklists="$totalChecklists"
-                        :taken-medication-doses="$takenMedicationDoses"
-                        :total-medication-doses="$totalMedicationDoses"
-                        :completed-vitals="$completedVitals"
-                        :total-required-vitals="$totalRequiredVitals"
-                    />
-
-                    <x-task-list
-                        :checklists="$todayChecklists"
-                        :completed-count="$completedChecklists"
-                        :total-count="$totalChecklists"
-                    />
-                </div>
-
-            </div>
         </div>
 
             {{-- TAB PANEL: HEALTH --}}
@@ -235,7 +317,7 @@
                 <div class="ambient-orb right-0 top-0 h-40 w-40 bg-rose-200/30"></div>
             <div class="ambient-orb left-12 bottom-0 h-32 w-32 bg-indigo-200/25"></div>
 
-            <div class="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="relative z-10 grid grid-cols-1 md:grid-cols-4 gap-4">
 
                 {{-- 1. WELLNESS CENTER --}}
                      <a href="{{ route('elderly.wellness.index') }}"
@@ -269,7 +351,23 @@
                     </div>
                 </a>
 
-                {{-- 3. HEALTH ANALYTICS --}}
+                {{-- 3. CARE MESSAGES --}}
+                     <a href="{{ route('elderly.messages.index') }}"
+                         class="card-gradient group bg-gradient-to-br from-indigo-500 to-sky-600 p-6 min-h-[140px] flex flex-col justify-between text-white shadow-[0_30px_55px_-30px_rgba(79,70,229,0.66)]">
+                    <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl" aria-hidden="true"></div>
+                    <div class="relative z-10">
+                        <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit mb-4">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h8m-8 4h5m-7 6l-3-3H3a2 2 0 01-2-2V7a2 2 0 012-2h18a2 2 0 012 2v8a2 2 0 01-2 2h-8l-5 5"></path></svg>
+                        </div>
+                        <h3 class="text-lg font-extrabold leading-tight">Care Messages</h3>
+                        <p class="text-indigo-100 text-sm font-medium mt-0.5">Message your caregiver</p>
+                    </div>
+                    <div class="absolute bottom-4 right-4 h-8 w-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-indigo-600 transition-all" aria-hidden="true">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                    </div>
+                </a>
+
+                {{-- 4. HEALTH ANALYTICS --}}
                      <a href="{{ route('elderly.vitals.analytics') }}"
                          class="card-gradient group bg-gradient-to-br from-indigo-500 to-purple-600 p-6 min-h-[140px] flex flex-col justify-between text-white shadow-[0_30px_55px_-30px_rgba(99,102,241,0.66)]">
                     <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl" aria-hidden="true"></div>
@@ -317,12 +415,11 @@
          ║  GLOBAL OVERLAYS & WIDGETS                              ║
          ╚══════════════════════════════════════════════════════════╝ --}}
 
-    {{-- Toast notification container --}}
+    {{-- Toast notification container (H2 FIX: icons + color for WCAG 1.4.1) --}}
     <div x-data class="toast-container" aria-live="polite" aria-atomic="true">
         <template x-for="t in $store.toast.queue" :key="t.id">
             <div class="toast"
                  :class="'toast-' + t.type"
-                 x-text="t.message"
                  x-show="t.visible"
                  x-transition:enter="transition ease-out duration-300"
                  x-transition:enter-start="opacity-0 translate-y-4"
@@ -330,7 +427,10 @@
                  x-transition:leave="transition ease-in duration-200"
                  x-transition:leave-start="opacity-100 translate-y-0"
                  x-transition:leave-end="opacity-0 translate-y-4"
-                 role="alert">
+                 role="alert"
+                 :aria-label="t.type + ': ' + t.message">
+                <span x-text="t.icon" aria-hidden="true" class="mr-1"></span>
+                <span x-text="t.message"></span>
             </div>
         </template>
     </div>

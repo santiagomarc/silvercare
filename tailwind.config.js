@@ -39,23 +39,32 @@ export default {
             /* ── Brand & semantic colors ─────────────────── */
             colors: {
                 navy: {
-                    DEFAULT: '#000080',
-                    50:  '#e6e6f2',
-                    100: '#b3b3d9',
-                    200: '#8080bf',
-                    300: '#4d4da6',
-                    400: '#26268f',
-                    500: '#000080',
-                    600: '#000070',
-                    700: '#000060',
-                    800: '#000050',
-                    900: '#000040',
+                    DEFAULT: '#3451d1',
+                    50:  '#eef2ff',
+                    100: '#dce4fc',
+                    200: '#b9cafc',
+                    300: '#8ba6f7',
+                    400: '#5b7aed',
+                    500: '#3451d1',
+                    600: '#2a3fad',
+                    700: '#1e2f8a',
+                    800: '#152068',
+                    900: '#0c1347',
+                    950: '#060a2e',
                 },
                 silver: {
                     bg:      '#EBEBEB',
                     'bg-alt': '#DEDEDE',
                     card:    '#FFFFFF',
                 },
+            },
+
+            boxShadow: {
+                'card': '0 1px 3px rgba(0,0,0,0.04), 0 8px 24px -8px rgba(15,23,42,0.08)',
+                'card-hover': '0 2px 6px rgba(0,0,0,0.06), 0 16px 40px -12px rgba(15,23,42,0.12)',
+                'elevated': '0 4px 12px rgba(0,0,0,0.05), 0 24px 48px -16px rgba(15,23,42,0.10)',
+                'glow-brand': '0 0 0 1px rgba(52,81,209,0.08), 0 12px 32px -8px rgba(52,81,209,0.18)',
+                'inner-ring': 'inset 0 1px 0 rgba(255,255,255,0.12)',
             },
 
             /* ── Accessible font sizing (18px base for elderly) ── */

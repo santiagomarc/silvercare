@@ -29,8 +29,10 @@ class MedicationList extends Component
 
     private function calculateProgress(): void
     {
+        $today = Carbon::today();
+
         foreach ($this->medications as $med) {
-            $times = $med->times_of_day ?? [];
+            $times = $med->scheduleTimesForDate($today);
             $this->totalDoses += count($times);
             foreach ($times as $t) {
                 $lk = $med->id . '_' . Carbon::parse($t)->format('H:i');

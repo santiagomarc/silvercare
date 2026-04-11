@@ -3,10 +3,8 @@
 namespace App\Http\Middleware;
 
 use Closure;
-use App\Models\UserProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 class RedirectBasedOnRole
@@ -22,22 +20,17 @@ class RedirectBasedOnRole
             $user = Auth::user();
             $profile = $user->profile;
 
-            if (! $profile) {
-                $profile = UserProfile::create([
-                    'user_id' => $user->id,
-                    'user_type' => 'elderly',
-                    'username' => Str::slug($user->name) ?: ('user-' . $user->id),
-                    'profile_completed' => false,
-                    'is_active' => true,
-                ]);
+            // No profile? Send them to role selection — do NOT silently create
+            // one, as that could accidentally assign the wrong role.
+            if (!$profile) {
+                return redirect()->route('auth.select-role')
+                    ->with('info', 'Please select your account type to continue.');
             }
 
-            if ($profile) {
-                if ($profile->user_type === 'elderly') {
-                    return redirect()->route('dashboard');
-                } elseif ($profile->user_type === 'caregiver') {
-                    return redirect()->route('caregiver.dashboard');
-                }
+            if ($profile->user_type === 'elderly') {
+                return redirect()->route('dashboard');
+            } elseif ($profile->user_type === 'caregiver') {
+                return redirect()->route('caregiver.dashboard');
             }
         }
 

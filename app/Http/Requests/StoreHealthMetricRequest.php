@@ -44,6 +44,22 @@ class StoreHealthMetricRequest extends FormRequest
                     $validator->errors()->add('value_text', 'Blood pressure must be in format like 120/80.');
                 }
 
+                // H3 FIX: Validate that BP components are within medically plausible ranges.
+                if ($type === 'blood_pressure' && $valueText !== '' && preg_match('/^(\d{2,3})\/(\d{2,3})$/', $valueText, $bpMatch)) {
+                    $systolic  = (int) $bpMatch[1];
+                    $diastolic = (int) $bpMatch[2];
+
+                    if ($systolic < 60 || $systolic > 250) {
+                        $validator->errors()->add('value_text', 'Systolic pressure must be between 60 and 250 mmHg.');
+                    }
+                    if ($diastolic < 40 || $diastolic > 150) {
+                        $validator->errors()->add('value_text', 'Diastolic pressure must be between 40 and 150 mmHg.');
+                    }
+                    if ($systolic > 0 && $diastolic > 0 && $systolic <= $diastolic) {
+                        $validator->errors()->add('value_text', 'Systolic pressure must be higher than diastolic.');
+                    }
+                }
+
                 return;
             }
 

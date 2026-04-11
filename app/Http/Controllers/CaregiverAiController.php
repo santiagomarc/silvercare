@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ChatSession;
+use App\Http\Controllers\Concerns\ResolvesAiSession;
+use App\Http\Requests\AiChatRequest;
 use App\Services\AiAssistantService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -11,6 +12,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CaregiverAiController extends Controller
 {
+    use ResolvesAiSession;
+
     protected AiAssistantService $aiService;
 
     public function __construct(AiAssistantService $aiService)
@@ -21,13 +24,8 @@ class CaregiverAiController extends Controller
     /**
      * Handle a caregiver AI analysis request (non-streaming fallback).
      */
-    public function chat(Request $request)
+    public function chat(AiChatRequest $request)
     {
-        $request->validate([
-            'message' => 'required|string|max:1000',
-            'session_id' => 'nullable|integer',
-        ]);
-
         try {
             $caregiver = Auth::user();
             $elderlyProfileId = $caregiver->profile->id ?? null;
@@ -73,13 +71,8 @@ class CaregiverAiController extends Controller
     /**
      * Stream caregiver AI analysis via Server-Sent Events.
      */
-    public function stream(Request $request): StreamedResponse
+    public function stream(AiChatRequest $request): StreamedResponse
     {
-        $request->validate([
-            'message' => 'required|string|max:1000',
-            'session_id' => 'nullable|integer',
-        ]);
-
         $caregiver = Auth::user();
         $elderlyProfileId = $this->getLinkedElderlyId($caregiver);
         $session = $this->resolveSession($caregiver, $request->input('session_id'));
@@ -152,6 +145,7 @@ class CaregiverAiController extends Controller
      */
     public function newSession()
     {
+        /** @var \App\Models\User $caregiver */
         $caregiver = Auth::user();
         $session = $caregiver->chatSessions()->create([
             'title' => 'Analysis ' . now()->format('M j, Y g:i A'),
@@ -179,18 +173,4 @@ class CaregiverAiController extends Controller
         return $elderlyProfile?->id;
     }
 
-    /**
-     * Resolve the chat session.
-     */
-    protected function resolveSession($user, ?int $sessionId): ChatSession
-    {
-        if ($sessionId) {
-            $session = ChatSession::where('id', $sessionId)
-                ->where('user_id', $user->id)
-                ->first();
-            if ($session) return $session;
-        }
-
-        return $user->activeChatSession();
-    }
 }

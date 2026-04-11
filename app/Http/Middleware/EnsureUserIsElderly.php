@@ -2,11 +2,9 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\UserProfile;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureUserIsElderly
@@ -18,26 +16,23 @@ class EnsureUserIsElderly
     public function handle(Request $request, Closure $next): Response
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return redirect()->route('login');
         }
 
         $profile = $user->profile;
 
-        if (! $profile) {
-            $profile = UserProfile::create([
-                'user_id' => $user->id,
-                'user_type' => 'elderly',
-                'username' => Str::slug($user->name) ?: ('user-' . $user->id),
-                'profile_completed' => false,
-                'is_active' => true,
-            ]);
+        // No profile at all — send them to role selection rather than
+        // silently creating a potentially-wrong profile.
+        if (!$profile) {
+            return redirect()->route('auth.select-role')
+                ->with('info', 'Please select your account type to continue.');
         }
 
-        if (!$profile || $profile->user_type !== 'elderly') {
+        if ($profile->user_type !== 'elderly') {
             // Redirect caregivers to their dashboard
-            if ($profile && $profile->user_type === 'caregiver') {
+            if ($profile->user_type === 'caregiver') {
                 return redirect()->route('caregiver.dashboard')
                     ->with('error', 'You do not have access to the elderly interface.');
             }
@@ -49,3 +44,4 @@ class EnsureUserIsElderly
         return $next($request);
     }
 }
+
