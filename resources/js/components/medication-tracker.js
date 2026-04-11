@@ -36,6 +36,11 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
          * @param {HTMLElement} entry — the .medication-entry element
          */
         async toggleEntry(entry) {
+            // C1 CLIENT FIX: Processing guard prevents a second click from
+            // firing while the first request is still in-flight.
+            if (entry.dataset.processing === 'true') return;
+            entry.dataset.processing = 'true';
+
             const medicationId = entry.dataset.medicationId;
             const time = entry.dataset.time;
             const isTaken = entry.dataset.taken === 'true';
@@ -45,10 +50,12 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
 
             if (!canTake && !isTaken) {
                 toast?.info('Too early! Wait until the scheduled time window.');
+                entry.dataset.processing = 'false';
                 return;
             }
             if (isTaken && !canUndo) {
                 toast?.info('Cannot unmark — grace period has ended.');
+                entry.dataset.processing = 'false';
                 return;
             }
 
@@ -111,6 +118,7 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
                 console.error('Medication toggle failed:', err);
                 toast?.error(err.message);
             } finally {
+                entry.dataset.processing = 'false';
                 entry.style.opacity = '';
             }
         },

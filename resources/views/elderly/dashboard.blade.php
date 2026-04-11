@@ -415,12 +415,11 @@
          ║  GLOBAL OVERLAYS & WIDGETS                              ║
          ╚══════════════════════════════════════════════════════════╝ --}}
 
-    {{-- Toast notification container --}}
+    {{-- Toast notification container (H2 FIX: icons + color for WCAG 1.4.1) --}}
     <div x-data class="toast-container" aria-live="polite" aria-atomic="true">
         <template x-for="t in $store.toast.queue" :key="t.id">
             <div class="toast"
                  :class="'toast-' + t.type"
-                 x-text="t.message"
                  x-show="t.visible"
                  x-transition:enter="transition ease-out duration-300"
                  x-transition:enter-start="opacity-0 translate-y-4"
@@ -428,7 +427,10 @@
                  x-transition:leave="transition ease-in duration-200"
                  x-transition:leave-start="opacity-100 translate-y-0"
                  x-transition:leave-end="opacity-0 translate-y-4"
-                 role="alert">
+                 role="alert"
+                 :aria-label="t.type + ': ' + t.message">
+                <span x-text="t.icon" aria-hidden="true" class="mr-1"></span>
+                <span x-text="t.message"></span>
             </div>
         </template>
     </div>

@@ -12,6 +12,7 @@ use App\Services\MedicationWindowService;
 use App\Services\ProfileCompletionService;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class ElderlyDashboardController extends Controller
@@ -206,53 +207,60 @@ class ElderlyDashboardController extends Controller
             ], 400);
         }
 
-        $existingLog = MedicationLog::where('elderly_id', $elderlyId)
-            ->where('medication_id', $medication->id)
-            ->where('scheduled_time', $scheduledDateTime)
-            ->first();
+        // C1 FIX: Wrap in transaction + pessimistic lock to prevent race condition
+        // on rapid double-clicks which previously caused double stock decrements.
+        return DB::transaction(function () use (
+            $elderlyId, $medication, $scheduledDateTime, $now, $windowEnd, $takenLate, $status
+        ) {
+            $existingLog = MedicationLog::where('elderly_id', $elderlyId)
+                ->where('medication_id', $medication->id)
+                ->where('scheduled_time', $scheduledDateTime)
+                ->lockForUpdate()
+                ->first();
 
-        if ($existingLog?->is_taken) {
+            if ($existingLog?->is_taken) {
+                return response()->json([
+                    'success' => true,
+                    'is_taken' => true,
+                    'taken_at' => $existingLog->taken_at?->toISOString(),
+                    'taken_late' => $existingLog->taken_at?->gt($windowEnd) ?? false,
+                    'status' => $existingLog->taken_at?->gt($windowEnd) ? 'taken_late' : 'taken',
+                    'message' => 'Medication already marked as taken.',
+                ]);
+            }
+
+            $log = MedicationLog::updateOrCreate(
+                [
+                    'elderly_id' => $elderlyId,
+                    'medication_id' => $medication->id,
+                    'scheduled_time' => $scheduledDateTime,
+                ],
+                [
+                    'is_taken' => true,
+                    'taken_at' => $now,
+                ]
+            );
+
+            if ($medication->track_inventory && $medication->current_stock > 0) {
+                $medication->decrement('current_stock');
+            }
+
+            // Create notification for medication taken (with late flag)
+            $this->notificationService->createMedicationTakenNotification(
+                $elderlyId,
+                $medication->name,
+                $takenLate
+            );
+
             return response()->json([
                 'success' => true,
                 'is_taken' => true,
-                'taken_at' => $existingLog->taken_at?->toISOString(),
-                'taken_late' => $existingLog->taken_at?->gt($windowEnd) ?? false,
-                'status' => $existingLog->taken_at?->gt($windowEnd) ? 'taken_late' : 'taken',
-                'message' => 'Medication already marked as taken.',
+                'taken_at' => $log->taken_at->toISOString(),
+                'taken_late' => $takenLate,
+                'status' => $status,
+                'message' => $takenLate ? 'Medication marked as taken (late)' : 'Medication taken!',
             ]);
-        }
-
-        $log = MedicationLog::updateOrCreate(
-            [
-                'elderly_id' => $elderlyId,
-                'medication_id' => $medication->id,
-                'scheduled_time' => $scheduledDateTime,
-            ],
-            [
-                'is_taken' => true,
-                'taken_at' => $now,
-            ]
-        );
-
-        if ($medication->track_inventory && $medication->current_stock > 0) {
-            $medication->decrement('current_stock');
-        }
-
-        // Create notification for medication taken (with late flag)
-        $this->notificationService->createMedicationTakenNotification(
-            $elderlyId,
-            $medication->name,
-            $takenLate
-        );
-
-        return response()->json([
-            'success' => true,
-            'is_taken' => true,
-            'taken_at' => $log->taken_at->toISOString(),
-            'taken_late' => $takenLate,
-            'status' => $status,
-            'message' => $takenLate ? 'Medication marked as taken (late)' : 'Medication taken!',
-        ]);
+        });
     }
 
     /**

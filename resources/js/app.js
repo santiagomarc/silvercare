@@ -11,6 +11,7 @@ import gardenWellness     from './components/garden-wellness.js';
 import dashboardTabs      from './components/dashboard-tabs.js';
 import googleFitSync      from './components/google-fit-sync.js';
 import heroAction         from './components/hero-action.js';
+import checklistPageItem  from './components/checklist-page-item.js';
 import { initOfflineQueue } from './utils/offline-queue.js';
 
 // ── Theme bootstrap (5H: Dark Mode Toggle) ──────────────────────
@@ -49,13 +50,15 @@ initOfflineQueue();
 Alpine.store('toast', toastStore);
 
 // ── Register Alpine.data() components ────────────────────────────
-Alpine.data('moodTracker',       (initialMood)    => moodTracker(initialMood));
-Alpine.data('checklistTracker',  (done, total)    => checklistTracker(done, total));
-Alpine.data('medicationTracker', (taken, total)   => medicationTracker(taken, total));
-Alpine.data('gardenWellness',    (c, m, v)        => gardenWellness(c, m, v));
-Alpine.data('dashboardTabs',     (tab)            => dashboardTabs(tab));
-Alpine.data('googleFitSync',     ()               => googleFitSync());
-Alpine.data('heroAction',        (opts)           => heroAction(opts));
+Alpine.data('moodTracker',        (initialMood)         => moodTracker(initialMood));
+Alpine.data('checklistTracker',   (done, total)         => checklistTracker(done, total));
+Alpine.data('checklistPageItem',  (id, isCompleted)     => checklistPageItem(id, isCompleted));
+Alpine.data('medicationTracker',  (taken, total)        => medicationTracker(taken, total));
+// H7 FIX: gardenWellness now takes 4 args (checklists, meds, vitals, meta)
+Alpine.data('gardenWellness',     (c, m, v, meta)       => gardenWellness(c, m, v, meta));
+Alpine.data('dashboardTabs',      (tab)                 => dashboardTabs(tab));
+Alpine.data('googleFitSync',      ()                    => googleFitSync());
+Alpine.data('heroAction',         (opts)                => heroAction(opts));
 
 window.Alpine = Alpine;
 Alpine.start();

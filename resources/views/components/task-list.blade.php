@@ -28,8 +28,13 @@
         </div>
 
         {{-- Progress Bar --}}
-        <div class="progress-track bg-blue-100 mb-4">
+        <div class="progress-track bg-blue-100 mb-4" aria-hidden="true">
             <div class="progress-fill bg-gradient-to-r from-blue-400 to-blue-500"
+                 role="progressbar"
+                 :aria-valuenow="progress"
+                 aria-valuemin="0"
+                 aria-valuemax="100"
+                 :aria-label="'Tasks: ' + completed + ' of ' + total + ' completed'"
                  :style="'width:' + progress + '%'"></div>
         </div>
 

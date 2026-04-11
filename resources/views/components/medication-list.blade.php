@@ -26,8 +26,14 @@
     </div>
 
     {{-- Progress Bar --}}
-    <div class="relative z-10 progress-track bg-white/20 mb-4">
-        <div class="progress-fill bg-white" :style="'width:' + progress + '%'"></div>
+    <div class="relative z-10 progress-track bg-white/20 mb-4" aria-hidden="true">
+        <div class="progress-fill bg-white"
+             role="progressbar"
+             :aria-valuenow="progress"
+             aria-valuemin="0"
+             aria-valuemax="100"
+             :aria-label="'Medications: ' + taken + ' of ' + total + ' taken'"
+             :style="'width:' + progress + '%'"></div>
     </div>
 
     {{-- Auto-collapsed summary once all doses are taken --}}

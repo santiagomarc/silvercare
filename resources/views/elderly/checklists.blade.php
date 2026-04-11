@@ -9,7 +9,8 @@
     />
 
     <main id="main-content" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
+
+        {{-- H6 FIX: Flash messages now shown via toast JS; keep server-side fallback for non-JS submissions --}}
         @if(session('success'))
             <div class="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
                 {{ session('success') }}
@@ -44,27 +45,37 @@
 
                 <!-- Tasks for this date -->
                 <div class="space-y-3">
-                    @foreach($dayChecklists as $checklist)
-                        <div class="bg-white rounded-2xl shadow-md overflow-hidden {{ $checklist->is_completed ? 'opacity-75' : '' }} transition-all duration-300">
+                @foreach($dayChecklists as $checklist)
+                        {{-- H6 FIX: Use Alpine x-data + AJAX toggle, no form POST page reload --}}
+                        <div x-data="checklistPageItem({{ $checklist->id }}, {{ $checklist->is_completed ? 'true' : 'false' }})"
+                             class="bg-white rounded-2xl shadow-md overflow-hidden transition-all duration-300"
+                             :class="completed ? 'opacity-75' : ''">
                             <div class="p-5 flex items-center">
                                 <!-- Toggle Button -->
-                                <form action="{{ route('elderly.checklists.toggle', $checklist) }}" method="POST" class="mr-4">
-                                    @csrf
-                                    <button type="submit" class="w-10 h-10 {{ $checklist->is_completed ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-gray-300 hover:border-green-500' }} border-2 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 shadow-sm">
-                                        @if($checklist->is_completed)
-                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                                        @endif
-                                    </button>
-                                </form>
+                                <button
+                                    @click="toggle"
+                                    :disabled="processing"
+                                    class="mr-4 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 shadow-sm border-2 focus:outline-none focus:ring-4 focus:ring-green-300"
+                                    :class="completed ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-gray-300 hover:border-green-500'"
+                                    :aria-label="completed ? 'Mark incomplete' : 'Mark complete'"
+                                    :aria-pressed="completed">
+                                    <svg x-show="completed" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                    <svg x-show="processing && !completed" class="w-5 h-5 animate-spin opacity-50" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                    </svg>
+                                </button>
 
                                 <!-- Category Icon -->
-                                <div class="flex-shrink-0 mr-4 text-3xl">
+                                <div class="flex-shrink-0 mr-4 text-3xl" aria-hidden="true">
                                     {{ \App\Presenters\ChecklistPresenter::categoryIcon($checklist->category) }}
                                 </div>
 
                                 <!-- Task Content -->
                                 <div class="flex-grow">
-                                    <h3 class="text-lg font-bold text-gray-900 {{ $checklist->is_completed ? 'line-through text-gray-500' : '' }}">
+                                    <h3 class="text-lg font-bold text-gray-900" :class="completed ? 'line-through text-gray-500' : ''">
                                         {{ $checklist->task }}
                                     </h3>
                                     <div class="flex flex-wrap items-center gap-2 mt-1">
@@ -80,7 +91,7 @@
 
                                 <!-- Status Badge -->
                                 <div class="flex-shrink-0 ml-4">
-                                    @if($checklist->is_completed)
+                                    <template x-if="completed">
                                         <div class="text-center">
                                             <span class="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full font-bold">
                                                 ✓ Done
@@ -89,11 +100,12 @@
                                                 <p class="text-xs text-gray-400 mt-1">{{ $checklist->completed_at->format('g:i A') }}</p>
                                             @endif
                                         </div>
-                                    @elseif($isPast)
+                                    </template>
+                                    <template x-if="!completed && {{ $isPast ? 'true' : 'false' }}">
                                         <span class="inline-flex items-center px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full font-bold">
                                             Overdue
                                         </span>
-                                    @endif
+                                    </template>
                                 </div>
                             </div>
 
@@ -102,7 +114,7 @@
                                     <p class="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">📝 {{ $checklist->notes }}</p>
                                 </div>
                             @endif
-                        </div>
+                        </div>{{-- end x-data checklist item --}}
                     @endforeach
                 </div>
             </div>

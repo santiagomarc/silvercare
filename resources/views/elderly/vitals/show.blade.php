@@ -338,6 +338,9 @@
 
     </main>
 
+    {{-- ─────────────────────────────────────────────
+         RECORD MODAL
+    ───────────────────────────────────────────── --}}
     <div id="recordModal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 transition-all duration-300 opacity-0" style="transition: opacity 0.3s;">
         <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden transform scale-95 transition-transform duration-300" id="recordModalContent">
             <div class="px-8 py-6 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
@@ -414,6 +417,41 @@
                     Save Record <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                 </button>
             </form>
+        </div>
+    </div>
+
+    {{-- ─────────────────────────────────────────────
+         H4 FIX: Delete Confirmation Modal
+         Replaces window.confirm() with a large, senior-friendly modal.
+    ───────────────────────────────────────────── --}}
+    <div id="deleteConfirmModal"
+         class="fixed inset-0 bg-gray-900/70 backdrop-blur-sm z-[60] hidden items-center justify-center p-6"
+         style="transition: opacity 0.25s;"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="deleteModalTitle">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center transform transition-transform duration-300 scale-95" id="deleteConfirmContent">
+            <div class="flex items-center justify-center w-20 h-20 mx-auto mb-5 rounded-full bg-red-50 border-4 border-red-100">
+                <svg class="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+            </div>
+            <h2 id="deleteModalTitle" class="text-2xl font-[900] text-gray-900 mb-2">Delete This Record?</h2>
+            <p class="text-base text-gray-500 font-medium mb-8">This action cannot be undone.</p>
+            <div class="flex gap-4">
+                <button
+                    id="deleteCancelBtn"
+                    onclick="closeDeleteModal()"
+                    class="flex-1 py-4 text-lg font-bold text-gray-700 bg-gray-100 rounded-2xl hover:bg-gray-200 transition-colors min-h-[56px] focus:outline-none focus:ring-4 focus:ring-gray-300">
+                    Cancel
+                </button>
+                <button
+                    id="deleteConfirmBtn"
+                    onclick="confirmDelete()"
+                    class="flex-1 py-4 text-lg font-bold text-white bg-red-600 rounded-2xl hover:bg-red-700 transition-colors min-h-[56px] shadow-lg shadow-red-200 focus:outline-none focus:ring-4 focus:ring-red-400">
+                    Yes, Delete
+                </button>
+            </div>
         </div>
     </div>
 
@@ -606,46 +644,97 @@
             }
         }
 
-        async function deleteRecord(id) {
-            if (!confirm('Are you sure you want to remove this record?')) return;
+        // H4 FIX: Delete modal state
+        let _pendingDeleteId = null;
+
+        function deleteRecord(id) {
+            _pendingDeleteId = id;
+            openDeleteModal();
+        }
+
+        function openDeleteModal() {
+            const modal = document.getElementById('deleteConfirmModal');
+            const content = document.getElementById('deleteConfirmContent');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            requestAnimationFrame(() => {
+                modal.style.opacity = '1';
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            });
+            document.body.style.overflow = 'hidden';
+            document.getElementById('deleteCancelBtn').focus();
+        }
+
+        function closeDeleteModal() {
+            const modal = document.getElementById('deleteConfirmModal');
+            const content = document.getElementById('deleteConfirmContent');
+            modal.style.opacity = '0';
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.body.style.overflow = '';
+                _pendingDeleteId = null;
+            }, 250);
+        }
+
+        async function confirmDelete() {
+            if (!_pendingDeleteId) return;
+            const id = _pendingDeleteId;
+            closeDeleteModal();
             try {
                 const response = await fetch(`/my-vitals/${id}`, {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN, 'X-Requested-With': 'XMLHttpRequest' }
                 });
                 if (!response.ok) throw new Error('Failed to delete');
-                showToast('Record deleted', 'success');
-                setTimeout(() => window.location.reload(), 500);
+                showToast('Record deleted successfully', 'success');
+                setTimeout(() => window.location.reload(), 600);
             } catch (error) {
                 showToast(error.message, 'error');
             }
         }
 
-        // --- Toasts ---
+        // Close delete modal on backdrop click or Escape
+        document.getElementById('deleteConfirmModal').addEventListener('click', function(e) {
+            if (e.target === this) closeDeleteModal();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeDeleteModal();
+                closeRecordModal();
+            }
+        });
+
+        // --- Toasts (local - matches global toast store durations/icons) ---
         function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
+            const icons = { success: '✅', error: '❌', info: 'ℹ️' };
             const bgClass = type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-gray-800';
-            toast.className = `fixed bottom-8 left-1/2 -translate-x-1/2 ${bgClass} text-white px-8 py-4 rounded-2xl shadow-2xl z-[60] font-bold text-base transform transition-all duration-300 translate-y-10 opacity-0 flex items-center gap-3`;
-            toast.innerHTML = type === 'success' ? `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>${message}` : message;
-            
+            // H1 FIX: Match global toast durations (5s success/info, 7s error)
+            const duration = type === 'error' ? 7000 : 5000;
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-8 left-1/2 -translate-x-1/2 ${bgClass} text-white px-8 py-4 rounded-2xl shadow-2xl z-[60] font-bold text-base transform transition-all duration-300 translate-y-10 opacity-0 flex items-center gap-3 min-w-[260px] max-w-[90vw]`;
+            // H2 FIX: Icon for non-color-only feedback
+            toast.innerHTML = `<span aria-hidden="true" class="text-xl">${icons[type] ?? 'ℹ️'}</span><span>${message}</span>`;
+            toast.setAttribute('role', 'alert');
+
             document.body.appendChild(toast);
-            
+
             requestAnimationFrame(() => {
                 toast.classList.remove('translate-y-10', 'opacity-0');
             });
-            
+
             setTimeout(() => {
                 toast.classList.add('translate-y-10', 'opacity-0');
                 setTimeout(() => toast.remove(), 300);
-            }, 3000);
+            }, duration);
         }
 
-        // Modal triggers
+        // Record modal triggers
         document.getElementById('recordModal').addEventListener('click', function(e) {
             if (e.target === this) closeRecordModal();
-        });
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') closeRecordModal();
         });
     </script>
     @endpush

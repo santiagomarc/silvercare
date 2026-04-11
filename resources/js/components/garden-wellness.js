@@ -37,9 +37,13 @@ export default function gardenWellness(checklists, meds, vitals, meta = {}) {
         },
 
         get stage() {
-            if (this.isWilting) return -1;
-
             const p = this.overallProgress;
+
+            // H5 FIX: Only show wilting when the user is genuinely struggling
+            // (< 50% overall progress). Previously triggered at any % if any
+            // item was missed — psychologically punishing 90%+ completion.
+            if (this.isWilting && p < 50) return -1;
+
             if (p >= 100) return 4;
             if (p >= 75)  return 3;
             if (p >= 50)  return 2;
@@ -95,10 +99,13 @@ export default function gardenWellness(checklists, meds, vitals, meta = {}) {
             // Listen for progress updates from other Alpine components
             window.addEventListener('progress-updated', (e) => {
                 const d = e.detail;
-                if (d.checklists !== undefined) this.checklists.done = d.checklists;
+                if (d.checklists  !== undefined) this.checklists.done  = d.checklists;
                 if (d.checklistTotal !== undefined) this.checklists.total = d.checklistTotal;
                 if (d.medications !== undefined) this.meds.done = d.medications;
                 if (d.medicationTotal !== undefined) this.meds.total = d.medicationTotal;
+                // H7 FIX: Update vitals count in real-time when a vital is recorded.
+                if (d.vitals      !== undefined) this.vitals.done  = d.vitals;
+                if (d.vitalTotal  !== undefined) this.vitals.total = d.vitalTotal;
             });
 
             window.addEventListener('garden-meta-updated', (e) => {
