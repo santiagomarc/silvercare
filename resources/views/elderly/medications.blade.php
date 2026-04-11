@@ -9,6 +9,14 @@
     />
 
     <main id="main-content" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        {{-- Back Navigation --}}
+        <div class="mb-6">
+            <a href="{{ route('dashboard') }}" class="back-nav-pill">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Back to Home
+            </a>
+        </div>
         
         @php
             $today = now();
@@ -118,17 +126,21 @@
                 </div>
             </div>
         @empty
-            <div class="text-center py-16">
-                <div class="text-6xl mb-4">💊</div>
-                <h2 class="text-2xl font-bold text-gray-700 mb-2">No Medications</h2>
-                <p class="text-gray-500">Your caregiver hasn't added any medications yet.</p>
-                <a href="{{ route('dashboard') }}" class="mt-6 inline-flex items-center text-[#000080] hover:underline font-medium">
-                    ← Back to Dashboard
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <svg class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                    </svg>
+                </div>
+                <h3>No medications yet</h3>
+                <p>Your caregiver will add your medications here when needed. Nothing to worry about! 😊</p>
+                <a href="{{ route('dashboard') }}" class="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-navy-500 text-white font-bold rounded-xl hover:bg-navy-600 transition-colors min-h-touch shadow-glow-brand">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                    Back to Dashboard
                 </a>
             </div>
         @endforelse
 
     </main>
 
-    <x-ai-chat-widget />
 </x-dashboard-layout>

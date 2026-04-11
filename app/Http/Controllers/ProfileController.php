@@ -24,7 +24,7 @@ class ProfileController extends Controller
     /**
      * Display the user's profile form.
      */
-    public function edit()
+    public function edit(\App\Services\NotificationService $notificationService)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
@@ -37,7 +37,9 @@ class ProfileController extends Controller
             $profile = new UserProfile();
         }
 
-        return view('profile.edit', compact('user', 'profile'));
+        $unreadNotifications = $profile->id ? $notificationService->getUnreadCount($profile->id) : 0;
+
+        return view('profile.edit', compact('user', 'profile', 'unreadNotifications'));
     }
 
     /**

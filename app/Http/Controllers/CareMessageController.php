@@ -134,28 +134,41 @@ class CareMessageController extends Controller
         ]);
     }
 
-    public function elderlyStore(StoreElderlyCareMessageRequest $request): RedirectResponse
+    public function elderlyStore(StoreElderlyCareMessageRequest $request): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $elderly = Auth::user()?->profile;
         abort_unless($elderly && $elderly->isElderly(), 403);
 
         if (!$this->isMessagingTableReady()) {
+            if ($request->wantsJson()) {
+                return response()->json(['error' => 'Messaging is temporarily unavailable.'], 503);
+            }
             return back()->with('error', 'Messaging is temporarily unavailable. Please run database migrations.');
         }
 
         $caregiver = $elderly->caregiver;
         if (!$caregiver) {
+            if ($request->wantsJson()) {
+                return response()->json(['error' => 'Link a caregiver before sending messages.'], 422);
+            }
             return back()->with('error', 'Link a caregiver before sending messages.');
         }
 
         $validated = $request->validated();
 
-        CareMessage::create([
+        $message = CareMessage::create([
             'caregiver_id' => $caregiver->id,
             'elderly_id' => $elderly->id,
             'sender_profile_id' => $elderly->id,
             'message' => trim($validated['message']),
         ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message->only('id', 'message', 'created_at'),
+            ]);
+        }
 
         return redirect()->route('elderly.messages.index')->with('success', 'Message sent.');
     }
