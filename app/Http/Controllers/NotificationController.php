@@ -44,9 +44,7 @@ class NotificationController extends Controller
         });
 
         // Get counts
-        $unreadCount = (clone $baseQuery)
-            ->where('is_read', false)
-            ->count();
+        $unreadCount = $this->notificationService->getUnreadCount($profile->id);
 
         $totalCount = $notifications->total();
 
@@ -122,10 +120,7 @@ class NotificationController extends Controller
 
         $user = Auth::user();
         
-        $count = Notification::forElderly()
-            ->where('elderly_id', $user->profile->id)
-            ->where('is_read', false)
-            ->count();
+        $count = $this->notificationService->getUnreadCount($user->profile->id);
 
         return response()->json(['count' => $count]);
     }

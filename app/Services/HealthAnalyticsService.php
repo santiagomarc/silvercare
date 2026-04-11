@@ -190,40 +190,12 @@ class HealthAnalyticsService
             }
 
             $totalFactors++;
-            $score  = 0;
-            $status = 'unknown';
+            $evaluation = $type === 'blood_pressure'
+                ? $this->evaluateBloodPressureScore($sevenDay)
+                : $this->evaluateMetricScore($type, floatval($sevenDay['avg'] ?? 0));
 
-            switch ($type) {
-                case 'blood_pressure':
-                    $sys = $sevenDay['systolic_avg'] ?? 120;
-                    $dia = $sevenDay['diastolic_avg'] ?? 80;
-                    if ($sys < 120 && $dia < 80)      { $score = 100; $status = 'Optimal'; }
-                    elseif ($sys < 130 && $dia < 85)   { $score = 85;  $status = 'Normal'; }
-                    elseif ($sys < 140 && $dia < 90)   { $score = 70;  $status = 'Elevated'; }
-                    else                               { $score = 50;  $status = 'High'; }
-                    break;
-
-                case 'heart_rate':
-                    $hr = $sevenDay['avg'] ?? 72;
-                    if ($hr >= 60 && $hr <= 100)       { $score = 100; $status = 'Optimal'; }
-                    elseif ($hr >= 50 && $hr <= 110)   { $score = 80;  $status = 'Normal'; }
-                    else                               { $score = 60;  $status = 'Attention'; }
-                    break;
-
-                case 'temperature':
-                    $temp = $sevenDay['avg'] ?? 36.5;
-                    if ($temp >= 36.1 && $temp <= 37.2)  { $score = 100; $status = 'Normal'; }
-                    elseif ($temp >= 35.5 && $temp <= 37.8) { $score = 75; $status = 'Mild'; }
-                    else                                 { $score = 50;  $status = 'Attention'; }
-                    break;
-
-                case 'sugar_level':
-                    $sugar = $sevenDay['avg'] ?? 100;
-                    if ($sugar >= 70 && $sugar <= 100)   { $score = 100; $status = 'Optimal'; }
-                    elseif ($sugar >= 60 && $sugar <= 125) { $score = 80; $status = 'Normal'; }
-                    else                                 { $score = 60;  $status = 'Attention'; }
-                    break;
-            }
+            $score  = $evaluation['score'];
+            $status = $evaluation['status'];
 
             $healthScore += $score;
             $healthFactors[$type] = ['score' => $score, 'status' => $status];
@@ -250,6 +222,87 @@ class HealthAnalyticsService
             'factors'      => $healthFactors,
             'totalFactors' => $totalFactors,
         ];
+    }
+
+    /**
+     * Evaluate score and status for scalar metrics (heart rate, sugar, temperature).
+     */
+    private function evaluateMetricScore(string $type, float $value): array
+    {
+        $rules = config("vitals.{$type}.score_thresholds", []);
+        $default = ['score' => 0, 'status' => 'unknown'];
+
+        foreach ($rules as $rule) {
+            if (($rule['default'] ?? false) === true) {
+                $default = [
+                    'score' => intval($rule['score'] ?? 0),
+                    'status' => strval($rule['status'] ?? 'unknown'),
+                ];
+                continue;
+            }
+
+            if ($this->matchesScalarRule($value, $rule)) {
+                return [
+                    'score' => intval($rule['score'] ?? 0),
+                    'status' => strval($rule['status'] ?? 'unknown'),
+                ];
+            }
+        }
+
+        return $default;
+    }
+
+    /**
+     * Evaluate score and status for blood pressure using systolic and diastolic averages.
+     */
+    private function evaluateBloodPressureScore(array $sevenDay): array
+    {
+        $sys = floatval($sevenDay['systolic_avg'] ?? 120);
+        $dia = floatval($sevenDay['diastolic_avg'] ?? 80);
+
+        $rules = config('vitals.blood_pressure.score_thresholds', []);
+        $default = ['score' => 50, 'status' => 'High'];
+
+        foreach ($rules as $rule) {
+            if (($rule['default'] ?? false) === true) {
+                $default = [
+                    'score' => intval($rule['score'] ?? 50),
+                    'status' => strval($rule['status'] ?? 'High'),
+                ];
+                continue;
+            }
+
+            $maxSystolic = $rule['max_systolic'] ?? null;
+            $maxDiastolic = $rule['max_diastolic'] ?? null;
+
+            $matchesSystolic = $maxSystolic === null || $sys <= floatval($maxSystolic);
+            $matchesDiastolic = $maxDiastolic === null || $dia <= floatval($maxDiastolic);
+
+            if ($matchesSystolic && $matchesDiastolic) {
+                return [
+                    'score' => intval($rule['score'] ?? 0),
+                    'status' => strval($rule['status'] ?? 'unknown'),
+                ];
+            }
+        }
+
+        return $default;
+    }
+
+    /**
+     * Match a scalar value against a configurable min/max threshold rule.
+     */
+    private function matchesScalarRule(float $value, array $rule): bool
+    {
+        if (array_key_exists('min', $rule) && $value < floatval($rule['min'])) {
+            return false;
+        }
+
+        if (array_key_exists('max', $rule) && $value > floatval($rule['max'])) {
+            return false;
+        }
+
+        return array_key_exists('min', $rule) || array_key_exists('max', $rule);
     }
 
     /**

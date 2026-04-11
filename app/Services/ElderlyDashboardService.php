@@ -8,7 +8,6 @@ use App\Models\GoogleFitToken;
 use App\Models\HealthMetric;
 use App\Models\Medication;
 use App\Models\MedicationLog;
-use App\Models\Notification;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -16,6 +15,10 @@ class ElderlyDashboardService
 {
     /** Required vital types for daily goals tracking */
     private const REQUIRED_VITALS = ['heart_rate', 'blood_pressure', 'sugar_level', 'temperature'];
+
+    public function __construct(protected NotificationService $notificationService)
+    {
+    }
 
     /**
      * Assemble all data for the elderly dashboard view.
@@ -392,10 +395,7 @@ class ElderlyDashboardService
 
     private function getUnreadNotificationCount(int $elderlyId): int
     {
-        return Notification::forElderly()
-            ->where('elderly_id', $elderlyId)
-            ->where('is_read', false)
-            ->count();
+        return $this->notificationService->getUnreadCount($elderlyId);
     }
 
     private function doseLogKey(int $medicationId, mixed $time): string

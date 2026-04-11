@@ -85,6 +85,17 @@ class NotificationService
     }
 
     /**
+     * Get unread notification count for an elderly profile.
+     */
+    public function getUnreadCount(int $elderlyProfileId): int
+    {
+        return Notification::forElderly()
+            ->where('elderly_id', $elderlyProfileId)
+            ->where('is_read', false)
+            ->count();
+    }
+
+    /**
      * Delete notification
      */
     public function deleteNotification(int $notificationId): bool

@@ -20,6 +20,7 @@ class ElderlyDashboardController extends Controller
         protected ElderlyDashboardService $dashboardService,
         protected MedicationWindowService $windowService,
         protected ProfileCompletionService $profileCompletionService,
+        protected NotificationService $notificationService,
     )
     {
     }
@@ -68,7 +69,7 @@ class ElderlyDashboardController extends Controller
         $user = Auth::user();
         $elderlyId = $user->profile?->id;
         $unreadNotifications = $elderlyId
-            ? $this->unreadNotificationsCount($elderlyId)
+            ? $this->notificationService->getUnreadCount($elderlyId)
             : 0;
 
         $medications = collect();
@@ -98,7 +99,7 @@ class ElderlyDashboardController extends Controller
         $user = Auth::user();
         $elderlyId = $user->profile?->id;
         $unreadNotifications = $elderlyId
-            ? $this->unreadNotificationsCount($elderlyId)
+            ? $this->notificationService->getUnreadCount($elderlyId)
             : 0;
 
         $checklists = collect();
@@ -139,7 +140,7 @@ class ElderlyDashboardController extends Controller
 
         // Create notification if task was completed
         if ($newStatus) {
-            app(NotificationService::class)->createTaskCompletedNotification(
+            $this->notificationService->createTaskCompletedNotification(
                 $elderlyId,
                 $checklist->task,
                 $checklist->category ?? 'General'
@@ -238,7 +239,7 @@ class ElderlyDashboardController extends Controller
         }
 
         // Create notification for medication taken (with late flag)
-        app(NotificationService::class)->createMedicationTakenNotification(
+        $this->notificationService->createMedicationTakenNotification(
             $elderlyId,
             $medication->name,
             $takenLate
@@ -327,11 +328,4 @@ class ElderlyDashboardController extends Controller
         ];
     }
 
-    private function unreadNotificationsCount(int $elderlyId): int
-    {
-        return \App\Models\Notification::where('elderly_id', $elderlyId)
-            ->forElderly()
-            ->where('is_read', false)
-            ->count();
-    }
 }

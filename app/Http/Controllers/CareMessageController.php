@@ -6,7 +6,6 @@ use App\Http\Controllers\Concerns\ResolvesElderlyPatient;
 use App\Http\Requests\StoreCaregiverCareMessageRequest;
 use App\Http\Requests\StoreElderlyCareMessageRequest;
 use App\Models\CareMessage;
-use App\Models\Notification;
 use App\Models\UserProfile;
 use App\Services\NotificationService;
 use Illuminate\Http\RedirectResponse;
@@ -99,7 +98,7 @@ class CareMessageController extends Controller
             ->with('success', 'Message sent.');
     }
 
-    public function elderlyIndex(): View|RedirectResponse
+    public function elderlyIndex(NotificationService $notificationService): View|RedirectResponse
     {
         $elderly = Auth::user()?->profile;
         abort_unless($elderly && $elderly->isElderly(), 403);
@@ -110,10 +109,7 @@ class CareMessageController extends Controller
         }
 
         $caregiver = $elderly->caregiver()->with('user')->first();
-        $unreadNotifications = Notification::forElderly()
-            ->where('elderly_id', $elderly->id)
-            ->where('is_read', false)
-            ->count();
+        $unreadNotifications = $notificationService->getUnreadCount($elderly->id);
 
         if (!$caregiver) {
             return view('elderly.messages.index', [
