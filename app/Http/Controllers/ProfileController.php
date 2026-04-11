@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\DeleteAccountRequest;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Http\Requests\UploadProfilePhotoRequest;
 use App\Models\UserProfile;
@@ -154,12 +155,8 @@ class ProfileController extends Controller
     /**
      * Delete the authenticated user's account.
      */
-    public function destroy(Request $request): RedirectResponse
+    public function destroy(DeleteAccountRequest $request): RedirectResponse
     {
-        $request->validateWithBag('userDeletion', [
-            'password' => ['required', 'current_password'],
-        ]);
-
         /** @var \App\Models\User $user */
         $user = $request->user();
 
