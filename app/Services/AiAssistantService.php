@@ -145,7 +145,7 @@ class AiAssistantService
             }
             $fullPrompt .= "\n\nUser: " . $userMessage;
 
-            $stream = Gemini::generativeModel('gemini-2.5-flash-lite')
+            $stream = Gemini::generativeModel('gemini-2.5-flash')
                 ->withTool($this->getTools())
                 ->streamGenerateContent($fullPrompt);
 
@@ -234,7 +234,7 @@ class AiAssistantService
         $fullResponse = '';
 
         try {
-            $stream = Gemini::generativeModel('gemini-2.5-flash-lite')
+            $stream = Gemini::generativeModel('gemini-2.5-flash')
                 ->streamGenerateContent($systemPrompt . "\n\n" . $conversationHistory . "\nCaregiver: " . $question);
 
             foreach ($stream as $response) {
@@ -283,7 +283,7 @@ class AiAssistantService
         $medicalInfo = $this->buildMedicalInfoContext($profile);
 
         return <<<PROMPT
-You are Silvia, the SilverCare AI Assistant — a warm, empathetic, and attentive companion, but most importantly, a REAL friend with a vivid personality. Do not sound like a customer service bot!
+You are Silvia, the SilverCare AI Assistant — a warm, empathetic, and attentive companion, but most importantly, a REAL friend with a vivid personality. Adopt a friendly, conversational, 'grandmotherly' tone. Speak as a close, caring friend. Match the user's length and energy; if they are brief, respond briefly.
 
 TODAY: {$dayName}, {$dateFormatted}
 USER: {$user->name}
@@ -302,17 +302,17 @@ USER: {$user->name}
 {$rangeVitals}
 
 === INSTRUCTIONS ===
-1. Be warm, natural, and emotionally intelligent. Respond like a modern chat assistant, not a scripted customer service bot.
-2. DO NOT start every response with a greeting like "Hey [User]!" or "Hello there!". Continue naturally from the latest message.
-3. Use CONVERSATION HISTORY from the CURRENT chat session only, and refer back naturally when relevant.
-4. If the user is talking about personal life (for example crushes, mood, or daily drama), stay on that topic and do NOT abruptly switch to medications, tasks, or health summaries unless the user asks.
-5. Reference medications/tasks/vitals only when the user explicitly asks about them.
-6. NEVER provide medical diagnoses. If the user describes serious symptoms, strongly recommend they contact their caregiver or doctor immediately.
-7. If the user seems distressed or mentions an emergency, respond with care and urgency.
+1. Be warm, natural, and emotionally intelligent. 
+2. Continue naturally from the latest message. Do not start every message with a greeting.
+3. Use CONVERSATION HISTORY from the CURRENT chat session only.
+4. If the user is talking about personal life (for example crushes, mood, or daily drama), stay on that topic. Let the conversation flow naturally.
+5. Reference medications/tasks/vitals only when the user explicitly asks about them or if they ask if they can take an over-the-counter medicine (e.g. Advil), in which case, act as a Medication Interaction / OTC Safety Checker and cross-reference with their active medications.
+6. NEVER provide medical diagnoses. If the user describes serious symptoms or asks an unrelated complex medical question, calmly state that you are an assistant, not a doctor, and gently suggest they reach out to their caregiver or press the SOS button.
+7. If the user seems distressed or mentions an emergency, respond with care and urgency. Remind them their caregiver has been notified.
 8. Use `mark_task_complete` only when the user explicitly asks to mark/complete/check off a task.
 9. Use `log_medication` only when the user explicitly asks to log/mark/take a medication.
 10. Keep answers concise (2-4 paragraphs max) unless the user asks for detail.
-11. If the user asks for vitals analysis over any date range (for example week, month, 3 months, last N days, since, or between dates), prioritize VITAL TRENDS for that requested window.
+11. If the user asks for vitals analysis over any date range, prioritize VITAL TRENDS for that requested window.
 PROMPT;
     }
 
@@ -350,12 +350,13 @@ ANALYSIS PERIOD: {$weekAgo->format('M j')} – {$today->format('M j, Y')}
 {$taskSummary}
 
 === INSTRUCTIONS ===
-1. Provide clinical, factual analysis based on the real data above.
+1. Provide clinical, factual analysis based on the real data above. Output your analysis strictly in Markdown format. Use an H3 `###` for sections, and always end with a `**Actionable Recommendation:**` block.
 2. Highlight any concerning trends (declining adherence, abnormal vitals, etc.).
 3. Use **bold** for emphasis, bullet points for clarity, and keep insights actionable.
 4. NEVER make medical diagnoses — suggest the caregiver consult a physician if metrics are concerning.
-5. If asked about specific metrics, reference exact numbers and dates.
-6. Be professional but compassionate — the caregiver cares about their patient.
+5. If the caregiver asks about OTC medication interactions (e.g. "Can I give them Ibuprofen?"), check for interactions with their medication adherence list.
+6. If asked about specific metrics, reference exact numbers and dates.
+7. Be professional but compassionate — the caregiver cares about their patient.
 PROMPT;
     }
 
@@ -441,7 +442,7 @@ PROMPT;
 
             $fullPrompt .= "\n\nUser: " . $userMessage;
 
-            $model = Gemini::generativeModel('gemini-2.5-flash-lite');
+            $model = Gemini::generativeModel('gemini-2.5-flash');
             if ($tools) {
                 $model = $model->withTool($tools);
             }
@@ -763,7 +764,7 @@ RULES:
 PROMPT;
 
         try {
-            $response = Gemini::generativeModel('gemini-2.5-flash-lite')
+            $response = Gemini::generativeModel('gemini-2.5-flash')
                 ->generateContent($prompt);
 
             return $response->text();
@@ -799,7 +800,16 @@ PROMPT;
                 ? ' [TAKEN: ' . implode(', ', $takenLogs) . ']'
                 : ' [NOT YET TAKEN]';
 
-            return "• [ID: {$medication->id}] {$medication->name} ({$medication->dosage}) — scheduled at {$timesStr}{$takenStr}";
+            $data = [
+                'id' => $medication->id,
+                'med' => $medication->name,
+                'dose' => $medication->dosage,
+                'sched' => $timesStr,
+            ];
+            if (count($takenLogs) > 0) {
+                $data['taken'] = implode(',', $takenLogs);
+            }
+            return json_encode($data);
         })->implode("\n");
     }
 
@@ -809,10 +819,12 @@ PROMPT;
             ->whereDate('due_date', $date)
             ->get()
             ->map(function (Checklist $task) {
-                $status = $task->is_completed ? '✅ Done' : '⬜ Pending';
-                $priority = $task->priority ? " [{$task->priority}]" : '';
-
-                return "• [ID: {$task->id}] {$task->task} — {$status}{$priority}";
+                return json_encode([
+                    'id' => $task->id,
+                    'task' => $task->task,
+                    'done' => $task->is_completed ? 1 : 0,
+                    'pri' => $task->priority
+                ]);
             })->implode("\n");
     }
 
@@ -825,10 +837,12 @@ PROMPT;
             ->groupBy('type')
             ->map(function ($records, $type) {
                 $latest = $records->first();
-                $value = $latest->value_text ?? $latest->value;
-                $unit = $latest->unit ? " {$latest->unit}" : '';
-
-                return "• {$type}: {$value}{$unit} (at " . Carbon::parse($latest->measured_at)->format('g:i A') . ")";
+                return json_encode([
+                    'type' => $type,
+                    'val' => $value,
+                    'unit' => trim($unit),
+                    'time' => Carbon::parse($latest->measured_at)->format('H:i')
+                ]);
             })->implode("\n");
     }
 
@@ -846,20 +860,16 @@ PROMPT;
                 $unit = $latest->unit ? " {$latest->unit}" : '';
                 $count = $records->count();
 
-                if ($numericRecords->count() < 2) {
-                    return "• {$type}: {$count} readings | Latest: {$latestVal}{$unit}";
-                }
-
-                $first = (float) $numericRecords->first()->value;
-                $last = (float) $numericRecords->last()->value;
-                $avg = round($numericRecords->avg('value'), 1);
-                $min = $numericRecords->min('value');
-                $max = $numericRecords->max('value');
-                $direction = $last > $first
-                    ? 'upward'
-                    : ($last < $first ? 'downward' : 'stable');
-
-                return "• {$type}: {$count} readings | Avg: {$avg}{$unit} | Range: {$min}-{$max}{$unit} | Trend: {$direction} | Latest: {$latestVal}{$unit}";
+                return json_encode([
+                    'type' => $type,
+                    'cnt' => $count,
+                    'avg' => $avg,
+                    'min' => $min,
+                    'max' => $max,
+                    'trend' => $direction,
+                    'latest' => $latestVal,
+                    'unit' => trim($unit)
+                ]);
             })
             ->implode("\n");
 
@@ -1031,12 +1041,15 @@ PROMPT;
         $missedMeds = $allLogs->where('is_taken', false)
             ->map(function ($log) {
                 $medName = $log->medication->name ?? 'Unknown';
-                $time = Carbon::parse($log->scheduled_time)->format('M j, g:i A');
+                $time = Carbon::parse($log->scheduled_time)->format('m/d H:i');
+                return "{$medName}@{$time}";
+            })->implode(",");
 
-                return "• {$medName} — missed at {$time}";
-            })->implode("\n");
-
-        return "Adherence Rate: {$adherenceRate}% ({$totalTaken}/{$totalScheduled} doses taken)\nMissed Doses:\n" . ($missedMeds ?: '• None');
+        return json_encode([
+            'adherence' => "{$adherenceRate}%",
+            'taken' => "{$totalTaken}/{$totalScheduled}",
+            'missed' => $missedMeds ?: 'none'
+        ]);
     }
 
     private function buildCaregiverVitalsContext(int $elderlyProfileId, Carbon $weekAgo, Carbon $today): string
@@ -1056,7 +1069,14 @@ PROMPT;
                 $min = $numericRecords->isNotEmpty() ? $numericRecords->min('value') : 'n/a';
                 $max = $numericRecords->isNotEmpty() ? $numericRecords->max('value') : 'n/a';
 
-                return "• {$type}: {$count} readings | Avg: {$avg} | Range: {$min}-{$max} | Latest: {$latestVal} {$unit}";
+                return json_encode([
+                    'type' => $type,
+                    'cnt' => $count,
+                    'avg' => $avg,
+                    'min' => $min,
+                    'max' => $max,
+                    'latest' => "{$latestVal} {$unit}"
+                ]);
             })->implode("\n");
     }
 
@@ -1070,7 +1090,10 @@ PROMPT;
         $completedTasks = $tasks->where('is_completed', true)->count();
         $taskRate = $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100, 1) : 0;
 
-        return "Completion Rate: {$taskRate}% ({$completedTasks}/{$totalTasks} tasks)";
+        return json_encode([
+            'rate' => "{$taskRate}%",
+            'completed' => "{$completedTasks}/{$totalTasks}"
+        ]);
     }
 
     private function formatListContext(mixed $value, string $fallback): string

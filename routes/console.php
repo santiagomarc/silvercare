@@ -40,3 +40,9 @@ Schedule::command('checklists:recycle-recurring')
     ->dailyAt('00:01')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/recurring-checklists.log'));
+
+// Track cognitive sentiment and mood from elderly AI chat logs daily at 11:00 PM
+Schedule::command('ai:track-cognitive-sentiment')
+    ->dailyAt('23:00')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/ai-sentiment.log'));
