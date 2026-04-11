@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ResolvesAiSession;
+use App\Http\Requests\AiChatRequest;
 use App\Services\AiAssistantService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,13 +32,8 @@ class AiAssistantController extends Controller
     /**
      * Handle chat requests — non-streaming fallback.
      */
-    public function chat(Request $request)
+    public function chat(AiChatRequest $request)
     {
-        $request->validate([
-            'message' => 'required|string|max:1000',
-            'session_id' => 'nullable|integer',
-        ]);
-
         try {
             $user = Auth::user();
             $session = $this->resolveSession($user, $request->input('session_id'));
@@ -61,13 +57,8 @@ class AiAssistantController extends Controller
     /**
      * Stream chat response via Server-Sent Events (SSE).
      */
-    public function stream(Request $request): StreamedResponse
+    public function stream(AiChatRequest $request): StreamedResponse
     {
-        $request->validate([
-            'message' => 'required|string|max:1000',
-            'session_id' => 'nullable|integer',
-        ]);
-
         $user = Auth::user();
         $session = $this->resolveSession($user, $request->input('session_id'));
         $userMessage = $request->input('message');

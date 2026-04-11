@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ResolvesAiSession;
+use App\Http\Requests\AiChatRequest;
 use App\Services\AiAssistantService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,13 +24,8 @@ class CaregiverAiController extends Controller
     /**
      * Handle a caregiver AI analysis request (non-streaming fallback).
      */
-    public function chat(Request $request)
+    public function chat(AiChatRequest $request)
     {
-        $request->validate([
-            'message' => 'required|string|max:1000',
-            'session_id' => 'nullable|integer',
-        ]);
-
         try {
             $caregiver = Auth::user();
             $elderlyProfileId = $caregiver->profile->id ?? null;
@@ -75,13 +71,8 @@ class CaregiverAiController extends Controller
     /**
      * Stream caregiver AI analysis via Server-Sent Events.
      */
-    public function stream(Request $request): StreamedResponse
+    public function stream(AiChatRequest $request): StreamedResponse
     {
-        $request->validate([
-            'message' => 'required|string|max:1000',
-            'session_id' => 'nullable|integer',
-        ]);
-
         $caregiver = Auth::user();
         $elderlyProfileId = $this->getLinkedElderlyId($caregiver);
         $session = $this->resolveSession($caregiver, $request->input('session_id'));

@@ -2,19 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ResolvesElderlyPatient;
+use App\Http\Requests\StoreCaregiverCareMessageRequest;
+use App\Http\Requests\StoreElderlyCareMessageRequest;
 use App\Models\CareMessage;
 use App\Models\Notification;
 use App\Models\UserProfile;
 use App\Services\NotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class CareMessageController extends Controller
 {
+    use ResolvesElderlyPatient;
+
     public function caregiverIndex(Request $request): View|RedirectResponse
     {
         $caregiver = Auth::user()?->profile;
@@ -25,10 +29,8 @@ class CareMessageController extends Controller
                 ->with('error', 'Messaging is temporarily unavailable. Please run database migrations.');
         }
 
-        [$elderlyPatients, $selectedElderly] = $this->resolveCaregiverSelection(
-            $caregiver,
-            $request->integer('elderly')
-        );
+        $elderlyPatients = $this->caregiverPatients($caregiver);
+        $selectedElderly = $this->resolveSelectedPatient($elderlyPatients, $request->integer('elderly'));
 
         if (!$selectedElderly) {
             return view('caregiver.messages.index', [
@@ -53,7 +55,7 @@ class CareMessageController extends Controller
         ]);
     }
 
-    public function caregiverStore(Request $request, NotificationService $notificationService): RedirectResponse
+    public function caregiverStore(StoreCaregiverCareMessageRequest $request, NotificationService $notificationService): RedirectResponse
     {
         $caregiver = Auth::user()?->profile;
         abort_unless($caregiver && $caregiver->isCaregiver(), 403);
@@ -62,10 +64,7 @@ class CareMessageController extends Controller
             return back()->with('error', 'Messaging is temporarily unavailable. Please run database migrations.');
         }
 
-        $validated = $request->validate([
-            'elderly_id' => ['required', 'integer', 'exists:user_profiles,id'],
-            'message' => ['required', 'string', 'max:1200'],
-        ]);
+        $validated = $request->validated();
 
         $elderly = UserProfile::where('id', $validated['elderly_id'])
             ->where('caregiver_id', $caregiver->id)
@@ -139,7 +138,7 @@ class CareMessageController extends Controller
         ]);
     }
 
-    public function elderlyStore(Request $request): RedirectResponse
+    public function elderlyStore(StoreElderlyCareMessageRequest $request): RedirectResponse
     {
         $elderly = Auth::user()?->profile;
         abort_unless($elderly && $elderly->isElderly(), 403);
@@ -153,9 +152,7 @@ class CareMessageController extends Controller
             return back()->with('error', 'Link a caregiver before sending messages.');
         }
 
-        $validated = $request->validate([
-            'message' => ['required', 'string', 'max:1200'],
-        ]);
+        $validated = $request->validated();
 
         CareMessage::create([
             'caregiver_id' => $caregiver->id,
@@ -165,27 +162,6 @@ class CareMessageController extends Controller
         ]);
 
         return redirect()->route('elderly.messages.index')->with('success', 'Message sent.');
-    }
-
-    /**
-     * @return array{Collection<int, UserProfile>, UserProfile|null}
-     */
-    private function resolveCaregiverSelection(UserProfile $caregiver, ?int $selectedElderlyId): array
-    {
-        $elderlyPatients = $caregiver->elderlyPatients()
-            ->with('user')
-            ->orderBy('id')
-            ->get();
-
-        if ($elderlyPatients->isEmpty()) {
-            return [$elderlyPatients, null];
-        }
-
-        $selectedElderly = $selectedElderlyId
-            ? $elderlyPatients->firstWhere('id', $selectedElderlyId)
-            : null;
-
-        return [$elderlyPatients, $selectedElderly ?? $elderlyPatients->first()];
     }
 
     private function markMessagesAsRead(int $caregiverId, int $elderlyId, int $senderProfileId): void

@@ -2,16 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\Concerns\ResolvesElderlyPatient;
 use App\Models\Checklist;
 use App\Services\HealthAnalyticsService;
 use App\Services\MedicationAdherenceService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class CaregiverAnalyticsController extends Controller
 {
+    use ResolvesElderlyPatient;
+
     public function __construct(
         protected HealthAnalyticsService $analyticsService,
         protected MedicationAdherenceService $adherenceService,
@@ -26,12 +29,8 @@ class CaregiverAnalyticsController extends Controller
             return redirect()->route('profile.complete');
         }
 
-        $elderlyPatients = $caregiver->elderlyPatients()->with('user')->orderBy('id')->get();
-        $requestedElderlyId = request()->integer('elderly');
-        $elderly = $requestedElderlyId
-            ? $elderlyPatients->firstWhere('id', $requestedElderlyId)
-            : null;
-        $elderly = $elderly ?? $elderlyPatients->first();
+        $elderlyPatients = $this->caregiverPatients($caregiver);
+        $elderly = $this->resolveSelectedPatient($elderlyPatients, request()->integer('elderly'));
         $selectedElderlyId = $elderly?->id;
 
         if (!$elderly) {
@@ -151,12 +150,8 @@ class CaregiverAnalyticsController extends Controller
             return redirect()->route('profile.complete');
         }
 
-        $elderlyPatients = $caregiver->elderlyPatients()->with('user')->orderBy('id')->get();
-        $requestedElderlyId = $request->integer('elderly');
-        $elderly = $requestedElderlyId
-            ? $elderlyPatients->firstWhere('id', $requestedElderlyId)
-            : null;
-        $elderly = $elderly ?? $elderlyPatients->first();
+        $elderlyPatients = $this->caregiverPatients($caregiver);
+        $elderly = $this->resolveSelectedPatient($elderlyPatients, $request->integer('elderly'));
 
         if (!$elderly) {
             return back()->with('error', 'No elder assigned to generate report.');

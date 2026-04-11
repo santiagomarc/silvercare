@@ -2,16 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ResolvesElderlyPatient;
 use App\Http\Requests\StoreChecklistRequest;
 use App\Http\Requests\UpdateChecklistRequest;
 use App\Models\Checklist;
 use App\Services\ChecklistService;
 use App\Services\NotificationService;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 
 class ChecklistController extends Controller
 {
+    use ResolvesElderlyPatient;
+
     public function __construct(
         protected ChecklistService $checklistService,
         protected NotificationService $notificationService,
@@ -170,28 +172,4 @@ class ChecklistController extends Controller
             ->with('success', 'Task deleted successfully.');
     }
 
-    private function caregiverPatients($caregiver): Collection
-    {
-        if (!$caregiver) {
-            return collect();
-        }
-
-        return $caregiver->elderlyPatients()->with('user')->orderBy('id')->get();
-    }
-
-    private function resolveSelectedPatient(Collection $elderlyPatients, ?int $selectedElderlyId)
-    {
-        if ($elderlyPatients->isEmpty()) {
-            return null;
-        }
-
-        if ($selectedElderlyId) {
-            $selected = $elderlyPatients->firstWhere('id', $selectedElderlyId);
-            if ($selected) {
-                return $selected;
-            }
-        }
-
-        return $elderlyPatients->first();
-    }
 }

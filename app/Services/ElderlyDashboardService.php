@@ -28,7 +28,11 @@ class ElderlyDashboardService
         $medProgress  = $this->getMedicationProgress($medications['todayMedications'], $medications['medicationLogs']);
         $checkProg    = $this->getChecklistProgress($checklists['todayChecklists']);
         $dailyGoals   = $this->calculateDailyGoals($checkProg, $medProgress, $vitals['vitalsProgress']);
-        $gardenInsights = $this->getGardenInsights($elderlyId);
+        $gardenInsights = $this->getGardenInsights(
+            $elderlyId,
+            $medications['medications'],
+            $checklists['checklists'],
+        );
         $stepsData    = $this->getStepsData($elderlyId);
         $moodData     = $this->getMoodData($elderlyId);
         $upcomingEvents       = $this->getUpcomingEvents($userId);
@@ -186,15 +190,10 @@ class ElderlyDashboardService
     /**
      * Build Garden of Wellness state: streak progress + wilting signal.
      */
-    private function getGardenInsights(int $elderlyId): array
+    private function getGardenInsights(int $elderlyId, Collection $activeMedications, Collection $allChecklists): array
     {
         $today = Carbon::today();
         $start = $today->copy()->subDays(6);
-
-        $activeMedications = Medication::where('elderly_id', $elderlyId)
-            ->where('is_active', true)
-            ->with('schedules')
-            ->get();
 
         $takenLogs = MedicationLog::where('elderly_id', $elderlyId)
             ->whereDate('scheduled_time', '>=', $start)
@@ -203,10 +202,8 @@ class ElderlyDashboardService
             ->get()
             ->groupBy(fn ($log) => $log->medication_id . '_' . $log->scheduled_time->format('Y-m-d'));
 
-        $checklistsByDay = Checklist::where('elderly_id', $elderlyId)
-            ->whereDate('due_date', '>=', $start)
-            ->whereDate('due_date', '<=', $today)
-            ->get()
+        $checklistsByDay = $allChecklists
+            ->filter(fn ($task) => $task->due_date && $task->due_date->between($start, $today))
             ->groupBy(fn ($task) => optional($task->due_date)->format('Y-m-d'));
 
         $vitalsByDay = HealthMetric::where('elderly_id', $elderlyId)

@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\OpenSignedCareLinkRequest;
+use App\Http\Requests\UnlinkCaregiverRequest;
+use App\Http\Requests\ValidateCareLinkCodeRequest;
 use App\Models\LinkCode;
 use App\Models\UserProfile;
 use App\Services\NotificationService;
@@ -65,7 +68,7 @@ class CareLinkController extends Controller
      * Open a temporary signed caregiver link from QR and prefill the PIN
      * in the elderly dashboard's confirmation flow.
      */
-    public function openSignedLink(Request $request): RedirectResponse
+    public function openSignedLink(OpenSignedCareLinkRequest $request): RedirectResponse
     {
         $profile = $request->user()?->profile;
 
@@ -73,10 +76,7 @@ class CareLinkController extends Controller
             abort(403);
         }
 
-        $validated = $request->validate([
-            'code' => ['required', 'digits:6'],
-            'caregiver' => ['required', 'integer'],
-        ]);
+        $validated = $request->validated();
 
         $linkCode = LinkCode::where('code', $validated['code'])
             ->whereNull('used_at')
@@ -104,11 +104,9 @@ class CareLinkController extends Controller
      * Step 1 of linking: validate the PIN and return caregiver preview data.
      * Does NOT commit the link — that requires a separate confirmation POST.
      */
-    public function validateCode(Request $request): JsonResponse
+    public function validateCode(ValidateCareLinkCodeRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'code' => ['required', 'digits:6'],
-        ]);
+        $validated = $request->validated();
 
         $profile = $request->user()?->profile;
         if (! $profile || ! $profile->isElderly()) {
@@ -145,11 +143,9 @@ class CareLinkController extends Controller
      * Step 2 of linking: confirm and persist the caregiver link.
      * Requires the same validated PIN from step 1.
      */
-    public function confirmLink(Request $request): RedirectResponse
+    public function confirmLink(ValidateCareLinkCodeRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'code' => ['required', 'digits:6'],
-        ]);
+        $validated = $request->validated();
 
         $profile = $request->user()?->profile;
         if (! $profile || ! $profile->isElderly()) {
@@ -181,12 +177,8 @@ class CareLinkController extends Controller
     /**
      * Unlink the elderly user from their current caregiver.
      */
-    public function unlink(Request $request): RedirectResponse
+    public function unlink(UnlinkCaregiverRequest $request): RedirectResponse
     {
-        $request->validate([
-            'password' => ['required', 'string'],
-        ]);
-
         $profile = $request->user()?->profile;
 
         if (! $profile || ! $profile->isElderly()) {

@@ -2,15 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ResolvesElderlyPatient;
 use App\Models\LinkCode;
 use App\Services\CaregiverDashboardService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\URL;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class CaregiverDashboardController extends Controller
 {
+    use ResolvesElderlyPatient;
+
     public function __construct(
         protected CaregiverDashboardService $dashboardService,
     ) {
@@ -28,12 +32,8 @@ class CaregiverDashboardController extends Controller
             return redirect()->route('profile.completion');
         }
 
-        $elderlyPatients = $caregiver->elderlyPatients()->with('user')->orderBy('id')->get();
-        $requestedElderlyId = $request->integer('elderly');
-        $elderly = $requestedElderlyId
-            ? $elderlyPatients->firstWhere('id', $requestedElderlyId)
-            : null;
-        $elderly = $elderly ?? $elderlyPatients->first();
+        $elderlyPatients = $this->caregiverPatients($caregiver);
+        $elderly = $this->resolveSelectedPatient($elderlyPatients, $request->integer('elderly'));
         $selectedElderlyId = $elderly?->id;
 
         if ($caregiver) {
@@ -53,11 +53,16 @@ class CaregiverDashboardController extends Controller
                     ]
                 );
 
-                $activeLinkQrSvg = (string) QrCode::format('svg')
-                    ->size(200)
-                    ->margin(1)
-                    ->errorCorrection('M')
-                    ->generate($activeLinkSignedUrl);
+                $cacheKey = "caregiver_link_qr_svg_{$activeLinkCode->id}";
+                $ttlSeconds = max(60, now()->diffInSeconds($activeLinkCode->expires_at, false));
+
+                $activeLinkQrSvg = Cache::remember($cacheKey, $ttlSeconds, function () use ($activeLinkSignedUrl) {
+                    return (string) QrCode::format('svg')
+                        ->size(200)
+                        ->margin(1)
+                        ->errorCorrection('M')
+                        ->generate($activeLinkSignedUrl);
+                });
             }
         }
 

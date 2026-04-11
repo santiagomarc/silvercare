@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreProfileCompletionRequest;
 use App\Services\ProfileCompletionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -49,28 +50,12 @@ class ProfileCompletionController extends Controller
     /**
      * Handle profile completion submission.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreProfileCompletionRequest $request): RedirectResponse
     {
         $user = Auth::user();
         $profile = $user->profile;
 
-        // Validate the complete profile data
-        $validated = $request->validate([
-            // Step 1: Personal Details
-            'age' => ['nullable', 'integer', 'min:1', 'max:150'],
-            'weight' => ['nullable', 'numeric', 'min:1', 'max:500'],
-            'height' => ['nullable', 'numeric', 'min:1', 'max:300'],
-            
-            // Step 2: Emergency Contact
-            'emergency_name' => ['nullable', 'string', 'max:255'],
-            'emergency_phone' => ['nullable', 'string', 'max:20'],
-            'emergency_relationship' => ['nullable', 'string', 'max:255'],
-            
-            // Step 3: Medical Info
-            'conditions' => ['nullable', 'string'],
-            'medications' => ['nullable', 'string'],
-            'allergies' => ['nullable', 'string'],
-        ]);
+        $validated = $request->validated();
 
         // Prepare medical info as separate arrays
         $medicalConditions = $validated['conditions'] ? array_values(array_filter(array_map('trim', explode(',', $validated['conditions'])))) : [];

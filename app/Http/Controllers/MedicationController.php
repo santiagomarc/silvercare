@@ -2,15 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ResolvesElderlyPatient;
 use App\Models\Medication;
 use App\Http\Requests\StoreMedicationRequest;
 use App\Http\Requests\UpdateMedicationRequest;
 use App\Services\MedicationService;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 
 class MedicationController extends Controller
 {
+    use ResolvesElderlyPatient;
+
     public function __construct(protected MedicationService $medicationService)
     {
     }
@@ -149,28 +151,4 @@ class MedicationController extends Controller
             ->with('success', 'Medication deleted successfully.');
     }
 
-    private function caregiverPatients($caregiver): Collection
-    {
-        if (!$caregiver) {
-            return collect();
-        }
-
-        return $caregiver->elderlyPatients()->with('user')->orderBy('id')->get();
-    }
-
-    private function resolveSelectedPatient(Collection $elderlyPatients, ?int $selectedElderlyId)
-    {
-        if ($elderlyPatients->isEmpty()) {
-            return null;
-        }
-
-        if ($selectedElderlyId) {
-            $selected = $elderlyPatients->firstWhere('id', $selectedElderlyId);
-            if ($selected) {
-                return $selected;
-            }
-        }
-
-        return $elderlyPatients->first();
-    }
 }
