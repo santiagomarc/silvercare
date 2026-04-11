@@ -6,6 +6,7 @@ use App\Http\Requests\DeleteAccountRequest;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Http\Requests\UploadProfilePhotoRequest;
 use App\Models\UserProfile;
+use App\Support\CommaSeparatedValueParser;
 use App\Services\ProfileCompletionService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -61,9 +62,9 @@ class ProfileController extends Controller
         ]);
 
         // 3. Process Array Fields
-        $medical_conditions = $this->processCommaSeparated($validated['medical_conditions'] ?? null);
-        $medications        = $this->processCommaSeparated($validated['medications'] ?? null);
-        $allergies          = $this->processCommaSeparated($validated['allergies'] ?? null);
+        $medical_conditions = CommaSeparatedValueParser::parse($validated['medical_conditions'] ?? null);
+        $medications        = CommaSeparatedValueParser::parse($validated['medications'] ?? null);
+        $allergies          = CommaSeparatedValueParser::parse($validated['allergies'] ?? null);
 
         // 4. Update or Create Profile (Direct Model Access)
         $profile = UserProfile::updateOrCreate(
@@ -150,9 +151,6 @@ class ProfileController extends Controller
     }
 
     /**
-     * Helper to turn comma-separated string into array
-     */
-    /**
      * Delete the authenticated user's account.
      */
     public function destroy(DeleteAccountRequest $request): RedirectResponse
@@ -170,9 +168,4 @@ class ProfileController extends Controller
         return Redirect::to('/');
     }
 
-    private function processCommaSeparated($string)
-    {
-        if (empty($string)) return [];
-        return array_values(array_filter(array_map('trim', explode(',', $string))));
-    }
 }

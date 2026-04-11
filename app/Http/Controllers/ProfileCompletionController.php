@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreProfileCompletionRequest;
 use App\Services\ProfileCompletionService;
+use App\Support\CommaSeparatedValueParser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -58,9 +59,9 @@ class ProfileCompletionController extends Controller
         $validated = $request->validated();
 
         // Prepare medical info as separate arrays
-        $medicalConditions = $validated['conditions'] ? array_values(array_filter(array_map('trim', explode(',', $validated['conditions'])))) : [];
-        $medicationsArray = $validated['medications'] ? array_values(array_filter(array_map('trim', explode(',', $validated['medications'])))) : [];
-        $allergiesArray = $validated['allergies'] ? array_values(array_filter(array_map('trim', explode(',', $validated['allergies'])))) : [];
+        $medicalConditions = CommaSeparatedValueParser::parse($validated['conditions'] ?? null);
+        $medicationsArray = CommaSeparatedValueParser::parse($validated['medications'] ?? null);
+        $allergiesArray = CommaSeparatedValueParser::parse($validated['allergies'] ?? null);
 
         // Update profile with individual columns (not legacy JSON fields)
         $profile->update([

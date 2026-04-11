@@ -101,10 +101,10 @@ class ElderlyDashboardService
     {
         $checklists = Checklist::where('elderly_id', $elderlyId)->get();
 
-        $todayChecklists = Checklist::where('elderly_id', $elderlyId)
-            ->whereDate('due_date', Carbon::today())
-            ->orderBy('due_time')
-            ->get();
+        $todayChecklists = $checklists
+            ->filter(fn (Checklist $checklist) => $checklist->due_date?->isToday())
+            ->sortBy('due_time')
+            ->values();
 
         return compact('checklists', 'todayChecklists');
     }
