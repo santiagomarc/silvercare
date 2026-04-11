@@ -837,6 +837,8 @@ PROMPT;
             ->groupBy('type')
             ->map(function ($records, $type) {
                 $latest = $records->first();
+                $value = $latest->value_text ?? $latest->value;
+                $unit = $latest->unit ? " {$latest->unit}" : '';
                 return json_encode([
                     'type' => $type,
                     'val' => $value,
@@ -859,6 +861,28 @@ PROMPT;
                 $latestVal = $latest->value_text ?? $latest->value;
                 $unit = $latest->unit ? " {$latest->unit}" : '';
                 $count = $records->count();
+
+                if ($numericRecords->count() < 2) {
+                    return json_encode([
+                        'type' => $type,
+                        'cnt' => $count,
+                        'avg' => 'n/a',
+                        'min' => 'n/a',
+                        'max' => 'n/a',
+                        'trend' => 'n/a',
+                        'latest' => $latestVal,
+                        'unit' => trim($unit)
+                    ]);
+                }
+
+                $first = (float) $numericRecords->first()->value;
+                $last = (float) $numericRecords->last()->value;
+                $avg = round($numericRecords->avg('value'), 1);
+                $min = $numericRecords->min('value');
+                $max = $numericRecords->max('value');
+                $direction = $last > $first
+                    ? 'upward'
+                    : ($last < $first ? 'downward' : 'stable');
 
                 return json_encode([
                     'type' => $type,
