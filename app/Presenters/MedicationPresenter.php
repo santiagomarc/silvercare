@@ -73,4 +73,29 @@ class MedicationPresenter
             'isWithinWindow' => false,
         ];
     }
+
+    /**
+     * Parses the instructions text for common, crucial tags.
+     */
+    public static function parseInstructionTags(?string $instructions): array
+    {
+        if (!$instructions) {
+            return [];
+        }
+
+        $tags = [];
+        $lowerSrc = strtolower($instructions);
+
+        if (str_contains($lowerSrc, 'food') || str_contains($lowerSrc, 'eat') || str_contains($lowerSrc, 'meal')) {
+            $tags[] = ['text' => 'Take with food', 'color' => 'bg-amber-100 text-amber-800'];
+        } elseif (str_contains($lowerSrc, 'empty stomach') || str_contains($lowerSrc, 'fasting') || str_contains($lowerSrc, 'before meal')) {
+            $tags[] = ['text' => 'Empty stomach', 'color' => 'bg-purple-100 text-purple-800'];
+        }
+        
+        if (str_contains($lowerSrc, 'water') || str_contains($lowerSrc, 'drink') || str_contains($lowerSrc, 'fluid')) {
+            $tags[] = ['text' => 'Drink water', 'color' => 'bg-cyan-100 text-cyan-800'];
+        }
+
+        return collect($tags)->unique('text')->values()->all();
+    }
 }

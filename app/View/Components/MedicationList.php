@@ -13,6 +13,7 @@ class MedicationList extends Component
     public Collection $medications;
     public Collection $logs;
     public Collection $sortedDoses;
+    public array $groupedDoses = [];
     public int $totalDoses = 0;
     public int $takenDoses = 0;
     public int $progress = 0;
@@ -56,10 +57,36 @@ class MedicationList extends Component
             }
         }
         
-        // Sort doses based on time (earliest to latest)
         $this->sortedDoses = $doses->sortBy(function($dose) {
             return $dose['time_carbon']->format('H:i:s');
         })->values();
+
+        // Group doses by time of day
+        // Morning (05:00-11:59), Afternoon (12:00-16:59), Evening (17:00-20:59), Night (21:00-04:59)
+        $this->groupedDoses = [
+            'Morning' => collect(),
+            'Afternoon' => collect(),
+            'Evening' => collect(),
+            'Night' => collect(),
+        ];
+
+        foreach ($this->sortedDoses as $dose) {
+            $hour = (int) $dose['time_carbon']->format('G');
+            if ($hour >= 5 && $hour < 12) {
+                $this->groupedDoses['Morning']->push($dose);
+            } elseif ($hour >= 12 && $hour < 17) {
+                $this->groupedDoses['Afternoon']->push($dose);
+            } elseif ($hour >= 17 && $hour < 21) {
+                $this->groupedDoses['Evening']->push($dose);
+            } else {
+                $this->groupedDoses['Night']->push($dose);
+            }
+        }
+
+        // Remove empty groups for cleaner rendering
+        $this->groupedDoses = array_filter($this->groupedDoses, function($group) {
+            return $group->count() > 0;
+        });
 
         $this->progress = $this->totalDoses > 0 ? (int) round(($this->takenDoses / $this->totalDoses) * 100) : 0;
     }
