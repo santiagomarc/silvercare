@@ -48,17 +48,15 @@
 
     <div x-show="expanded || !(total > 0 && taken >= total)"
          class="relative z-10 overflow-y-auto no-scrollbar space-y-2">
-        @forelse($medications as $medication)
+        @forelse($sortedDoses as $doseInfo)
             @php
-                $medTimes = $medication->scheduleTimesForDate(now());
+                $medication = $doseInfo['medication'];
+                $time = $doseInfo['time_carbon']->format('H:i');
+                $logKey = $doseInfo['log_key'];
+                $log = $doseInfo['log'];
+                $status = \App\Presenters\MedicationPresenter::getDoseStatus($time, $log);
             @endphp
-            @foreach($medTimes as $time)
-                @php
-                    $logKey = $medication->id . '_' . $time;
-                    $log = $logs->get($logKey);
-                    $status = \App\Presenters\MedicationPresenter::getDoseStatus($time, $log);
-                @endphp
-                <div x-data="{
+            <div x-data="{
                         expanded: false,
                         relativeText: '',
                         ticker: null,
@@ -137,7 +135,7 @@
                     @if($medication->instructions)
                         <div class="mt-2 border-t border-dashed border-gray-200 pt-1" @click.stop="expanded = !expanded">
                             <button class="text-xs font-bold text-blue-500 flex items-center gap-1 hover:text-blue-700 transition-colors w-full focus:outline-none">
-                                <svg x-show="!expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <svg x-show="!expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                 <svg x-show="expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
                                 <span x-text="expanded ? 'Hide Info' : 'Show Instructions'"></span>
                             </button>
@@ -147,7 +145,6 @@
                         </div>
                     @endif
                 </div>
-            @endforeach
         @empty
             <div class="text-center py-8 flex flex-col items-center bg-white/20 rounded-xl">
                 <div class="text-4xl mb-2 opacity-50" aria-hidden="true">🎉</div>

@@ -25,7 +25,7 @@ class MedicationWindowService
     public function build(Carbon $scheduledDateTime, ?Carbon $now = null, int $graceMinutes = self::DEFAULT_GRACE_MINUTES): array
     {
         $current = $now?->copy() ?? Carbon::now();
-        $windowStart = $scheduledDateTime->copy()->subMinutes($graceMinutes);
+        $windowStart = $scheduledDateTime->copy();
         $windowEnd = $scheduledDateTime->copy()->addMinutes($graceMinutes);
 
         $isWithinWindow = $current->between($windowStart, $windowEnd);
