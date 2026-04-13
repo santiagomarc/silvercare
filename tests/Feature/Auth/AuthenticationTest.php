@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use App\Models\UserProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -27,7 +28,45 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(route('auth.select-role', absolute: false));
+    }
+
+    public function test_users_with_profiles_are_redirected_to_role_dashboard_on_login(): void
+    {
+        $elderly = User::factory()->create();
+
+        UserProfile::create([
+            'user_id' => $elderly->id,
+            'user_type' => 'elderly',
+            'username' => 'elderly-user',
+            'profile_completed' => true,
+            'is_active' => true,
+        ]);
+
+        $elderlyLogin = $this->post('/login', [
+            'email' => $elderly->email,
+            'password' => 'password',
+        ]);
+
+        $elderlyLogin->assertRedirect(route('dashboard', absolute: false));
+        $this->post('/logout');
+
+        $caregiver = User::factory()->create();
+
+        UserProfile::create([
+            'user_id' => $caregiver->id,
+            'user_type' => 'caregiver',
+            'username' => 'caregiver-user',
+            'profile_completed' => true,
+            'is_active' => true,
+        ]);
+
+        $caregiverLogin = $this->post('/login', [
+            'email' => $caregiver->email,
+            'password' => 'password',
+        ]);
+
+        $caregiverLogin->assertRedirect(route('caregiver.dashboard', absolute: false));
     }
 
     public function test_users_can_not_authenticate_with_invalid_password(): void

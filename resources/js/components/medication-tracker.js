@@ -205,8 +205,10 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
             this._updateEntryAppearance(entry, action.taken_late ? 'taken-late' : 'taken');
             createConfetti(entry);
 
-            const toast = Alpine.store('toast');
-            toast?.success('Medication logged by Silvia');
+            if (action.source !== 'user') {
+                const toast = Alpine.store('toast');
+                toast?.success('Medication logged by Silvia');
+            }
 
             window.dispatchEvent(new CustomEvent('progress-updated', {
                 detail: { medications: this.taken, medicationTotal: this.total }

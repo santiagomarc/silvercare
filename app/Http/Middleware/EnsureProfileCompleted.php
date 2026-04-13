@@ -11,12 +11,12 @@ class EnsureProfileCompleted
 {
     /**
      * Routes that bypass the profile-completion gate.
-     * Includes all /profile/completion* routes, logout, and any
-     * file-serving or Vite asset paths.
+     * Includes profile completion flow and logout.
      */
-    protected array $except = [
-        'profile/completion',
-        'profile/completion/skip',
+    protected array $exceptRouteNames = [
+        'profile.completion',
+        'profile.completion.store',
+        'profile.completion.skip',
         'logout',
     ];
 
@@ -38,11 +38,9 @@ class EnsureProfileCompleted
             return $next($request);
         }
 
-        // Let the request pass through for excluded routes
-        foreach ($this->except as $path) {
-            if ($request->is($path)) {
-                return $next($request);
-            }
+        // Let the request pass through for excluded routes.
+        if ($request->routeIs($this->exceptRouteNames)) {
+            return $next($request);
         }
 
         $profile = $user->profile;

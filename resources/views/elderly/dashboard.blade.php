@@ -418,8 +418,8 @@
     {{-- Toast notification container (H2 FIX: icons + color for WCAG 1.4.1) --}}
     <div x-data class="toast-container" aria-live="polite" aria-atomic="true">
         <template x-for="t in $store.toast.queue" :key="t.id">
-            <div class="toast"
-                 :class="'toast-' + t.type"
+            <div class="toast-card"
+                 :class="'toast-border-' + t.type"
                  x-show="t.visible"
                  x-transition:enter="transition ease-out duration-300"
                  x-transition:enter-start="opacity-0 translate-y-4"
@@ -429,8 +429,15 @@
                  x-transition:leave-end="opacity-0 translate-y-4"
                  role="alert"
                  :aria-label="t.type + ': ' + t.message">
-                <span x-text="t.icon" aria-hidden="true" class="mr-1"></span>
-                <span x-text="t.message"></span>
+                
+                <div class="flex items-center gap-3">
+                    <span x-html="t.iconHtml" aria-hidden="true" class="flex-shrink-0"></span>
+                    <span x-text="t.message" class="text-white font-medium text-sm leading-snug"></span>
+                </div>
+                
+                <button @click="$store.toast.dismiss(t.id)" class="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/90 p-1 focus:outline-none">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
             </div>
         </template>
     </div>

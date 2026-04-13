@@ -150,6 +150,7 @@ export default function heroAction({ progress = 0, steps = [], initialTotal = nu
                 if (result.queued) {
                     window.dispatchEvent(new CustomEvent('ai-medication-logged', {
                         detail: {
+                            source: 'user',
                             medication_id: this.current.medication_id,
                             scheduled_time: this.current.time,
                             taken_late: false,
@@ -167,6 +168,7 @@ export default function heroAction({ progress = 0, steps = [], initialTotal = nu
 
                 window.dispatchEvent(new CustomEvent('ai-medication-logged', {
                     detail: {
+                        source: 'user',
                         medication_id: this.current.medication_id,
                         scheduled_time: this.current.time,
                         taken_late: data.taken_late || false,

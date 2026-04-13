@@ -5,12 +5,10 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
-use App\Models\UserProfile;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
@@ -18,8 +16,19 @@ class AuthenticatedSessionController extends Controller
     /**
      * Display the login view.
      */
-    public function create(): View
+    public function create(Request $request): View
     {
+        $intended = $request->session()->get('url.intended');
+
+        if (is_string($intended)) {
+            $intendedPath = parse_url($intended, PHP_URL_PATH) ?: '';
+
+            // Avoid carrying over generic pages across account switches.
+            if (in_array($intendedPath, ['/', '/profile', '/login'], true)) {
+                $request->session()->forget('url.intended');
+            }
+        }
+
         return view('auth.login');
     }
 
@@ -39,20 +48,14 @@ class AuthenticatedSessionController extends Controller
     }
 
     /**
-     * Resolve the post-login destination by role, creating a fallback profile when missing.
+     * Resolve the post-login destination by role.
      */
     protected function resolveRedirectForUser(User $user): string
     {
         $profile = $user->profile;
 
         if (! $profile) {
-            $profile = UserProfile::create([
-                'user_id' => $user->id,
-                'user_type' => 'elderly',
-                'username' => Str::slug($user->name) ?: ('user-' . $user->id),
-                'profile_completed' => false,
-                'is_active' => true,
-            ]);
+            return route('auth.select-role', absolute: false);
         }
 
         return $profile->isCaregiver()

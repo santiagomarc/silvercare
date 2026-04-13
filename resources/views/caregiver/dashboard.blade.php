@@ -80,7 +80,7 @@
                                         @endif
                                         @if(isset($_SERVER['HTTP_HOST']))
                                         <a
-                                            href="mailto:?subject=SilverCare%20Caregiver%20Link&body=Use%20this%20secure%20link%20to%20connect%20with%20me%20on%20SilverCare%3A%0A%0A{{ urlencode($shareUrl ?? url('/dashboard')) }}%0A%0AOr%20enter%20this%20PIN%3A%20{{ $displayCode }}"
+                                            href="mailto:?subject=SilverCare%20Caregiver%20Link&body=Use%20this%20secure%20link%20to%20connect%20with%20me%20on%20SilverCare%3A%0A%0A{{ urlencode($shareUrl ?? route('caregiver.dashboard')) }}%0A%0AOr%20enter%20this%20PIN%3A%20{{ $displayCode }}"
                                             class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-bold bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
                                         >
                                             <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
