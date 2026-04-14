@@ -97,13 +97,16 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
 
                 if (data.is_taken) {
                     entry.dataset.taken = 'true';
-                    if (data.taken_late) entry.dataset.canUndo = 'false';
+                    entry.dataset.canTake = 'false';
+                    entry.dataset.canUndo = data.taken_late ? 'false' : 'true';
                     this.taken++;
                     this._updateEntryAppearance(entry, data.taken_late ? 'taken-late' : 'taken');
                     createConfetti(entry);
                     toast?.success(data.message || 'Medication taken!');
                 } else {
                     entry.dataset.taken = 'false';
+                    entry.dataset.canTake = 'true';
+                    entry.dataset.canUndo = 'true';
                     this.taken--;
                     this._updateEntryAppearance(entry, this._computeStatus(time));
                     toast?.info(data.message || 'Medication unmarked');

@@ -14,6 +14,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
+    <!-- Flatpickr for Date/Time picker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
@@ -105,13 +109,13 @@
                     <!-- Start Date -->
                     <div>
                         <label for="start_date" class="block text-xs font-[800] uppercase tracking-wider text-gray-400 mb-2">Start Date</label>
-                        <input type="date" name="start_date" id="start_date" value="{{ old('start_date', date('Y-m-d')) }}" class="w-full rounded-xl border-2 border-gray-100 bg-gray-50 px-4 py-3.5 font-[600] text-gray-900 transition-all focus:border-blue-500 focus:bg-white focus:ring-0 outline-none">
+                        <input type="text" name="start_date" id="start_date" value="{{ old('start_date', date('Y-m-d')) }}" class="w-full rounded-xl border-2 border-gray-100 bg-gray-50 px-4 py-3.5 font-[600] text-gray-900 transition-all focus:border-blue-500 focus:bg-white focus:ring-0 outline-none cursor-pointer placeholder-gray-400" placeholder="Select date...">
                     </div>
 
                     <!-- End Date -->
                     <div>
                         <label for="end_date" class="block text-xs font-[800] uppercase tracking-wider text-gray-400 mb-2">End Date</label>
-                        <input type="date" name="end_date" id="end_date" value="{{ old('end_date') }}" class="w-full rounded-xl border-2 border-gray-100 bg-gray-50 px-4 py-3.5 font-[600] text-gray-900 transition-all focus:border-blue-500 focus:bg-white focus:ring-0 outline-none">
+                        <input type="text" name="end_date" id="end_date" value="{{ old('end_date') }}" class="w-full rounded-xl border-2 border-gray-100 bg-gray-50 px-4 py-3.5 font-[600] text-gray-900 transition-all focus:border-blue-500 focus:bg-white focus:ring-0 outline-none cursor-pointer placeholder-gray-400" placeholder="Select date...">
                     </div>
                 </div>
             </div>
@@ -169,8 +173,8 @@
                     <div id="specificDateContainer" data-initial-dates='@json(old('specific_dates', []))' class="flex flex-wrap gap-2 mb-4"></div>
 
                     <div class="flex items-center gap-3">
-                        <input type="date" id="newSpecificDateInput" class="rounded-xl border-2 border-gray-100 bg-gray-50 px-4 py-3 font-[600] text-gray-900 focus:border-indigo-500 focus:bg-white focus:ring-0 outline-none">
-                        <button type="button" onclick="addSpecificDate()" class="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-500 to-blue-600 text-white rounded-xl font-[700] shadow-md hover:-translate-y-0.5 transition-all">
+                        <input type="text" id="newSpecificDateInput" class="rounded-xl border-2 border-gray-100 bg-gray-50 px-4 py-3 font-[600] text-gray-900 focus:border-indigo-500 focus:bg-white focus:ring-0 outline-none cursor-pointer placeholder-gray-400" placeholder="Select date...">
+                        <button type="button" onclick="addSpecificDate()" class="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-500 to-blue-600 text-white rounded-xl font-[700] shadow-md hover:-translate-y-0.5 transition-all w-max min-w-max">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                             Add Date
                         </button>
@@ -187,8 +191,8 @@
                     </div>
                     
                     <div class="flex items-center gap-3">
-                        <input type="time" id="newTimeInput" class="rounded-xl border-2 border-gray-100 bg-gray-50 px-4 py-3 font-[600] text-gray-900 focus:border-amber-500 focus:bg-white focus:ring-0 outline-none">
-                        <button type="button" onclick="addTimeSlot()" class="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-xl font-[700] shadow-md hover:-translate-y-0.5 transition-all">
+                        <input type="text" id="newTimeInput" class="rounded-xl border-2 border-gray-100 bg-gray-50 px-4 py-3 font-[600] text-gray-900 focus:border-amber-500 focus:bg-white focus:ring-0 outline-none cursor-pointer placeholder-gray-400" placeholder="Select time...">
+                        <button type="button" onclick="addTimeSlot()" class="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-xl font-[700] shadow-md hover:-translate-y-0.5 transition-all w-max min-w-max">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                             Add Time
                         </button>
@@ -271,7 +275,12 @@
             timeSlots.push(time);
             timeSlots.sort();
             renderTimeSlots();
-            input.value = '';
+            
+            if (input._flatpickr) {
+                input._flatpickr.clear();
+            } else {
+                input.value = '';
+            }
         }
 
         function removeTimeSlot(time) {
@@ -296,7 +305,13 @@
             specificDates.push(value);
             specificDates.sort();
             renderSpecificDates();
-            input.value = '';
+
+            const specificInput = document.getElementById('newSpecificDateInput');
+            if (specificInput._flatpickr) {
+                specificInput._flatpickr.clear();
+            } else {
+                specificInput.value = '';
+            }
         }
 
         function removeSpecificDate(dateValue) {
@@ -398,12 +413,20 @@
                 }
             }
 
-            if (scheduleType === 'specific_date' && specificDates.length === 0) {
-                e.preventDefault();
-                alert('Please add at least one specific date');
-                return;
+            if (scheduleType === 'specific_date') {
+                const specificDateVal = document.getElementById('newSpecificDateInput').value;
+                if (specificDateVal) { addSpecificDate(); }
+                
+                if (specificDates.length === 0) {
+                    e.preventDefault();
+                    alert('Please add at least one specific date');
+                    return;
+                }
             }
             
+            const timeVal = document.getElementById('newTimeInput').value;
+            if (timeVal) { addTimeSlot(); }
+
             if (timeSlots.length === 0) {
                 e.preventDefault();
                 alert('Please add at least one time slot');
@@ -411,9 +434,38 @@
             }
         });
 
+        document.getElementById('newTimeInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addTimeSlot();
+            }
+        });
+
+        document.getElementById('newSpecificDateInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addSpecificDate();
+            }
+        });
+
         renderTimeSlots();
         renderSpecificDates();
         toggleScheduleSections();
+
+        document.addEventListener('DOMContentLoaded', function() {
+            flatpickr("#start_date, #end_date, #newSpecificDateInput", {
+                dateFormat: "Y-m-d",
+                allowInput: true
+            });
+            flatpickr("#newTimeInput", {
+                enableTime: true,
+                noCalendar: true,
+                dateFormat: "H:i",
+                altInput: true,
+                altFormat: "h:i K",
+                allowInput: true
+            });
+        });
     </script>
 
 </body>

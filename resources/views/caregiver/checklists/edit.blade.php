@@ -14,6 +14,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
+    <!-- Flatpickr for Date/Time picker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
@@ -122,13 +126,13 @@
                     <!-- Due Date -->
                     <div>
                         <label for="due_date" class="block text-xs font-[800] uppercase tracking-wider text-gray-400 mb-2">Due Date <span class="text-red-500">*</span></label>
-                        <input type="date" name="due_date" id="due_date" value="{{ old('due_date', $checklist->due_date?->format('Y-m-d')) }}" class="w-full rounded-xl border-2 border-gray-100 bg-gray-50 px-4 py-3.5 font-[600] text-gray-900 transition-all focus:border-amber-500 focus:bg-white focus:ring-0 outline-none" required>
+                        <input type="text" name="due_date" id="due_date" value="{{ old('due_date', $checklist->due_date?->format('Y-m-d')) }}" class="w-full rounded-xl border-2 border-gray-100 bg-gray-50 px-4 py-3.5 font-[600] text-gray-900 transition-all focus:border-amber-500 focus:bg-white focus:ring-0 outline-none cursor-pointer placeholder-gray-400" placeholder="Select date..." required>
                     </div>
 
                     <!-- Due Time -->
                     <div>
                         <label for="due_time" class="block text-xs font-[800] uppercase tracking-wider text-gray-400 mb-2">Due Time (Optional)</label>
-                        <input type="time" name="due_time" id="due_time" value="{{ old('due_time', $checklist->due_time ? \Carbon\Carbon::parse($checklist->due_time)->format('H:i') : '') }}" class="w-full rounded-xl border-2 border-gray-100 bg-gray-50 px-4 py-3.5 font-[600] text-gray-900 transition-all focus:border-amber-500 focus:bg-white focus:ring-0 outline-none">
+                        <input type="text" name="due_time" id="due_time" value="{{ old('due_time', $checklist->due_time ? \Carbon\Carbon::parse($checklist->due_time)->format('H:i') : '') }}" class="w-full rounded-xl border-2 border-gray-100 bg-gray-50 px-4 py-3.5 font-[600] text-gray-900 transition-all focus:border-amber-500 focus:bg-white focus:ring-0 outline-none cursor-pointer placeholder-gray-400" placeholder="Select time...">
                     </div>
                 </div>
 
@@ -202,5 +206,21 @@
         </form>
     </main>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            flatpickr("#due_date", {
+                dateFormat: "Y-m-d",
+                allowInput: true
+            });
+            flatpickr("#due_time", {
+                enableTime: true,
+                noCalendar: true,
+                dateFormat: "H:i",
+                altInput: true,
+                altFormat: "h:i K",
+                allowInput: true
+            });
+        });
+    </script>
 </body>
 </html>
