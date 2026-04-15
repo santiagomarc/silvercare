@@ -39,7 +39,10 @@
     {{-- Auto-collapsed summary once all doses are taken --}}
     <div x-show="!expanded && total > 0 && taken >= total" x-cloak
          class="relative z-10 rounded-xl border border-white/30 bg-white/20 px-3 py-2 flex items-center justify-between">
-        <p class="text-sm font-extrabold text-white">✅ Medications — All taken</p>
+        <p class="text-sm font-extrabold text-white inline-flex items-center gap-1.5">
+            <x-lucide-circle-check class="w-4 h-4" aria-hidden="true" />
+            Medications - All taken
+        </p>
         <button @click="expanded = true" class="text-xs font-bold text-white/90 hover:text-white transition-colors flex items-center gap-1">
             Expand
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -218,7 +221,7 @@
             </div>
         @empty
             <div class="text-center py-8 flex flex-col items-center bg-white/20 rounded-xl">
-                <div class="text-4xl mb-2 opacity-50" aria-hidden="true">🎉</div>
+                <x-lucide-party-popper class="w-10 h-10 mb-2 text-white/80" aria-hidden="true" />
                 <p class="text-white/90 text-sm font-bold">No medications today!</p>
                 <p class="text-white/70 text-xs mt-1">Enjoy your day</p>
             </div>

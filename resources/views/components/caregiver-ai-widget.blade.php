@@ -37,7 +37,7 @@
         class="w-16 h-16 bg-gradient-to-r from-purple-700 to-purple-500 rounded-full shadow-2xl flex items-center justify-center text-white hover:scale-110 transition-transform border-4 border-white focus:outline-none"
         aria-label="Open AI Health Analyst"
     >
-        <span class="text-3xl">📊</span>
+        <x-lucide-chart-column class="w-10 h-10" aria-hidden="true" />
     </button>
 
     {{-- Chat Window --}}
@@ -57,7 +57,7 @@
         <div class="bg-gradient-to-r from-purple-700 to-purple-500 p-4 flex items-center justify-between text-white shrink-0">
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-2xl">
-                    📊
+                    <x-lucide-chart-column class="w-6 h-6" aria-hidden="true" />
                 </div>
                 <div>
                     <h3 class="font-bold text-lg leading-tight">AI Health Analyst</h3>
@@ -106,9 +106,14 @@
             {{-- Welcome (no history) --}}
             <div x-show="!isLoadingHistory && messages.length === 0" class="cg-chat-fade-in" style="display: none;">
                 <div class="flex items-start space-x-2">
-                    <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-lg shrink-0">📊</div>
+                    <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center shrink-0">
+                        <x-lucide-chart-column class="w-5 h-5 text-purple-700" aria-hidden="true" />
+                    </div>
                     <div class="bg-white border border-gray-100 text-gray-800 p-3 rounded-2xl rounded-tl-none shadow-sm max-w-[85%]">
-                        <p class="text-sm font-medium">Hello! 👋 I'm the SilverCare AI Health Analyst.</p>
+                        <p class="text-sm font-medium inline-flex items-center gap-1.5">
+                            <span>Hello! I'm the SilverCare AI Health Analyst.</span>
+                            <x-lucide-hand class="w-4 h-4 text-amber-500" aria-hidden="true" />
+                        </p>
                         <p class="text-sm text-gray-600 mt-1">I can analyze your patient's health data, medication adherence, and identify trends. Ask me anything about their well-being.</p>
                     </div>
                 </div>
@@ -131,9 +136,10 @@
             {{-- Messages --}}
             <template x-for="(msg, index) in messages" :key="index">
                 <div class="flex items-start space-x-2 cg-chat-fade-in" :class="msg.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''">
-                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-lg shrink-0"
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
                          :class="msg.role === 'user' ? 'bg-purple-600 text-white' : 'bg-purple-100'">
-                        <span x-text="msg.role === 'user' ? '👤' : '📊'"></span>
+                        <x-lucide-user x-show="msg.role === 'user'" class="w-4 h-4" aria-hidden="true" />
+                        <x-lucide-chart-column x-show="msg.role !== 'user'" class="w-4 h-4 text-purple-700" aria-hidden="true" />
                     </div>
                     <div class="p-3 shadow-sm max-w-[85%]"
                          :class="msg.role === 'user' ? 'bg-purple-600 text-white rounded-2xl rounded-tr-none' : 'bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-tl-none'">
@@ -145,7 +151,9 @@
 
             {{-- Thinking Indicator --}}
             <div x-show="isLoading && !isStreaming" class="flex items-start space-x-2" style="display: none;">
-                <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-lg shrink-0">📊</div>
+                <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center shrink-0">
+                    <x-lucide-chart-column class="w-5 h-5 text-purple-700" aria-hidden="true" />
+                </div>
                 <div class="bg-white border border-gray-100 p-4 rounded-2xl rounded-tl-none shadow-sm flex space-x-1.5 items-center">
                     <div class="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
                     <div class="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style="animation-delay: 0.15s"></div>

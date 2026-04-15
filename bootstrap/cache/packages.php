@@ -11,6 +11,13 @@
       0 => 'Barryvdh\\DomPDF\\ServiceProvider',
     ),
   ),
+  'blade-ui-kit/blade-icons' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'BladeUI\\Icons\\BladeIconsServiceProvider',
+    ),
+  ),
   'google-gemini-php/laravel' => 
   array (
     'providers' => 
@@ -67,6 +74,13 @@
     'providers' => 
     array (
       0 => 'Laravel\\Tinker\\TinkerServiceProvider',
+    ),
+  ),
+  'mallardduck/blade-lucide-icons' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'MallardDuck\\LucideIcons\\BladeLucideIconsServiceProvider',
     ),
   ),
   'nesbot/carbon' => 

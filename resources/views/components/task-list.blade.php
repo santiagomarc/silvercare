@@ -41,7 +41,10 @@
         {{-- Auto-collapsed summary once all tasks are done --}}
         <div x-show="!expanded && total > 0 && completed >= total" x-cloak
              class="rounded-xl border border-blue-100 bg-white/80 px-3 py-2 mb-3 flex items-center justify-between">
-            <p class="text-sm font-extrabold text-emerald-700">✅ Tasks — All completed</p>
+            <p class="text-sm font-extrabold text-emerald-700 inline-flex items-center gap-1.5">
+                <x-lucide-circle-check class="w-4 h-4" aria-hidden="true" />
+                Tasks - All completed
+            </p>
             <button @click="expanded = true" class="text-xs font-bold text-[#000080] hover:text-blue-900 transition-colors flex items-center gap-1">
                 Expand
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -51,10 +54,17 @@
         <div class="space-y-2" x-show="expanded || !(total > 0 && completed >= total)">
             @php
                 $categoryIcons = [
-                    'Health' => '❤️', 'Exercise' => '🏃', 'Nutrition' => '🍎',
-                    'Social' => '👥', 'Hygiene' => '🧼', 'Mental' => '🧠',
-                    'Medication' => '💊', 'Medical' => '🏥', 'Daily' => '☀️',
-                    'Home' => '🏠', 'Other' => '📋',
+                    'Health' => 'heart-pulse',
+                    'Exercise' => 'footprints',
+                    'Nutrition' => 'apple',
+                    'Social' => 'users',
+                    'Hygiene' => 'shower-head',
+                    'Mental' => 'brain',
+                    'Medication' => 'pill',
+                    'Medical' => 'hospital',
+                    'Daily' => 'sun',
+                    'Home' => 'house',
+                    'Other' => 'clipboard-list',
                 ];
             @endphp
 
@@ -75,8 +85,11 @@
                     </button>
 
                     {{-- Category Icon --}}
-                    <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-sm flex-shrink-0 mt-0.5" aria-hidden="true">
-                        {{ $categoryIcons[$checklist->category] ?? '📋' }}
+                    @php
+                        $categoryIcon = $categoryIcons[$checklist->category] ?? 'clipboard-list';
+                    @endphp
+                    <div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5" aria-hidden="true">
+                        <x-dynamic-component :component="'lucide-' . $categoryIcon" class="w-5 h-5 text-slate-600" />
                     </div>
 
                     {{-- Task Content --}}
@@ -103,8 +116,9 @@
                                 </span>
                             @endif
                             @if($checklist->is_recurring)
-                                <span class="text-xs text-blue-500 font-medium">
-                                    🔄 {{ ucfirst($checklist->frequency ?? 'Recurring') }}
+                                <span class="text-xs text-blue-500 font-medium inline-flex items-center gap-1">
+                                    <x-lucide-refresh-cw class="w-3.5 h-3.5" aria-hidden="true" />
+                                    {{ ucfirst($checklist->frequency ?? 'Recurring') }}
                                 </span>
                             @endif
                         </div>
@@ -112,8 +126,9 @@
                         {{-- Description --}}
                         @if($checklist->description)
                             <div class="mt-1">
-                                <div x-show="!expanded" class="text-xs text-gray-500 cursor-pointer hover:text-gray-700" @click="expanded = true">
-                                    📝 {{ Str::limit($checklist->description, 60) }}
+                                <div x-show="!expanded" class="text-xs text-gray-500 cursor-pointer hover:text-gray-700 inline-flex items-center gap-1" @click="expanded = true">
+                                    <x-lucide-notebook-pen class="w-3.5 h-3.5 text-slate-400" aria-hidden="true" />
+                                    <span>{{ Str::limit($checklist->description, 60) }}</span>
                                     @if(strlen($checklist->description) > 60)
                                         <span class="text-blue-500 font-bold ml-1 hover:underline">Read more</span>
                                     @endif
@@ -125,13 +140,18 @@
                             </div>
                         @endif
                         @if($checklist->notes && !$checklist->description)
-                            <p class="text-xs text-gray-400 mt-1 truncate italic">💬 {{ Str::limit($checklist->notes, 60) }}</p>
+                            <p class="text-xs text-gray-400 mt-1 truncate italic inline-flex items-center gap-1">
+                                <x-lucide-message-circle class="w-3.5 h-3.5 text-slate-400" aria-hidden="true" />
+                                <span>{{ Str::limit($checklist->notes, 60) }}</span>
+                            </p>
                         @endif
                     </div>
                 </div>
             @empty
                 <div class="text-center py-10">
-                    <div class="text-5xl mb-3" aria-hidden="true">🎉</div>
+                    <div class="mb-3 flex justify-center" aria-hidden="true">
+                        <x-lucide-party-popper class="w-10 h-10 text-emerald-500" />
+                    </div>
                     <p class="text-gray-600 text-sm font-bold">All caught up!</p>
                     <p class="text-gray-400 text-xs mt-1">No tasks for today</p>
                 </div>

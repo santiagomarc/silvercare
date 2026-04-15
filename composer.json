@@ -8,11 +8,13 @@
     "require": {
         "php": "^8.2",
         "barryvdh/laravel-dompdf": "^3.1",
+        "blade-ui-kit/blade-icons": "^1.9",
         "google-gemini-php/laravel": "^2.0",
         "laravel/framework": "^12.0",
         "laravel/reverb": "^1.0",
         "laravel/socialite": "^5.23",
         "laravel/tinker": "^2.10.1",
+        "mallardduck/blade-lucide-icons": "^1.26",
         "simplesoftwareio/simple-qrcode": "^4.2"
     },
     "require-dev": {

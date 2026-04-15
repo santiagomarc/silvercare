@@ -103,7 +103,8 @@
         <div class="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-2 relative z-10">
             <div>
                 <h2 class="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
-                    {{ $greeting }}, <span class="text-[#000080]">{{ $firstName }}</span> <span class="text-2xl" aria-hidden="true">👋</span>
+                    {{ $greeting }}, <span class="text-[#000080]">{{ $firstName }}</span>
+                    <x-lucide-hand class="inline-block w-8 h-8 text-amber-500 align-[-0.2em]" aria-hidden="true" />
                 </h2>
             </div>
             <div class="hidden sm:block md:text-right">
@@ -144,9 +145,30 @@
                             <p class="text-sm font-extrabold text-gray-900">Complete your health profile</p>
                             <p class="text-xs text-gray-500 mt-0.5">
                                 Complete your profile:
-                                <span class="font-bold {{ $personalStepComplete ? 'text-emerald-700' : 'text-gray-500' }}">{{ $personalStepComplete ? '☑' : '☐' }} Personal</span>
-                                <span class="font-bold {{ $emergencyStepComplete ? 'text-emerald-700' : 'text-gray-500' }}">{{ $emergencyStepComplete ? '☑' : '☐' }} Emergency</span>
-                                <span class="font-bold {{ $medicalStepComplete ? 'text-emerald-700' : 'text-gray-500' }}">{{ $medicalStepComplete ? '☑' : '☐' }} Medical</span>
+                                <span class="inline-flex items-center gap-1 font-bold {{ $personalStepComplete ? 'text-emerald-700' : 'text-gray-500' }}">
+                                    @if($personalStepComplete)
+                                        <x-lucide-check class="w-4 h-4" aria-hidden="true" />
+                                    @else
+                                        <x-lucide-square class="w-4 h-4" aria-hidden="true" />
+                                    @endif
+                                    Personal
+                                </span>
+                                <span class="inline-flex items-center gap-1 font-bold {{ $emergencyStepComplete ? 'text-emerald-700' : 'text-gray-500' }}">
+                                    @if($emergencyStepComplete)
+                                        <x-lucide-check class="w-4 h-4" aria-hidden="true" />
+                                    @else
+                                        <x-lucide-square class="w-4 h-4" aria-hidden="true" />
+                                    @endif
+                                    Emergency
+                                </span>
+                                <span class="inline-flex items-center gap-1 font-bold {{ $medicalStepComplete ? 'text-emerald-700' : 'text-gray-500' }}">
+                                    @if($medicalStepComplete)
+                                        <x-lucide-check class="w-4 h-4" aria-hidden="true" />
+                                    @else
+                                        <x-lucide-square class="w-4 h-4" aria-hidden="true" />
+                                    @endif
+                                    Medical
+                                </span>
                             </p>
                         </div>
                     </div>

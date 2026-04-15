@@ -56,14 +56,20 @@
                 @click="completeMedication()"
                 class="hero-action-cta text-green-700 flex items-center gap-2"
                 aria-label="Mark medication as taken"
-            >✓ I Took It</button>
+            >
+                <x-lucide-check class="w-5 h-5" aria-hidden="true" />
+                I Took It
+            </button>
 
             <button
                 x-show="isTask && !busy"
                 @click="completeTask()"
                 class="hero-action-cta text-[#000080] flex items-center gap-2"
                 aria-label="Mark task as complete"
-            >✓ Mark Complete</button>
+            >
+                <x-lucide-check class="w-5 h-5" aria-hidden="true" />
+                Mark Complete
+            </button>
 
             <a
                 x-show="isVital && currentRoute"

@@ -66,8 +66,24 @@
                                 </form>
 
                                 <!-- Category Icon -->
-                                <div class="flex-shrink-0 mr-4 text-3xl">
-                                    {{ \App\Presenters\ChecklistPresenter::categoryIcon($checklist->category) }}
+                                @php
+                                    $categoryIcons = [
+                                        'Health' => 'heart-pulse',
+                                        'Exercise' => 'footprints',
+                                        'Nutrition' => 'apple',
+                                        'Social' => 'users',
+                                        'Hygiene' => 'shower-head',
+                                        'Mental' => 'brain',
+                                        'Medication' => 'pill',
+                                        'Medical' => 'hospital',
+                                        'Daily' => 'sun',
+                                        'Home' => 'house',
+                                        'Other' => 'clipboard-list',
+                                    ];
+                                    $categoryIcon = $categoryIcons[$checklist->category] ?? 'clipboard-list';
+                                @endphp
+                                <div class="flex-shrink-0 mr-4 w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                                    <x-dynamic-component :component="'lucide-' . $categoryIcon" class="w-6 h-6 text-slate-600" aria-hidden="true" />
                                 </div>
 
                                 <!-- Task Content -->
@@ -78,10 +94,16 @@
                                     <div class="flex flex-wrap items-center gap-2 mt-1">
                                         <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">{{ $checklist->category ?? 'General' }}</span>
                                         @if($checklist->due_time)
-                                            <span class="text-sm text-gray-500">🕐 {{ \Carbon\Carbon::parse($checklist->due_time)->format('g:i A') }}</span>
+                                            <span class="text-sm text-gray-500 inline-flex items-center gap-1">
+                                                <x-lucide-clock-3 class="w-4 h-4 text-slate-400" aria-hidden="true" />
+                                                {{ \Carbon\Carbon::parse($checklist->due_time)->format('g:i A') }}
+                                            </span>
                                         @endif
                                         @if($checklist->priority == 'high')
-                                            <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full font-bold">❗ High Priority</span>
+                                            <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full font-bold inline-flex items-center gap-1">
+                                                <x-lucide-triangle-alert class="w-3.5 h-3.5" aria-hidden="true" />
+                                                High Priority
+                                            </span>
                                         @endif
                                     </div>
                                 </div>
@@ -91,7 +113,8 @@
                                     @if($checklist->is_completed)
                                         <div class="text-center">
                                             <span class="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full font-bold">
-                                                ✓ Done
+                                                <x-lucide-check class="w-4 h-4 mr-1" aria-hidden="true" />
+                                                Done
                                             </span>
                                             @if($checklist->completed_at)
                                                 <p class="text-xs text-gray-400 mt-1">{{ $checklist->completed_at->format('g:i A') }}</p>
@@ -107,7 +130,10 @@
 
                             @if($checklist->notes)
                                 <div class="px-5 pb-4">
-                                    <p class="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">📝 {{ $checklist->notes }}</p>
+                                    <p class="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg inline-flex items-start gap-2">
+                                        <x-lucide-notebook-pen class="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" aria-hidden="true" />
+                                        <span>{{ $checklist->notes }}</span>
+                                    </p>
                                 </div>
                             @endif
                         </div>
@@ -122,7 +148,10 @@
                     </svg>
                 </div>
                 <h3>No tasks right now</h3>
-                <p>Your caregiver hasn't added any tasks for you yet. Enjoy your free time! 🌿</p>
+                <p class="inline-flex items-center gap-2 text-gray-600">
+                    Your caregiver hasn't added any tasks for you yet. Enjoy your free time!
+                    <x-lucide-leaf class="w-5 h-5 text-emerald-600" aria-hidden="true" />
+                </p>
                 <a href="{{ route('dashboard') }}" class="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-navy-500 text-white font-bold rounded-xl hover:bg-navy-600 transition-colors min-h-touch shadow-glow-brand">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
                     Back to Dashboard

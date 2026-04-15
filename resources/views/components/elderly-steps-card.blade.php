@@ -28,7 +28,7 @@
         <div class="flex justify-between items-start mb-4">
             <div>
                 <div class="flex items-center gap-2 mb-1">
-                    <span class="text-2xl" aria-hidden="true">👟</span>
+                    <x-lucide-footprints class="w-8 h-8 text-emerald-100" aria-hidden="true" />
                     <h3 class="font-extrabold text-lg">Today's Steps</h3>
                 </div>
                 <p class="text-white/70 text-sm">
@@ -63,8 +63,9 @@
             <span class="text-white/80">{{ $progress }}% of daily goal</span>
 
             @if($goalReached)
-                <span class="badge bg-white/20 text-white font-bold text-xs" role="status">
-                    🎉 Goal Reached!
+                <span class="badge bg-white/20 text-white font-bold text-xs inline-flex items-center gap-1" role="status">
+                    <x-lucide-party-popper class="w-3.5 h-3.5" aria-hidden="true" />
+                    Goal Reached!
                 </span>
             @elseif($stepsData)
                 <span class="text-white/60 text-xs">

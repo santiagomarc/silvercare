@@ -31,7 +31,10 @@
     <div class="ambient-orb -left-6 bottom-0 h-24 w-24 bg-emerald-200/35 blur-2xl" aria-hidden="true"></div>
 
     <div class="flex items-center justify-between mb-3 relative z-10">
-        <h3 class="font-extrabold text-base text-emerald-900">🌱 Your Garden</h3>
+        <h3 class="font-extrabold text-base text-emerald-900 inline-flex items-center gap-2">
+            <x-lucide-sprout class="w-6 h-6 text-emerald-600" aria-hidden="true" />
+            Your Garden
+        </h3>
         <div class="flex items-center gap-2">
             <span class="badge badge-success text-xs" x-text="overallProgress + '%'"></span>
             <span class="badge text-xs" :class="isWilting ? 'badge-danger' : 'badge-info'" x-text="streakLabel"></span>

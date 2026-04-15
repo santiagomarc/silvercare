@@ -14,14 +14,19 @@
     <div class="ambient-orb -right-8 top-0 h-28 w-28 bg-amber-200/45"></div>
     <div class="ambient-orb -bottom-8 left-8 h-24 w-24 bg-rose-200/30 blur-2xl"></div>
     <div class="flex flex-col sm:flex-row items-center gap-5">
-        {{-- Emoji display --}}
+        {{-- Mood icon display --}}
         <div class="flex flex-col items-center justify-center w-28 flex-shrink-0">
             <div
-                class="text-5xl transition-transform duration-300"
-                x-text="emoji"
+                class="w-14 h-14 rounded-2xl bg-white/70 border border-white/80 flex items-center justify-center transition-transform duration-300"
                 :style="`transform: scale(${saved ? 1.1 : 1})`"
                 aria-hidden="true"
-            ></div>
+            >
+                <x-lucide-frown x-show="value === 1" class="w-10 h-10" x-bind:style="`color: ${color}`" />
+                <x-lucide-frown x-show="value === 2" class="w-9 h-9" x-bind:style="`color: ${color}`" />
+                <x-lucide-meh x-show="value === 3" class="w-9 h-9" x-bind:style="`color: ${color}`" />
+                <x-lucide-smile x-show="value === 4" class="w-9 h-9" x-bind:style="`color: ${color}`" />
+                <x-lucide-party-popper x-show="value === 5" class="w-9 h-9" x-bind:style="`color: ${color}`" />
+            </div>
             <p
                 class="font-extrabold text-lg mt-1 transition-colors duration-300 text-center"
                 x-text="label"
@@ -43,10 +48,11 @@
                     x-transition:leave="transition ease-in duration-150"
                     x-transition:leave-start="opacity-100"
                     x-transition:leave-end="opacity-0"
-                    class="badge badge-success text-xs"
+                    class="badge badge-success text-xs inline-flex items-center gap-1"
                     role="status"
                 >
-                    ✓ Saved
+                    <x-lucide-check class="w-3.5 h-3.5" aria-hidden="true" />
+                    <span>Saved</span>
                 </span>
             </div>
 
