@@ -65,6 +65,12 @@
     $healthScore = $totalFactors > 0 ? round($healthScore / $totalFactors) : 0;
     $healthLabel = $healthScore >= 90 ? 'Excellent' : ($healthScore >= 75 ? 'Good' : ($healthScore >= 60 ? 'Fair' : 'Needs Attention'));
     $healthColor = $healthScore >= 90 ? 'emerald' : ($healthScore >= 75 ? 'blue' : ($healthScore >= 60 ? 'amber' : 'red'));
+    $vitalIconMap = [
+        'blood_pressure' => 'heart-pulse',
+        'sugar_level' => 'droplets',
+        'temperature' => 'thermometer',
+        'heart_rate' => 'activity',
+    ];
 @endphp
 
 <div class="min-h-screen pb-24">
@@ -145,8 +151,10 @@
                             @if($totalFactors > 0)
                             <div class="flex flex-wrap gap-2">
                                 @foreach($healthFactors as $type => $factor)
-                                <span class="px-2 py-1 bg-white/20 rounded-lg text-xs font-[700]">
-                                    {{ $analyticsData[$type]['config']['icon'] }} {{ $factor['status'] }}
+                                @php $factorIcon = $vitalIconMap[$type] ?? 'stethoscope'; @endphp
+                                <span class="px-2 py-1 bg-white/20 rounded-lg text-xs font-[700] inline-flex items-center gap-1.5">
+                                    <x-dynamic-component :component="'lucide-' . $factorIcon" class="w-3.5 h-3.5" aria-hidden="true" />
+                                    {{ $factor['status'] }}
                                 </span>
                                 @endforeach
                             </div>
@@ -205,7 +213,7 @@
 
         <!-- Insights Section (Now in Grid with BMI) -->
 
-        <!-- ✨ AI Vitals Trend Analyzer -->
+        <!-- AI Vitals Trend Analyzer -->
         @if($totalFactors > 0)
         <div x-data="vitalsAiAnalyzer()" class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-xl overflow-hidden">
             <div class="p-6">
@@ -224,14 +232,17 @@
                         <template x-if="loading">
                             <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                         </template>
-                        <span x-text="loading ? 'Analyzing...' : (analysis ? 'Re-Analyze' : '🔍 Analyze My Trends')"></span>
+                        <span x-text="loading ? 'Analyzing...' : (analysis ? 'Re-Analyze' : 'Analyze My Trends')"></span>
                     </button>
                 </div>
 
                 <!-- AI Analysis Result -->
                 <div x-show="analysis" x-transition class="mt-5 bg-white/10 backdrop-blur rounded-xl p-5 text-white">
                     <div class="prose prose-invert prose-sm max-w-none" x-html="renderMarkdown(analysis)"></div>
-                    <p class="text-xs text-white/50 mt-3 font-[600]">⚕️ This is AI-generated insight, not medical advice.</p>
+                    <p class="text-xs text-white/50 mt-3 font-[600] inline-flex items-center gap-1.5">
+                        <x-lucide-stethoscope class="w-3.5 h-3.5" aria-hidden="true" />
+                        <span>This is AI-generated insight, not medical advice.</span>
+                    </p>
                 </div>
 
                 <!-- Error -->
@@ -348,7 +359,10 @@
                                 @endphp
                                 <div class="{{ $insightColors[$insightType] }} rounded-xl p-3 border">
                                     <div class="flex items-start gap-3">
-                                        <span class="text-xl">{{ $data['config']['icon'] }}</span>
+                                        @php $insightIcon = $vitalIconMap[$type] ?? 'stethoscope'; @endphp
+                                        <div class="w-8 h-8 rounded-lg bg-white/80 flex items-center justify-center flex-shrink-0">
+                                            <x-dynamic-component :component="'lucide-' . $insightIcon" class="w-4.5 h-4.5 text-{{ $data['config']['color'] }}-600" aria-hidden="true" />
+                                        </div>
                                         <div>
                                             <h4 class="font-[800] text-sm mb-0.5">{{ $data['config']['name'] }}</h4>
                                             <p class="text-xs font-[600] leading-relaxed">{{ $insight }}</p>
@@ -366,8 +380,8 @@
             <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
                 <div class="bg-gradient-to-r from-purple-50 to-violet-100 p-5 border-b border-purple-100">
                     <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-2xl shadow-sm">
-                            ⚖️
+                        <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                            <x-lucide-scale class="w-6 h-6 text-violet-600" aria-hidden="true" />
                         </div>
                         <div>
                             <h3 class="text-lg font-[900] text-gray-900">Body Metrics</h3>
@@ -391,12 +405,16 @@
                         <!-- Weight & Height Cards -->
                         <div class="grid grid-cols-2 gap-3 mb-4">
                             <div class="bg-gray-50 rounded-xl p-4 text-center">
-                                <div class="text-2xl mb-1">📏</div>
+                                <div class="mb-1 flex justify-center">
+                                    <x-lucide-ruler class="w-6 h-6 text-indigo-600" aria-hidden="true" />
+                                </div>
                                 <p class="text-xs font-[700] text-gray-500 uppercase">Height</p>
                                 <p class="text-xl font-[900] text-gray-900">{{ $bmiData['height'] }} <span class="text-sm font-[600] text-gray-500">cm</span></p>
                             </div>
                             <div class="bg-gray-50 rounded-xl p-4 text-center">
-                                <div class="text-2xl mb-1">⚖️</div>
+                                <div class="mb-1 flex justify-center">
+                                    <x-lucide-scale class="w-6 h-6 text-violet-600" aria-hidden="true" />
+                                </div>
                                 <p class="text-xs font-[700] text-gray-500 uppercase">Weight</p>
                                 <p class="text-xl font-[900] text-gray-900">{{ $bmiData['weight'] }} <span class="text-sm font-[600] text-gray-500">kg</span></p>
                             </div>
@@ -421,8 +439,8 @@
                     @else
                         <!-- No BMI Data -->
                         <div class="text-center py-8">
-                            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl opacity-50">
-                                ⚖️
+                            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 opacity-50">
+                                <x-lucide-scale class="w-8 h-8 text-gray-500" aria-hidden="true" />
                             </div>
                             <h4 class="text-base font-[800] text-gray-400 mb-1">No Body Metrics</h4>
                             <p class="text-xs text-gray-400 font-[600] mb-4">Update your profile with weight & height</p>
@@ -440,8 +458,8 @@
             <div class="flex flex-col md:flex-row items-center gap-6">
                 <!-- Left: Icon and Title -->
                 <div class="flex items-center gap-4 flex-shrink-0">
-                    <div class="w-14 h-14 bg-white rounded-xl flex items-center justify-center text-3xl shadow-sm">
-                        👟
+                    <div class="w-14 h-14 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                        <x-lucide-footprints class="w-8 h-8 text-emerald-600" aria-hidden="true" />
                     </div>
                     <div>
                         <h3 class="text-lg font-[900] text-gray-900">Daily Steps</h3>
@@ -489,7 +507,10 @@
                     
                     @if($stepsData['today']['source'] === 'google_fit')
                     <div class="flex-shrink-0">
-                        <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-[700] text-xs">🔗 Google Fit</span>
+                        <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-[700] text-xs inline-flex items-center gap-1.5">
+                            <x-lucide-link class="w-3.5 h-3.5" aria-hidden="true" />
+                            Google Fit
+                        </span>
                     </div>
                     @endif
                 @else
@@ -511,8 +532,9 @@
                 <div class="bg-gradient-to-r from-{{ $data['config']['color'] }}-50 to-{{ $data['config']['color'] }}-100/50 p-5 border-b border-{{ $data['config']['color'] }}-100">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-2xl shadow-sm">
-                                {{ $data['config']['icon'] }}
+                            @php $cardIcon = $vitalIconMap[$type] ?? 'stethoscope'; @endphp
+                            <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                                <x-dynamic-component :component="'lucide-' . $cardIcon" class="w-6 h-6 text-{{ $data['config']['color'] }}-600" aria-hidden="true" />
                             </div>
                             <div>
                                 <h3 class="text-lg font-[900] text-gray-900">{{ $data['config']['name'] }}</h3>

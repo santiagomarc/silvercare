@@ -135,15 +135,30 @@
                                         @if($notification->severity)
                                             <div class="flex items-center gap-2 mb-3">
                                                 @if($notification->severity === 'negative' || $notification->severity === 'high')
-                                                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold bg-rose-50 text-rose-700 border border-rose-100">⚠️ Urgent</span>
+                                                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold bg-rose-50 text-rose-700 border border-rose-100">
+                                                        <x-lucide-triangle-alert class="w-4 h-4" aria-hidden="true" />
+                                                        Urgent
+                                                    </span>
                                                 @elseif($notification->severity === 'warning' || $notification->severity === 'medium')
-                                                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold bg-amber-50 text-amber-700 border border-amber-100">⚡ Important</span>
+                                                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold bg-amber-50 text-amber-700 border border-amber-100">
+                                                        <x-lucide-bolt class="w-4 h-4" aria-hidden="true" />
+                                                        Important
+                                                    </span>
                                                 @elseif($notification->severity === 'positive')
-                                                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">✓ Completed</span>
+                                                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                                        <x-lucide-check-circle class="w-4 h-4" aria-hidden="true" />
+                                                        Completed
+                                                    </span>
                                                 @elseif($notification->severity === 'reminder')
-                                                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold bg-violet-50 text-violet-700 border border-violet-100">🔔 Reminder</span>
+                                                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold bg-violet-50 text-violet-700 border border-violet-100">
+                                                        <x-lucide-bell class="w-4 h-4" aria-hidden="true" />
+                                                        Reminder
+                                                    </span>
                                                 @elseif($notification->severity === 'low')
-                                                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold bg-slate-50 text-slate-600 border border-slate-100">🟢 Low Priority</span>
+                                                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold bg-slate-50 text-slate-600 border border-slate-100">
+                                                        <x-lucide-circle class="w-4 h-4 text-emerald-500" aria-hidden="true" />
+                                                        Low Priority
+                                                    </span>
                                                 @endif
                                             </div>
                                         @endif
@@ -175,7 +190,10 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                     </div>
-                    <h3>You're all caught up! 🌿</h3>
+                        <h3 class="inline-flex items-center gap-2">
+                            <span>You're all caught up!</span>
+                            <x-lucide-leaf class="w-5 h-5 text-emerald-600" aria-hidden="true" />
+                        </h3>
                     <p>No new notifications right now. We'll let you know when something important comes up.</p>
                     <a href="{{ route('dashboard') }}" class="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-navy-500 text-white font-bold rounded-xl hover:bg-navy-600 transition-colors min-h-touch shadow-glow-brand">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
@@ -224,11 +242,11 @@
                     if (markButton) markButton.remove();
 
                     updateCounts();
-                    showToast('✓ Marked as read', 'success');
+                    showToast('Marked as read', 'success');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showToast('❌ Failed to mark as read', 'error');
+                showToast('Failed to mark as read', 'error');
             }
         }
 
@@ -252,7 +270,7 @@
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showToast('❌ Failed to mark all as read', 'error');
+                showToast('Failed to mark all as read', 'error');
             }
         }
 
@@ -282,11 +300,11 @@
                         checkIfEmpty();
                     }, 300);
 
-                    showToast('✓ Notification deleted', 'success');
+                    showToast('Notification deleted', 'success');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showToast('❌ Failed to delete notification', 'error');
+                showToast('Failed to delete notification', 'error');
             }
         }
 
@@ -310,7 +328,7 @@
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showToast('❌ Failed to clear notifications', 'error');
+                showToast('Failed to clear notifications', 'error');
             }
         }
 

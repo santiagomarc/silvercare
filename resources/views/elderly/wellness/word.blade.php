@@ -97,11 +97,11 @@
                 show: true,
                 showToast: false,
                 quotes: [
-                    { quote: 'Every day is a new beginning. Take a deep breath, smile, and start again.', author: 'Unknown', action: 'Start your day with a smile! 😊' },
-                    { quote: 'Age is just a number. It\'s never too late to learn something new.', author: 'Unknown', action: 'Try something new today! 🌟' },
-                    { quote: 'Happiness is not by chance, but by choice.', author: 'Jim Rohn', action: 'Choose joy today! ✨' },
-                    { quote: 'Do not regret growing older. It is a privilege denied to many.', author: 'Unknown', action: 'Be grateful for today! 🙏' },
-                    { quote: 'Laughter is timeless, imagination has no age, and dreams are forever.', author: 'Walt Disney', action: 'Laugh with a friend! 😂' }
+                    { quote: 'Every day is a new beginning. Take a deep breath, smile, and start again.', author: 'Unknown', action: 'Start your day with a smile.' },
+                    { quote: 'Age is just a number. It\'s never too late to learn something new.', author: 'Unknown', action: 'Try something new today.' },
+                    { quote: 'Happiness is not by chance, but by choice.', author: 'Jim Rohn', action: 'Choose joy today.' },
+                    { quote: 'Do not regret growing older. It is a privilege denied to many.', author: 'Unknown', action: 'Be grateful for today.' },
+                    { quote: 'Laughter is timeless, imagination has no age, and dreams are forever.', author: 'Walt Disney', action: 'Laugh with a friend.' }
                 ],
                 get current() { return this.quotes[this.idx]; },
                 get dateString() {

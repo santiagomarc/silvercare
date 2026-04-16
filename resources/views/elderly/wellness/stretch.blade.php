@@ -111,7 +111,9 @@
         <!-- Complete Modal -->
         <div x-show="showComplete" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" style="display: none;" x-transition.opacity>
             <div class="bg-white rounded-[32px] p-8 max-w-md w-full text-center shadow-2xl transform transition-all scale-100">
-                <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">🎉</div>
+                <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <x-lucide-party-popper class="w-10 h-10 text-green-600" aria-hidden="true" />
+                </div>
                 <h2 class="text-3xl font-[900] text-gray-800 mb-2">Session Complete!</h2>
                 <p class="text-gray-600 mb-8">You've completed the <span x-text="levelNames[level]"></span> routine. Excellent work keeping your body moving.</p>
                 <a href="{{ route('elderly.wellness.index') }}" class="block w-full py-4 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors shadow-lg">

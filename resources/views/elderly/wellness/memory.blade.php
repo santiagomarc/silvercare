@@ -64,12 +64,14 @@
         <!-- Level Complete Modal (Levels 1-4) -->
         <div x-show="showLevelModal" style="display: none;" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" x-transition.opacity>
             <div class="bg-white rounded-[32px] p-8 max-w-sm w-full text-center shadow-2xl transform transition-all scale-100 relative overflow-hidden">
-                <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 shadow-inner">👍</div>
+                <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                    <x-lucide-thumbs-up class="w-10 h-10" aria-hidden="true" />
+                </div>
                 <h2 class="text-2xl font-[900] text-gray-800 mb-2">Good Job!</h2>
                 <p class="text-gray-500 mb-8">Level <span x-text="level + 1"></span> complete.</p>
                 
                 <button @click="nextLevel()" class="w-full py-3 bg-blue-600 text-white font-[800] rounded-2xl hover:bg-blue-700 shadow-lg transition-all hover:scale-[1.02]">
-                    Next Level →
+                    Next Level
                 </button>
             </div>
         </div>
@@ -83,8 +85,8 @@
                 
                 <!-- Content Container (Forces buttons to Front) -->
                 <div class="relative z-10">
-                    <div class="w-24 h-24 bg-yellow-100 text-yellow-500 rounded-full flex items-center justify-center text-5xl mx-auto mb-6 shadow-inner animate-bounce">
-                        🏆
+                    <div class="w-24 h-24 bg-yellow-100 text-yellow-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner animate-bounce">
+                        <x-lucide-trophy class="w-12 h-12" aria-hidden="true" />
                     </div>
                     
                     <h2 class="text-3xl font-[900] text-gray-800 mb-2">Congratulations!</h2>
@@ -92,7 +94,10 @@
                     
                     <div class="space-y-3">
                         <button @click="restartGame()" class="w-full py-4 bg-blue-600 text-white font-[800] rounded-2xl hover:bg-blue-700 shadow-lg transition-all hover:scale-[1.02] cursor-pointer">
-                            Play Again 🔄
+                            <span class="inline-flex items-center gap-2">
+                                <x-lucide-rotate-cw class="w-5 h-5" aria-hidden="true" />
+                                Play Again
+                            </span>
                         </button>
                         
                         <a href="{{ route('elderly.wellness.index') }}" class="block w-full py-4 bg-white text-gray-600 font-[800] rounded-2xl hover:bg-gray-50 border-2 border-gray-200 transition-all cursor-pointer">

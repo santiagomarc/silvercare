@@ -711,14 +711,18 @@
 
         // --- Toasts (local - matches global toast store durations/icons) ---
         function showToast(message, type = 'info') {
-            const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+            const icons = {
+                success: '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M8.5 12.5l2.5 2.5 4.5-5"></path></svg>',
+                error: '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M15 9l-6 6M9 9l6 6"></path></svg>',
+                info: '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 10v6"></path><path d="M12 7h.01"></path></svg>'
+            };
             const bgClass = type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-gray-800';
             // H1 FIX: Match global toast durations (5s success/info, 7s error)
             const duration = type === 'error' ? 7000 : 5000;
             const toast = document.createElement('div');
             toast.className = `fixed bottom-8 left-1/2 -translate-x-1/2 ${bgClass} text-white px-8 py-4 rounded-2xl shadow-2xl z-[60] font-bold text-base transform transition-all duration-300 translate-y-10 opacity-0 flex items-center gap-3 min-w-[260px] max-w-[90vw]`;
             // H2 FIX: Icon for non-color-only feedback
-            toast.innerHTML = `<span aria-hidden="true" class="text-xl">${icons[type] ?? 'ℹ️'}</span><span>${message}</span>`;
+            toast.innerHTML = `<span aria-hidden="true" class="text-xl">${icons[type] ?? icons.info}</span><span>${message}</span>`;
             toast.setAttribute('role', 'alert');
 
             document.body.appendChild(toast);

@@ -97,7 +97,10 @@
                                 </svg>
                             </div>
                             <h3 class="text-lg font-extrabold text-slate-700 mb-1">Start a conversation</h3>
-                            <p class="text-base text-slate-500 font-medium max-w-xs">Send a message to your caregiver — they'd love to hear from you! 💬</p>
+                            <p class="text-base text-slate-500 font-medium max-w-xs inline-flex items-center justify-center gap-2">
+                                <span>Send a message to your caregiver - they'd love to hear from you!</span>
+                                <x-lucide-message-circle class="w-5 h-5 text-navy-500" aria-hidden="true" />
+                            </p>
                         </div>
                     @endforelse
                 </div>

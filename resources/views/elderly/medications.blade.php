@@ -36,7 +36,10 @@
             <div class="mb-6 bg-white rounded-2xl shadow-lg overflow-hidden {{ $isToday ? 'ring-2 ring-blue-500' : '' }}">
                 @if($isToday)
                     <div class="bg-blue-500 text-white text-center py-1 text-sm font-bold">
-                        📅 Scheduled for Today
+                        <span class="inline-flex items-center gap-1.5">
+                            <x-lucide-calendar-days class="w-4 h-4" aria-hidden="true" />
+                            Scheduled for Today
+                        </span>
                     </div>
                 @endif
                 <div class="p-6">
@@ -108,7 +111,10 @@
                     <!-- Instructions -->
                     @if($medication->instructions)
                         <div class="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                            <p class="text-sm text-gray-500 font-medium mb-1">📝 Instructions</p>
+                            <p class="text-sm text-gray-500 font-medium mb-1 inline-flex items-center gap-1.5">
+                                <x-lucide-notebook-pen class="w-4 h-4 text-slate-400" aria-hidden="true" />
+                                Instructions
+                            </p>
                             <p class="text-gray-700">{{ $medication->instructions }}</p>
                         </div>
                     @endif
@@ -116,7 +122,7 @@
                     <!-- Stock Warning -->
                     @if($medication->track_inventory && $medication->current_stock <= ($medication->low_stock_threshold ?? 5))
                         <div class="mt-4 p-3 bg-red-50 rounded-xl border border-red-200 flex items-center">
-                            <span class="text-2xl mr-3">⚠️</span>
+                            <x-lucide-triangle-alert class="w-6 h-6 mr-3 text-red-600" aria-hidden="true" />
                             <div>
                                 <p class="text-red-700 font-bold">Low Stock Alert</p>
                                 <p class="text-red-600 text-sm">Only {{ $medication->current_stock }} left. Please refill soon!</p>
@@ -133,7 +139,10 @@
                     </svg>
                 </div>
                 <h3>No medications yet</h3>
-                <p>Your caregiver will add your medications here when needed. Nothing to worry about! 😊</p>
+                <p class="inline-flex items-center gap-2 text-gray-600">
+                    <span>Your caregiver will add your medications here when needed. Nothing to worry about.</span>
+                    <x-lucide-heart class="w-5 h-5 text-emerald-600" aria-hidden="true" />
+                </p>
                 <a href="{{ route('dashboard') }}" class="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-navy-500 text-white font-bold rounded-xl hover:bg-navy-600 transition-colors min-h-touch shadow-glow-brand">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
                     Back to Dashboard
