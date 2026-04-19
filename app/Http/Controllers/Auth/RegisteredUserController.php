@@ -29,8 +29,27 @@ class RegisteredUserController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request)
     {
+        // Handle real-time uniqueness validation
+        if ($request->wantsJson() && $request->has('check_unique')) {
+            $field = $request->input('check_unique');
+            $value = $request->input($field);
+            
+            if (!$value) {
+                return response()->json(['taken' => false]);
+            }
+            
+            $taken = false;
+            if ($field === 'email') {
+                $taken = DB::table('users')->where('email', 'ILIKE', $value)->exists();
+            } elseif ($field === 'username') {
+                $taken = DB::table('user_profiles')->where('username', 'ILIKE', $value)->exists();
+            }
+            
+            return response()->json(['taken' => $taken]);
+        }
+
         // Validate elderly registration data
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],

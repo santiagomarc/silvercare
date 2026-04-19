@@ -53,26 +53,7 @@
             <form method="POST" action="{{ route('register') }}" class="space-y-6">
                 @csrf
 
-                <!-- Show all errors at top -->
-                @if ($errors->any())
-                    <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded fade-in-section transition-delay-100">
-                        <div class="flex">
-                            <div class="flex-shrink-0">
-                                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                                </svg>
-                            </div>
-                            <div class="ml-3">
-                                <h3 class="text-sm font-bold text-red-800">There were errors with your submission:</h3>
-                                <ul class="mt-2 text-sm text-red-700 list-disc list-inside">
-                                    @foreach ($errors->all() as $error)
-                                        <li>{{ $error }}</li>
-                                    @endforeach
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                @endif
+                <!-- Show all errors at top (Removed for inline validation) -->
 
                 <!-- Google Sign-In -->
                 <div class="fade-in-section transition-delay-200">
@@ -101,6 +82,10 @@
                                 <option value="elderly" {{ old('user_type') == 'elderly' ? 'selected' : '' }}>Elderly / Patient</option>
                                 <option value="caregiver" {{ old('user_type') == 'caregiver' ? 'selected' : '' }}>Caregiver</option>
                             </select>
+                            <p id="user_type-error" class="text-[13px] text-red-600 font-medium mt-1 hidden"></p>
+                            @error('user_type')
+                                <p class="text-[13px] text-red-600 font-medium mt-1">{{ $message }}</p>
+                            @enderror
                         </div>
 
                         <div>
@@ -108,6 +93,10 @@
                             <input id="name" type="text" name="name" value="{{ old('name') }}" required autofocus
                                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium"
                                    placeholder="John Doe">
+                            <p id="name-error" class="text-[13px] text-red-600 font-medium mt-1 hidden"></p>
+                            @error('name')
+                                <p class="text-[13px] text-red-600 font-medium mt-1">{{ $message }}</p>
+                            @enderror
                         </div>
 
                         <div>
@@ -115,6 +104,10 @@
                             <input id="email" type="email" name="email" value="{{ old('email') }}" required
                                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium"
                                    placeholder="you@example.com">
+                            <p id="email-error" class="text-[13px] text-red-600 font-medium mt-1 hidden"></p>
+                            @error('email')
+                                <p class="text-[13px] text-red-600 font-medium mt-1">{{ $message }}</p>
+                            @enderror
                         </div>
 
                         <div>
@@ -122,6 +115,10 @@
                             <input id="phone_number" type="tel" name="phone_number" value="{{ old('phone_number') }}"
                                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium"
                                    placeholder="+1234567890">
+                            <p id="phone_number-error" class="text-[13px] text-red-600 font-medium mt-1 hidden"></p>
+                            @error('phone_number')
+                                <p class="text-[13px] text-red-600 font-medium mt-1">{{ $message }}</p>
+                            @enderror
                         </div>
                     </div>
 
@@ -131,6 +128,10 @@
                             <input id="username" type="text" name="username" value="{{ old('username') }}"
                                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium"
                                    placeholder="johndoe123">
+                            <p id="username-error" class="text-[13px] text-red-600 font-medium mt-1 hidden"></p>
+                            @error('username')
+                                <p class="text-[13px] text-red-600 font-medium mt-1">{{ $message }}</p>
+                            @enderror
                         </div>
 
                         <div>
@@ -149,6 +150,10 @@
                                     </svg>
                                 </button>
                             </div>
+                            <p id="password-error" class="text-[13px] text-red-600 font-medium mt-1 hidden"></p>
+                            @error('password')
+                                <p class="text-[13px] text-red-600 font-medium mt-1">{{ $message }}</p>
+                            @enderror
                         </div>
 
                         <div>
@@ -166,6 +171,10 @@
                                     </svg>
                                 </button>
                             </div>
+                            <p id="password_confirmation-error" class="text-[13px] text-red-600 font-medium mt-1 hidden"></p>
+                            @error('password_confirmation')
+                                <p class="text-[13px] text-red-600 font-medium mt-1">{{ $message }}</p>
+                            @enderror
                         </div>
 
                         {{--<div>
@@ -245,17 +254,69 @@
             `;
         }
 
-        function checkFormValidity() {
-            const role = document.getElementById('user_type').value;
-            const name = document.getElementById('name').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('password_confirmation').value;
+        const fields = {
+            user_type: { required: true, msg: 'Please select your role.' },
+            name: { required: true, msg: 'Full name is required.' },
+            email: { required: true, regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, msg: 'Please enter a valid email address.', checkUnique: true },
+            phone_number: { required: false },
+            username: { required: false, checkUnique: true },
+            password: { required: true, minLength: 8, msg: 'Password must be at least 8 characters.' },
+            password_confirmation: { required: true, match: 'password', msg: 'Passwords do not match.' }
+        };
 
-            const isValid = role !== '' && name !== '' && email !== '' && password !== '' && confirmPassword !== '';
+        const state = {};
+        Object.keys(fields).forEach(id => {
+            state[id] = { dirty: false, blurred: false, error: '', loading: false, uniqueError: '' };
+        });
+
+        // Track global async checking state to disable button
+        let checkingUnique = 0;
+
+        function validateField(id, value) {
+            const rule = fields[id];
+            if (!rule) return '';
+            
+            if (rule.required && !value) return rule.msg || 'This field is required.';
+            if (!value && !rule.required) return ''; // Optional and empty is valid
+            
+            if (rule.regex && !rule.regex.test(value)) return rule.msg;
+            if (rule.minLength && value.length < rule.minLength) return rule.msg;
+            if (rule.match) {
+                const matchVal = document.getElementById(rule.match).value;
+                if (value !== matchVal) return rule.msg;
+            }
+            return '';
+        }
+
+        function updateUI(id) {
+            const errEl = document.getElementById(id + '-error');
+            if (!errEl) return;
+
+            // Exception: password and password_confirmation validate on input (no blur needed)
+            const shouldShow = (state[id].blurred && state[id].dirty) || ((id === 'password' || id === 'password_confirmation') && state[id].dirty);
+            
+            const currentErr = state[id].error || state[id].uniqueError;
+            
+            if (shouldShow && currentErr) {
+                errEl.textContent = currentErr;
+                errEl.classList.remove('hidden');
+            } else {
+                errEl.classList.add('hidden');
+            }
+        }
+
+        function checkFormValidity() {
+            let isValid = true;
+            for (const id of Object.keys(fields)) {
+                const el = document.getElementById(id);
+                const val = (id.startsWith('password')) ? el.value : el.value.trim();
+                const err = validateField(id, val);
+                if (err || state[id].uniqueError) isValid = false;
+            }
 
             const btn = document.getElementById('submit-btn');
-            if (isValid) {
+            // Disable button if any base validation fails, uniqueness fails, or if a check is active
+            if (isValid && checkingUnique === 0) {
                 btn.disabled = false;
                 btn.classList.remove('opacity-50', 'cursor-not-allowed');
             } else {
@@ -264,12 +325,93 @@
             }
         }
 
+        async function checkUniqueness(id, value) {
+            if (!value) return;
+            
+            // Only check if basic validation passes
+            if (state[id].error) return;
+
+            checkingUnique++;
+            checkFormValidity();
+            
+            try {
+                const formData = new FormData();
+                formData.append('_token', document.querySelector('input[name="_token"]').value);
+                formData.append('check_unique', id);
+                formData.append(id, value);
+                
+                const response = await fetch("{{ route('register') }}", {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' },
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.taken) {
+                        state[id].uniqueError = id === 'username' 
+                            ? 'This username is already taken.' 
+                            : 'An account with this email already exists.';
+                    } else {
+                        state[id].uniqueError = '';
+                    }
+                }
+            } catch (err) {
+                console.error('Validation check failed', err);
+            } finally {
+                checkingUnique--;
+                updateUI(id);
+                checkFormValidity();
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
-            const requiredFields = ['user_type', 'name', 'email', 'password', 'password_confirmation'];
-            requiredFields.forEach(id => {
-                document.getElementById(id).addEventListener('input', checkFormValidity);
-                document.getElementById(id).addEventListener('change', checkFormValidity);
+            Object.keys(fields).forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+
+                const evaluate = () => {
+                    const val = (id.startsWith('password')) ? el.value : el.value.trim();
+                    state[id].error = validateField(id, val);
+                    updateUI(id);
+                    checkFormValidity();
+                };
+
+                el.addEventListener('input', () => {
+                    state[id].dirty = true;
+                    // Clear unique error immediately on input changes
+                    if (state[id].uniqueError) {
+                        state[id].uniqueError = '';
+                    }
+                    evaluate();
+                    
+                    // Cross-field validation for password changing
+                    if (id === 'password' && state['password_confirmation'].dirty) {
+                        const confEl = document.getElementById('password_confirmation');
+                        state['password_confirmation'].error = validateField('password_confirmation', confEl.value);
+                        updateUI('password_confirmation');
+                    }
+                });
+
+                el.addEventListener('blur', () => {
+                    state[id].blurred = true;
+                    evaluate();
+                    
+                    // Trigger uniqueness validation if applicable and no basic errors
+                    if (fields[id].checkUnique && state[id].dirty && !state[id].error) {
+                        const val = el.value.trim();
+                        checkUniqueness(id, val);
+                    }
+                });
+                
+                el.addEventListener('change', () => {
+                    state[id].dirty = true;
+                    evaluate();
+                });
             });
+
+            // Initial button state check
+            checkFormValidity();
         });
     </script>
 </body>
