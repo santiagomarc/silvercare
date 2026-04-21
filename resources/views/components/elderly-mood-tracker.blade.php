@@ -22,7 +22,7 @@
                 aria-hidden="true"
             >
                 <template x-if="isSelected(1)">
-                    <x-lucide-angry class="w-10 h-10" x-bind:style="`color: ${color}`" />
+                    <x-lucide-frown class="w-10 h-10" x-bind:style="`color: ${color}`" />
                 </template>
                 <template x-if="isSelected(2)">
                     <x-lucide-frown class="w-9 h-9" x-bind:style="`color: ${color}`" />
@@ -42,7 +42,6 @@
                 x-text="label"
                 :style="`color: ${color}`"
             ></p>
-            <p class="text-[11px] font-bold text-slate-400 text-center">Tap a face below</p>
         </div>
 
         {{-- Slider --}}
@@ -109,7 +108,7 @@
                         :class="isSelected(1) ? 'bg-rose-50 border-rose-300 text-rose-600 shadow-sm scale-105' : 'bg-white/85 border-slate-200 text-slate-400 hover:text-slate-600'"
                         aria-label="Very Sad"
                     >
-                        <x-lucide-angry class="w-4 h-4" aria-hidden="true" />
+                        <x-lucide-frown class="w-4 h-4" aria-hidden="true" />
                     </button>
 
                     <button
