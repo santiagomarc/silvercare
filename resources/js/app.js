@@ -13,6 +13,7 @@ import googleFitSync      from './components/google-fit-sync.js';
 import heroAction         from './components/hero-action.js';
 import checklistPageItem  from './components/checklist-page-item.js';
 import { initOfflineQueue } from './utils/offline-queue.js';
+import { installDialogHelpers } from './utils/dialogs.js';
 
 // ── Theme bootstrap (5H: Dark Mode Toggle) ──────────────────────
 const preferredDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
@@ -45,6 +46,7 @@ if ('serviceWorker' in navigator) {
 }
 
 initOfflineQueue();
+installDialogHelpers();
 
 // ── Register global store ────────────────────────────────────────
 Alpine.store('toast', toastStore);

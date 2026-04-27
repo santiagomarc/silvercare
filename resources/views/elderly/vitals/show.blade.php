@@ -423,7 +423,7 @@
 
     {{-- ─────────────────────────────────────────────
          H4 FIX: Delete Confirmation Modal
-         Replaces window.confirm() with a large, senior-friendly modal.
+            Replaces native confirmation dialogs with a large, senior-friendly modal.
     ───────────────────────────────────────────── --}}
     <div id="deleteConfirmModal"
          class="fixed inset-0 bg-gray-900/70 backdrop-blur-sm z-[60] hidden items-center justify-center p-6"

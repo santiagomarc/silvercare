@@ -97,7 +97,17 @@
                                             </div>
 
                                             <!-- Delete Action -->
-                                            <form method="POST" action="{{ route('calendar.destroy', $event->id) }}" onsubmit="return confirm('Delete this event?');" class="ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <form
+                                                method="POST"
+                                                action="{{ route('calendar.destroy', $event->id) }}"
+                                                class="ml-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                data-confirm="Delete this event?"
+                                                data-confirm-title="Delete calendar entry?"
+                                                data-confirm-icon="warning"
+                                                data-confirm-confirm-text="Delete event"
+                                                data-confirm-cancel-text="Keep event"
+                                                data-confirm-elderly="true"
+                                            >
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="p-3 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Delete">

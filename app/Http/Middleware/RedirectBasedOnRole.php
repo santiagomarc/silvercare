@@ -27,9 +27,14 @@ class RedirectBasedOnRole
                     ->with('info', 'Please select your account type to continue.');
             }
 
-            if ($profile->user_type === 'elderly') {
+            if (! $profile->hasKnownRole()) {
+                return redirect()->route('auth.select-role')
+                    ->with('error', 'Account role is invalid. Please select your account type.');
+            }
+
+            if ($profile->isElderly()) {
                 return redirect()->route('dashboard');
-            } elseif ($profile->user_type === 'caregiver') {
+            } elseif ($profile->isCaregiver()) {
                 return redirect()->route('caregiver.dashboard');
             }
         }

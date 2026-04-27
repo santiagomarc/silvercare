@@ -699,29 +699,38 @@
             });
         }
 
-        function removeProfilePhoto() {
-            if (!confirm('Are you sure you want to remove your profile photo?')) return;
+        async function removeProfilePhoto() {
+            const confirmed = await window.scConfirm({
+                title: 'Remove profile photo?',
+                text: 'Your avatar will be reset to the default profile image.',
+                icon: 'warning',
+                confirmButtonText: 'Remove photo',
+                cancelButtonText: 'Cancel',
+                elderly: true,
+            });
+
+            if (!confirmed) return;
 
             const statusDiv = document.getElementById('photo-status');
             statusDiv.innerHTML = '<span class="text-navy-500 text-sm">Removing...</span>';
 
-            fetch('{{ route("profile.photo.remove") }}', {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                }
-            })
-            .then(response => {
+            try {
+                const response = await fetch('{{ route("profile.photo.remove") }}', {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    }
+                });
+
                 if (response.ok) {
                     statusDiv.innerHTML = '<span class="text-emerald-600 text-sm">Photo removed!</span>';
                     setTimeout(() => window.location.reload(), 1000);
                 } else {
                     statusDiv.innerHTML = '<span class="text-rose-500 text-sm">Failed to remove. Please try again.</span>';
                 }
-            })
-            .catch(() => {
+            } catch (_) {
                 statusDiv.innerHTML = '<span class="text-rose-500 text-sm">An error occurred. Please try again.</span>';
-            });
+            }
         }
     </script>
 </x-dashboard-layout>

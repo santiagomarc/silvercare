@@ -458,6 +458,136 @@
     }
 }
 
+/* ── SweetAlert2 (Phase 2 premium modal integration) ───────────── */
+:root {
+    --sc-modal-surface: #ffffff;
+    --sc-modal-border: #dbe4f5;
+    --sc-modal-title: #0f172a;
+    --sc-modal-copy: #334155;
+    --sc-modal-confirm-start: #2563eb;
+    --sc-modal-confirm-end: #1d4ed8;
+    --sc-modal-cancel-bg: #f8fafc;
+    --sc-modal-cancel-border: #cbd5e1;
+    --sc-modal-cancel-copy: #334155;
+}
+
+.swal2-container.swal2-backdrop-show {
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.swal2-popup.swal2-silvercare-popup {
+    width: min(34rem, calc(100vw - 2rem));
+    border: 1px solid var(--sc-modal-border);
+    border-radius: 1rem;
+    background: linear-gradient(165deg, #ffffff 0%, #f7fbff 100%);
+    box-shadow: 0 28px 64px -32px rgba(15, 23, 42, 0.52);
+    padding: 1.4rem 1.4rem 1.1rem;
+}
+
+.swal2-title.swal2-silvercare-title {
+    color: var(--sc-modal-title);
+    font-size: 1.35rem;
+    line-height: 1.9rem;
+    font-weight: 900;
+    letter-spacing: -0.01em;
+}
+
+.swal2-html-container.swal2-silvercare-content {
+    color: var(--sc-modal-copy);
+    font-size: 1rem;
+    line-height: 1.65rem;
+    font-weight: 600;
+    margin-top: 0.35rem;
+}
+
+.swal2-icon.swal2-silvercare-icon {
+    margin: 0.25rem auto 0.55rem;
+    border-width: 0.12em;
+}
+
+.swal2-silvercare-popup.swal2-silvercare-tone-warning .swal2-icon.swal2-warning {
+    border-color: #f59e0b;
+    color: #d97706;
+}
+
+.swal2-silvercare-popup.swal2-silvercare-tone-success .swal2-icon.swal2-success {
+    border-color: #10b981;
+    color: #059669;
+}
+
+.swal2-silvercare-popup.swal2-silvercare-tone-error .swal2-icon.swal2-error,
+.swal2-silvercare-popup.swal2-silvercare-tone-danger .swal2-icon.swal2-error {
+    border-color: #ef4444;
+    color: #dc2626;
+}
+
+.swal2-silvercare-popup.swal2-silvercare-tone-info .swal2-icon.swal2-info,
+.swal2-silvercare-popup.swal2-silvercare-tone-question .swal2-icon.swal2-question {
+    border-color: #3b82f6;
+    color: #2563eb;
+}
+
+.swal2-actions.swal2-silvercare-actions {
+    width: 100%;
+    gap: 0.7rem;
+    margin-top: 1.1rem;
+    padding: 0;
+}
+
+.swal2-silvercare-btn {
+    min-height: 48px;
+    min-width: 132px;
+    border-radius: 0.85rem;
+    border: 1px solid transparent;
+    padding: 0.68rem 1rem;
+    font-size: 0.95rem;
+    line-height: 1.35rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.swal2-silvercare-btn:hover {
+    transform: translateY(-1px);
+}
+
+.swal2-silvercare-btn:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, 0.25);
+    outline-offset: 2px;
+}
+
+.swal2-silvercare-btn-confirm {
+    color: #ffffff;
+    border-color: #1d4ed8;
+    background: linear-gradient(135deg, var(--sc-modal-confirm-start), var(--sc-modal-confirm-end));
+    box-shadow: 0 14px 26px -18px rgba(37, 99, 235, 0.75);
+}
+
+.swal2-silvercare-btn-cancel {
+    color: var(--sc-modal-cancel-copy);
+    border-color: var(--sc-modal-cancel-border);
+    background: var(--sc-modal-cancel-bg);
+}
+
+.swal2-popup.swal2-silvercare-popup.swal2-silvercare-elderly .swal2-title.swal2-silvercare-title {
+    font-size: 1.55rem;
+    line-height: 2.05rem;
+}
+
+.swal2-popup.swal2-silvercare-popup.swal2-silvercare-elderly .swal2-html-container.swal2-silvercare-content {
+    font-size: 1.125rem;
+    line-height: 1.8rem;
+}
+
+.swal2-popup.swal2-silvercare-popup.swal2-silvercare-elderly .swal2-silvercare-btn {
+    min-height: 56px;
+    min-width: 160px;
+    font-size: 1.06rem;
+    line-height: 1.45rem;
+    padding: 0.8rem 1.2rem;
+}
+
 /* ── Utility Layer ───────────────────────────────────────────────── */
 @layer utilities {
     /* Scrollbar hiding (cross-browser) */

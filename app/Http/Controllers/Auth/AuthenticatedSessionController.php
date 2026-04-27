@@ -44,7 +44,71 @@ class AuthenticatedSessionController extends Controller
 
         $user = Auth::user();
 
-        return redirect()->intended($this->resolveRedirectForUser($user));
+        return redirect()->to($this->resolvePostLoginRedirect($request, $user));
+    }
+
+    /**
+     * Resolve a role-safe post-login destination.
+     */
+    protected function resolvePostLoginRedirect(Request $request, User $user): string
+    {
+        $fallback = $this->resolveRedirectForUser($user);
+        $intended = $request->session()->pull('url.intended');
+
+        if (! is_string($intended)) {
+            return $fallback;
+        }
+
+        $intendedPath = parse_url($intended, PHP_URL_PATH);
+        if (! is_string($intendedPath) || $intendedPath === '') {
+            return $fallback;
+        }
+
+        $normalizedPath = '/' . ltrim($intendedPath, '/');
+        if (! $this->isAllowedIntendedPath($user, $normalizedPath)) {
+            return $fallback;
+        }
+
+        $intendedQuery = parse_url($intended, PHP_URL_QUERY);
+
+        return is_string($intendedQuery) && $intendedQuery !== ''
+            ? $normalizedPath . '?' . $intendedQuery
+            : $normalizedPath;
+    }
+
+    /**
+     * Allow intended redirects only when path is compatible with the user's role.
+     */
+    protected function isAllowedIntendedPath(User $user, string $path): bool
+    {
+        $blockedPrefixes = [
+            '/login',
+            '/register',
+            '/forgot-password',
+            '/reset-password',
+            '/verify-email',
+            '/email/verification-notification',
+        ];
+
+        foreach ($blockedPrefixes as $blockedPrefix) {
+            if (str_starts_with($path, $blockedPrefix)) {
+                return false;
+            }
+        }
+
+        $profile = $user->profile;
+
+        if (! $profile || ! $profile->hasKnownRole()) {
+            return str_starts_with($path, '/auth/select-role');
+        }
+
+        if ($profile->isCaregiver()) {
+            return str_starts_with($path, '/caregiver')
+                || str_starts_with($path, '/profile')
+                || str_starts_with($path, '/calendar');
+        }
+
+        return ! str_starts_with($path, '/caregiver');
     }
 
     /**
@@ -54,7 +118,7 @@ class AuthenticatedSessionController extends Controller
     {
         $profile = $user->profile;
 
-        if (! $profile) {
+        if (! $profile || ! $profile->hasKnownRole()) {
             return route('auth.select-role', absolute: false);
         }
 

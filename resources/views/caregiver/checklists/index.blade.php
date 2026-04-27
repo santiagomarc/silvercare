@@ -203,7 +203,17 @@
                                 <a href="{{ route('caregiver.checklists.edit', ['checklist' => $checklist, 'elderly' => $selectedElderly->id]) }}" class="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                 </a>
-                                <form action="{{ route('caregiver.checklists.destroy', $checklist) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this task?');" class="inline">
+                                <form
+                                    action="{{ route('caregiver.checklists.destroy', $checklist) }}"
+                                    method="POST"
+                                    class="inline"
+                                    data-confirm="Are you sure you want to delete this task?"
+                                    data-confirm-title="Delete checklist task?"
+                                    data-confirm-icon="warning"
+                                    data-confirm-confirm-text="Delete task"
+                                    data-confirm-cancel-text="Keep task"
+                                    data-confirm-elderly="false"
+                                >
                                     @csrf
                                     @method('DELETE')
                                     <input type="hidden" name="elderly_id" value="{{ $selectedElderly->id }}">

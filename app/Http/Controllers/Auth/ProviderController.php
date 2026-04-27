@@ -60,7 +60,7 @@ class ProviderController extends Controller
         $request->session()->regenerate();
 
         $profile = $user->profile;
-        if (! $profile) {
+        if (! $profile || ! $profile->hasKnownRole()) {
             return redirect()->route('auth.select-role');
         }
 
@@ -75,9 +75,10 @@ class ProviderController extends Controller
     public function showRoleSelection(Request $request): View|RedirectResponse
     {
         $user = $request->user();
+        $profile = $user->profile;
 
-        if ($user->profile) {
-            return $user->profile->isCaregiver()
+        if ($profile && $profile->hasKnownRole()) {
+            return $profile->isCaregiver()
                 ? redirect()->route('caregiver.dashboard')
                 : redirect()->route('dashboard');
         }
@@ -96,13 +97,27 @@ class ProviderController extends Controller
 
         $user = $request->user();
 
-        if (! $user->profile) {
+        if ($user->profile && $user->profile->hasKnownRole()) {
+            return $user->profile->isCaregiver()
+                ? redirect()->route('caregiver.dashboard')
+                : redirect()->route('dashboard');
+        }
+
+        $attributes = [
+            'user_type' => $validated['user_type'],
+            'username' => $user->profile?->username ?: (Str::slug($user->name) ?: ('user-' . $user->id)),
+            'profile_completed' => $validated['user_type'] === 'caregiver',
+            'profile_skipped' => false,
+            'is_active' => true,
+        ];
+
+        if ($user->profile) {
+            $user->profile->fill($attributes);
+            $user->profile->save();
+        } else {
             UserProfile::create([
                 'user_id' => $user->id,
-                'user_type' => $validated['user_type'],
-                'username' => Str::slug($user->name) ?: ('user-' . $user->id),
-                'profile_completed' => $validated['user_type'] === 'caregiver',
-                'is_active' => true,
+                ...$attributes,
             ]);
         }
 

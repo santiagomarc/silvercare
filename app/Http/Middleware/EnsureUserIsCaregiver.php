@@ -30,9 +30,14 @@ class EnsureUserIsCaregiver
                 ->with('info', 'Please select your account type to continue.');
         }
 
-        if ($profile->user_type !== 'caregiver') {
+        if (! $profile->hasKnownRole()) {
+            return redirect()->route('auth.select-role')
+                ->with('error', 'Account role is invalid. Please select your account type.');
+        }
+
+        if (! $profile->isCaregiver()) {
             // Redirect elderly to their dashboard
-            if ($profile->user_type === 'elderly') {
+            if ($profile->isElderly()) {
                 return redirect()->route('dashboard')
                     ->with('error', 'You do not have access to the caregiver interface.');
             }

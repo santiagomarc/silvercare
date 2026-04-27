@@ -258,17 +258,26 @@
         let timeSlots = JSON.parse(timeSlotContainer.dataset.initialTimes || '[]');
         let specificDates = JSON.parse(specificDateContainer.dataset.initialDates || '[]');
 
+        function showMedicationFormAlert(message) {
+            window.scAlert({
+                title: 'Please review the form',
+                text: message,
+                icon: 'warning',
+                confirmButtonText: 'Got it',
+            });
+        }
+
         function addTimeSlot() {
             const input = document.getElementById('newTimeInput');
             const time = input.value;
             
             if (!time) {
-                alert('Please select a time first');
+                showMedicationFormAlert('Please select a time first');
                 return;
             }
             
             if (timeSlots.includes(time)) {
-                alert('This time slot already exists');
+                showMedicationFormAlert('This time slot already exists');
                 return;
             }
             
@@ -293,12 +302,12 @@
             const value = input.value;
 
             if (!value) {
-                alert('Please select a date first');
+                showMedicationFormAlert('Please select a date first');
                 return;
             }
 
             if (specificDates.includes(value)) {
-                alert('This date already exists');
+                showMedicationFormAlert('This date already exists');
                 return;
             }
 
@@ -408,7 +417,7 @@
                 const checkedDays = document.querySelectorAll('input[name="days_of_week[]"]:checked');
                 if (checkedDays.length === 0) {
                     e.preventDefault();
-                    alert('Please select at least one day for weekly schedule');
+                    showMedicationFormAlert('Please select at least one day for weekly schedule');
                     return;
                 }
             }
@@ -419,7 +428,7 @@
                 
                 if (specificDates.length === 0) {
                     e.preventDefault();
-                    alert('Please add at least one specific date');
+                    showMedicationFormAlert('Please add at least one specific date');
                     return;
                 }
             }
@@ -429,7 +438,7 @@
 
             if (timeSlots.length === 0) {
                 e.preventDefault();
-                alert('Please add at least one time slot');
+                showMedicationFormAlert('Please add at least one time slot');
                 return;
             }
         });

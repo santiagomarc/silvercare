@@ -251,7 +251,16 @@
         }
 
         async function markAllAsRead() {
-            if (!confirm('Mark all notifications as read?')) return;
+            const confirmed = await window.scConfirm({
+                title: 'Mark all as read?',
+                text: 'All unread notifications will be marked as read.',
+                icon: 'question',
+                confirmButtonText: 'Yes, mark all',
+                cancelButtonText: 'Cancel',
+                elderly: true,
+            });
+
+            if (!confirmed) return;
 
             try {
                 const response = await fetch('/notifications/mark-all-read', {
@@ -275,7 +284,16 @@
         }
 
         async function deleteNotification(notificationId) {
-            if (!confirm('Delete this notification?')) return;
+            const confirmed = await window.scConfirm({
+                title: 'Delete this notification?',
+                text: 'This notification will be permanently removed.',
+                icon: 'warning',
+                confirmButtonText: 'Delete notification',
+                cancelButtonText: 'Keep notification',
+                elderly: true,
+            });
+
+            if (!confirmed) return;
 
             try {
                 const response = await fetch(`/notifications/${notificationId}`, {
@@ -309,7 +327,16 @@
         }
 
         async function clearAllNotifications() {
-            if (!confirm('Clear all notifications? This action cannot be undone.')) return;
+            const confirmed = await window.scConfirm({
+                title: 'Clear all notifications?',
+                text: 'This action cannot be undone and all notifications will be removed.',
+                icon: 'warning',
+                confirmButtonText: 'Clear all',
+                cancelButtonText: 'Cancel',
+                elderly: true,
+            });
+
+            if (!confirmed) return;
 
             try {
                 const response = await fetch('/notifications/clear-all', {

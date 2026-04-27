@@ -143,6 +143,11 @@ class UserProfile extends Model
         return $this->user_type === 'caregiver';
     }
 
+    public function hasKnownRole(): bool
+    {
+        return $this->isElderly() || $this->isCaregiver();
+    }
+
     /**
      * Resolve normalized medical conditions, including legacy medical_info fallback.
      *
