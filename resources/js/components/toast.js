@@ -22,6 +22,11 @@ export default {
     },
 
     show(message, type = 'info', duration = 5000) {
+        if (typeof window !== 'undefined' && typeof window.scToast === 'function') {
+            window.scToast(message, type, { duration, elderly: true });
+            return;
+        }
+
         const id = ++this.toastId;
         const iconHtml = this.icons[type] ?? this.icons['info'];
         this.queue.push({ id, message, type, iconHtml, visible: false });

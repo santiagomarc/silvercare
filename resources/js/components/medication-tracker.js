@@ -1,9 +1,5 @@
 /**
  * Alpine.data('medicationTracker') — Medication dose toggle with progress tracking.
- *
- * Props:
- *   takenDoses: int  — initial count of taken doses
- *   totalDoses: int  — total number of doses for today
  */
 import Alpine from 'alpinejs';
 import { createConfetti } from './confetti.js';
@@ -36,8 +32,6 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
          * @param {HTMLElement} entry — the .medication-entry element
          */
         async toggleEntry(entry) {
-            // C1 CLIENT FIX: Processing guard prevents a second click from
-            // firing while the first request is still in-flight.
             if (entry.dataset.processing === 'true') return;
             entry.dataset.processing = 'true';
 
@@ -48,6 +42,7 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
             const canUndo = entry.dataset.canUndo === 'true';
             const toast = Alpine.store('toast');
 
+            // Validation Check
             if (!canTake && !isTaken) {
                 toast?.info('Too early! Wait until the scheduled time window.');
                 entry.dataset.processing = 'false';
@@ -58,6 +53,31 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
                 entry.dataset.processing = 'false';
                 return;
             }
+
+            // --- SWEETALERT2 CONFIRMATION FOR UNDOING MEDICATIONS ---
+            if (isTaken) {
+                const confirmed = await window.Swal.fire({
+                    title: 'Unmark Medication?',
+                    html: '<p class="text-lg text-slate-600 mt-2">Are you sure you want to unmark this dose? Only do this if you clicked it by mistake.</p>',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#e11d48', // Tailwind rose-600
+                    cancelButtonColor: '#64748b', // Tailwind slate-500
+                    confirmButtonText: '<span class="text-lg font-bold px-4 py-2">Yes, unmark it</span>',
+                    cancelButtonText: '<span class="text-lg font-bold px-4 py-2">Cancel</span>',
+                    reverseButtons: true, // Puts the primary action on the right
+                    customClass: {
+                        popup: 'rounded-2xl border border-slate-200 shadow-2xl',
+                        title: 'text-2xl font-extrabold text-slate-800'
+                    }
+                });
+
+                if (!confirmed.isConfirmed) {
+                    entry.dataset.processing = 'false';
+                    return; // Stop execution if they cancel
+                }
+            }
+            // -----------------------------------------------------------
 
             entry.style.opacity = '0.7';
             const endpoint = isTaken
@@ -70,14 +90,21 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
                     body: { time },
                 });
 
+                // Offline Queue Handling
                 if (result.queued) {
                     if (!isTaken) {
                         entry.dataset.taken = 'true';
+                        entry.dataset.canTake = 'false';
+                        entry.dataset.canUndo = 'true'; // Optimistically allow undo
+                        
                         this.taken++;
                         this._updateEntryAppearance(entry, 'taken');
                         createConfetti(entry);
                     } else {
                         entry.dataset.taken = 'false';
+                        entry.dataset.canTake = 'true'; // Re-enable taking
+                        entry.dataset.canUndo = 'false';
+                        
                         this.taken--;
                         this._updateEntryAppearance(entry, this._computeStatus(time));
                     }
@@ -95,21 +122,27 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
 
                 const data = result.data || {};
 
+                // Online Live Handling
                 if (data.is_taken) {
                     entry.dataset.taken = 'true';
-                    if (data.taken_late) entry.dataset.canUndo = 'false';
+                    entry.dataset.canTake = 'false';
+                    // Update canUndo dynamically based on whether they took it late
+                    entry.dataset.canUndo = data.taken_late ? 'false' : 'true';
+                    
                     this.taken++;
                     this._updateEntryAppearance(entry, data.taken_late ? 'taken-late' : 'taken');
                     createConfetti(entry);
                     toast?.success(data.message || 'Medication taken!');
                 } else {
                     entry.dataset.taken = 'false';
+                    entry.dataset.canTake = 'true'; // Re-enable taking
+                    entry.dataset.canUndo = 'false';
+                    
                     this.taken--;
                     this._updateEntryAppearance(entry, this._computeStatus(time));
                     toast?.info(data.message || 'Medication unmarked');
                 }
 
-                // Notify other components
                 window.dispatchEvent(new CustomEvent('progress-updated', {
                     detail: { medications: this.taken, medicationTotal: this.total }
                 }));
@@ -123,9 +156,6 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
             }
         },
 
-        /**
-         * Compute current status for a dose based on scheduled time.
-         */
         _computeStatus(timeStr) {
             const now = new Date();
             const [h, m] = timeStr.split(':').map(Number);
@@ -139,15 +169,10 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
             return 'upcoming';
         },
 
-        /**
-         * Update DOM classes on a medication entry based on status.
-         */
         _updateEntryAppearance(entry, status) {
-            // Remove all status classes
             entry.classList.remove(
                 'dose-taken', 'dose-taken-late', 'dose-missed', 'dose-active', 'dose-upcoming', 'opacity-75'
             );
-            // Add correct one
             entry.classList.add(`dose-${status}`);
 
             const iconDiv = entry.querySelector('[data-icon]');
@@ -181,20 +206,12 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
             const medicationId = String(action.medication_id || '');
             const scheduledTime = action.scheduled_time;
 
-            if (!medicationId || !scheduledTime) {
-                return;
-            }
+            if (!medicationId || !scheduledTime) return;
 
             const selector = `.medication-entry[data-medication-id="${CSS.escape(medicationId)}"][data-time="${CSS.escape(scheduledTime)}"]`;
             const entry = document.querySelector(selector);
 
-            if (!entry) {
-                return;
-            }
-
-            if (entry.dataset.taken === 'true') {
-                return;
-            }
+            if (!entry || entry.dataset.taken === 'true') return;
 
             entry.dataset.taken = 'true';
             entry.dataset.canTake = 'false';

@@ -72,22 +72,6 @@
             </button>
         </div>
 
-        <!-- Success Toast -->
-        <div 
-            x-show="showToast"
-            x-transition:enter="transition ease-out duration-300"
-            x-transition:enter-start="opacity-0 transform translate-y-8"
-            x-transition:enter-end="opacity-100 transform translate-y-0"
-            x-transition:leave="transition ease-in duration-300"
-            x-transition:leave-start="opacity-100 transform translate-y-0"
-            x-transition:leave-end="opacity-0 transform translate-y-8"
-            class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 z-50"
-            style="display: none;"
-        >
-            <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            <span class="font-bold text-sm">Quote successfully copied!</span>
-        </div>
-
     </div>
 
     <script>
@@ -95,7 +79,6 @@
             return {
                 idx: 0,
                 show: true,
-                showToast: false,
                 quotes: [
                     { quote: 'Every day is a new beginning. Take a deep breath, smile, and start again.', author: 'Unknown', action: 'Start your day with a smile.' },
                     { quote: 'Age is just a number. It\'s never too late to learn something new.', author: 'Unknown', action: 'Try something new today.' },
@@ -118,10 +101,13 @@
                         this.show = true;
                     }, 300);
                 },
-                copy() {
-                    navigator.clipboard.writeText(`"${this.current.quote}" - ${this.current.author}`);
-                    this.showToast = true;
-                    setTimeout(() => this.showToast = false, 2500);
+                async copy() {
+                    try {
+                        await navigator.clipboard.writeText(`"${this.current.quote}" - ${this.current.author}`);
+                        window.scToast('Quote successfully copied!', 'success', { elderly: true });
+                    } catch (_) {
+                        window.scToast('Unable to copy quote right now. Please try again.', 'error', { elderly: true });
+                    }
                 }
             }
         }

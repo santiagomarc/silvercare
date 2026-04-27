@@ -588,6 +588,56 @@
     padding: 0.8rem 1.2rem;
 }
 
+.swal2-popup.swal2-silvercare-toast {
+    width: min(28rem, calc(100vw - 1.5rem));
+    border: 1px solid #cbd5e1;
+    border-radius: 0.95rem;
+    background: linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.95));
+    box-shadow: 0 24px 44px -30px rgba(2, 6, 23, 0.86);
+    padding: 0.8rem 0.95rem;
+}
+
+.swal2-popup.swal2-silvercare-toast .swal2-title.swal2-silvercare-toast-title {
+    color: #f8fafc;
+    font-size: 0.96rem;
+    line-height: 1.4rem;
+    font-weight: 800;
+    margin: 0;
+}
+
+.swal2-popup.swal2-silvercare-toast .swal2-html-container.swal2-silvercare-toast-content {
+    color: #e2e8f0;
+    font-size: 0.9rem;
+    line-height: 1.35rem;
+    margin: 0.15rem 0 0;
+}
+
+.swal2-popup.swal2-silvercare-toast .swal2-icon.swal2-silvercare-toast-icon {
+    margin: 0 0.55rem 0 0;
+    width: 1.65em;
+    height: 1.65em;
+    border-width: 0.11em;
+}
+
+.swal2-popup.swal2-silvercare-toast .swal2-timer-progress-bar.swal2-silvercare-toast-progress {
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.9), rgba(37, 99, 235, 0.88));
+}
+
+.swal2-popup.swal2-silvercare-toast.swal2-silvercare-toast-elderly .swal2-title.swal2-silvercare-toast-title {
+    font-size: 1.08rem;
+    line-height: 1.55rem;
+}
+
+.swal2-popup.swal2-silvercare-toast.swal2-silvercare-toast-elderly .swal2-html-container.swal2-silvercare-toast-content {
+    font-size: 1rem;
+    line-height: 1.55rem;
+}
+
+.swal2-popup.swal2-silvercare-toast.swal2-silvercare-toast-elderly .swal2-icon.swal2-silvercare-toast-icon {
+    width: 1.85em;
+    height: 1.85em;
+}
+
 /* ── Utility Layer ───────────────────────────────────────────────── */
 @layer utilities {
     /* Scrollbar hiding (cross-browser) */

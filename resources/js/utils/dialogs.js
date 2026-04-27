@@ -23,6 +23,43 @@ function normalizeAlertOptions(input, maybeOptions = {}) {
     return input || {};
 }
 
+const TOAST_DEFAULT_DURATIONS = {
+    success: 5000,
+    info: 5000,
+    warning: 6000,
+    error: 7000,
+    question: 5000,
+};
+
+function normalizeToastType(type = 'info') {
+    if (type === 'danger') {
+        return 'error';
+    }
+
+    return ['success', 'error', 'info', 'warning', 'question'].includes(type)
+        ? type
+        : 'info';
+}
+
+function normalizeToastOptions(input, maybeType = 'info', maybeOptions = {}) {
+    if (typeof input !== 'string') {
+        return input || {};
+    }
+
+    if (typeof maybeType === 'string') {
+        return {
+            text: input,
+            type: normalizeToastType(maybeType),
+            ...maybeOptions,
+        };
+    }
+
+    return {
+        text: input,
+        ...(maybeType || {}),
+    };
+}
+
 function buildPopupClasses(config, customPopupClass = '') {
     const tone = config.tone || config.icon || 'info';
     const toneClass = `swal2-silvercare-tone-${tone}`;
@@ -104,6 +141,48 @@ export async function showConfirm(options = {}) {
     return result.isConfirmed;
 }
 
+export async function showToast(input, maybeType = 'info', maybeOptions = {}) {
+    const options = normalizeToastOptions(input, maybeType, maybeOptions);
+    const type = normalizeToastType(options.type || options.icon || 'info');
+    const elderly = options.elderly === true;
+    const customClass = options.customClass || {};
+    const timer = Number.isFinite(options.duration)
+        ? options.duration
+        : (TOAST_DEFAULT_DURATIONS[type] || 5000);
+
+    return Swal.fire({
+        toast: true,
+        position: options.position || 'bottom-end',
+        icon: type,
+        title: options.title || options.text || 'Notice',
+        text: options.title ? options.text : undefined,
+        showConfirmButton: false,
+        showCloseButton: options.showCloseButton ?? false,
+        timer,
+        timerProgressBar: options.timerProgressBar ?? true,
+        customClass: {
+            ...customClass,
+            popup: [
+                'swal2-silvercare-toast',
+                elderly ? 'swal2-silvercare-toast-elderly' : '',
+                customClass.popup || '',
+            ].filter(Boolean).join(' '),
+            title: customClass.title || 'swal2-silvercare-toast-title',
+            htmlContainer: customClass.htmlContainer || 'swal2-silvercare-toast-content',
+            icon: customClass.icon || 'swal2-silvercare-toast-icon',
+            timerProgressBar: customClass.timerProgressBar || 'swal2-silvercare-toast-progress',
+        },
+        didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer);
+            toast.addEventListener('mouseleave', Swal.resumeTimer);
+
+            if (typeof options.didOpen === 'function') {
+                options.didOpen(toast);
+            }
+        },
+    });
+}
+
 function createFormConfirmOptions(form) {
     return {
         title: form.dataset.confirmTitle || 'Please confirm',
@@ -137,6 +216,7 @@ function bindConfirmForms() {
 export function installDialogHelpers() {
     window.scAlert = (input, maybeOptions = {}) => showAlert(input, maybeOptions);
     window.scConfirm = (options = {}) => showConfirm(options);
+    window.scToast = (input, maybeType = 'info', maybeOptions = {}) => showToast(input, maybeType, maybeOptions);
     window.scConfirmForm = async (event, options = {}) => {
         if (event) {
             event.preventDefault();

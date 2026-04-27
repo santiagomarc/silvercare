@@ -242,11 +242,11 @@
                     if (markButton) markButton.remove();
 
                     updateCounts();
-                    showToast('Marked as read', 'success');
+                    window.scToast('Marked as read', 'success', { elderly: true });
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showToast('Failed to mark as read', 'error');
+                window.scToast('Failed to mark as read', 'error', { elderly: true });
             }
         }
 
@@ -279,7 +279,7 @@
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showToast('Failed to mark all as read', 'error');
+                window.scToast('Failed to mark all as read', 'error', { elderly: true });
             }
         }
 
@@ -318,11 +318,11 @@
                         checkIfEmpty();
                     }, 300);
 
-                    showToast('Notification deleted', 'success');
+                    window.scToast('Notification deleted', 'success', { elderly: true });
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showToast('Failed to delete notification', 'error');
+                window.scToast('Failed to delete notification', 'error', { elderly: true });
             }
         }
 
@@ -355,7 +355,7 @@
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showToast('Failed to clear notifications', 'error');
+                window.scToast('Failed to clear notifications', 'error', { elderly: true });
             }
         }
 
@@ -382,30 +382,6 @@
             if (notifications.length === 0) {
                 location.reload();
             }
-        }
-
-        function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            const colors = {
-                success: 'bg-emerald-600',
-                error: 'bg-rose-600',
-                info: 'bg-navy'
-            };
-
-            toast.className = `fixed bottom-6 right-6 ${colors[type]} text-white px-6 py-3 rounded-xl shadow-elevated font-bold text-sm z-50 transform translate-y-20 opacity-0 transition-all duration-300`;
-            toast.textContent = message;
-            document.body.appendChild(toast);
-
-            setTimeout(() => {
-                toast.style.transform = 'translateY(0)';
-                toast.style.opacity = '1';
-            }, 10);
-
-            setTimeout(() => {
-                toast.style.transform = 'translateY(20px)';
-                toast.style.opacity = '0';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
         }
 
         setInterval(async () => {
