@@ -1,9 +1,5 @@
 /**
  * Alpine.data('checklistTracker') — Checklist toggle with optimistic UI.
- *
- * Props:
- *   completedCount: int — initial count of completed items
- *   totalCount: int     — total number of checklist items
  */
 import Alpine from 'alpinejs';
 import { createConfetti } from './confetti.js';
@@ -69,6 +65,31 @@ export default function checklistTracker(completedCount = 0, totalCount = 0) {
 
             const btn = el;
             const isCompleted = item.dataset.completed === 'true';
+
+            // --- SWEETALERT2 CONFIRMATION FOR UNMARKING TASK ---
+            if (isCompleted) {
+                const confirmed = await window.Swal.fire({
+                    title: 'Unmark Task?',
+                    html: '<p class="text-lg text-slate-600 mt-2">Are you sure you want to unmark this task? Only do this if you checked it by mistake.</p>',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#e11d48', // Tailwind rose-600
+                    cancelButtonColor: '#64748b', // Tailwind slate-500
+                    confirmButtonText: '<span class="text-lg font-bold px-4 py-2">Yes, unmark it</span>',
+                    cancelButtonText: '<span class="text-lg font-bold px-4 py-2">Cancel</span>',
+                    reverseButtons: true,
+                    customClass: {
+                        popup: 'rounded-2xl border border-slate-200 shadow-2xl',
+                        title: 'text-2xl font-extrabold text-slate-800'
+                    }
+                });
+
+                if (!confirmed.isConfirmed) {
+                    return; // Stop execution if they cancel
+                }
+            }
+            // -----------------------------------------------------------
+
             btn.disabled = true;
 
             try {
@@ -154,7 +175,6 @@ export default function checklistTracker(completedCount = 0, totalCount = 0) {
                     Alpine.store('toast')?.info('Task marked incomplete');
                 }
 
-                // Dispatch a custom event so other components (garden, hero) can react
                 window.dispatchEvent(new CustomEvent('progress-updated', {
                     detail: { checklists: this.completed, checklistTotal: this.total }
                 }));

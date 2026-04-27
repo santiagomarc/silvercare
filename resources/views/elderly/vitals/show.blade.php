@@ -635,8 +635,16 @@
                 if (!response.ok) throw new Error(data.message || 'Failed to save');
 
                 closeRecordModal();
-                window.scToast('Record saved successfully!', 'success', { elderly: true });
-                setTimeout(() => window.location.reload(), 500);
+
+                // Let users finish reading the success feedback before reloading.
+                if (typeof window.scToast === 'function') {
+                    await window.scToast('Record saved successfully!', 'success', {
+                        elderly: true,
+                        duration: 1800,
+                    });
+                }
+
+                window.location.reload();
 
             } catch (error) {
                 window.scToast(error.message, 'error', { elderly: true });

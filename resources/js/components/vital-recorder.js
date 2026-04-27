@@ -1,8 +1,5 @@
 /**
  * Alpine.data('vitalRecorder') — Vital recording modal logic.
- *
- * Replaces 150+ lines of document.createElement JS with Alpine reactivity.
- * The modal Blade markup lives in <x-vital-record-modal>.
  */
 import Alpine from 'alpinejs';
 import { sendJsonRequest } from '../utils/offline-queue.js';
@@ -58,7 +55,6 @@ export default function vitalRecorder() {
             this.submitting = false;
             this.open = true;
 
-            // Focus first input on next tick
             this.$nextTick(() => {
                 const input = this.$refs.modalContent?.querySelector('input');
                 input?.focus();
@@ -96,7 +92,7 @@ export default function vitalRecorder() {
             };
 
             this.recognition.onresult = (event) => {
-                const transcript = event.results?.[0]?.[0]?.transcript || '';
+                const transcript = event.results?.?.?.transcript || '';
                 this.applyVoiceTranscript(transcript);
             };
 
@@ -134,8 +130,8 @@ export default function vitalRecorder() {
                     return;
                 }
 
-                this.systolic = bpMatch[1];
-                this.diastolic = bpMatch[2];
+                this.systolic = bpMatch;
+                this.diastolic = bpMatch;
                 toast?.success('Blood pressure captured from voice.');
                 return;
             }
@@ -146,15 +142,23 @@ export default function vitalRecorder() {
                 return;
             }
 
-            this.value = numberMatch[0];
+            this.value = numberMatch;
             toast?.success(`${this.config?.name || 'Value'} captured from voice.`);
         },
 
-        async submit() {
+        // We accept the "event" parameter to forcefully stop HTML native refreshes
+        async submit(event) {
+            // 1. Stop native browser form refresh
+            if (event) {
+                event.preventDefault();
+            }
+
+            // 2. Iron-clad guard against double-clicks
+            if (this.submitting) return;
+
             const toast = Alpine.store('toast');
             if (!this.config) return;
 
-            // Validate
             if (this.config.isBP) {
                 if (!this.systolic || !this.diastolic) {
                     toast?.error('Please enter both systolic and diastolic values');
@@ -165,6 +169,7 @@ export default function vitalRecorder() {
                 return;
             }
 
+            // Freeze the button
             this.submitting = true;
 
             try {
@@ -186,14 +191,33 @@ export default function vitalRecorder() {
                 if (!result.ok) throw new Error(result.data?.message || 'Failed to save');
 
                 this.closeModal();
-                toast?.success(`${this.config.name} recorded!`);
-                setTimeout(() => window.location.reload(), 600);
+
+                // Wait for the modal to completely finish its 1.5-second animation
+                await window.Swal.fire({
+                    title: 'Great Job!',
+                    text: `${this.config.name} recorded successfully.`,
+                    icon: 'success',
+                    timer: 1500,
+                    timerProgressBar: true,
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    customClass: {
+                        popup: 'rounded-2xl border border-slate-200 shadow-2xl',
+                        title: 'text-2xl font-extrabold text-slate-800'
+                    }
+                });
+                
+                // Only refresh AFTER the promise resolves (1.5 seconds later)
+                window.location.reload();
 
             } catch (err) {
                 console.error('Vital save failed:', err);
                 toast?.error(err.message);
-            } finally {
-                this.submitting = false;
+                
+                // Only unfreeze the button if there was an error. 
+                // If successful, leave it frozen so they can't click again before the reload!
+                this.submitting = false; 
             }
         },
     };
