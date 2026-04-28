@@ -1,5 +1,5 @@
 <x-app-layout>
-    <div class="py-10 bg-[#F3F4F6] min-h-screen font-sans" x-data="{ showModal: false }">
+    <div class="py-10 bg-[#F3F4F6] min-h-screen font-sans" x-data="calendarSchedulerForm()" x-init="initDateTimePicker()">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             
             <!-- Dynamic Header -->
@@ -8,7 +8,7 @@
                     <h2 class="text-4xl font-extrabold text-gray-900 tracking-tight">Schedule</h2>
                     <p class="text-gray-500 mt-2 font-medium">Manage your health appointments and reminders.</p>
                 </div>
-                <button @click="showModal = true" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3.5 rounded-2xl font-bold shadow-lg shadow-blue-200 flex items-center transform transition hover:-translate-y-1 hover:shadow-xl group">
+                <button @click="openModal()" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3.5 rounded-2xl font-bold shadow-lg shadow-blue-200 flex items-center transform transition hover:-translate-y-1 hover:shadow-xl group">
                     <div class="bg-white/20 p-1 rounded-lg mr-3 group-hover:rotate-90 transition-transform duration-300">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                     </div>
@@ -126,13 +126,13 @@
 
         <!-- Modern Modal -->
         <div x-show="showModal" class="fixed inset-0 z-50 overflow-y-auto" style="display: none;">
-            <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity duration-300" @click="showModal = false"></div>
+            <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity duration-300" @click="closeModal()"></div>
             <div class="flex min-h-full items-center justify-center p-4">
                 <div class="relative w-full max-w-lg bg-white rounded-[2rem] shadow-2xl p-10 transform transition-all scale-100">
                     
                     <div class="flex justify-between items-center mb-8">
                         <h3 class="text-3xl font-extrabold text-gray-900">New Entry</h3>
-                        <button @click="showModal = false" class="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-colors">
+                        <button @click="closeModal()" class="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-colors">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
                     </div>
@@ -149,8 +149,15 @@
                         <div class="grid grid-cols-2 gap-5">
                             <div class="space-y-2">
                                 <label class="text-sm font-bold text-gray-900">When?</label>
-                                <input type="datetime-local" name="start_time" required 
-                                    class="w-full bg-gray-50 border-transparent rounded-xl px-4 py-4 text-gray-900 font-semibold focus:ring-4 focus:ring-blue-100 focus:bg-white transition-all text-sm">
+                                <input
+                                    type="text"
+                                    name="start_time"
+                                    x-ref="startTimeInput"
+                                    required
+                                    autocomplete="off"
+                                    placeholder="Select date and time"
+                                    class="w-full bg-gray-50 border-transparent rounded-xl px-4 py-4 text-gray-900 font-semibold focus:ring-4 focus:ring-blue-100 focus:bg-white transition-all text-sm"
+                                >
                             </div>
                             <div class="space-y-2">
                                 <label class="text-sm font-bold text-gray-900">Type</label>
@@ -183,4 +190,47 @@
             </div>
         </div>
     </div>
+
+    <script>
+        function calendarSchedulerForm() {
+            return {
+                showModal: false,
+                startTimePicker: null,
+
+                initDateTimePicker() {
+                    if (!this.$refs.startTimeInput || typeof window.flatpickr !== 'function') {
+                        return;
+                    }
+
+                    this.startTimePicker = window.flatpickr(this.$refs.startTimeInput, {
+                        enableTime: true,
+                        time_24hr: false,
+                        minuteIncrement: 5,
+                        dateFormat: 'Y-m-d H:i',
+                        altInput: true,
+                        altFormat: 'F j, Y h:i K',
+                        allowInput: true,
+                        disableMobile: true,
+                        defaultDate: new Date(),
+                    });
+                },
+
+                openModal() {
+                    this.showModal = true;
+
+                    this.$nextTick(() => {
+                        if (this.startTimePicker) {
+                            this.startTimePicker.setDate(new Date(), true);
+                            this.startTimePicker.open();
+                        }
+                    });
+                },
+
+                closeModal() {
+                    this.showModal = false;
+                    this.startTimePicker?.close();
+                },
+            };
+        }
+    </script>
 </x-app-layout>

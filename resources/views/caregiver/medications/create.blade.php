@@ -14,10 +14,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-    <!-- Flatpickr for Date/Time picker -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
@@ -70,7 +66,7 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('caregiver.medications.store') }}" id="medicationForm">
+        <form method="POST" action="{{ route('caregiver.medications.store') }}" id="medicationForm" x-data="medicationCreateFlatpickr()" x-init="initPickers()">
             @csrf
             <input type="hidden" name="elderly_id" value="{{ $selectedElderly->id }}">
 
@@ -252,6 +248,39 @@
     </main>
 
     <script>
+        function medicationCreateFlatpickr() {
+            return {
+                initialized: false,
+
+                initPickers() {
+                    if (this.initialized || typeof window.flatpickr !== 'function') {
+                        return;
+                    }
+
+                    window.flatpickr('#start_date, #end_date, #newSpecificDateInput', {
+                        dateFormat: 'Y-m-d',
+                        altInput: true,
+                        altFormat: 'F j, Y',
+                        allowInput: true,
+                        disableMobile: true,
+                    });
+
+                    window.flatpickr('#newTimeInput', {
+                        enableTime: true,
+                        noCalendar: true,
+                        dateFormat: 'H:i',
+                        altInput: true,
+                        altFormat: 'h:i K',
+                        allowInput: true,
+                        disableMobile: true,
+                        minuteIncrement: 5,
+                    });
+
+                    this.initialized = true;
+                },
+            };
+        }
+
         const timeSlotContainer = document.getElementById('timeSlotContainer');
         const specificDateContainer = document.getElementById('specificDateContainer');
 
@@ -259,11 +288,17 @@
         let specificDates = JSON.parse(specificDateContainer.dataset.initialDates || '[]');
 
         function showMedicationFormAlert(message) {
-            window.scAlert({
+            // Replaced Phantom scAlert with actual SweetAlert2
+            window.Swal.fire({
                 title: 'Please review the form',
                 text: message,
                 icon: 'warning',
                 confirmButtonText: 'Got it',
+                confirmButtonColor: '#3b82f6', // Tailwind blue-500
+                customClass: {
+                    popup: 'rounded-2xl border border-slate-200 shadow-xl',
+                    title: 'text-xl font-extrabold text-slate-800'
+                }
             });
         }
 
@@ -461,20 +496,6 @@
         renderSpecificDates();
         toggleScheduleSections();
 
-        document.addEventListener('DOMContentLoaded', function() {
-            flatpickr("#start_date, #end_date, #newSpecificDateInput", {
-                dateFormat: "Y-m-d",
-                allowInput: true
-            });
-            flatpickr("#newTimeInput", {
-                enableTime: true,
-                noCalendar: true,
-                dateFormat: "H:i",
-                altInput: true,
-                altFormat: "h:i K",
-                allowInput: true
-            });
-        });
     </script>
 
 </body>

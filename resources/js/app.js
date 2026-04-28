@@ -1,6 +1,8 @@
 import './bootstrap';
 
 import Alpine from 'alpinejs';
+import flatpickr from 'flatpickr';
+import 'flatpickr/dist/flatpickr.min.css';
 
 // ── Alpine Components (extracted from inline scripts) ────────────
 import toastStore         from './components/toast.js';
@@ -63,4 +65,5 @@ Alpine.data('googleFitSync',      ()                    => googleFitSync());
 Alpine.data('heroAction',         (opts)                => heroAction(opts));
 
 window.Alpine = Alpine;
+window.flatpickr = flatpickr;
 Alpine.start();
