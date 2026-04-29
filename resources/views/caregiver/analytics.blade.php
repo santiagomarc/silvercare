@@ -209,8 +209,10 @@
                     <div class="period-data {{ $period !== '7days' ? 'hidden' : '' }}" data-period="{{ $period }}" data-type="{{ $type }}">
                         @if(($data[$period]['count'] ?? 0) > 0)
                             <!-- Mini Chart -->
-                            <div class="mb-4 bg-gray-50 rounded-xl p-3 h-[140px]">
-                                <canvas id="chart-{{ $type }}-{{ $period }}" class="w-full h-full"></canvas>
+                            <div class="mb-4 chart-container">
+                                <div class="chart-wrapper">
+                                    <canvas id="chart-{{ $type }}-{{ $period }}" class="w-full h-full"></canvas>
+                                </div>
                             </div>
 
                             <!-- Key Stats Row -->
@@ -307,6 +309,13 @@
                         <div class="text-center {{ $medicationSummary['adherenceRate'] >= 80 ? 'bg-green-50' : ($medicationSummary['adherenceRate'] >= 50 ? 'bg-yellow-50' : 'bg-red-50') }} rounded-2xl p-4">
                             <p class="text-3xl font-[900] {{ $medicationSummary['adherenceRate'] >= 80 ? 'text-green-600' : ($medicationSummary['adherenceRate'] >= 50 ? 'text-yellow-600' : 'text-red-600') }}">{{ $medicationSummary['adherenceRate'] ?? 0 }}%</p>
                             <p class="text-xs font-[700] {{ $medicationSummary['adherenceRate'] >= 80 ? 'text-green-600/70' : ($medicationSummary['adherenceRate'] >= 50 ? 'text-yellow-600/70' : 'text-red-600/70') }}">Adherence</p>
+                        </div>
+                    </div>
+
+                    <!-- Medication Adherence Doughnut Chart -->
+                    <div class="mb-6 chart-container">
+                        <div class="doughnut-chart-wrapper">
+                            <canvas id="medicationAdherenceChart" class="max-h-64"></canvas>
                         </div>
                     </div>
 
@@ -429,9 +438,26 @@
     <script>
         const charts = {};
         const analyticsData = @json($analyticsData ?? []);
+        const medicationSummary = @json($medicationSummary ?? []);
         let currentPeriod = '7days';
 
+        // Premium color palette matching SilverCare design
+        const premiumColors = {
+            primary: 'rgb(59, 130, 246)',       // Blue 500
+            primaryLight: 'rgba(59, 130, 246, 0.15)',
+            accent: 'rgb(99, 102, 241)',        // Indigo 600
+            success: 'rgb(34, 197, 94)',        // Green 500
+            successLight: 'rgba(34, 197, 94, 0.15)',
+            warning: 'rgb(245, 158, 11)',       // Amber 500
+            warningLight: 'rgba(245, 158, 11, 0.15)',
+            danger: 'rgb(239, 68, 68)',         // Red 500
+            dangerLight: 'rgba(239, 68, 68, 0.15)',
+            grid: 'rgba(0, 0, 0, 0.04)',
+            text: 'rgb(75, 85, 99)',
+        };
+
         function initCharts() {
+            // Initialize vitals charts
             Object.keys(analyticsData).forEach(type => {
                 const data = analyticsData[type];
                 ['7days', '30days', '90days'].forEach(period => {
@@ -445,6 +471,63 @@
                     }
                 });
             });
+
+            // Initialize medication adherence doughnut chart
+            const medCtx = document.getElementById('medicationAdherenceChart');
+            if (medCtx && medicationSummary.totalMedications > 0) {
+                charts['medicationAdherence'] = createMedicationAdherenceChart(medCtx);
+            }
+        }
+
+        function createMedicationAdherenceChart(ctx) {
+            const adherenceRate = medicationSummary.adherenceRate || 0;
+            const missedRate = 100 - adherenceRate;
+
+            return new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Doses Taken', 'Doses Missed'],
+                    datasets: [{
+                        data: [adherenceRate, missedRate],
+                        backgroundColor: [
+                            premiumColors.success,
+                            'rgba(226, 232, 240, 0.6)',
+                        ],
+                        borderColor: ['rgb(255, 255, 255)', 'rgb(255, 255, 255)'],
+                        borderWidth: 3,
+                        borderRadius: 8,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: { size: 12, weight: 'bold', family: 'inherit' },
+                                color: premiumColors.text,
+                                padding: 16,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            padding: 12,
+                            titleFont: { size: 13, weight: 'bold' },
+                            bodyFont: { size: 12 },
+                            cornerRadius: 10,
+                            displayColors: true,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ' + context.parsed + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         function createChart(ctx, type, periodData, config) {
@@ -455,9 +538,9 @@
             });
             
             const colorMap = {
-                'red': { bg: 'rgba(239, 68, 68, 0.15)', border: 'rgb(239, 68, 68)' },
-                'blue': { bg: 'rgba(59, 130, 246, 0.15)', border: 'rgb(59, 130, 246)' },
-                'orange': { bg: 'rgba(249, 115, 22, 0.15)', border: 'rgb(249, 115, 22)' },
+                'red': { bg: premiumColors.dangerLight, border: premiumColors.danger },
+                'blue': { bg: premiumColors.primaryLight, border: premiumColors.primary },
+                'orange': { bg: premiumColors.warningLight, border: premiumColors.warning },
                 'rose': { bg: 'rgba(244, 63, 94, 0.15)', border: 'rgb(244, 63, 94)' },
                 'pink': { bg: 'rgba(236, 72, 153, 0.15)', border: 'rgb(236, 72, 153)' },
             };
@@ -475,12 +558,51 @@
                     }
                 });
                 datasets = [
-                    { label: 'Sys', data: systolic, borderColor: colors.border, backgroundColor: colors.bg, borderWidth: 2, fill: true, tension: 0.4, pointRadius: 3 },
-                    { label: 'Dia', data: diastolic, borderColor: 'rgb(147, 51, 234)', backgroundColor: 'rgba(147, 51, 234, 0.15)', borderWidth: 2, fill: true, tension: 0.4, pointRadius: 3 }
+                    { 
+                        label: 'Systolic', 
+                        data: systolic, 
+                        borderColor: colors.border, 
+                        backgroundColor: colors.bg, 
+                        borderWidth: 3, 
+                        fill: true, 
+                        tension: 0.4, 
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: colors.border,
+                        pointBorderColor: 'white',
+                        pointBorderWidth: 2,
+                    },
+                    { 
+                        label: 'Diastolic', 
+                        data: diastolic, 
+                        borderColor: premiumColors.accent, 
+                        backgroundColor: 'rgba(99, 102, 241, 0.15)', 
+                        borderWidth: 3, 
+                        fill: true, 
+                        tension: 0.4, 
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: premiumColors.accent,
+                        pointBorderColor: 'white',
+                        pointBorderWidth: 2,
+                    }
                 ];
             } else {
                 const values = metrics.map(m => parseFloat(m.value));
-                datasets = [{ label: config.name, data: values, borderColor: colors.border, backgroundColor: colors.bg, borderWidth: 2, fill: true, tension: 0.4, pointRadius: 3 }];
+                datasets = [{ 
+                    label: config.name, 
+                    data: values, 
+                    borderColor: colors.border, 
+                    backgroundColor: colors.bg, 
+                    borderWidth: 3, 
+                    fill: true, 
+                    tension: 0.4, 
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: colors.border,
+                    pointBorderColor: 'white',
+                    pointBorderWidth: 2,
+                }];
             }
 
             return new Chart(ctx, {
@@ -489,13 +611,40 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
                     plugins: {
-                        legend: { display: type === 'blood_pressure', position: 'top', labels: { font: { weight: 'bold', size: 10 }, usePointStyle: true, padding: 8 } },
-                        tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', padding: 10, titleFont: { size: 12, weight: 'bold' }, bodyFont: { size: 11 }, cornerRadius: 8 }
+                        legend: { 
+                            display: type === 'blood_pressure', 
+                            position: 'top', 
+                            labels: { 
+                                font: { weight: 'bold', size: 11, family: 'inherit' }, 
+                                color: premiumColors.text,
+                                usePointStyle: true, 
+                                padding: 12,
+                                pointStyle: 'circle',
+                            } 
+                        },
+                        tooltip: { 
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)', 
+                            padding: 12, 
+                            titleFont: { size: 12, weight: 'bold' }, 
+                            bodyFont: { size: 11 }, 
+                            cornerRadius: 10,
+                            displayColors: true,
+                            borderColor: 'rgba(255, 255, 255, 0.2)',
+                            borderWidth: 1,
+                        }
                     },
                     scales: {
-                        y: { beginAtZero: false, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { weight: '600', size: 10 } } },
-                        x: { grid: { display: false }, ticks: { font: { weight: '600', size: 9 }, maxRotation: 45, minRotation: 45 } }
+                        y: { 
+                            beginAtZero: false, 
+                            grid: { color: premiumColors.grid, drawBorder: false }, 
+                            ticks: { font: { weight: '600', size: 11 }, color: premiumColors.text },
+                        },
+                        x: { 
+                            grid: { display: false, drawBorder: false }, 
+                            ticks: { font: { weight: '600', size: 10 }, color: premiumColors.text, maxRotation: 45, minRotation: 45 } 
+                        }
                     }
                 }
             });

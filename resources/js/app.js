@@ -6,6 +6,8 @@ import 'flatpickr/dist/flatpickr.min.css';
 
 import TomSelect from 'tom-select';
 import 'tom-select/dist/css/tom-select.default.css';
+import Chart from 'chart.js/auto';
+
 
 // ── Alpine Components (extracted from inline scripts) ────────────
 import toastStore         from './components/toast.js';
@@ -70,4 +72,5 @@ Alpine.data('heroAction',         (opts)                => heroAction(opts));
 window.Alpine = Alpine;
 window.flatpickr = flatpickr;
 window.TomSelect = TomSelect;
+window.Chart = Chart;
 Alpine.start();
