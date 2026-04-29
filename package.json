@@ -24,6 +24,7 @@
         "chart.js": "^4.5.1",
         "flatpickr": "^4.6.13",
         "lucide": "^1.8.0",
-        "sweetalert2": "^11.26.24"
+        "sweetalert2": "^11.26.24",
+        "tom-select": "^2.6.0"
     }
 }

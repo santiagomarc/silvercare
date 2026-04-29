@@ -66,7 +66,7 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('caregiver.medications.store') }}" id="medicationForm" x-data="medicationCreateFlatpickr()" x-init="initPickers()">
+        <form method="POST" action="{{ route('caregiver.medications.store') }}" id="medicationForm" x-data="medicationFormManager()" x-init="initPickers()">
             @csrf
             <input type="hidden" name="elderly_id" value="{{ $selectedElderly->id }}">
 
@@ -91,14 +91,16 @@
                         <label for="dosage" class="block text-xs font-[800] uppercase tracking-wider text-gray-400 mb-2">Dosage <span class="text-red-500">*</span></label>
                         <div class="flex">
                             <input type="text" name="dosage" id="dosage" value="{{ old('dosage') }}" class="w-2/3 rounded-l-xl border-2 border-r-0 border-gray-100 bg-gray-50 px-4 py-3.5 font-[600] text-gray-900 transition-all focus:border-blue-500 focus:bg-white focus:ring-0 outline-none" placeholder="e.g. 10, 500" required>
-                            <select name="dosage_unit" class="w-1/3 rounded-r-xl border-2 border-gray-100 bg-gray-100 px-3 py-3.5 font-[600] text-gray-700 focus:border-blue-500 focus:ring-0 outline-none">
-                                <option value="mg" {{ old('dosage_unit') == 'mg' ? 'selected' : '' }}>mg</option>
-                                <option value="ml" {{ old('dosage_unit') == 'ml' ? 'selected' : '' }}>ml</option>
-                                <option value="tablet" {{ old('dosage_unit') == 'tablet' ? 'selected' : '' }}>tablet</option>
-                                <option value="capsule" {{ old('dosage_unit') == 'capsule' ? 'selected' : '' }}>capsule</option>
-                                <option value="puff" {{ old('dosage_unit') == 'puff' ? 'selected' : '' }}>puff</option>
-                                <option value="drop" {{ old('dosage_unit') == 'drop' ? 'selected' : '' }}>drop</option>
-                            </select>
+                            <div class="w-1/3 relative">
+                                <select name="dosage_unit" x-ref="dosageUnitSelect" class="w-full rounded-r-xl border-2 border-gray-100 bg-gray-100 px-3 py-3.5 font-[600] text-gray-700 focus:border-blue-500 focus:ring-0 outline-none">
+                                    <option value="mg" {{ old('dosage_unit') == 'mg' ? 'selected' : '' }}>mg</option>
+                                    <option value="ml" {{ old('dosage_unit') == 'ml' ? 'selected' : '' }}>ml</option>
+                                    <option value="tablet" {{ old('dosage_unit') == 'tablet' ? 'selected' : '' }}>tablet</option>
+                                    <option value="capsule" {{ old('dosage_unit') == 'capsule' ? 'selected' : '' }}>capsule</option>
+                                    <option value="puff" {{ old('dosage_unit') == 'puff' ? 'selected' : '' }}>puff</option>
+                                    <option value="drop" {{ old('dosage_unit') == 'drop' ? 'selected' : '' }}>drop</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
@@ -128,7 +130,7 @@
                 <!-- Schedule Type -->
                 <div class="mb-6">
                     <label for="schedule_type" class="block text-xs font-[800] uppercase tracking-wider text-gray-400 mb-2">Schedule Type <span class="text-red-500">*</span></label>
-                    <select name="schedule_type" id="schedule_type" class="w-full rounded-xl border-2 border-gray-100 bg-gray-50 px-4 py-3.5 font-[700] text-gray-900 transition-all focus:border-green-500 focus:bg-white focus:ring-0 outline-none">
+                    <select name="schedule_type" id="schedule_type" x-ref="scheduleTypeSelect" class="w-full rounded-xl border-2 border-gray-100 bg-gray-50 px-4 py-3.5 font-[700] text-gray-900 transition-all focus:border-green-500 focus:bg-white focus:ring-0 outline-none">
                         @php $scheduleType = old('schedule_type', 'daily'); @endphp
                         <option value="daily" {{ $scheduleType === 'daily' ? 'selected' : '' }}>Daily (Every day)</option>
                         <option value="weekly" {{ $scheduleType === 'weekly' ? 'selected' : '' }}>Weekly (Selected days)</option>
@@ -248,33 +250,56 @@
     </main>
 
     <script>
-        function medicationCreateFlatpickr() {
+        function medicationFormManager() {
             return {
                 initialized: false,
 
                 initPickers() {
-                    if (this.initialized || typeof window.flatpickr !== 'function') {
+                    if (this.initialized) {
                         return;
                     }
 
-                    window.flatpickr('#start_date, #end_date, #newSpecificDateInput', {
-                        dateFormat: 'Y-m-d',
-                        altInput: true,
-                        altFormat: 'F j, Y',
-                        allowInput: true,
-                        disableMobile: true,
-                    });
+                    if (typeof window.flatpickr === 'function') {
+                        window.flatpickr('#start_date, #end_date, #newSpecificDateInput', {
+                            dateFormat: 'Y-m-d',
+                            altInput: true,
+                            altFormat: 'F j, Y',
+                            allowInput: true,
+                            disableMobile: true,
+                        });
 
-                    window.flatpickr('#newTimeInput', {
-                        enableTime: true,
-                        noCalendar: true,
-                        dateFormat: 'H:i',
-                        altInput: true,
-                        altFormat: 'h:i K',
-                        allowInput: true,
-                        disableMobile: true,
-                        minuteIncrement: 5,
-                    });
+                        window.flatpickr('#newTimeInput', {
+                            enableTime: true,
+                            noCalendar: true,
+                            dateFormat: 'H:i',
+                            altInput: true,
+                            altFormat: 'h:i K',
+                            allowInput: true,
+                            disableMobile: true,
+                            minuteIncrement: 5,
+                        });
+                    }
+
+                    if (typeof window.TomSelect === 'function') {
+                        if (this.$refs.dosageUnitSelect) {
+                            new window.TomSelect(this.$refs.dosageUnitSelect, {
+                                create: false,
+                                controlInput: null,
+                            });
+                        }
+
+                        if (this.$refs.scheduleTypeSelect) {
+                            new window.TomSelect(this.$refs.scheduleTypeSelect, {
+                                create: false,
+                                controlInput: null,
+                                onChange: function(value) {
+                                    if (typeof toggleScheduleSections === 'function') {
+                                        toggleScheduleSections();
+                                    }
+                                }
+                            });
+                        }
+                    }
 
                     this.initialized = true;
                 },

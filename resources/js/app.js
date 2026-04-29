@@ -4,6 +4,9 @@ import Alpine from 'alpinejs';
 import flatpickr from 'flatpickr';
 import 'flatpickr/dist/flatpickr.min.css';
 
+import TomSelect from 'tom-select';
+import 'tom-select/dist/css/tom-select.default.css';
+
 // ── Alpine Components (extracted from inline scripts) ────────────
 import toastStore         from './components/toast.js';
 import moodTracker        from './components/mood-tracker.js';
@@ -66,4 +69,5 @@ Alpine.data('heroAction',         (opts)                => heroAction(opts));
 
 window.Alpine = Alpine;
 window.flatpickr = flatpickr;
+window.TomSelect = TomSelect;
 Alpine.start();
