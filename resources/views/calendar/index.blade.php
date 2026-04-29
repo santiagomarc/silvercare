@@ -2,7 +2,6 @@
     <div class="py-10 bg-[#F3F4F6] min-h-screen font-sans" x-data="calendarSchedulerForm()" x-init="initDateTimePicker()">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             
-            <!-- Dynamic Header -->
             <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
                 <div>
                     <h2 class="text-4xl font-extrabold text-gray-900 tracking-tight">Schedule</h2>
@@ -16,14 +15,11 @@
                 </button>
             </div>
 
-            <!-- Content Grid -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 
-                <!-- Left: Visual Calendar Card -->
                 <div class="lg:col-span-4">
                     <div class="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-[2.5rem] p-8 shadow-xl text-white relative overflow-hidden h-full min-h-[400px] flex flex-col justify-between group">
                         
-                        <!-- Background decoration -->
                         <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-2xl group-hover:scale-110 transition-transform duration-700"></div>
                         <div class="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/30 rounded-full -ml-10 -mb-10 blur-xl"></div>
 
@@ -48,7 +44,6 @@
                     </div>
                 </div>
 
-                <!-- Right: Events List -->
                 <div class="lg:col-span-8 space-y-6">
                     @if($events->isEmpty())
                         <div class="bg-white rounded-[2.5rem] p-16 text-center shadow-sm border border-gray-100 flex flex-col items-center justify-center h-full">
@@ -59,7 +54,6 @@
                             <p class="text-gray-500 max-w-sm mx-auto">Your schedule is clear for now. Click the "Add Entry" button to plan ahead.</p>
                         </div>
                     @else
-                        <!-- List Container -->
                         <div class="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
                             <div class="p-8">
                                 <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center">
@@ -71,13 +65,11 @@
                                     @foreach($events as $event)
                                         <div class="group flex items-center p-5 rounded-2xl border border-gray-100 hover:border-blue-100 hover:bg-blue-50/30 transition-all duration-300">
                                             
-                                            <!-- Date Badge -->
                                             <div class="flex-shrink-0 w-16 h-16 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center mr-6 group-hover:scale-105 transition-transform">
                                                 <span class="text-xs font-bold text-gray-400 uppercase">{{ \Carbon\Carbon::parse($event->start_time)->format('M') }}</span>
                                                 <span class="text-xl font-extrabold text-gray-800">{{ \Carbon\Carbon::parse($event->start_time)->format('d') }}</span>
                                             </div>
 
-                                            <!-- Content -->
                                             <div class="flex-1 min-w-0">
                                                 <div class="flex items-center gap-3 mb-1">
                                                     <span class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide
@@ -96,7 +88,6 @@
                                                 @endif
                                             </div>
 
-                                            <!-- Delete Action -->
                                             <form
                                                 method="POST"
                                                 action="{{ route('calendar.destroy', $event->id) }}"
@@ -124,7 +115,6 @@
             </div>
         </div>
 
-        <!-- Modern Modal -->
         <div x-show="showModal" class="fixed inset-0 z-50 overflow-y-auto" style="display: none;">
             <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity duration-300" @click="closeModal()"></div>
             <div class="flex min-h-full items-center justify-center p-4">
@@ -161,16 +151,11 @@
                             </div>
                             <div class="space-y-2">
                                 <label class="text-sm font-bold text-gray-900">Type</label>
-                                <div class="relative">
-                                    <select name="type" class="w-full bg-gray-50 border-transparent rounded-xl px-4 py-4 text-gray-900 font-semibold focus:ring-4 focus:ring-blue-100 focus:bg-white transition-all appearance-none">
-                                        <option value="Event">📅 Event</option>
-                                        <option value="Reminder">🔔 Reminder</option>
-                                        <option value="Appointment">🩺 Appointment</option>
-                                    </select>
-                                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
-                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                    </div>
-                                </div>
+                                <select name="type" x-ref="typeSelect" autocomplete="off" placeholder="Select Type">
+                                    <option value="Event">📅 Event</option>
+                                    <option value="Reminder">🔔 Reminder</option>
+                                    <option value="Appointment">🩺 Appointment</option>
+                                </select>
                             </div>
                         </div>
 
@@ -196,23 +181,34 @@
             return {
                 showModal: false,
                 startTimePicker: null,
+                typeSelect: null,
 
                 initDateTimePicker() {
-                    if (!this.$refs.startTimeInput || typeof window.flatpickr !== 'function') {
-                        return;
+                    // 1. Init Flatpickr
+                    if (this.$refs.startTimeInput && typeof window.flatpickr === 'function') {
+                        this.startTimePicker = window.flatpickr(this.$refs.startTimeInput, {
+                            enableTime: true,
+                            time_24hr: false,
+                            minuteIncrement: 5,
+                            dateFormat: 'Y-m-d H:i',
+                            altInput: true,
+                            altFormat: 'F j, Y h:i K',
+                            allowInput: true,
+                            disableMobile: true,
+                            defaultDate: new Date(),
+                        });
                     }
 
-                    this.startTimePicker = window.flatpickr(this.$refs.startTimeInput, {
-                        enableTime: true,
-                        time_24hr: false,
-                        minuteIncrement: 5,
-                        dateFormat: 'Y-m-d H:i',
-                        altInput: true,
-                        altFormat: 'F j, Y h:i K',
-                        allowInput: true,
-                        disableMobile: true,
-                        defaultDate: new Date(),
-                    });
+                    // 2. Init Tom Select
+                    if (this.$refs.typeSelect && typeof window.TomSelect === 'function') {
+                        this.typeSelect = new window.TomSelect(this.$refs.typeSelect, {
+                            create: false,
+                            searchField: ['text'],
+                            placeholder: 'Select event type...',
+                            // Hides the text input cursor for small dropdowns to act like a normal select
+                            controlInput: null 
+                        });
+                    }
                 },
 
                 openModal() {

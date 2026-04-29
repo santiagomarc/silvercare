@@ -707,6 +707,42 @@
 .flatpickr-input[readonly] {
     cursor: pointer;
 }
+/* ── Tom Select plugin ─────────────── */
+.ts-control {
+    border: 2px solid #f3f4f6 !important;
+    border-radius: 0.75rem !important;
+    padding: 1rem 1.25rem !important;
+    font-family: 'Montserrat', sans-serif !important;
+    font-weight: 600 !important;
+    background-color: #f9fafb !important;
+    box-shadow: none !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
+.ts-control.focus {
+    border-color: #dbeafe !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 0 0 4px rgba(219, 234, 254, 0.5) !important;
+}
+
+.ts-dropdown {
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 0.75rem !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+    font-family: 'Montserrat', sans-serif !important;
+    margin-top: 4px !important;
+    overflow: hidden !important;
+}
+
+.ts-dropdown .option {
+    padding: 0.75rem 1.25rem !important;
+    font-weight: 600 !important;
+}
+
+.ts-dropdown .option:hover, .ts-dropdown .active {
+    background-color: #eff6ff !important;
+    color: #1d4ed8 !important;
+}
 
 /* ── Utility Layer ───────────────────────────────────────────────── */
 @layer utilities {
