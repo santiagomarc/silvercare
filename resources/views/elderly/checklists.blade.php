@@ -53,17 +53,19 @@
                 <!-- Tasks for this date -->
                 <div class="space-y-3">
                     @foreach($dayChecklists as $checklist)
-                        <div class="bg-white rounded-2xl shadow-md overflow-hidden {{ $checklist->is_completed ? 'opacity-75' : '' }} transition-all duration-300">
+                        <div x-data="checklistPageItem({{ $checklist->id }}, {{ $checklist->is_completed ? 'true' : 'false' }})"
+                             :class="completed ? 'opacity-75' : ''"
+                             class="bg-white rounded-2xl shadow-md overflow-hidden transition-all duration-300">
                             <div class="p-5 flex items-center">
                                 <!-- Toggle Button -->
-                                <form action="{{ route('elderly.checklists.toggle', $checklist) }}" method="POST" class="mr-4">
-                                    @csrf
-                                    <button type="submit" class="w-10 h-10 {{ $checklist->is_completed ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-gray-300 hover:border-green-500' }} border-2 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 shadow-sm">
-                                        @if($checklist->is_completed)
-                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                                        @endif
-                                    </button>
-                                </form>
+                                <button type="button" 
+                                        @click="toggle()" 
+                                        :disabled="processing"
+                                        :class="completed ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-gray-300 hover:border-green-500'"
+                                        class="mr-4 w-10 h-10 border-2 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                        :aria-label="completed ? 'Mark incomplete' : 'Mark complete'">
+                                    <svg x-show="completed" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                </button>
 
                                 <!-- Category Icon -->
                                 @php
@@ -88,7 +90,7 @@
 
                                 <!-- Task Content -->
                                 <div class="flex-grow">
-                                    <h3 class="text-lg font-bold text-gray-900 {{ $checklist->is_completed ? 'line-through text-gray-500' : '' }}">
+                                    <h3 class="text-lg font-bold text-gray-900" :class="completed ? 'line-through text-gray-500' : ''">
                                         {{ $checklist->task }}
                                     </h3>
                                     <div class="flex flex-wrap items-center gap-2 mt-1">
@@ -105,23 +107,28 @@
                                                 High Priority
                                             </span>
                                         @endif
+                                        @if($checklist->is_recurring)
+                                            <span class="text-xs text-blue-500 font-medium inline-flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                                                <x-lucide-refresh-cw class="w-3.5 h-3.5" aria-hidden="true" />
+                                                {{ ucfirst($checklist->frequency ?? 'Recurring') }}
+                                            </span>
+                                        @endif
                                     </div>
                                 </div>
 
                                 <!-- Status Badge -->
                                 <div class="flex-shrink-0 ml-4">
-                                    @if($checklist->is_completed)
-                                        <div class="text-center">
-                                            <span class="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full font-bold">
-                                                <x-lucide-check class="w-4 h-4 mr-1" aria-hidden="true" />
-                                                Done
-                                            </span>
-                                            @if($checklist->completed_at)
-                                                <p class="text-xs text-gray-400 mt-1">{{ $checklist->completed_at->format('g:i A') }}</p>
-                                            @endif
-                                        </div>
-                                    @elseif($isPast)
-                                        <span class="inline-flex items-center px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full font-bold">
+                                    <div x-show="completed" class="text-center" x-cloak>
+                                        <span class="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full font-bold">
+                                            <x-lucide-check class="w-4 h-4 mr-1" aria-hidden="true" />
+                                            Done
+                                        </span>
+                                        @if($checklist->completed_at)
+                                            <p class="text-xs text-gray-400 mt-1">{{ $checklist->completed_at->format('g:i A') }}</p>
+                                        @endif
+                                    </div>
+                                    @if($isPast)
+                                        <span x-show="!completed" class="inline-flex items-center px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full font-bold" x-cloak>
                                             Overdue
                                         </span>
                                     @endif

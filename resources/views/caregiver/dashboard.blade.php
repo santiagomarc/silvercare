@@ -94,12 +94,34 @@
                             </div>
                         @endif
 
-                        <form method="POST" action="{{ route('caregiver.link-code.generate') }}" class="mt-4">
-                            @csrf
-                            <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-[#000080] px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-900 transition-colors">
-                                {{ $activeLinkCode ? '↻ Refresh PIN & QR Code' : 'Generate Linking PIN & QR Code' }}
+                        <div class="mt-4" x-data="{
+                                loading: false,
+                                async generate() {
+                                    if(this.loading) return;
+                                    this.loading = true;
+                                    try {
+                                        const res = await fetch('{{ route('caregiver.link-code.generate') }}', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'Accept': 'application/json',
+                                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
+                                            }
+                                        });
+                                        if(!res.ok) throw new Error('Failed to generate PIN');
+                                        window.location.reload();
+                                    } catch(e) {
+                                        window.Swal?.fire({ icon: 'error', title: 'Error', text: e.message });
+                                    } finally {
+                                        this.loading = false;
+                                    }
+                                }
+                            }">
+                            <button @click="generate()" :disabled="loading" class="inline-flex items-center justify-center rounded-xl bg-[#000080] px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-900 transition-colors disabled:opacity-50 min-h-touch">
+                                <span x-show="!loading">{{ $activeLinkCode ? '↻ Refresh PIN & QR Code' : 'Generate Linking PIN & QR Code' }}</span>
+                                <span x-show="loading">Generating...</span>
                             </button>
-                        </form>
+                        </div>
                     </div>
                 </div>
             </div>

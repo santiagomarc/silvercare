@@ -27,7 +27,7 @@
     $roleLabel = $isCaregiver ? 'Caregiver' : 'Patient';
 @endphp
 
-<nav class="sticky top-0 z-50 border-b border-white/60 bg-white/70 backdrop-blur-xl shadow-[0_18px_40px_-32px_rgba(15,23,42,0.42)]">
+<nav x-data="{ mobileMenuOpen: false }" class="sticky top-0 z-50 border-b border-white/60 bg-white/70 backdrop-blur-xl shadow-[0_18px_40px_-32px_rgba(15,23,42,0.42)]">
     <div class="max-w-[1600px] mx-auto px-6 lg:px-12 h-16 flex justify-between items-center">
 
         {{-- Left Side: Logo + Title --}}
@@ -50,7 +50,7 @@
 
             {{-- Notifications Bell (Elderly Only) --}}
             @if(!$isCaregiver)
-                <a href="{{ route('elderly.notifications.index') }}" class="relative rounded-xl border border-transparent p-2 transition-all group hover:border-white/70 hover:bg-white/60" title="Notifications">
+                <a href="{{ route('elderly.notifications.index') }}" aria-label="Notifications" class="hidden sm:flex relative rounded-xl border border-transparent p-2 transition-all group hover:border-white/70 hover:bg-white/60" title="Notifications">
                     <svg class="w-6 h-6 text-gray-600 group-hover:text-[#000080] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                     </svg>
@@ -65,7 +65,8 @@
             {{-- Messages (both roles) --}}
             <a
                 href="{{ $isCaregiver ? route('caregiver.messages.index') : route('elderly.messages.index') }}"
-                class="relative rounded-xl border border-transparent p-2 transition-all group hover:border-white/70 hover:bg-white/60"
+                aria-label="Messages"
+                class="hidden sm:flex relative rounded-xl border border-transparent p-2 transition-all group hover:border-white/70 hover:bg-white/60"
                 title="Messages"
             >
                 <svg class="w-6 h-6 text-gray-600 group-hover:text-[#000080] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -78,8 +79,9 @@
                 type="button"
                 x-data="{ dark: document.documentElement.classList.contains('dark') }"
                 @click="dark = window.toggleSilverCareTheme ? window.toggleSilverCareTheme() : dark"
-                class="rounded-xl border border-transparent p-2 transition-all hover:border-white/70 hover:bg-white/60"
+                class="hidden sm:flex rounded-xl border border-transparent p-2 transition-all hover:border-white/70 hover:bg-white/60"
                 :title="dark ? 'Switch to light mode' : 'Switch to dark mode'"
+                :aria-label="dark ? 'Switch to light mode' : 'Switch to dark mode'"
             >
                 <svg x-show="!dark" class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646a9 9 0 1011.708 11.708z"/>
@@ -129,7 +131,12 @@
                                 class="rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-1.5 text-xs font-bold text-red-700 transition-colors">
                             SOS
                         </button>
-                        <div x-show="confirming" x-cloak class="absolute right-0 top-full mt-2 w-48 rounded-xl border border-red-200 bg-white p-3 shadow-lg z-50">
+                        <div x-show="confirming" 
+                             @keydown.escape.window="confirming = false"
+                             role="dialog"
+                             aria-modal="true"
+                             x-cloak 
+                             class="absolute right-0 top-full mt-2 w-48 rounded-xl border border-red-200 bg-white p-3 shadow-lg z-50">
                             <p class="text-xs font-semibold text-gray-600 mb-2">Send emergency alert now?</p>
                             <div class="flex items-center gap-2">
                                 <button @click="sendSos()" :disabled="sending" class="rounded-lg bg-red-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-60">
@@ -144,7 +151,7 @@
             @endif
 
             {{-- Profile Link --}}
-            <a href="{{ route('profile.edit') }}" class="flex cursor-pointer items-center gap-2 rounded-xl border border-transparent px-2 py-1.5 transition-all group hover:border-white/70 hover:bg-white/60" title="Manage Profile">
+            <a href="{{ route('profile.edit') }}" class="hidden sm:flex cursor-pointer items-center gap-2 rounded-xl border border-transparent px-2 py-1.5 transition-all group hover:border-white/70 hover:bg-white/60" title="Manage Profile">
                 <div class="relative">
                     <div class="w-9 h-9 rounded-full {{ $profileBgColor }} font-[900] text-base group-hover:text-white transition-colors overflow-hidden flex items-center justify-center">
                         @if(Auth::user()->profile && Auth::user()->profile->profile_photo)
@@ -159,7 +166,80 @@
                     <p class="text-xs text-gray-500 font-medium">{{ $roleLabel }}</p>
                 </div>
             </a>
+            
+            {{-- Mobile Menu Button --}}
+            <button type="button" @click="mobileMenuOpen = true" aria-label="Open mobile menu" :aria-expanded="mobileMenuOpen.toString()" class="sm:hidden p-2 text-gray-600 hover:text-gray-900 focus:outline-none">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
 
+        </div>
+    </div>
+    
+    {{-- Mobile Drawer Panel --}}
+    <div x-show="mobileMenuOpen" 
+         class="fixed inset-0 z-[60] sm:hidden" 
+         aria-modal="true" 
+         role="dialog"
+         x-cloak>
+        <!-- Backdrop -->
+        <div x-show="mobileMenuOpen" 
+             x-transition.opacity 
+             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm"
+             @click="mobileMenuOpen = false"></div>
+
+        <!-- Drawer -->
+        <div x-show="mobileMenuOpen" 
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="translate-x-full"
+             x-transition:enter-end="translate-x-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="translate-x-0"
+             x-transition:leave-end="translate-x-full"
+             class="fixed right-0 top-0 bottom-0 w-64 bg-white shadow-xl overflow-y-auto"
+             @click.away="mobileMenuOpen = false">
+             
+             <div class="p-4 border-b border-gray-100 flex justify-between items-center">
+                <h2 class="font-bold text-lg text-navy-800">Menu</h2>
+                <button @click="mobileMenuOpen = false" aria-label="Close menu" class="p-2 text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+             </div>
+             
+             <div class="p-4 space-y-4">
+                <div class="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
+                    <div class="w-10 h-10 rounded-full {{ $profileBgColor }} font-[900] flex items-center justify-center overflow-hidden">
+                        @if(Auth::user()->profile && Auth::user()->profile->profile_photo)
+                            <img src="{{ Storage::url(Auth::user()->profile->profile_photo) }}" alt="Profile" class="w-full h-full object-cover">
+                        @else
+                            {{ substr(Auth::user()->name, 0, 1) }}
+                        @endif
+                    </div>
+                    <div>
+                        <p class="font-bold text-gray-900">{{ Auth::user()->name }}</p>
+                        <p class="text-xs text-gray-500">{{ $roleLabel }}</p>
+                    </div>
+                </div>
+             
+                <a href="{{ route('profile.edit') }}" class="block font-bold text-gray-800 hover:text-navy-600">Manage Profile</a>
+                <a href="{{ $isCaregiver ? route('caregiver.messages.index') : route('elderly.messages.index') }}" class="block font-bold text-gray-800 hover:text-navy-600">Messages</a>
+                @if(!$isCaregiver)
+                    <a href="{{ route('elderly.notifications.index') }}" class="block font-bold text-gray-800 hover:text-navy-600">
+                        Notifications
+                        @if($unreadNotifications > 0)
+                            <span class="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{{ $unreadNotifications }}</span>
+                        @endif
+                    </a>
+                @endif
+                
+                <div class="pt-4 mt-4 border-t border-gray-100">
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="w-full text-left font-bold text-rose-600 hover:text-rose-800">
+                            Log Out
+                        </button>
+                    </form>
+                </div>
+             </div>
         </div>
     </div>
 </nav>

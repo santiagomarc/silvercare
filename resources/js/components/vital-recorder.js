@@ -208,15 +208,28 @@ export default function vitalRecorder() {
                     }
                 });
                 
-                // Only refresh AFTER the promise resolves (1.5 seconds later)
-                window.location.reload();
+                // Dispatch events instead of reloading the page
+                window.dispatchEvent(new CustomEvent('vital-recorded', {
+                    detail: { type: this.type }
+                }));
+
+                if (result.data && result.data.vitals !== undefined) {
+                    window.dispatchEvent(new CustomEvent('progress-updated', {
+                        detail: { 
+                            vitals: result.data.vitals, 
+                            vitalTotal: result.data.vitalTotal 
+                        }
+                    }));
+                }
+
+                // If successful, we can unfreeze since we aren't reloading
+                this.submitting = false;
 
             } catch (err) {
                 console.error('Vital save failed:', err);
                 toast?.error(err.message);
                 
                 // Only unfreeze the button if there was an error. 
-                // If successful, leave it frozen so they can't click again before the reload!
                 this.submitting = false; 
             }
         },

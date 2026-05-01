@@ -475,7 +475,10 @@
                             }
                         },
                         async validatePin() {
-                            if (this.pin.length !== 6) { this.error = 'Please enter all 6 digits.'; return; }
+                            if (this.pin.length !== 6) { 
+                                window.Swal.fire({ icon: 'warning', title: 'Invalid PIN', text: 'Please enter all 6 digits.', confirmButtonColor: '#000080' });
+                                return; 
+                            }
                             this.loading = true;
                             this.error = '';
                             try {
@@ -493,10 +496,42 @@
                                     this.caregiver = data;
                                     this.step = 'confirm';
                                 } else {
-                                    this.error = data.message || 'Invalid PIN.';
+                                    window.Swal.fire({ icon: 'error', title: 'Invalid PIN', text: data.message || 'The PIN you entered is invalid or expired.', confirmButtonColor: '#000080' });
                                 }
                             } catch (e) {
-                                this.error = 'Something went wrong. Please try again.';
+                                window.Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong. Please try again.', confirmButtonColor: '#000080' });
+                            } finally {
+                                this.loading = false;
+                            }
+                        },
+                        async confirmLink() {
+                            this.loading = true;
+                            try {
+                                const res = await fetch('{{ route('elderly.confirm-link') }}', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                        'Accept': 'application/json',
+                                    },
+                                    body: JSON.stringify({ code: this.caregiver.code }),
+                                });
+                                const data = await res.json();
+                                if (res.ok) {
+                                    await window.Swal.fire({
+                                        icon: 'success',
+                                        title: 'Connected!',
+                                        text: 'You have successfully linked with your caregiver.',
+                                        timer: 1500,
+                                        showConfirmButton: false,
+                                        allowOutsideClick: false
+                                    });
+                                    window.location.reload();
+                                } else {
+                                    throw new Error(data.message || 'Failed to connect.');
+                                }
+                            } catch (e) {
+                                window.Swal.fire({ icon: 'error', title: 'Connection Failed', text: e.message || 'Please try again.', confirmButtonColor: '#000080' });
                             } finally {
                                 this.loading = false;
                             }
@@ -580,11 +615,10 @@
                                     </div>
                                 </div>
                                 <div class="flex gap-2">
-                                    <form method="POST" action="{{ route('elderly.confirm-link') }}" class="flex-1">
-                                        @csrf
-                                        <input type="hidden" name="code" :value="caregiver?.code">
-                                        <button type="submit" class="w-full rounded-xl bg-navy-500 px-4 py-2.5 text-base font-bold text-white hover:bg-navy-600 transition-colors min-h-touch">✓ Link Caregiver</button>
-                                    </form>
+                                    <button type="button" @click="confirmLink()" :disabled="loading" class="flex-1 w-full rounded-xl bg-navy-500 px-4 py-2.5 text-base font-bold text-white hover:bg-navy-600 transition-colors min-h-touch disabled:opacity-50">
+                                        <span x-show="!loading">✓ Link Caregiver</span>
+                                        <span x-show="loading">Linking...</span>
+                                    </button>
                                     <button type="button" @click="reset()" class="rounded-xl border border-slate-200 px-4 py-2.5 text-base font-bold text-slate-600 min-h-touch">Cancel</button>
                                 </div>
                             </div>

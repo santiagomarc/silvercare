@@ -146,51 +146,62 @@ export async function sendJsonRequest(url, { method = 'POST', body = {} } = {}) 
     }
 }
 
+let isFlushing = false;
+
 export async function flushOfflineQueue() {
+    if (isFlushing) {
+        return { synced: 0, pending: (await getQueuedRequests()).length };
+    }
+
     if (!navigator.onLine) {
         return { synced: 0, pending: (await getQueuedRequests()).length };
     }
 
-    const queued = await getQueuedRequests();
-    let synced = 0;
+    isFlushing = true;
+    try {
+        const queued = await getQueuedRequests();
+        let synced = 0;
 
-    for (const item of queued) {
-        try {
-            const response = await fetch(item.url, {
-                method: item.method,
-                headers: {
-                    ...item.headers,
-                    'X-CSRF-TOKEN': currentCsrfToken(),
-                },
-                body: item.body,
-                credentials: 'same-origin',
-            });
+        for (const item of queued) {
+            try {
+                const response = await fetch(item.url, {
+                    method: item.method,
+                    headers: {
+                        ...item.headers,
+                        'X-CSRF-TOKEN': currentCsrfToken(),
+                    },
+                    body: item.body,
+                    credentials: 'same-origin',
+                });
 
-            if (response.ok || (response.status >= 400 && response.status < 500)) {
-                await deleteQueuedRequest(item.id);
-                synced++;
+                if (response.ok || (response.status >= 400 && response.status < 500)) {
+                    await deleteQueuedRequest(item.id);
+                    synced++;
 
-                window.dispatchEvent(new CustomEvent('offline-queue-item-synced', {
-                    detail: { url: item.url, method: item.method },
-                }));
-                continue;
+                    window.dispatchEvent(new CustomEvent('offline-queue-item-synced', {
+                        detail: { url: item.url, method: item.method },
+                    }));
+                    continue;
+                }
+
+                break;
+            } catch {
+                break;
             }
-
-            break;
-        } catch {
-            break;
         }
+
+        const pending = (await getQueuedRequests()).length;
+
+        if (synced > 0) {
+            window.dispatchEvent(new CustomEvent('offline-queue-flushed', {
+                detail: { synced, pending },
+            }));
+        }
+
+        return { synced, pending };
+    } finally {
+        isFlushing = false;
     }
-
-    const pending = (await getQueuedRequests()).length;
-
-    if (synced > 0) {
-        window.dispatchEvent(new CustomEvent('offline-queue-flushed', {
-            detail: { synced, pending },
-        }));
-    }
-
-    return { synced, pending };
 }
 
 export function initOfflineQueue() {
@@ -198,8 +209,12 @@ export function initOfflineQueue() {
         return;
     }
 
+    let onlineTimeout = null;
     window.addEventListener('online', () => {
-        flushOfflineQueue().catch(() => {});
+        if (onlineTimeout) clearTimeout(onlineTimeout);
+        onlineTimeout = setTimeout(() => {
+            flushOfflineQueue().catch(() => {});
+        }, 500);
     });
 
     window.addEventListener('load', () => {

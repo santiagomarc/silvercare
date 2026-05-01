@@ -499,6 +499,10 @@
                         }
                     });
 
+                    if (!res.ok) {
+                        throw new Error(`Server returned ${res.status}`);
+                    }
+
                     const data = await res.json();
                     if (data.success) {
                         this.persistSessionId(data.session_id);
@@ -517,6 +521,15 @@
                     }
                 } catch (e) {
                     console.error('History load failed:', e);
+                    window.Swal?.fire({
+                        icon: 'error',
+                        title: 'Oops!',
+                        text: 'Failed to restore conversation. Check connection.',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
                 } finally {
                     this.isLoadingHistory = false;
                     this.scrollToBottom();

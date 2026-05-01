@@ -1,50 +1,11 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Daily Checklists - SilverCare</title>
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="{{ asset('assets/icons/silvercare.png') }}">
-    <link rel="apple-touch-icon" href="{{ asset('assets/icons/silvercare.png') }}">
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<x-dashboard-layout>
+    <x-slot:title>Daily Checklists - SilverCare</x-slot:title>
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-
-    <style>
-        body { font-family: 'Montserrat', sans-serif; }
-    </style>
-</head>
-<body class="bg-[#EBEBEB] min-h-screen">
-
-    <!-- NAV BAR -->
-    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div class="max-w-[1600px] mx-auto px-6 lg:px-12 h-16 flex justify-between items-center">
-            <div class="flex items-center gap-6">
-                <a href="{{ route('caregiver.dashboard') }}" class="flex items-center gap-3 group">
-                    <img src="{{ asset('assets/icons/silvercare.png') }}" alt="SilverCare" class="w-9 h-9 object-contain group-hover:scale-105 transition-transform">
-                    <h1 class="text-xl font-[900] tracking-tight text-gray-900 hidden sm:block">SILVER<span class="text-[#000080]">CARE</span></h1>
-                </a>
-                <div class="h-6 w-[1px] bg-gray-200 hidden md:block"></div>
-                <div class="hidden md:block">
-                    <h2 class="text-lg font-[800] text-gray-900">Daily Checklists</h2>
-                    <p class="text-xs text-gray-500 font-medium -mt-0.5">{{ now()->format('l, F j, Y') }}</p>
-                </div>
-            </div>
-            
-            <div class="flex items-center gap-4">
-                <a href="{{ route('caregiver.dashboard', ['elderly' => $selectedElderly->id]) }}" class="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-sm transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                    <span class="hidden sm:inline">Back to Dashboard</span>
-                </a>
-            </div>
-        </div>
-    </nav>
+    <x-dashboard-nav
+        title="Daily Checklists"
+        subtitle="{{ now()->format('l, F j, Y') }}"
+        role="caregiver"
+    />
 
     <!-- MAIN CONTENT -->
     <main class="max-w-[1600px] mx-auto px-6 lg:px-12 py-6">
@@ -127,16 +88,39 @@
                     <li class="group hover:bg-gray-50 transition-colors duration-200">
                         <div class="px-6 py-5 flex items-center">
                             <!-- Toggle Checkbox -->
-                            <div class="flex-shrink-0 mr-4">
-                                <form action="{{ route('caregiver.checklists.toggle', $checklist) }}" method="POST">
-                                    @csrf
-                                    <input type="hidden" name="elderly_id" value="{{ $selectedElderly->id }}">
-                                    <button type="submit" class="w-8 h-8 {{ $checklist->is_completed ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-gray-300 hover:border-green-500' }} border-2 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 shadow-sm">
-                                        @if($checklist->is_completed)
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                                        @endif
-                                    </button>
-                                </form>
+                            <div class="flex-shrink-0 mr-4" x-data="{
+                                completed: {{ $checklist->is_completed ? 'true' : 'false' }},
+                                processing: false,
+                                async toggle() {
+                                    if(this.processing) return;
+                                    this.processing = true;
+                                    const prev = this.completed;
+                                    this.completed = !this.completed;
+                                    
+                                    try {
+                                        const res = await window.fetch('{{ route('caregiver.checklists.toggle', $checklist) }}', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                                'Accept': 'application/json'
+                                            },
+                                            body: JSON.stringify({ elderly_id: {{ $selectedElderly->id }} })
+                                        });
+                                        const data = await res.json();
+                                        if(!res.ok) throw new Error(data.message || 'Failed');
+                                        this.completed = Boolean(data.is_completed);
+                                    } catch(e) {
+                                        this.completed = prev;
+                                        window.Alpine.store('toast')?.error('Failed to update task.');
+                                    } finally {
+                                        this.processing = false;
+                                    }
+                                }
+                            }">
+                                <button type="button" @click="toggle()" :disabled="processing" :class="completed ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-gray-300 hover:border-green-500'" class="w-8 h-8 border-2 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 shadow-sm disabled:opacity-50">
+                                    <svg x-show="completed" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-cloak><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                </button>
                             </div>
 
                             <!-- Category Icon -->
@@ -147,11 +131,18 @@
                             <!-- Task Details -->
                             <div class="flex-grow min-w-0 {{ $checklist->is_completed ? 'opacity-60' : '' }}">
                                 <div class="flex items-center gap-2 mb-1">
-                                    <h4 class="text-base font-[700] text-gray-900 {{ $checklist->is_completed ? 'line-through' : '' }}">{{ $checklist->task }}</h4>
+                                    <h4 class="text-base font-[700] text-gray-900" :class="completed ? 'line-through' : ''">{{ $checklist->task }}</h4>
                                     @if($checklist->priority == 'high')
                                         <span class="px-2.5 py-0.5 bg-red-100 text-red-700 text-[10px] font-[800] rounded-full uppercase">High</span>
                                     @elseif($checklist->priority == 'low')
                                         <span class="px-2.5 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-[800] rounded-full uppercase">Low</span>
+                                    @endif
+                                    
+                                    @if($checklist->is_recurring)
+                                        <span class="text-xs text-blue-500 font-medium inline-flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                                            <x-lucide-refresh-cw class="w-3.5 h-3.5" aria-hidden="true" />
+                                            {{ ucfirst($checklist->frequency ?? 'Recurring') }}
+                                        </span>
                                     @endif
                                 </div>
                                 <div class="flex items-center gap-3 text-xs text-gray-500 font-medium">
@@ -241,5 +232,4 @@
         </div>
     </main>
 
-</body>
-</html>
+</x-dashboard-layout>

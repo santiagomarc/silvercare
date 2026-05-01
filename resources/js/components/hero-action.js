@@ -36,6 +36,13 @@ export default function heroAction({ progress = 0, steps = [], initialTotal = nu
             window.addEventListener('mood-logged', () => {
                 this.markDoneById('mood-today');
             });
+
+            window.addEventListener('vital-recorded', (e) => {
+                const type = e.detail?.type;
+                if (type) {
+                    this.markDoneById(`vital-${type}`);
+                }
+            });
         },
 
         get current() {
