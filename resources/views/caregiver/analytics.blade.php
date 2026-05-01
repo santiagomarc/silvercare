@@ -1,9 +1,6 @@
 <x-dashboard-layout>
     <x-slot:title>Health Analytics - SilverCare</x-slot:title>
 
-    @push('head-scripts')
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    @endpush
 
     @push('styles')
     <style>
@@ -30,9 +27,9 @@
             <div class="flex items-center gap-4">
                 {{-- Time Period Selector --}}
                 <div class="flex bg-gray-100 rounded-xl p-1 hidden md:flex">
-                    <button onclick="changePeriod('7days')" class="period-btn active px-4 py-2 rounded-lg text-sm font-[700] transition-all" data-period="7days">Week</button>
-                    <button onclick="changePeriod('30days')" class="period-btn px-4 py-2 rounded-lg text-sm font-[700] transition-all" data-period="30days">Month</button>
-                    <button onclick="changePeriod('90days')" class="period-btn px-4 py-2 rounded-lg text-sm font-[700] transition-all" data-period="90days">3 Months</button>
+                    <button @click="setPeriod('7days')" :class="period === '7days' ? 'active bg-white text-gray-900 shadow' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-2 rounded-lg text-sm font-[700] transition-all">Week</button>
+                    <button @click="setPeriod('30days')" :class="period === '30days' ? 'active bg-white text-gray-900 shadow' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-2 rounded-lg text-sm font-[700] transition-all">Month</button>
+                    <button @click="setPeriod('90days')" :class="period === '90days' ? 'active bg-white text-gray-900 shadow' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-2 rounded-lg text-sm font-[700] transition-all">3 Months</button>
                 </div>
                 
                 {{-- Export PDF Button --}}
@@ -52,7 +49,7 @@
     </nav>
 
     {{-- Main Content --}}
-    <main class="max-w-[1600px] mx-auto px-6 lg:px-12 py-6">
+    <main x-data="analyticsManager()" x-init="init()" class="max-w-[1600px] mx-auto px-6 lg:px-12 py-6">
 
         @if(($elderlyPatients ?? collect())->count() > 1)
             <div class="mb-6 rounded-2xl border border-blue-100 bg-blue-50/80 p-4 shadow-sm">
@@ -206,7 +203,7 @@
                 <!-- Card Body -->
                 <div class="p-5">
                     @foreach(['7days', '30days', '90days'] as $period)
-                    <div class="period-data {{ $period !== '7days' ? 'hidden' : '' }}" data-period="{{ $period }}" data-type="{{ $type }}">
+                    <div x-show="period === '{{ $period }}'" x-cloak>
                         @if(($data[$period]['count'] ?? 0) > 0)
                             <!-- Mini Chart -->
                             <div class="mb-4 chart-container">
@@ -436,234 +433,132 @@
 
     @push('scripts')
     <script>
-        const charts = {};
-        const analyticsData = @json($analyticsData ?? []);
-        const medicationSummary = @json($medicationSummary ?? []);
-        let currentPeriod = '7days';
-
-        // Premium color palette matching SilverCare design
-        const premiumColors = {
-            primary: 'rgb(59, 130, 246)',       // Blue 500
-            primaryLight: 'rgba(59, 130, 246, 0.15)',
-            accent: 'rgb(99, 102, 241)',        // Indigo 600
-            success: 'rgb(34, 197, 94)',        // Green 500
-            successLight: 'rgba(34, 197, 94, 0.15)',
-            warning: 'rgb(245, 158, 11)',       // Amber 500
-            warningLight: 'rgba(245, 158, 11, 0.15)',
-            danger: 'rgb(239, 68, 68)',         // Red 500
-            dangerLight: 'rgba(239, 68, 68, 0.15)',
-            grid: 'rgba(0, 0, 0, 0.04)',
-            text: 'rgb(75, 85, 99)',
-        };
-
-        function initCharts() {
-            // Initialize vitals charts
-            Object.keys(analyticsData).forEach(type => {
-                const data = analyticsData[type];
-                ['7days', '30days', '90days'].forEach(period => {
-                    const periodData = data[period];
-                    if (periodData && periodData.count > 0) {
-                        const canvasId = `chart-${type}-${period}`;
-                        const ctx = document.getElementById(canvasId);
-                        if (ctx) {
-                            charts[canvasId] = createChart(ctx, type, periodData, data.config);
-                        }
-                    }
-                });
-            });
-
-            // Initialize medication adherence doughnut chart
-            const medCtx = document.getElementById('medicationAdherenceChart');
-            if (medCtx && medicationSummary.totalMedications > 0) {
-                charts['medicationAdherence'] = createMedicationAdherenceChart(medCtx);
-            }
-        }
-
-        function createMedicationAdherenceChart(ctx) {
-            const adherenceRate = medicationSummary.adherenceRate || 0;
-            const missedRate = 100 - adherenceRate;
-
-            return new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Doses Taken', 'Doses Missed'],
-                    datasets: [{
-                        data: [adherenceRate, missedRate],
-                        backgroundColor: [
-                            premiumColors.success,
-                            'rgba(226, 232, 240, 0.6)',
-                        ],
-                        borderColor: ['rgb(255, 255, 255)', 'rgb(255, 255, 255)'],
-                        borderWidth: 3,
-                        borderRadius: 8,
-                    }]
+        function analyticsManager() {
+            return {
+                period: '7days',
+                charts: {},
+                analyticsData: @json($analyticsData ?? []),
+                medicationSummary: @json($medicationSummary ?? []),
+                
+                premiumColors: {
+                    primary: 'rgb(59, 130, 246)',
+                    primaryLight: 'rgba(59, 130, 246, 0.15)',
+                    accent: 'rgb(99, 102, 241)',
+                    success: 'rgb(34, 197, 94)',
+                    warning: 'rgb(245, 158, 11)',
+                    danger: 'rgb(239, 68, 68)',
+                    dangerLight: 'rgba(239, 68, 68, 0.15)',
+                    warningLight: 'rgba(245, 158, 11, 0.15)',
+                    grid: 'rgba(0, 0, 0, 0.04)',
+                    text: 'rgb(75, 85, 99)',
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                font: { size: 12, weight: 'bold', family: 'inherit' },
-                                color: premiumColors.text,
-                                padding: 16,
-                                usePointStyle: true,
-                                pointStyle: 'circle',
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                            padding: 12,
-                            titleFont: { size: 13, weight: 'bold' },
-                            bodyFont: { size: 12 },
-                            cornerRadius: 10,
-                            displayColors: true,
-                            callbacks: {
-                                label: function(context) {
-                                    return context.label + ': ' + context.parsed + '%';
+
+                init() {
+                    // Ensure Chart.js is loaded from app.js before initializing
+                    this.$nextTick(() => {
+                        if (typeof window.Chart !== 'undefined') {
+                            this.initCharts();
+                        } else {
+                            console.error('Chart.js not found in window. Ensure app.js is compiled.');
+                        }
+                    });
+                },
+
+                setPeriod(newPeriod) {
+                    this.period = newPeriod;
+                },
+
+                initCharts() {
+                    Object.keys(this.analyticsData).forEach(type => {
+                        const data = this.analyticsData[type];
+                        ['7days', '30days', '90days'].forEach(p => {
+                            const periodData = data[p];
+                            if (periodData && periodData.count > 0) {
+                                const canvasId = `chart-${type}-${p}`;
+                                const ctx = document.getElementById(canvasId);
+                                if (ctx) {
+                                    this.charts[canvasId] = this.createChart(ctx, type, periodData, data.config);
                                 }
                             }
-                        }
-                    }
-                }
-            });
-        }
+                        });
+                    });
 
-        function createChart(ctx, type, periodData, config) {
-            const metrics = periodData.metrics || [];
-            const labels = metrics.map(m => {
-                const d = new Date(m.measured_at);
-                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            });
-            
-            const colorMap = {
-                'red': { bg: premiumColors.dangerLight, border: premiumColors.danger },
-                'blue': { bg: premiumColors.primaryLight, border: premiumColors.primary },
-                'orange': { bg: premiumColors.warningLight, border: premiumColors.warning },
-                'rose': { bg: 'rgba(244, 63, 94, 0.15)', border: 'rgb(244, 63, 94)' },
-                'pink': { bg: 'rgba(236, 72, 153, 0.15)', border: 'rgb(236, 72, 153)' },
+                    const medCtx = document.getElementById('medicationAdherenceChart');
+                    if (medCtx && this.medicationSummary.totalMedications > 0) {
+                        this.charts['medicationAdherence'] = this.createMedicationAdherenceChart(medCtx);
+                    }
+                },
+
+                createMedicationAdherenceChart(ctx) {
+                    const adherenceRate = this.medicationSummary.adherenceRate || 0;
+                    return new window.Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Doses Taken', 'Doses Missed'],
+                            datasets: [{
+                                data: [adherenceRate, 100 - adherenceRate],
+                                backgroundColor: [this.premiumColors.success, 'rgba(226, 232, 240, 0.6)'],
+                                borderColor: ['#ffffff', '#ffffff'],
+                                borderWidth: 3,
+                                borderRadius: 8,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'bottom', labels: { font: { size: 12, weight: 'bold' }, usePointStyle: true } }
+                            }
+                        }
+                    });
+                },
+
+                createChart(ctx, type, periodData, config) {
+                    const metrics = periodData.metrics || [];
+                    const labels = metrics.map(m => new Date(m.measured_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                    
+                    const colorMap = {
+                        'red': { bg: this.premiumColors.dangerLight, border: this.premiumColors.danger },
+                        'blue': { bg: this.premiumColors.primaryLight, border: this.premiumColors.primary },
+                        'orange': { bg: this.premiumColors.warningLight, border: this.premiumColors.warning },
+                    };
+                    const colors = colorMap[config.color] || colorMap.blue;
+
+                    let datasets = [];
+                    if (type === 'blood_pressure') {
+                        const systolic = [], diastolic = [];
+                        metrics.forEach(m => {
+                            if (m.value_text) {
+                                const parts = m.value_text.split('/');
+                                systolic.push(parseInt(parts[0]));
+                                diastolic.push(parseInt(parts[1]));
+                            }
+                        });
+                        datasets = [
+                            { label: 'Systolic', data: systolic, borderColor: colors.border, backgroundColor: colors.bg, borderWidth: 3, fill: true, tension: 0.4 },
+                            { label: 'Diastolic', data: diastolic, borderColor: this.premiumColors.accent, backgroundColor: 'rgba(99, 102, 241, 0.15)', borderWidth: 3, fill: true, tension: 0.4 }
+                        ];
+                    } else {
+                        datasets = [{ label: config.name, data: metrics.map(m => parseFloat(m.value)), borderColor: colors.border, backgroundColor: colors.bg, borderWidth: 3, fill: true, tension: 0.4 }];
+                    }
+
+                    return new window.Chart(ctx, {
+                        type: 'line',
+                        data: { labels, datasets },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            plugins: { legend: { display: type === 'blood_pressure' } },
+                            scales: {
+                                y: { grid: { color: this.premiumColors.grid, drawBorder: false } },
+                                x: { grid: { display: false } }
+                            }
+                        }
+                    });
+                }
             };
-            const colors = colorMap[config.color] || colorMap.blue;
-
-            let datasets = [];
-
-            if (type === 'blood_pressure') {
-                const systolic = [], diastolic = [];
-                metrics.forEach(m => {
-                    if (m.value_text) {
-                        const parts = m.value_text.split('/');
-                        systolic.push(parseInt(parts[0]));
-                        diastolic.push(parseInt(parts[1]));
-                    }
-                });
-                datasets = [
-                    { 
-                        label: 'Systolic', 
-                        data: systolic, 
-                        borderColor: colors.border, 
-                        backgroundColor: colors.bg, 
-                        borderWidth: 3, 
-                        fill: true, 
-                        tension: 0.4, 
-                        pointRadius: 4,
-                        pointHoverRadius: 6,
-                        pointBackgroundColor: colors.border,
-                        pointBorderColor: 'white',
-                        pointBorderWidth: 2,
-                    },
-                    { 
-                        label: 'Diastolic', 
-                        data: diastolic, 
-                        borderColor: premiumColors.accent, 
-                        backgroundColor: 'rgba(99, 102, 241, 0.15)', 
-                        borderWidth: 3, 
-                        fill: true, 
-                        tension: 0.4, 
-                        pointRadius: 4,
-                        pointHoverRadius: 6,
-                        pointBackgroundColor: premiumColors.accent,
-                        pointBorderColor: 'white',
-                        pointBorderWidth: 2,
-                    }
-                ];
-            } else {
-                const values = metrics.map(m => parseFloat(m.value));
-                datasets = [{ 
-                    label: config.name, 
-                    data: values, 
-                    borderColor: colors.border, 
-                    backgroundColor: colors.bg, 
-                    borderWidth: 3, 
-                    fill: true, 
-                    tension: 0.4, 
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    pointBackgroundColor: colors.border,
-                    pointBorderColor: 'white',
-                    pointBorderWidth: 2,
-                }];
-            }
-
-            return new Chart(ctx, {
-                type: 'line',
-                data: { labels, datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: {
-                        legend: { 
-                            display: type === 'blood_pressure', 
-                            position: 'top', 
-                            labels: { 
-                                font: { weight: 'bold', size: 11, family: 'inherit' }, 
-                                color: premiumColors.text,
-                                usePointStyle: true, 
-                                padding: 12,
-                                pointStyle: 'circle',
-                            } 
-                        },
-                        tooltip: { 
-                            backgroundColor: 'rgba(15, 23, 42, 0.9)', 
-                            padding: 12, 
-                            titleFont: { size: 12, weight: 'bold' }, 
-                            bodyFont: { size: 11 }, 
-                            cornerRadius: 10,
-                            displayColors: true,
-                            borderColor: 'rgba(255, 255, 255, 0.2)',
-                            borderWidth: 1,
-                        }
-                    },
-                    scales: {
-                        y: { 
-                            beginAtZero: false, 
-                            grid: { color: premiumColors.grid, drawBorder: false }, 
-                            ticks: { font: { weight: '600', size: 11 }, color: premiumColors.text },
-                        },
-                        x: { 
-                            grid: { display: false, drawBorder: false }, 
-                            ticks: { font: { weight: '600', size: 10 }, color: premiumColors.text, maxRotation: 45, minRotation: 45 } 
-                        }
-                    }
-                }
-            });
         }
-
-        function changePeriod(period) {
-            currentPeriod = period;
-            document.querySelectorAll('.period-btn').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.dataset.period === period) btn.classList.add('active');
-            });
-            document.querySelectorAll('.period-data').forEach(el => {
-                el.classList.toggle('hidden', el.dataset.period !== period);
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            initCharts();
-        });
     </script>
     @endpush
 
