@@ -54,6 +54,7 @@ Route::middleware(['auth', 'verified', 'elderly', 'profile.complete', 'prevent.b
     // Medication dose tracking
     Route::post('/my-medications/{medication}/take', [ElderlyDashboardController::class, 'takeMedication'])->name('elderly.medications.take');
     Route::post('/my-medications/{medication}/undo', [ElderlyDashboardController::class, 'undoMedication'])->name('elderly.medications.undo');
+    Route::post('/my-medications/{medication}/refill', [ElderlyDashboardController::class, 'requestRefill'])->name('elderly.medications.refill');
 
     // Health Metrics (Vitals)
     Route::post('/my-vitals', [HealthMetricController::class, 'store'])->name('elderly.vitals.store');

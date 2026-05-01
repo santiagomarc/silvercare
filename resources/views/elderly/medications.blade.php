@@ -121,12 +121,52 @@
 
                     <!-- Stock Warning -->
                     @if($medication->track_inventory && $medication->current_stock <= ($medication->low_stock_threshold ?? 5))
-                        <div class="mt-4 p-3 bg-red-50 rounded-xl border border-red-200 flex items-center">
-                            <x-lucide-triangle-alert class="w-6 h-6 mr-3 text-red-600" aria-hidden="true" />
-                            <div>
-                                <p class="text-red-700 font-bold">Low Stock Alert</p>
-                                <p class="text-red-600 text-sm">Only {{ $medication->current_stock }} left. Please refill soon!</p>
+                        <div class="mt-4 p-4 bg-red-50 rounded-2xl border border-red-200 flex flex-col sm:flex-row items-center justify-between gap-4"
+                             x-data="{ 
+                                loading: false,
+                                requested: false,
+                                async requestRefill() {
+                                    this.loading = true;
+                                    try {
+                                        const res = await sendJsonRequest('{{ route('elderly.medications.refill', $medication) }}', 'POST');
+                                        if (res.success) {
+                                            this.requested = true;
+                                            window.Swal.fire({
+                                                title: 'Refill Requested!',
+                                                text: 'Your caregiver has been notified.',
+                                                icon: 'success',
+                                                confirmButtonColor: '#3085d6'
+                                            });
+                                        }
+                                    } catch (e) {
+                                        console.error(e);
+                                    } finally {
+                                        this.loading = false;
+                                    }
+                                }
+                             }">
+                            <div class="flex items-center">
+                                <x-lucide-triangle-alert class="w-8 h-8 mr-3 text-red-600" aria-hidden="true" />
+                                <div>
+                                    <p class="text-red-700 font-[800]">Low Stock Alert</p>
+                                    <p class="text-red-600 text-sm font-medium">Only {{ $medication->current_stock }} {{ $medication->dosage_unit }} left.</p>
+                                </div>
                             </div>
+                            <button @click="requestRefill()" 
+                                    :disabled="loading || requested"
+                                    class="w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2"
+                                    :class="requested ? 'bg-green-100 text-green-700 border border-green-200 cursor-default' : 'bg-red-600 hover:bg-red-700 text-white shadow-red-200 shadow-lg active:scale-95'">
+                                <template x-if="loading">
+                                    <svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                </template>
+                                <template x-if="!loading">
+                                    <span class="flex items-center gap-2">
+                                        <x-lucide-package-plus x-show="!requested" class="w-5 h-5" aria-hidden="true" />
+                                        <x-lucide-check x-show="requested" class="w-5 h-5" aria-hidden="true" />
+                                        <span x-text="requested ? 'Refill Requested' : 'Request Refill'"></span>
+                                    </span>
+                                </template>
+                            </button>
                         </div>
                     @endif
                 </div>

@@ -318,6 +318,49 @@ class ElderlyDashboardController extends Controller
     }
 
     /**
+     * Request a medication refill from the caregiver
+     */
+    public function requestRefill(Medication $medication)
+    {
+        $user = Auth::user();
+        $elderly = $user->profile;
+        $this->authorize('take', $medication); // Reuse 'take' policy for ownership check
+
+        $caregiver = $elderly->caregiver;
+        if (!$caregiver) {
+            return response()->json(['error' => 'No linked caregiver found.'], 422);
+        }
+
+        $messageText = "🚨 REFILL REQUEST: I need a refill for my medication: {$medication->name}. Current stock: {$medication->current_stock} {$medication->dosage_unit}.";
+
+        // Create CareMessage
+        \App\Models\CareMessage::create([
+            'caregiver_id' => $caregiver->id,
+            'elderly_id' => $elderly->id,
+            'sender_profile_id' => $elderly->id,
+            'message' => $messageText,
+        ]);
+
+        // Create Notification for Caregiver
+        $this->notificationService->createNotification([
+            'elderly_id' => $elderly->id,
+            'type' => 'refill_request',
+            'title' => 'Medication Refill Requested',
+            'message' => "{$user->name} requested a refill for {$medication->name}.",
+            'severity' => 'urgent',
+            'metadata' => [
+                'medication_id' => $medication->id,
+                'medication_name' => $medication->name,
+            ],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Refill request sent to your caregiver.',
+        ]);
+    }
+
+    /**
      * Helper: Check if a dose can be taken now
      */
     public static function canTakeDose(string $scheduledTime): array

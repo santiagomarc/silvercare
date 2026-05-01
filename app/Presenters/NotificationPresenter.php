@@ -21,6 +21,7 @@ class NotificationPresenter
         'appointment_reminder'  => ['icon' => '📅', 'color' => 'blue'],
         'caregiver_message'     => ['icon' => '💬', 'color' => 'indigo'],
         'health_alert'          => ['icon' => '⚠️', 'color' => 'amber'],
+        'refill_request'        => ['icon' => '💊', 'color' => 'blue'],
     ];
 
     /**
@@ -75,6 +76,7 @@ class NotificationPresenter
             'appointment_reminder'  => "Upcoming appointment for {$firstName}",
             'caregiver_message'     => "New message for {$firstName}",
             'health_alert'          => "Health alert for {$firstName}",
+            'refill_request'        => "{$firstName} requested a refill for " . ($meta['medication_name'] ?? 'medication'),
             default                 => "{$firstName}: " . $notification->title,
         };
     }
@@ -98,6 +100,7 @@ class NotificationPresenter
             'task_completed'    => ucfirst($meta['category'] ?? 'Task'),
             'appointment_reminder' => $meta['starts_at_human'] ?? 'Upcoming soon',
             'caregiver_message' => $meta['preview'] ?? 'Message received',
+            'refill_request'    => 'Manual request sent',
             default             => ucfirst($notification->severity),
         };
     }

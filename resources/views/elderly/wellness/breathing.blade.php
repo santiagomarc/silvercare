@@ -1,18 +1,25 @@
-<x-app-layout>
-    <div x-data="breathingApp()" class="min-h-screen bg-[#E0F7FA] flex flex-col">
+<x-dashboard-layout>
+    <x-slot:title>Breathing Exercise - SilverCare</x-slot:title>
+    <x-slot:bodyClass>min-h-screen bg-[#E0F7FA]</x-slot:bodyClass>
+
+    <x-dashboard-nav
+        title="Breathing Space"
+        subtitle="Reduce anxiety with guided breathing"
+        role="elderly"
+        :unread-notifications="$unreadNotifications"
+    />
+
+    <main id="main-content" x-data="breathingApp()" class="max-w-4xl mx-auto px-6 py-8 flex flex-col items-center">
         
-        <!-- Navbar -->
-        <div class="px-6 py-6 flex items-center justify-between">
-            <a href="{{ route('elderly.wellness.index') }}" class="flex items-center text-teal-700 font-bold hover:text-teal-900 transition group">
-                <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm mr-3 group-hover:shadow-md transition-all">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                </div>
-                Exit
+        {{-- Back Navigation --}}
+        <div class="w-full mb-8">
+            <a href="{{ route('elderly.wellness.index') }}" class="back-nav-pill !text-teal-700 !bg-white/50 hover:!bg-white">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Back to Wellness
             </a>
         </div>
 
-        <!-- Content -->
-        <div class="flex-1 flex flex-col items-center justify-center pb-20 px-4">
+        <div class="flex-1 flex flex-col items-center justify-center pb-20 w-full">
             
             <h1 class="text-3xl md:text-4xl font-[900] text-teal-900 mb-2 tracking-tight text-center">Breathe with Me</h1>
             <p class="text-teal-600 font-medium text-lg mb-10 text-center max-w-md">
@@ -37,10 +44,10 @@
             </div>
 
             <!-- Controls -->
-            <div class="flex gap-6">
+            <div class="flex flex-wrap justify-center gap-6 w-full max-w-md">
                 <button 
                     @click="toggle()"
-                    class="px-10 py-4 rounded-2xl font-[800] text-lg shadow-lg transform hover:-translate-y-1 transition-all flex items-center gap-2 min-w-[160px] justify-center"
+                    class="flex-1 px-10 py-4 rounded-2xl font-[800] text-lg shadow-lg transform hover:-translate-y-1 transition-all flex items-center gap-2 min-w-[160px] justify-center"
                     :class="isRunning ? 'bg-white text-teal-600 hover:bg-gray-50' : 'bg-teal-600 text-white hover:bg-teal-700'"
                 >
                     <svg x-show="!isRunning" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg>
@@ -63,7 +70,7 @@
                     <template x-for="sec in [3, 4, 5, 6]">
                         <button 
                             @click="setDuration(sec)"
-                            class="w-8 h-8 rounded-lg font-bold text-sm transition-all"
+                            class="w-10 h-10 rounded-lg font-bold text-sm transition-all"
                             :class="stepDuration === sec ? 'bg-teal-600 text-white shadow-md' : 'bg-white text-teal-600 hover:bg-teal-50'"
                             x-text="sec + 's'"
                             :disabled="isRunning"
@@ -73,8 +80,9 @@
             </div>
 
         </div>
-    </div>
+    </main>
 
+    @push('scripts')
     <script>
         function breathingApp() {
             return {
@@ -86,7 +94,6 @@
                 timer: null,
 
                 get circleStyle() {
-                    // Base size
                     let size = 200; 
                     let scale = 1;
 
@@ -100,7 +107,6 @@
 
                 get animationClass() {
                     if (!this.isRunning) return '';
-                    // Add smooth transition duration matching the step time
                     return `duration-[${this.stepDuration}000ms]`;
                 },
 
@@ -154,4 +160,5 @@
             }
         }
     </script>
-</x-app-layout>
+    @endpush
+</x-dashboard-layout>
