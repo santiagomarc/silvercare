@@ -19,6 +19,7 @@ use App\Http\Controllers\CaregiverAiController;
 use App\Http\Controllers\CareLinkController;
 use App\Http\Controllers\CareMessageController;
 use App\Http\Controllers\SosController;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 // Welcome landing page - redirect logged-in users to their dashboard
@@ -26,13 +27,50 @@ Route::get('/', function () {
     return view('welcome');
 })->middleware('role.redirect')->name('welcome');
 
+// Temporary debug route: reports available PDO drivers and attempts a DB connection
+Route::get('/__debug/pdo', function () {
+    try {
+        $drivers = PDO::getAvailableDrivers();
+        $pdo = DB::connection()->getPdo();
+        return response()->json([
+            'drivers' => $drivers,
+            'connected' => true,
+            'db_config' => DB::getConfig(),
+            'php_sapi' => php_sapi_name(),
+            'php_binary' => PHP_BINARY,
+            'loaded_extensions' => in_array('pdo_sqlite', get_loaded_extensions()),
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'drivers' => PDO::getAvailableDrivers(),
+            'db_config' => DB::getConfig(),
+            'php_sapi' => php_sapi_name(),
+            'php_binary' => PHP_BINARY,
+            'loaded_extensions' => in_array('pdo_sqlite', get_loaded_extensions()),
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+});
+
+// Lightweight debug route: no DB use, just report PHP runtime info
+Route::get('/__debug/ping', function () {
+    return response()->json([
+        'ok' => true,
+        'php_sapi' => php_sapi_name(),
+        'php_binary' => PHP_BINARY,
+        'loaded_extensions' => in_array('pdo_sqlite', get_loaded_extensions()),
+        'php_ini' => php_ini_loaded_file(),
+        'php_ini_scanned' => php_ini_scanned_files(),
+        'extension_dir' => ini_get('extension_dir'),
+    ]);
+});
+
 // Caregiver Password Setup (Signed Route - No Auth Required)
 Route::get('/caregiver/set-password/{userId}', [CaregiverSetPasswordController::class, 'show'])
     ->name('caregiver.password.show');
 
 Route::post('/caregiver/set-password/{userId}', [CaregiverSetPasswordController::class, 'store'])
     ->name('caregiver.password.store');
-
 // Elderly Routes - Protected by 'elderly' middleware
 // M5 FIX: 'prevent.back' added here so no-cache headers only apply to authenticated pages.
 Route::middleware(['auth', 'verified', 'elderly', 'profile.complete', 'prevent.back'])->group(function () {
@@ -133,6 +171,7 @@ Route::middleware(['auth', 'verified', 'caregiver', 'profile.complete', 'prevent
     
     Route::resource('medications', MedicationController::class);
     Route::resource('checklists', ChecklistController::class);
+
     Route::post('checklists/{checklist}/toggle', [ChecklistController::class, 'toggleComplete'])->name('checklists.toggle');
 
     // Care Messages

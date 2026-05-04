@@ -166,6 +166,13 @@
                     <p class="text-xs text-gray-500 font-medium">{{ $roleLabel }}</p>
                 </div>
             </a>
+
+            <form method="POST" action="{{ route('logout') }}" class="hidden sm:block">
+                @csrf
+                <button type="submit" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700 transition-all hover:bg-rose-100">
+                    Log Out
+                </button>
+            </form>
             
             {{-- Mobile Menu Button --}}
             <button type="button" @click="mobileMenuOpen = true" aria-label="Open mobile menu" :aria-expanded="mobileMenuOpen.toString()" class="sm:hidden p-2 text-gray-600 hover:text-gray-900 focus:outline-none">

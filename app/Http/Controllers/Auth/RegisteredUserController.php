@@ -51,7 +51,7 @@ class RegisteredUserController extends Controller
         }
 
         // Validate elderly registration data
-        $validated = $request->validate([
+        $validated = $this->validate($request, [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
