@@ -5,6 +5,7 @@
         title="Care Messages"
         role="caregiver"
         subtitle="Secure check-ins with your patient"
+        :show-back="true"
     />
 
     <main class="max-w-[1100px] mx-auto px-6 lg:px-12 py-6 space-y-5">

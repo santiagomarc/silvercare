@@ -122,6 +122,10 @@ Route::middleware(['auth', 'verified', 'elderly', 'profile.complete', 'prevent.b
 // Caregiver Routes - Protected by 'caregiver' middleware
 // M5 FIX: 'prevent.back' added here so no-cache headers only apply to authenticated pages.
 Route::middleware(['auth', 'verified', 'caregiver', 'profile.complete', 'prevent.back'])->prefix('caregiver')->name('caregiver.')->group(function () {
+    Route::get('/patients', [App\Http\Controllers\PatientListController::class, 'index'])->name('patients.index');
+    Route::post('/patients/{patient}/remove', [App\Http\Controllers\PatientListController::class, 'remove'])->name('patients.remove');
+    Route::post('/patients/{patient}/restore', [App\Http\Controllers\PatientListController::class, 'restore'])->name('patients.restore');
+
     Route::get('/dashboard', [CaregiverDashboardController::class, 'index'])->name('dashboard');
     Route::post('/link-code', [CareLinkController::class, 'generate'])->name('link-code.generate');
     

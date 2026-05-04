@@ -16,6 +16,7 @@
     'subtitle' => null,
     'role' => 'elderly',
     'unreadNotifications' => 0,
+    'showBack' => false,
 ])
 
 @php
@@ -45,8 +46,16 @@
             </div>
         </div>
 
-        {{-- Right Side: Actions --}}
+	{{-- Right Side: Actions --}}
         <div class="flex items-center gap-4">
+
+            {{-- Back to Dashboard (Caregiver sub-pages only) --}}
+            @if($isCaregiver && $showBack)
+                <a href="{{ route('caregiver.dashboard') }}" class="hidden sm:flex items-center gap-1.5 text-sm font-bold text-gray-500 hover:text-purple-700 hover:bg-purple-50 px-4 py-2 rounded-xl transition-all group">
+                    <svg class="w-4 h-4 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    Back to Dashboard
+                </a>
+            @endif
 
             {{-- Notifications Bell (Elderly Only) --}}
             @if(!$isCaregiver)
