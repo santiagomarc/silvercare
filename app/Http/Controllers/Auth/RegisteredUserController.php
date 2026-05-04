@@ -76,6 +76,8 @@ class RegisteredUserController extends Controller
             $isCaregiver = $validated['user_type'] === 'caregiver';
 
             // Create role profile
+            // For elderly: profile_completed = false (will be set to true after 3-step wizard)
+            // For caregiver: profile_completed = true (no wizard needed)
             UserProfile::create([
                 'user_id' => $user->id,
                 'user_type' => $validated['user_type'],
@@ -94,9 +96,12 @@ class RegisteredUserController extends Controller
 
             Auth::login($user);
 
-            return $isCaregiver
-                ? redirect()->route('caregiver.dashboard')->with('success', 'Account created successfully.')
-                : redirect()->route('dashboard')->with('success', 'Account created successfully.');
+            if ($isCaregiver) {
+                return redirect()->route('caregiver.dashboard')->with('success', 'Account created successfully.');
+            }
+
+            // Elderly users are redirected to profile completion wizard
+            return redirect()->route('profile.completion')->with('info', 'Please complete your profile to get started.');
 
         } catch (\Exception $e) {
             DB::rollBack();

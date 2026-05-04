@@ -11,24 +11,18 @@ class EnsureProfileCompleted
 {
     /**
      * Routes that bypass the profile-completion gate.
-     * Includes profile completion flow and logout.
      */
     protected array $exceptRouteNames = [
         'profile.completion',
         'profile.completion.store',
-        'profile.completion.skip',
         'logout',
     ];
 
     /**
      * Handle an incoming request.
      *
-     * If the authenticated user's profile is not yet completed AND they have
-     * not explicitly skipped onboarding, redirect them to the wizard so
-     * their dashboard always has meaningful data.
-     *
-     * The `profile_skipped` flag allows users who tapped "Skip for now" to
-     * reach the dashboard. A nudge banner there will encourage them to finish.
+     * If the authenticated user's profile is not yet completed,
+     * redirect them to the completion wizard.
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -46,14 +40,11 @@ class EnsureProfileCompleted
         $profile = $user->profile;
 
         if (!$profile) {
-            // No profile at all — let the role middleware handle it
             return $next($request);
         }
 
-        // Redirect to the onboarding wizard when:
-        //   • profile_completed is false, AND
-        //   • the user has not explicitly chosen to skip (profile_skipped is false)
-        if (!$profile->profile_completed && !$profile->profile_skipped) {
+        // Redirect to profile completion if not complete
+        if (!$profile->profile_completed) {
             return redirect()->route('profile.completion')
                 ->with('info', 'Please complete your profile before continuing.');
         }

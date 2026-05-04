@@ -22,30 +22,24 @@ class ProfileCompletionController extends Controller
      */
     public function show(): View|RedirectResponse
     {
+        // Require authentication
+        if (!Auth::check()) {
+            return redirect()->route('login');
+        }
+
         $user = Auth::user();
         $profile = $user->profile;
 
         $completion = $this->profileCompletionService->evaluate($profile);
 
-        // If truly complete, redirect to dashboard
+        // If already complete, redirect to dashboard
         if ($completion['is_complete']) {
             return $this->redirectToDashboard($profile->user_type);
         }
 
-        // Get caregiver info if exists (for emergency contact auto-fill option)
         $caregiver = null;
-        if ($profile && $profile->caregiver_id) {
-            $caregiverProfile = $profile->caregiver;
-            if ($caregiverProfile && $caregiverProfile->user) {
-                $caregiver = [
-                    'name' => $caregiverProfile->user->name,
-                    'phone' => $caregiverProfile->phone_number ?? '',
-                    'relationship' => $caregiverProfile->relationship ?? 'Caregiver',
-                ];
-            }
-        }
 
-        return view('auth.profile-completion', compact('profile', 'caregiver'));
+        return view('auth.profile-completion', compact('caregiver'));
     }
 
     /**
@@ -53,6 +47,11 @@ class ProfileCompletionController extends Controller
      */
     public function store(StoreProfileCompletionRequest $request): RedirectResponse
     {
+        // Require authentication
+        if (!Auth::check()) {
+            return redirect()->route('login');
+        }
+
         $user = Auth::user();
         $profile = $user->profile;
 
@@ -63,13 +62,13 @@ class ProfileCompletionController extends Controller
         $medicationsArray = CommaSeparatedValueParser::parse($validated['medications'] ?? null);
         $allergiesArray = CommaSeparatedValueParser::parse($validated['allergies'] ?? null);
 
-        // Update profile with individual columns (not legacy JSON fields)
+        // Update profile with all fields
         $profile->update([
             'age' => $validated['age'],
             'weight' => $validated['weight'],
             'height' => $validated['height'],
             
-            // Emergency Contact - Individual Columns
+            // Emergency Contact
             'emergency_name' => $validated['emergency_name'],
             'emergency_phone' => $validated['emergency_phone'],
             'emergency_relationship' => $validated['emergency_relationship'],
@@ -82,39 +81,18 @@ class ProfileCompletionController extends Controller
 
         $completion = $this->profileCompletionService->evaluate($profile->fresh());
 
+        // Update profile_completed based on completion evaluation
         $profile->update([
             'profile_completed' => $completion['is_complete'],
-            'profile_skipped' => false,
         ]);
 
-        if (! $completion['is_complete']) {
+        if (!$completion['is_complete']) {
             return redirect()->route('profile.completion')
                 ->with('info', 'Please complete all profile sections before continuing.');
         }
 
         return $this->redirectToDashboard($profile->user_type)
             ->with('success', 'Profile completed successfully!');
-    }
-
-    /**
-     * Skip profile completion for now.
-     *
-     * Sets profile_skipped = true so the middleware does not redirect the user
-     * again. Their dashboard will show a nudge banner to encourage completion.
-     * profile_completed intentionally stays false so we can distinguish between
-     * "genuinely done" and "skipped" in reporting and nudge logic.
-     */
-    public function skip(): RedirectResponse
-    {
-        $user = Auth::user();
-        $profile = $user->profile;
-
-        $profile->update([
-            'profile_skipped' => true,
-        ]);
-
-        return $this->redirectToDashboard($profile->user_type)
-            ->with('info', 'Profile completion skipped. You can complete it later from your settings.');
     }
 
     /**

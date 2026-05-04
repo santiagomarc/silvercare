@@ -70,7 +70,16 @@ Alpine.data('googleFitSync',      ()                    => googleFitSync());
 Alpine.data('heroAction',         (opts)                => heroAction(opts));
 
 window.Alpine = Alpine;
-window.flatpickr = flatpickr;
+
+// Wrap flatpickr assignment in try-catch to fail silently if not available
+try {
+	if (flatpickr) {
+		window.flatpickr = flatpickr;
+	}
+} catch (error) {
+	console.warn('flatpickr is not available on this page:', error);
+}
+
 window.TomSelect = TomSelect;
 window.Chart = Chart;
 Alpine.start();

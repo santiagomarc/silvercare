@@ -281,7 +281,7 @@
         <!-- ============================================ -->
         <!-- CARE MANAGEMENT PANEL (Action Buttons) -->
         <!-- ============================================ -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
             
             <!-- Manage Medications -->
             <a href="{{ route('caregiver.medications.index', ['elderly' => $selectedElderlyId]) }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
@@ -346,6 +346,23 @@
                         <p class="text-indigo-100 text-xs font-medium mt-0.5">Chat with patient</p>
                     </div>
                     <div class="absolute bottom-4 right-4 h-8 w-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-indigo-600 transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                    </div>
+                </div>
+            </a>
+
+<!-- My Patients -->
+            <a href="{{ route('caregiver.patients.index') }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 shadow-lg shadow-teal-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
+                <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl"></div>
+                <div class="relative p-5 flex flex-col justify-between h-full z-10">
+                    <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-[900] text-white leading-tight">My Patients</h3>
+                        <p class="text-teal-100 text-xs font-medium mt-0.5">Manage patients</p>
+                    </div>
+                    <div class="absolute bottom-4 right-4 h-8 w-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-teal-600 transition-all">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
                     </div>
                 </div>

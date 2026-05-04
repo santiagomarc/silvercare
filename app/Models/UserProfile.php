@@ -38,9 +38,10 @@ class UserProfile extends Model
         'relationship',
         'caregiver_id',
         'profile_completed',
-        'profile_skipped',
         'is_active',
         'last_login_at',
+        'archived_at',
+        'archived_by_caregiver_id',
     ];
 
     /**
@@ -57,6 +58,7 @@ class UserProfile extends Model
         'profile_skipped'    => 'boolean',
         'is_active'          => 'boolean',
         'last_login_at'      => 'datetime',
+        'archived_at'        => 'datetime',
     ];
 
     // --- RELATIONSHIPS (PRESERVED) ---
