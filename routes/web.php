@@ -150,15 +150,12 @@ Route::middleware(['auth', 'verified', 'caregiver', 'profile.complete', 'prevent
 
 // Profile Completion Routes
 // M5 FIX: 'prevent.back' ensures the profile completion form is never served from browser cache.
-Route::middleware(['auth', 'prevent.back'])->group(function () {
+Route::middleware(['prevent.back'])->group(function () {
     Route::get('/profile/completion', [ProfileCompletionController::class, 'show'])
         ->name('profile.completion');
     
     Route::post('/profile/completion', [ProfileCompletionController::class, 'store'])
         ->name('profile.completion.store');
-    
-    Route::get('/profile/completion/skip', [ProfileCompletionController::class, 'skip'])
-        ->name('profile.completion.skip');
 });
 
 // Shared authenticated routes (profile, calendar) — M5 FIX: prevent.back added

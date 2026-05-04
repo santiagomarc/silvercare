@@ -46,3 +46,9 @@ Schedule::command('ai:track-cognitive-sentiment')
     ->dailyAt('23:00')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/ai-sentiment.log'));
+
+// Delete incomplete user profiles every hour (older than 24 hours)
+Schedule::command('profiles:delete-incomplete --hours=24')
+    ->hourly()
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/incomplete-profiles-cleanup.log'));

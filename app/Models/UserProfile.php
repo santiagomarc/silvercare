@@ -38,7 +38,6 @@ class UserProfile extends Model
         'relationship',
         'caregiver_id',
         'profile_completed',
-        'profile_skipped',
         'is_active',
         'last_login_at',
     ];

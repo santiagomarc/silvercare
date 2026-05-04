@@ -30,9 +30,15 @@ class ProfileCompletionService
             && filled($profile->emergency_phone)
             && filled($profile->emergency_relationship);
 
-        $medicalComplete = ! empty($this->normalizeList($profile->medical_conditions))
-            || ! empty($this->normalizeList($profile->medications))
-            || ! empty($this->normalizeList($profile->allergies));
+        // Medical section is complete if at least one field has meaningful data.
+        // "none" is treated as meaningful (indicating user acknowledged but has no condition/medication/allergy).
+        $conditionsList = $this->normalizeList($profile->medical_conditions);
+        $medicationsList = $this->normalizeList($profile->medications);
+        $allergiesList = $this->normalizeList($profile->allergies);
+
+        $medicalComplete = ! empty($conditionsList)
+            || ! empty($medicationsList)
+            || ! empty($allergiesList);
 
         return [
             'personal_complete' => $personalComplete,

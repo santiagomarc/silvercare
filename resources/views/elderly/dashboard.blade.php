@@ -464,6 +464,36 @@
         </template>
     </div>
 
+    {{-- Account Completion Success Modal --}}
+    @if(session('account_created_and_completed'))
+    <div x-data="{ show: true }" 
+         x-init="setTimeout(() => show = false, 10000)"
+         x-show="show"
+         class="fixed inset-0 z-50 flex items-center justify-center pointer-events-none px-4"
+         x-transition:enter="transition ease-out duration-700"
+         x-transition:enter-start="opacity-0 translate-y-12"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-500"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 translate-y-12">
+        <div class="bg-white rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.15)] border border-gray-100 p-8 max-w-sm w-full pointer-events-auto text-center relative overflow-hidden">
+            <!-- Decorative background blob -->
+            <div class="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-[#000080]/10 to-transparent -z-10"></div>
+            
+            <div class="w-16 h-16 bg-[#000080]/10 rounded-full flex items-center justify-center mx-auto mb-4 relative z-10">
+                <svg class="w-8 h-8 text-[#000080]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+            
+            <h3 class="text-xl font-[800] text-gray-900 mb-2 relative z-10 font-[Montserrat]">Account Created</h3>
+            <p class="text-gray-600 font-medium leading-relaxed relative z-10 font-[Montserrat]">
+                Your account has been created. You can now link your caregiver.
+            </p>
+        </div>
+    </div>
+    @endif
+
     {{-- AI Assistant Chat Widget --}}
     <x-ai-chat-widget />
 
