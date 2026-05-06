@@ -76,11 +76,15 @@ class GoogleFitController extends Controller
     }
 
     /**
-     * Sync data from Google Fit
+     * Sync data from Google Fit.
+     *
+     * Accepts an optional ?vital_type=heart_rate|blood_pressure|temperature|steps
+     * query parameter so the frontend can restrict syncing to one vital type
+     * (e.g. when auto-syncing on the heart-rate vitals page).
      */
-    public function sync()
+    public function sync(Request $request)
     {
-        $user = Auth::user();
+        $user      = Auth::user();
         $elderlyId = $user->profile?->id;
 
         if (!$elderlyId) {
@@ -90,13 +94,15 @@ class GoogleFitController extends Controller
             ], 404);
         }
 
+        $vitalType = $request->input('vital_type'); // nullable — syncs all if absent
+
         try {
-            $synced = $this->googleFitService->syncAll($elderlyId, $user->id);
+            $synced = $this->googleFitService->syncAll($elderlyId, $user->id, $vitalType);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Google Fit data synced successfully!',
-                'synced' => $synced,
+                'synced'  => $synced,
             ]);
 
         } catch (\RuntimeException $e) {

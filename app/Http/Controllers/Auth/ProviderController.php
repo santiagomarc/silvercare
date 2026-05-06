@@ -28,12 +28,23 @@ class ProviderController extends Controller
      */
     public function handleGoogleCallback(Request $request): RedirectResponse
     {
+        // If the user is already fully authenticated with a known role, just send them home.
+        // This prevents a mid-session OAuth loop if the callback fires on an active session.
+        if (Auth::check()) {
+            $existingProfile = Auth::user()->profile;
+            if ($existingProfile && $existingProfile->hasKnownRole()) {
+                return $existingProfile->isCaregiver()
+                    ? redirect()->route('caregiver.dashboard')
+                    : redirect()->route('dashboard');
+            }
+        }
+
         try {
             $googleUser = Socialite::driver('google')->user();
         } catch (\Throwable $e) {
-            return redirect()->route('login')->withErrors([
-                'email' => 'Google sign-in failed. Please try again.',
-            ]);
+            return redirect()->route('login')
+                ->with('swal_error', 'Google sign-in failed. Please try again.')
+                ->withErrors(['email' => 'Google sign-in failed. Please try again.']);
         }
 
         $user = User::where('google_id', $googleUser->id)

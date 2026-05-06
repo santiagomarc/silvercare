@@ -40,18 +40,18 @@ class GoogleFitToken extends Model
         );
     }
 
-    // Automatically encrypt/decrypt refresh token
+    // Automatically encrypt/decrypt refresh token (null-safe)
     protected function refreshToken(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => decrypt($value),
-            set: fn ($value) => encrypt($value),
+            get: fn ($value) => $value === null ? null : decrypt($value),
+            set: fn ($value) => $value === null ? null : encrypt($value),
         );
     }
 
-    // Check if token is expired
+    // Check if token is expired (with a 5-minute buffer to avoid expiring mid-request)
     public function isExpired(): bool
     {
-        return $this->expires_at < now();
+        return $this->expires_at < now()->addMinutes(5);
     }
 }

@@ -21,19 +21,28 @@ class GoogleFitService
         'https://www.googleapis.com/auth/fitness.body_temperature.read',
     ];
 
+    /** HTTP timeout for all Google API calls (seconds). */
+    private const HTTP_TIMEOUT = 10;
+
+    /** Number of retries for transient Google API failures. */
+    private const HTTP_RETRIES = 2;
+
+    /** Milliseconds between retries. */
+    private const HTTP_RETRY_SLEEP_MS = 500;
+
     /**
      * Build Google OAuth authorization URL.
      */
     public function buildAuthorizationUrl(string $redirectUri, ?string $state = null): string
     {
         $params = http_build_query([
-            'client_id' => config('services.google.client_id'),
-            'redirect_uri' => $redirectUri,
+            'client_id'     => config('services.google.client_id'),
+            'redirect_uri'  => $redirectUri,
             'response_type' => 'code',
-            'scope' => implode(' ', self::SCOPES),
-            'access_type' => 'offline',
-            'prompt' => 'consent',
-            'state' => $state ?? csrf_token(),
+            'scope'         => implode(' ', self::SCOPES),
+            'access_type'   => 'offline',
+            'prompt'        => 'consent',
+            'state'         => $state ?? csrf_token(),
         ]);
 
         return "https://accounts.google.com/o/oauth2/v2/auth?{$params}";
@@ -45,50 +54,76 @@ class GoogleFitService
     public function exchangeCodeForTokens(string $code, string $redirectUri): ?array
     {
         try {
-            $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
-                'client_id' => config('services.google.client_id'),
-                'client_secret' => config('services.google.client_secret'),
-                'code' => $code,
-                'grant_type' => 'authorization_code',
-                'redirect_uri' => $redirectUri,
-            ]);
+            $response = Http::timeout(self::HTTP_TIMEOUT)
+                ->retry(self::HTTP_RETRIES, self::HTTP_RETRY_SLEEP_MS)
+                ->asForm()
+                ->post('https://oauth2.googleapis.com/token', [
+                    'client_id'     => config('services.google.client_id'),
+                    'client_secret' => config('services.google.client_secret'),
+                    'code'          => $code,
+                    'grant_type'    => 'authorization_code',
+                    'redirect_uri'  => $redirectUri,
+                ]);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
+                Log::warning('Google Fit token exchange failed', [
+                    'status' => $response->status(),
+                    'body'   => $response->body(),
+                ]);
                 return null;
             }
 
-            $tokenData = $response->json();
+            $tokenData           = $response->json();
             $tokenData['scopes'] = self::SCOPES;
 
             return $tokenData;
         } catch (\Exception $e) {
-            Log::warning('Google Fit token exchange failed: ' . $e->getMessage());
+            Log::warning('Google Fit token exchange exception: ' . $e->getMessage());
             return null;
         }
     }
 
     /**
-     * Store Google Fit OAuth tokens
+     * Store (or update) Google Fit OAuth tokens for a user.
      */
     public function storeTokens(int $userId, array $tokenData): GoogleFitToken
     {
+        $attributes = [
+            'access_token' => $tokenData['access_token'],
+            'expires_at'   => now()->addSeconds($tokenData['expires_in']),
+            'scopes'       => $tokenData['scopes'] ?? [],
+        ];
+
+        // Only update refresh_token when Google actually returns one.
+        // Google omits it on subsequent authorisations if the user hasn't revoked access.
+        if (! empty($tokenData['refresh_token'])) {
+            $attributes['refresh_token'] = $tokenData['refresh_token'];
+        }
+
         return GoogleFitToken::updateOrCreate(
             ['user_id' => $userId],
-            [
-                'access_token' => $tokenData['access_token'],
-                'refresh_token' => $tokenData['refresh_token'] ?? null,
-                'expires_at' => now()->addSeconds($tokenData['expires_in']),
-                'scopes' => $tokenData['scopes'] ?? [],
-            ]
+            $attributes,
         );
     }
 
     /**
-     * Remove Google Fit link for a user.
+     * Revoke Google tokens and remove the local record.
+     *
+     * Calls Google's revocation endpoint BEFORE deleting the DB row so that
+     * even if the DB delete fails, the token is already invalidated at Google's side.
      */
     public function disconnectUser(int $userId): void
     {
-        GoogleFitToken::where('user_id', $userId)->delete();
+        $token = GoogleFitToken::where('user_id', $userId)->first();
+
+        if (! $token) {
+            return;
+        }
+
+        // Revoke at Google's end to prevent orphaned OAuth grants.
+        $this->revokeGoogleToken($token);
+
+        $token->delete();
     }
 
     /**
@@ -99,155 +134,218 @@ class GoogleFitService
         $token = GoogleFitToken::where('user_id', $userId)->first();
 
         return [
-            'connected' => $token !== null,
+            'connected'  => $token !== null,
             'expires_at' => $token?->expires_at?->toISOString(),
             'is_expired' => $token?->isExpired() ?? true,
         ];
     }
 
     /**
-     * Sync all supported vitals from Google Fit into health_metrics.
+     * Sync all (or a single) supported vitals from Google Fit into health_metrics.
+     *
+     * @param  int         $elderlyId  UserProfile ID of the elderly patient.
+     * @param  int         $userId     User ID (owner of the token).
+     * @param  string|null $vitalType  Optional — restrict sync to one vital type:
+     *                                 'heart_rate' | 'blood_pressure' | 'temperature' | 'steps'
      *
      * @throws \RuntimeException when the account is disconnected or token refresh fails.
      */
-    public function syncAll(int $elderlyId, int $userId): array
+    public function syncAll(int $elderlyId, int $userId, ?string $vitalType = null): array
     {
         $token = GoogleFitToken::where('user_id', $userId)->first();
 
-        if (!$token) {
+        if (! $token) {
             throw new \RuntimeException('Google Fit not connected. Please connect first.', 400);
         }
 
         if ($token->isExpired()) {
             $token = $this->refreshAccessToken($token);
-            if (!$token) {
+            if (! $token) {
                 throw new \RuntimeException('Google Fit session expired. Please reconnect.', 401);
             }
         }
 
-        $synced = [];
+        $synced      = [];
         $accessToken = $token->access_token;
 
-        $heartRateData = $this->fetchHeartRateFromSources($accessToken);
-        if (!empty($heartRateData)) {
-            foreach ($heartRateData as $reading) {
-                HealthMetric::updateOrCreate(
-                    [
-                        'elderly_id' => $elderlyId,
-                        'type' => 'heart_rate',
-                        'source' => 'google_fit',
-                        'measured_at' => $reading['timestamp'],
-                    ],
-                    [
-                        'value' => $reading['value'],
-                        'unit' => 'bpm',
-                    ]
-                );
+        // Fetch data sources ONCE and reuse for all vital types.
+        // Previously each fetch*FromSources() method called getDataSources() independently,
+        // tripling the number of API calls per sync.
+        $dataSources = $this->getDataSources($accessToken);
+
+        if (! $vitalType || $vitalType === 'heart_rate') {
+            $heartRateData = $this->fetchHeartRateFromSources($accessToken, $dataSources);
+            if (! empty($heartRateData)) {
+                foreach ($heartRateData as $reading) {
+                    HealthMetric::updateOrCreate(
+                        [
+                            'elderly_id'  => $elderlyId,
+                            'type'        => 'heart_rate',
+                            'source'      => 'google_fit',
+                            'measured_at' => $reading['timestamp'],
+                        ],
+                        [
+                            'value' => $reading['value'],
+                            'unit'  => 'bpm',
+                        ]
+                    );
+                }
+                $synced['heart_rate'] = count($heartRateData) . ' readings';
             }
-            $synced['heart_rate'] = count($heartRateData) . ' readings';
         }
 
-        $bpData = $this->fetchBloodPressureFromSources($accessToken);
-        if (!empty($bpData)) {
-            foreach ($bpData as $reading) {
-                HealthMetric::updateOrCreate(
-                    [
-                        'elderly_id' => $elderlyId,
-                        'type' => 'blood_pressure',
-                        'source' => 'google_fit',
-                        'measured_at' => $reading['timestamp'],
-                    ],
-                    [
-                        'value' => $reading['systolic'],
-                        'value_text' => $reading['systolic'] . '/' . $reading['diastolic'],
-                        'unit' => 'mmHg',
-                    ]
-                );
+        if (! $vitalType || $vitalType === 'blood_pressure') {
+            $bpData = $this->fetchBloodPressureFromSources($accessToken, $dataSources);
+            if (! empty($bpData)) {
+                foreach ($bpData as $reading) {
+                    HealthMetric::updateOrCreate(
+                        [
+                            'elderly_id'  => $elderlyId,
+                            'type'        => 'blood_pressure',
+                            'source'      => 'google_fit',
+                            'measured_at' => $reading['timestamp'],
+                        ],
+                        [
+                            'value'      => $reading['systolic'],
+                            'value_text' => $reading['systolic'] . '/' . $reading['diastolic'],
+                            'unit'       => 'mmHg',
+                        ]
+                    );
+                }
+                $synced['blood_pressure'] = count($bpData) . ' readings';
             }
-            $synced['blood_pressure'] = count($bpData) . ' readings';
         }
 
-        $tempData = $this->fetchTemperatureFromSources($accessToken);
-        if (!empty($tempData)) {
-            foreach ($tempData as $reading) {
-                HealthMetric::updateOrCreate(
-                    [
-                        'elderly_id' => $elderlyId,
-                        'type' => 'temperature',
-                        'source' => 'google_fit',
-                        'measured_at' => $reading['timestamp'],
-                    ],
-                    [
-                        'value' => $reading['value'],
-                        'unit' => '°C',
-                    ]
-                );
+        if (! $vitalType || $vitalType === 'temperature') {
+            $tempData = $this->fetchTemperatureFromSources($accessToken, $dataSources);
+            if (! empty($tempData)) {
+                foreach ($tempData as $reading) {
+                    HealthMetric::updateOrCreate(
+                        [
+                            'elderly_id'  => $elderlyId,
+                            'type'        => 'temperature',
+                            'source'      => 'google_fit',
+                            'measured_at' => $reading['timestamp'],
+                        ],
+                        [
+                            'value' => $reading['value'],
+                            'unit'  => '°C',
+                        ]
+                    );
+                }
+                $synced['temperature'] = count($tempData) . ' readings';
             }
-            $synced['temperature'] = count($tempData) . ' readings';
         }
 
-        $steps = $this->fetchStepsAggregated($accessToken);
-        if ($steps !== null && $steps > 0) {
-            HealthMetric::updateOrCreate(
-                [
-                    'elderly_id' => $elderlyId,
-                    'type' => 'steps',
-                    'source' => 'google_fit',
-                    'measured_at' => Carbon::today(),
-                ],
-                [
-                    'value' => $steps,
-                    'unit' => 'steps',
-                ]
-            );
-            $synced['steps'] = $steps;
+        if (! $vitalType || $vitalType === 'steps') {
+            $steps = $this->fetchStepsAggregated($accessToken);
+            if ($steps !== null && $steps > 0) {
+                HealthMetric::updateOrCreate(
+                    [
+                        'elderly_id'  => $elderlyId,
+                        'type'        => 'steps',
+                        'source'      => 'google_fit',
+                        'measured_at' => Carbon::today(),
+                    ],
+                    [
+                        'value' => $steps,
+                        'unit'  => 'steps',
+                    ]
+                );
+                $synced['steps'] = $steps;
+            }
         }
 
         return $synced;
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Private helpers
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Revoke a Google OAuth token.
+     * We try the access_token first; if unavailable we try the refresh_token.
+     * Failures are logged but do NOT propagate — a failed revocation must not
+     * block the user from disconnecting within the app.
+     */
+    private function revokeGoogleToken(GoogleFitToken $token): void
+    {
+        $revokeToken = $token->access_token ?? $token->refresh_token;
+
+        if (! $revokeToken) {
+            return;
+        }
+
+        try {
+            Http::timeout(5)->post('https://oauth2.googleapis.com/revoke', [
+                'token' => $revokeToken,
+            ]);
+        } catch (\Exception $e) {
+            Log::warning('Google token revocation failed (non-fatal): ' . $e->getMessage());
+        }
+    }
+
     /**
      * Refresh expired access token.
+     * Also persists a rotated refresh_token if Google returns one.
      */
     private function refreshAccessToken(GoogleFitToken $token): ?GoogleFitToken
     {
-        if (!$token->refresh_token) {
+        if (! $token->refresh_token) {
             return null;
         }
 
         try {
-            $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
-                'client_id' => config('services.google.client_id'),
-                'client_secret' => config('services.google.client_secret'),
-                'refresh_token' => $token->refresh_token,
-                'grant_type' => 'refresh_token',
-            ]);
+            $response = Http::timeout(self::HTTP_TIMEOUT)
+                ->retry(self::HTTP_RETRIES, self::HTTP_RETRY_SLEEP_MS)
+                ->asForm()
+                ->post('https://oauth2.googleapis.com/token', [
+                    'client_id'     => config('services.google.client_id'),
+                    'client_secret' => config('services.google.client_secret'),
+                    'refresh_token' => $token->refresh_token,
+                    'grant_type'    => 'refresh_token',
+                ]);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
+                Log::warning('Google Fit token refresh failed', [
+                    'status' => $response->status(),
+                    'body'   => $response->body(),
+                ]);
                 return null;
             }
 
             $data = $response->json();
 
-            $token->update([
+            $updates = [
                 'access_token' => $data['access_token'],
-                'expires_at' => now()->addSeconds($data['expires_in']),
-            ]);
+                'expires_at'   => now()->addSeconds($data['expires_in']),
+            ];
+
+            // Google occasionally rotates the refresh_token — persist it if returned.
+            if (! empty($data['refresh_token'])) {
+                $updates['refresh_token'] = $data['refresh_token'];
+            }
+
+            $token->update($updates);
 
             return $token->fresh();
         } catch (\Exception $e) {
-            Log::warning('Google Fit token refresh failed: ' . $e->getMessage());
+            Log::warning('Google Fit token refresh exception: ' . $e->getMessage());
             return null;
         }
     }
 
     /**
      * Get all available Google Fit data sources.
+     * Called ONCE per syncAll() and passed to all fetch methods.
      */
     private function getDataSources(string $accessToken): array
     {
         try {
-            $response = Http::withToken($accessToken)
+            $response = Http::timeout(self::HTTP_TIMEOUT)
+                ->retry(self::HTTP_RETRIES, self::HTTP_RETRY_SLEEP_MS)
+                ->withToken($accessToken)
                 ->get('https://www.googleapis.com/fitness/v1/users/me/dataSources');
 
             if ($response->successful()) {
@@ -262,16 +360,17 @@ class GoogleFitService
 
     /**
      * Fetch heart-rate readings from data sources and aggregate fallback.
+     *
+     * @param  array $dataSources Pre-fetched data sources from getDataSources().
      */
-    private function fetchHeartRateFromSources(string $accessToken): array
+    private function fetchHeartRateFromSources(string $accessToken, array $dataSources): array
     {
-        $dataSources = $this->getDataSources($accessToken);
         $allData = [];
 
-        $endTime = Carbon::now();
+        $endTime   = Carbon::now();
         $startTime = Carbon::now()->subDays(7);
         $startNanos = $startTime->timestamp * 1000000000;
-        $endNanos = $endTime->timestamp * 1000000000;
+        $endNanos   = $endTime->timestamp * 1000000000;
 
         foreach ($dataSources as $source) {
             $dataType = $source['dataType']['name'] ?? '';
@@ -280,19 +379,21 @@ class GoogleFitService
             }
 
             $dataSourceId = $source['dataStreamId'];
-            $datasetId = "{$startNanos}-{$endNanos}";
+            $datasetId    = "{$startNanos}-{$endNanos}";
 
             try {
-                $response = Http::withToken($accessToken)
+                $response = Http::timeout(self::HTTP_TIMEOUT)
+                    ->retry(self::HTTP_RETRIES, self::HTTP_RETRY_SLEEP_MS)
+                    ->withToken($accessToken)
                     ->get("https://www.googleapis.com/fitness/v1/users/me/dataSources/{$dataSourceId}/datasets/{$datasetId}");
 
-                if (!$response->successful()) {
+                if (! $response->successful()) {
                     continue;
                 }
 
                 $points = $response->json()['point'] ?? [];
                 foreach ($points as $point) {
-                    $values = $point['value'] ?? [];
+                    $values         = $point['value'] ?? [];
                     $startTimeNanos = $point['startTimeNanos'] ?? 0;
 
                     if (empty($values)) {
@@ -300,7 +401,7 @@ class GoogleFitService
                     }
 
                     $heartRate = $values[0]['fpVal'] ?? $values[0]['intVal'] ?? null;
-                    if (!$heartRate || $heartRate <= 0 || $heartRate >= 300) {
+                    if (! $heartRate || $heartRate <= 0 || $heartRate >= 300) {
                         continue;
                     }
 
@@ -308,7 +409,7 @@ class GoogleFitService
                         ->setTimezone(config('app.timezone'));
 
                     $allData[] = [
-                        'value' => (int) round($heartRate),
+                        'value'     => (int) round($heartRate),
                         'timestamp' => $timestamp,
                     ];
                 }
@@ -320,18 +421,19 @@ class GoogleFitService
         $aggregatedData = $this->fetchHeartRateAggregated($accessToken);
         if ($aggregatedData) {
             $allData[] = [
-                'value' => $aggregatedData,
+                'value'     => $aggregatedData,
                 'timestamp' => Carbon::now(),
             ];
         }
 
-        $uniqueData = [];
-        $seenTimestamps = [];
+        // Deduplicate by minute-precision timestamp
+        $uniqueData      = [];
+        $seenTimestamps  = [];
         foreach ($allData as $data) {
             $key = $data['timestamp']->format('Y-m-d H:i');
-            if (!isset($seenTimestamps[$key])) {
+            if (! isset($seenTimestamps[$key])) {
                 $seenTimestamps[$key] = true;
-                $uniqueData[] = $data;
+                $uniqueData[]         = $data;
             }
         }
 
@@ -340,16 +442,17 @@ class GoogleFitService
 
     /**
      * Fetch blood-pressure readings from Google Fit data sources.
+     *
+     * @param  array $dataSources Pre-fetched data sources from getDataSources().
      */
-    private function fetchBloodPressureFromSources(string $accessToken): array
+    private function fetchBloodPressureFromSources(string $accessToken, array $dataSources): array
     {
-        $dataSources = $this->getDataSources($accessToken);
         $allData = [];
 
-        $endTime = Carbon::now();
-        $startTime = Carbon::now()->subDays(7);
+        $endTime    = Carbon::now();
+        $startTime  = Carbon::now()->subDays(7);
         $startNanos = $startTime->timestamp * 1000000000;
-        $endNanos = $endTime->timestamp * 1000000000;
+        $endNanos   = $endTime->timestamp * 1000000000;
 
         foreach ($dataSources as $source) {
             $dataType = $source['dataType']['name'] ?? '';
@@ -358,29 +461,31 @@ class GoogleFitService
             }
 
             $dataSourceId = $source['dataStreamId'];
-            $datasetId = "{$startNanos}-{$endNanos}";
+            $datasetId    = "{$startNanos}-{$endNanos}";
 
             try {
-                $response = Http::withToken($accessToken)
+                $response = Http::timeout(self::HTTP_TIMEOUT)
+                    ->retry(self::HTTP_RETRIES, self::HTTP_RETRY_SLEEP_MS)
+                    ->withToken($accessToken)
                     ->get("https://www.googleapis.com/fitness/v1/users/me/dataSources/{$dataSourceId}/datasets/{$datasetId}");
 
-                if (!$response->successful()) {
+                if (! $response->successful()) {
                     continue;
                 }
 
                 $points = $response->json()['point'] ?? [];
                 foreach ($points as $point) {
-                    $values = $point['value'] ?? [];
+                    $values         = $point['value'] ?? [];
                     $startTimeNanos = $point['startTimeNanos'] ?? 0;
 
                     if (count($values) < 2) {
                         continue;
                     }
 
-                    $systolic = $values[0]['fpVal'] ?? null;
+                    $systolic  = $values[0]['fpVal'] ?? null;
                     $diastolic = $values[1]['fpVal'] ?? null;
 
-                    if (!$systolic || !$diastolic || $systolic <= 0 || $diastolic <= 0) {
+                    if (! $systolic || ! $diastolic || $systolic <= 0 || $diastolic <= 0) {
                         continue;
                     }
 
@@ -388,7 +493,7 @@ class GoogleFitService
                         ->setTimezone(config('app.timezone'));
 
                     $allData[] = [
-                        'systolic' => (int) round($systolic),
+                        'systolic'  => (int) round($systolic),
                         'diastolic' => (int) round($diastolic),
                         'timestamp' => $timestamp,
                     ];
@@ -403,16 +508,17 @@ class GoogleFitService
 
     /**
      * Fetch body-temperature readings from Google Fit data sources.
+     *
+     * @param  array $dataSources Pre-fetched data sources from getDataSources().
      */
-    private function fetchTemperatureFromSources(string $accessToken): array
+    private function fetchTemperatureFromSources(string $accessToken, array $dataSources): array
     {
-        $dataSources = $this->getDataSources($accessToken);
         $allData = [];
 
-        $endTime = Carbon::now();
-        $startTime = Carbon::now()->subDays(7);
+        $endTime    = Carbon::now();
+        $startTime  = Carbon::now()->subDays(7);
         $startNanos = $startTime->timestamp * 1000000000;
-        $endNanos = $endTime->timestamp * 1000000000;
+        $endNanos   = $endTime->timestamp * 1000000000;
 
         foreach ($dataSources as $source) {
             $dataType = $source['dataType']['name'] ?? '';
@@ -421,19 +527,21 @@ class GoogleFitService
             }
 
             $dataSourceId = $source['dataStreamId'];
-            $datasetId = "{$startNanos}-{$endNanos}";
+            $datasetId    = "{$startNanos}-{$endNanos}";
 
             try {
-                $response = Http::withToken($accessToken)
+                $response = Http::timeout(self::HTTP_TIMEOUT)
+                    ->retry(self::HTTP_RETRIES, self::HTTP_RETRY_SLEEP_MS)
+                    ->withToken($accessToken)
                     ->get("https://www.googleapis.com/fitness/v1/users/me/dataSources/{$dataSourceId}/datasets/{$datasetId}");
 
-                if (!$response->successful()) {
+                if (! $response->successful()) {
                     continue;
                 }
 
                 $points = $response->json()['point'] ?? [];
                 foreach ($points as $point) {
-                    $values = $point['value'] ?? [];
+                    $values         = $point['value'] ?? [];
                     $startTimeNanos = $point['startTimeNanos'] ?? 0;
 
                     if (empty($values)) {
@@ -441,7 +549,7 @@ class GoogleFitService
                     }
 
                     $temperature = $values[0]['fpVal'] ?? null;
-                    if (!$temperature || $temperature < 35 || $temperature > 42) {
+                    if (! $temperature || $temperature < 35 || $temperature > 42) {
                         continue;
                     }
 
@@ -449,7 +557,7 @@ class GoogleFitService
                         ->setTimezone(config('app.timezone'));
 
                     $allData[] = [
-                        'value' => round($temperature, 1),
+                        'value'     => round($temperature, 1),
                         'timestamp' => $timestamp,
                     ];
                 }
@@ -466,20 +574,22 @@ class GoogleFitService
      */
     private function fetchHeartRateAggregated(string $accessToken): ?int
     {
-        $now = Carbon::now();
+        $now        = Carbon::now();
         $startOfDay = Carbon::today();
 
         try {
-            $response = Http::withToken($accessToken)
+            $response = Http::timeout(self::HTTP_TIMEOUT)
+                ->retry(self::HTTP_RETRIES, self::HTTP_RETRY_SLEEP_MS)
+                ->withToken($accessToken)
                 ->post('https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate', [
-                    'aggregateBy' => [
+                    'aggregateBy'   => [
                         ['dataTypeName' => 'com.google.heart_rate.bpm'],
                     ],
-                    'bucketByTime' => [
+                    'bucketByTime'  => [
                         'durationMillis' => 86400000,
                     ],
                     'startTimeMillis' => $startOfDay->timestamp * 1000,
-                    'endTimeMillis' => $now->timestamp * 1000,
+                    'endTimeMillis'   => $now->timestamp * 1000,
                 ]);
 
             if ($response->successful()) {
@@ -509,24 +619,26 @@ class GoogleFitService
      */
     private function fetchStepsAggregated(string $accessToken): ?int
     {
-        $now = Carbon::now();
+        $now        = Carbon::now();
         $startOfDay = Carbon::today();
 
         try {
-            $response = Http::withToken($accessToken)
+            $response = Http::timeout(self::HTTP_TIMEOUT)
+                ->retry(self::HTTP_RETRIES, self::HTTP_RETRY_SLEEP_MS)
+                ->withToken($accessToken)
                 ->post('https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate', [
-                    'aggregateBy' => [
+                    'aggregateBy'   => [
                         ['dataTypeName' => 'com.google.step_count.delta'],
                     ],
-                    'bucketByTime' => [
+                    'bucketByTime'  => [
                         'durationMillis' => 86400000,
                     ],
                     'startTimeMillis' => $startOfDay->timestamp * 1000,
-                    'endTimeMillis' => $now->timestamp * 1000,
+                    'endTimeMillis'   => $now->timestamp * 1000,
                 ]);
 
             if ($response->successful()) {
-                $data = $response->json();
+                $data       = $response->json();
                 $totalSteps = 0;
 
                 foreach ($data['bucket'] ?? [] as $bucket) {

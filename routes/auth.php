@@ -18,12 +18,6 @@ Route::middleware('guest')->group(function () {
 
     Route::post('register', [RegisteredUserController::class, 'store']);
 
-    Route::get('auth/google/redirect', [ProviderController::class, 'redirectToGoogle'])
-        ->name('auth.google.redirect');
-
-    Route::get('auth/google/callback', [ProviderController::class, 'handleGoogleCallback'])
-        ->name('auth.google.callback');
-
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
 
@@ -40,6 +34,17 @@ Route::middleware('guest')->group(function () {
 
     Route::post('reset-password', [NewPasswordController::class, 'store'])
         ->name('password.store');
+});
+
+// Google OAuth routes — intentionally NOT behind 'guest' middleware.
+// The callback may fire after a session regeneration during the OAuth redirect window.
+// Placing these here under the default 'web' middleware avoids a 302 loop.
+Route::middleware('web')->group(function () {
+    Route::get('auth/google/redirect', [ProviderController::class, 'redirectToGoogle'])
+        ->name('auth.google.redirect');
+
+    Route::get('auth/google/callback', [ProviderController::class, 'handleGoogleCallback'])
+        ->name('auth.google.callback');
 });
 
 Route::middleware('auth')->group(function () {
