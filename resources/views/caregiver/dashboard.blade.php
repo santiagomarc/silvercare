@@ -149,6 +149,53 @@
             </div>
         @endif
 
+        <!-- PIN CARD: always visible when caregiver has patients -->
+        @if($activeLinkCode)
+        <div class="mb-5 rounded-2xl border border-blue-200 bg-blue-50/80 p-4 shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-4" x-data="{ copied: false }">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 010 5.656l-3 3a4 4 0 11-5.656-5.656l1.5-1.5m6.656-1.5l1.5-1.5a4 4 0 115.656 5.656l-3 3a4 4 0 01-5.656 0"/></svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-blue-700 uppercase tracking-wide">Active Linking PIN</p>
+                        <p class="text-2xl font-black tracking-[0.2em] text-gray-900">{{ $activeLinkCode->code }}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap sm:ml-auto">
+                    <p class="text-xs text-blue-600 font-semibold">Expires: {{ $activeLinkCode->expires_at->format('M d, Y h:i A') }}</p>
+                    <button @click="navigator.clipboard.writeText('{{ $activeLinkCode->code }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-bold bg-white border border-blue-200 rounded-lg hover:border-blue-400 transition-colors">
+                        <span x-text="copied ? '✓ Copied!' : 'Copy PIN'"></span>
+                    </button>
+                    <div x-data="{ loading: false }">
+                        <button @click="loading=true; fetch('{{ route('caregiver.link-code.generate') }}', {method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name=csrf-token]').content}}).then(()=>window.location.reload()).finally(()=>loading=false)"
+                            :disabled="loading"
+                            class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-bold bg-white border border-blue-200 rounded-lg hover:border-blue-400 transition-colors disabled:opacity-50">
+                            <span x-show="!loading">↻ Refresh</span>
+                            <span x-show="loading">...</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @else
+        <div class="mb-5 rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-sm" x-data="{ loading: false }">
+            <div class="flex items-center justify-between gap-4">
+                <div>
+                    <p class="text-sm font-bold text-gray-700">No active linking PIN</p>
+                    <p class="text-xs text-gray-500">Generate a PIN to link additional patients.</p>
+                </div>
+                <button @click="loading=true; fetch('{{ route('caregiver.link-code.generate') }}', {method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name=csrf-token]').content}}).then(()=>window.location.reload()).finally(()=>loading=false)"
+                    :disabled="loading"
+                    class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-bold bg-[#000080] text-white rounded-lg hover:bg-blue-900 transition-colors disabled:opacity-50">
+                    <span x-show="!loading">Generate PIN</span>
+                    <span x-show="loading">Generating...</span>
+                </button>
+            </div>
+        </div>
+        @endif
+
         <!-- ============================================ -->
         <!-- TOP ROW: Elder Profile Card + Management Panel -->
         <!-- ============================================ -->
