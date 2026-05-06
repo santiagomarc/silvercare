@@ -19,10 +19,10 @@ class StoreProfileCompletionRequest extends FormRequest
             'height' => ['required', 'numeric', 'min:1', 'max:300'],
             'emergency_name' => ['required', 'string', 'max:255'],
             'emergency_phone' => ['required', 'string', 'max:20'],
-            'emergency_relationship' => ['required', 'string', 'in:Spouse (Asawa),Child (Anak),Family/Relative (Pamilya/Kamag-anak),Friend (Kaibigan),Neighbor (Kapitbahay)'],
-            'conditions' => ['required', 'string'],
-            'medications' => ['required', 'string'],
-            'allergies' => ['required', 'string'],
+            'emergency_relationship' => ['required', 'string', 'max:255'],
+            'conditions' => ['nullable', 'string'],
+            'medications' => ['nullable', 'string'],
+            'allergies' => ['nullable', 'string'],
         ];
     }
 }

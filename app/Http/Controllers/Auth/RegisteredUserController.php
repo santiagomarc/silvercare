@@ -87,6 +87,9 @@ class RegisteredUserController extends Controller
                 'address' => $validated['address'] ?? null,
                 'age' => $validated['age'] ?? null,
                 'profile_completed' => $isCaregiver,
+                // Newly-registered elderly users are initially marked as "skipped"
+                // so they can access the app and complete the wizard later.
+                'profile_skipped' => !$isCaregiver,
                 'is_active' => true,
             ]);
 
@@ -100,8 +103,8 @@ class RegisteredUserController extends Controller
                 return redirect()->route('caregiver.dashboard')->with('success', 'Account created successfully.');
             }
 
-            // Elderly users are redirected to profile completion wizard
-            return redirect()->route('profile.completion')->with('info', 'Please complete your profile to get started.');
+            // Elderly users: allow access to dashboard after registration (they're marked skipped)
+            return redirect()->route('dashboard')->with('info', 'Account created. You can complete your profile later.');
 
         } catch (\Exception $e) {
             DB::rollBack();

@@ -7,6 +7,7 @@ import 'flatpickr/dist/flatpickr.min.css';
 import TomSelect from 'tom-select';
 import 'tom-select/dist/css/tom-select.default.css';
 import Chart from 'chart.js/auto';
+import './profile-photo-cropper.js';
 
 
 // ── Alpine Components (extracted from inline scripts) ────────────

@@ -3,6 +3,19 @@
 
     @php
         $dashboardRoute = $profile->isCaregiver() ? 'caregiver.dashboard' : 'dashboard';
+        $profileErrorFields = [
+            'name',
+            'email',
+            'phone_number',
+            'relationship',
+            'medical_conditions',
+            'medications',
+            'allergies',
+            'emergency_name',
+            'emergency_phone',
+            'emergency_relationship',
+        ];
+        $hasProfileValidationErrors = $errors->hasAny($profileErrorFields);
     @endphp
 
     <x-dashboard-nav
@@ -12,7 +25,7 @@
         :unread-notifications="$unreadNotifications ?? 0"
     />
 
-    <div class="min-h-screen bg-slate-50 py-8" x-data="{ editMode: false, showLogoutConfirm: false }">
+    <div class="min-h-screen bg-slate-50 py-8" x-data="{ editMode: {{ $hasProfileValidationErrors ? 'true' : 'false' }}, showLogoutConfirm: false }">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
 
             {{-- Back Navigation --}}
@@ -51,6 +64,20 @@
                 </div>
             </div>
 
+            @if($hasProfileValidationErrors)
+                <div class="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-rose-800 shadow-sm" role="alert" aria-live="assertive">
+                    <div class="flex items-start gap-3">
+                        <svg class="mt-0.5 h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v4m0 4h.01M4.93 19h14.14c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.2 16c-.77 1.33.19 3 1.73 3z"></path>
+                        </svg>
+                        <div>
+                            <p class="font-extrabold">Changes could not be saved.</p>
+                            <p class="mt-1 text-sm font-semibold text-rose-700">Please fix the highlighted fields below and try again.</p>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             <form method="POST" action="{{ route('profile.update') }}">
                 @csrf
                 @method('PATCH')
@@ -65,7 +92,7 @@
                             </div>
 
                             {{-- Profile Photo Section --}}
-                            <div class="flex flex-col sm:flex-row items-center gap-6 mb-8 pb-8 border-b border-slate-100" x-data="{ photoUploading: false, photoError: null }">
+                            <div class="flex flex-col sm:flex-row items-center gap-6 mb-8 pb-8 border-b border-slate-100">
                                 <div class="relative group">
                                     <div class="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-navy-500 to-navy-400 shadow-glow-brand flex items-center justify-center">
                                         @if($profile->profile_photo)
@@ -78,7 +105,7 @@
                                     <template x-if="editMode">
                                         <label for="photo-upload" class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                                             <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0118.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                             </svg>
                                         </label>
@@ -94,7 +121,7 @@
 
                                     <template x-if="editMode">
                                         <div class="flex flex-col gap-2">
-                                            <input type="file" id="photo-upload" name="profile_photo" accept="image/jpeg,image/png,image/gif,image/webp" class="hidden" onchange="uploadProfilePhoto(this)">
+                                            <input type="file" id="photo-upload" name="profile_photo" accept="image/jpeg,image/png,image/gif,image/webp" class="hidden" @change="openCropModal($event)">
 
                                             <div class="flex items-center gap-2">
                                                 <label for="photo-upload" class="flex items-center gap-1.5 bg-navy-500 text-white px-4 py-2 rounded-lg font-semibold text-sm shadow hover:-translate-y-0.5 transition-all cursor-pointer min-h-touch">
@@ -103,17 +130,46 @@
                                                 </label>
 
                                                 @if($profile->profile_photo)
-                                                <button type="button" onclick="removeProfilePhoto()" class="flex items-center gap-1.5 bg-rose-500 text-white px-4 py-2 rounded-lg font-semibold text-sm shadow hover:-translate-y-0.5 transition-all min-h-touch">
+                                                <button type="button" @click="removeProfilePhoto()" class="flex items-center gap-1.5 bg-rose-500 text-white px-4 py-2 rounded-lg font-semibold text-sm shadow hover:-translate-y-0.5 transition-all min-h-touch">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                                     Remove
                                                 </button>
                                                 @endif
                                             </div>
 
-                                            <p class="text-xs text-slate-400">JPG, PNG, GIF or WebP. Max 5MB.</p>
+                                            <p class="text-xs text-slate-400">JPG, PNG, GIF or WebP. Max 5MB. You'll be able to crop your photo before uploading.</p>
                                             <div id="photo-status"></div>
                                         </div>
                                     </template>
+                                </div>
+                            </div>
+
+                            {{-- CROP MODAL --}}
+                            <div id="profile-photo-crop-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+                                <div class="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
+                                    <div class="flex items-center justify-between border-b border-slate-100 p-6">
+                                        <h3 class="text-xl font-bold text-slate-900">Crop Your Photo</h3>
+                                        <button type="button" onclick="cancelCrop()" class="text-slate-400 hover:text-slate-600">
+                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                        </button>
+                                    </div>
+
+                                    <div class="p-6">
+                                        <div class="mb-6 flex justify-center rounded-lg bg-slate-100 p-4">
+                                            <img id="crop-image" alt="Crop preview" class="max-h-96 max-w-full" style="max-width: 100%;">
+                                        </div>
+
+                                        <p class="mb-4 text-sm text-slate-500">Click and drag to reposition. Use the handles to resize the crop area. Aim for a square crop for best profile picture results.</p>
+
+                                        <div class="flex justify-end gap-2">
+                                            <button type="button" onclick="cancelCrop()" class="rounded-lg bg-slate-100 px-4 py-2 font-semibold text-slate-700 transition-all hover:bg-slate-200">
+                                                Cancel
+                                            </button>
+                                            <button id="crop-upload-button" type="button" onclick="applyCrop()" class="rounded-lg bg-navy-500 px-4 py-2 font-semibold text-white transition-all hover:bg-navy-600">
+                                                ✓ Crop & Upload
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -125,7 +181,13 @@
                                         <p class="profile-field-value">{{ $user->name ?: '—' }}</p>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="text" name="name" value="{{ old('name', $user->name) }}" required class="profile-field-input">
+                                        <div>
+                                            <input type="text" name="name" value="{{ old('name', $user->name) }}" required
+                                                class="profile-field-input @error('name') !border-rose-500 !bg-rose-50 focus:!border-rose-500 @enderror">
+                                            @error('name')
+                                                <p class="mt-2 text-sm font-bold text-rose-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
                                     </template>
                                 </div>
 
@@ -142,7 +204,13 @@
                                         <p class="profile-field-value">{{ $profile->phone_number ?: '—' }}</p>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="text" name="phone_number" value="{{ old('phone_number', $profile->phone_number) }}" class="profile-field-input">
+                                        <div>
+                                            <input type="text" name="phone_number" value="{{ old('phone_number', $profile->phone_number) }}"
+                                                class="profile-field-input @error('phone_number') !border-rose-500 !bg-rose-50 focus:!border-rose-500 @enderror">
+                                            @error('phone_number')
+                                                <p class="mt-2 text-sm font-bold text-rose-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
                                     </template>
                                 </div>
 
@@ -155,176 +223,12 @@
                                     </template>
                                     <template x-if="editMode">
                                         <div class="relative">
-                                            <select name="relationship" class="profile-field-input appearance-none">
-                                                <option value="">Select...</option>
-                                                <option value="Son" {{ (old('relationship', $profile->relationship) == 'Son') ? 'selected' : '' }}>Son</option>
-                                                <option value="Daughter" {{ (old('relationship', $profile->relationship) == 'Daughter') ? 'selected' : '' }}>Daughter</option>
-                                                <option value="Spouse" {{ (old('relationship', $profile->relationship) == 'Spouse') ? 'selected' : '' }}>Spouse</option>
-                                                <option value="Sibling" {{ (old('relationship', $profile->relationship) == 'Sibling') ? 'selected' : '' }}>Sibling</option>
-                                                <option value="Friend" {{ (old('relationship', $profile->relationship) == 'Friend') ? 'selected' : '' }}>Friend</option>
-                                                <option value="Professional Caregiver" {{ (old('relationship', $profile->relationship) == 'Professional Caregiver') ? 'selected' : '' }}>Professional Caregiver</option>
-                                                <option value="Other" {{ (old('relationship', $profile->relationship) == 'Other') ? 'selected' : '' }}>Other</option>
-                                            </select>
-                                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
-                                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                            </div>
-                                        </div>
-                                    </template>
-                                </div>
-                                @endif
-
-                                @if($profile->isCaregiver())
-                                {{-- Age (Caregiver) --}}
-                                <div>
-                                    <label class="profile-field-label">Age</label>
-                                    <template x-if="!editMode">
-                                        <p class="profile-field-value">{{ $profile->age ?: '—' }}</p>
-                                    </template>
-                                    <template x-if="editMode">
-                                        <input type="number" name="age" value="{{ old('age', $profile->age) }}" class="profile-field-input">
-                                    </template>
-                                </div>
-                                @endif
-
-                                @if($profile->isElderly())
-                                {{-- Age (Elderly) --}}
-                                <div>
-                                    <label class="profile-field-label">Age</label>
-                                    <template x-if="!editMode">
-                                        <p class="profile-field-value">{{ $profile->age ?: '—' }}</p>
-                                    </template>
-                                    <template x-if="editMode">
-                                        <input type="number" name="age" value="{{ old('age', $profile->age) }}" class="profile-field-input">
-                                    </template>
-                                </div>
-                                <div>
-                                    <label class="profile-field-label">Sex</label>
-                                    <template x-if="!editMode">
-                                        <p class="profile-field-value">{{ $profile->sex ?: '—' }}</p>
-                                    </template>
-                                    <template x-if="editMode">
-                                        <div class="relative">
-                                            <select name="sex" class="profile-field-input appearance-none">
-                                                <option value="">Select...</option>
-                                                <option value="Male" {{ (old('sex', $profile->sex) == 'Male') ? 'selected' : '' }}>Male</option>
-                                                <option value="Female" {{ (old('sex', $profile->sex) == 'Female') ? 'selected' : '' }}>Female</option>
-                                            </select>
-                                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
-                                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                            </div>
-                                        </div>
-                                    </template>
-                                </div>
-
-                                {{-- Height --}}
-                                <div>
-                                    <label class="profile-field-label">Height (cm)</label>
-                                    <template x-if="!editMode">
-                                        <p class="profile-field-value">{{ $profile->height ?: '—' }}</p>
-                                    </template>
-                                    <template x-if="editMode">
-                                        <input type="number" step="0.01" name="height" value="{{ old('height', $profile->height) }}" class="profile-field-input">
-                                    </template>
-                                </div>
-
-                                {{-- Weight --}}
-                                <div>
-                                    <label class="profile-field-label">Weight (kg)</label>
-                                    <template x-if="!editMode">
-                                        <p class="profile-field-value">{{ $profile->weight ?: '—' }}</p>
-                                    </template>
-                                    <template x-if="editMode">
-                                        <input type="number" step="0.01" name="weight" value="{{ old('weight', $profile->weight) }}" class="profile-field-input">
-                                    </template>
-                                </div>
-                                @endif
-
-                                {{-- Address --}}
-                                <div class="md:col-span-2 lg:col-span-3">
-                                    <label class="profile-field-label">Address</label>
-                                    <template x-if="!editMode">
-                                        <p class="profile-field-value">{{ $profile->address ?: '—' }}</p>
-                                    </template>
-                                    <template x-if="editMode">
-                                        <textarea name="address" rows="2" class="profile-field-input resize-none">{{ old('address', $profile->address) }}</textarea>
-                                    </template>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- CARD 2: Medical Information (Elderly Only) --}}
-                    @if($profile->isElderly())
-                    @php
-                        // Helper to safely implode arrays or JSON strings
-                        function safeImplode($value) {
-                            if (is_array($value)) return implode(', ', $value);
-                            if (is_string($value)) {
-                                $decoded = json_decode($value, true);
-                                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) return implode(', ', $decoded);
-                                return $value;
-                            }
-                            return '';
-                        }
-
-                        // Try individual columns first, fallback to legacy medical_info JSON
-                        $legacyMedical = $profile->medical_info ?? [];
-
-                        $conditionsVal = safeImplode($profile->medical_conditions)
-                            ?: safeImplode($legacyMedical['conditions'] ?? []);
-                        $medsVal = safeImplode($profile->medications)
-                            ?: safeImplode($legacyMedical['medications'] ?? []);
-                        $allergiesVal = safeImplode($profile->allergies)
-                            ?: safeImplode($legacyMedical['allergies'] ?? []);
-
-                        // Emergency Contact
-                        $legacyEmergency = $profile->emergency_contact ?? [];
-                        $caregiver = $profile->caregiver?->user ?? null;
-                        $caregiverProfile = $profile->caregiver ?? null;
-
-                        $emergencyName = $profile->emergency_name
-                            ?: ($legacyEmergency['name'] ?? null)
-                            ?: ($caregiver?->name ?? '');
-                        $emergencyPhone = $profile->emergency_phone
-                            ?: ($legacyEmergency['phone'] ?? null)
-                            ?: ($caregiverProfile?->phone_number ?? '');
-                        $emergencyRelationship = $profile->emergency_relationship
-                            ?: ($legacyEmergency['relationship'] ?? null)
-                            ?: ($caregiverProfile?->relationship ?? '');
-                    @endphp
-
-                    <div class="bg-white rounded-2xl p-6 md:p-8 shadow-card mb-6">
-                        <div>
-                            <div class="flex items-center gap-3 mb-8 pb-4 border-b border-slate-100">
-                                <h3 class="font-extrabold text-xl text-slate-900">Medical Information</h3>
-                            </div>
-
-                            <div class="grid grid-cols-1 gap-y-8 gap-x-6 md:grid-cols-3">
-                                {{-- Medical Conditions --}}
-                                <div>
-                                    <label class="profile-field-label !text-rose-400">Medical Conditions</label>
-                                    <template x-if="!editMode">
-                                        <div class="px-4 py-3">
-                                            @if($conditionsVal)
-                                                <div class="flex flex-wrap gap-2">
-                                                    @foreach(explode(', ', $conditionsVal) as $condition)
-                                                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-rose-50 text-rose-700 border border-rose-100">
-                                                            ❤️ {{ trim($condition) }}
-                                                        </span>
-                                                    @endforeach
-                                                </div>
-                                            @else
-                                                <p class="text-lg font-bold text-slate-400">None specified</p>
-                                            @endif
-                                        </div>
-                                    </template>
-                                    <template x-if="editMode">
-                                        <div class="relative">
-                                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                                <span class="text-rose-300">❤️</span>
                                             </div>
                                             <input type="text" name="medical_conditions" value="{{ old('medical_conditions', $conditionsVal) }}" placeholder="e.g. Diabetes, Hypertension"
-                                                class="profile-field-input pl-12 !border-rose-100 !bg-rose-50/30 placeholder-rose-300 focus:!border-rose-400">
+                                                class="profile-field-input pl-12 !border-rose-100 !bg-rose-50/30 placeholder-rose-300 focus:!border-rose-400 @error('medical_conditions') !border-rose-500 !bg-rose-50 focus:!border-rose-500 @enderror">
+                                            @error('medical_conditions')
+                                                <p class="mt-2 text-sm font-bold text-rose-600">{{ $message }}</p>
+                                            @enderror
                                         </div>
                                     </template>
                                 </div>
@@ -353,7 +257,10 @@
                                                 <span class="text-navy-300">💊</span>
                                             </div>
                                             <input type="text" name="medications" value="{{ old('medications', $medsVal) }}" placeholder="e.g. Metformin, Aspirin"
-                                                class="profile-field-input pl-12 !border-navy-100 !bg-navy-50/30 placeholder-navy-200 focus:!border-navy-400">
+                                                class="profile-field-input pl-12 !border-navy-100 !bg-navy-50/30 placeholder-navy-200 focus:!border-navy-400 @error('medications') !border-rose-500 !bg-rose-50 focus:!border-rose-500 @enderror">
+                                            @error('medications')
+                                                <p class="mt-2 text-sm font-bold text-rose-600">{{ $message }}</p>
+                                            @enderror
                                         </div>
                                     </template>
                                 </div>
@@ -382,7 +289,10 @@
                                                 <span class="text-amber-300">⚠️</span>
                                             </div>
                                             <input type="text" name="allergies" value="{{ old('allergies', $allergiesVal) }}" placeholder="e.g. Peanuts, Penicillin"
-                                                class="profile-field-input pl-12 !border-amber-100 !bg-amber-50/30 placeholder-amber-300 focus:!border-amber-400">
+                                                class="profile-field-input pl-12 !border-amber-100 !bg-amber-50/30 placeholder-amber-300 focus:!border-amber-400 @error('allergies') !border-rose-500 !bg-rose-50 focus:!border-rose-500 @enderror">
+                                            @error('allergies')
+                                                <p class="mt-2 text-sm font-bold text-rose-600">{{ $message }}</p>
+                                            @enderror
                                         </div>
                                     </template>
                                 </div>
@@ -393,6 +303,43 @@
 
                     {{-- CARD 3: Emergency Contact (Elderly Only) --}}
                     @if($profile->isElderly())
+                    @php
+                        $safeImplode = function ($value) {
+                            if (is_array($value)) {
+                                return implode(', ', $value);
+                            }
+
+                            if (is_string($value)) {
+                                $decoded = json_decode($value, true);
+                                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                                    return implode(', ', $decoded);
+                                }
+
+                                return $value;
+                            }
+
+                            return '';
+                        };
+
+                        $legacyMedical = $profile->medical_info ?? [];
+                        $conditionsVal = $safeImplode($profile->medical_conditions) ?: $safeImplode($legacyMedical['conditions'] ?? []);
+                        $medsVal = $safeImplode($profile->medications) ?: $safeImplode($legacyMedical['medications'] ?? []);
+                        $allergiesVal = $safeImplode($profile->allergies) ?: $safeImplode($legacyMedical['allergies'] ?? []);
+
+                        $legacyEmergency = $profile->emergency_contact ?? [];
+                        $caregiver = $profile->caregiver?->user ?? null;
+                        $caregiverProfile = $profile->caregiver ?? null;
+
+                        $emergencyName = $profile->emergency_name
+                            ?: ($legacyEmergency['name'] ?? null)
+                            ?: ($caregiver?->name ?? '');
+                        $emergencyPhone = $profile->emergency_phone
+                            ?: ($legacyEmergency['phone'] ?? null)
+                            ?: ($caregiverProfile?->phone_number ?? '');
+                        $emergencyRelationship = $profile->emergency_relationship
+                            ?: ($legacyEmergency['relationship'] ?? null)
+                            ?: ($caregiverProfile?->relationship ?? '');
+                    @endphp
                     <div class="bg-white rounded-2xl p-6 md:p-8 shadow-card mb-6">
                         <div>
                             <div class="flex items-center gap-3 mb-8 pb-4 border-b border-slate-100">
@@ -407,8 +354,13 @@
                                         <p class="profile-field-value">{{ $emergencyName ?: '—' }}</p>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="text" name="emergency_name" value="{{ old('emergency_name', $emergencyName) }}" placeholder="Contact Name"
-                                            class="profile-field-input">
+                                        <div>
+                                            <input type="text" name="emergency_name" value="{{ old('emergency_name', $emergencyName) }}" placeholder="Contact Name"
+                                                class="profile-field-input @error('emergency_name') !border-rose-500 !bg-rose-50 focus:!border-rose-500 @enderror">
+                                            @error('emergency_name')
+                                                <p class="mt-2 text-sm font-bold text-rose-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
                                     </template>
                                 </div>
 
@@ -419,8 +371,13 @@
                                         <p class="profile-field-value">{{ $emergencyPhone ?: '—' }}</p>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="text" name="emergency_phone" value="{{ old('emergency_phone', $emergencyPhone) }}" placeholder="Phone Number"
-                                            class="profile-field-input">
+                                        <div>
+                                            <input type="text" name="emergency_phone" value="{{ old('emergency_phone', $emergencyPhone) }}" placeholder="Phone Number"
+                                                class="profile-field-input @error('emergency_phone') !border-rose-500 !bg-rose-50 focus:!border-rose-500 @enderror">
+                                            @error('emergency_phone')
+                                                <p class="mt-2 text-sm font-bold text-rose-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
                                     </template>
                                 </div>
 
@@ -431,8 +388,13 @@
                                         <p class="profile-field-value">{{ $emergencyRelationship ?: '—' }}</p>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="text" name="emergency_relationship" value="{{ old('emergency_relationship', $emergencyRelationship) }}" placeholder="Relationship"
-                                            class="profile-field-input">
+                                        <div>
+                                            <input type="text" name="emergency_relationship" value="{{ old('emergency_relationship', $emergencyRelationship) }}" placeholder="Relationship"
+                                                class="profile-field-input @error('emergency_relationship') !border-rose-500 !bg-rose-50 focus:!border-rose-500 @enderror">
+                                            @error('emergency_relationship')
+                                                <p class="mt-2 text-sm font-bold text-rose-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
                                     </template>
                                 </div>
                             </div>
@@ -687,84 +649,4 @@
         </div>
     </div>
 
-    <script>
-        function uploadProfilePhoto(input) {
-            if (!input.files || !input.files[0]) return;
-
-            const file = input.files[0];
-            const statusDiv = document.getElementById('photo-status');
-
-            // Validate file type
-            const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-            if (!validTypes.includes(file.type)) {
-                statusDiv.innerHTML = '<span class="text-rose-500 text-sm">Please select a valid image (JPG, PNG, GIF, WebP)</span>';
-                return;
-            }
-
-            // Validate file size (5MB max)
-            if (file.size > 5 * 1024 * 1024) {
-                statusDiv.innerHTML = '<span class="text-rose-500 text-sm">Image must be less than 5MB</span>';
-                return;
-            }
-
-            // Show uploading status
-            statusDiv.innerHTML = '<span class="text-navy-500 text-sm flex items-center gap-1"><svg class="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Uploading...</span>';
-
-            const formData = new FormData();
-            formData.append('profile_photo', file);
-
-            fetch('{{ route("profile.photo.upload") }}', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                },
-                body: formData
-            })
-            .then(response => {
-                if (response.ok) {
-                    statusDiv.innerHTML = '<span class="text-emerald-600 text-sm flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Photo updated!</span>';
-                    setTimeout(() => window.location.reload(), 1000);
-                } else {
-                    statusDiv.innerHTML = '<span class="text-rose-500 text-sm">Failed to upload. Please try again.</span>';
-                }
-            })
-            .catch(() => {
-                statusDiv.innerHTML = '<span class="text-rose-500 text-sm">An error occurred. Please try again.</span>';
-            });
-        }
-
-        async function removeProfilePhoto() {
-            const confirmed = await window.scConfirm({
-                title: 'Remove profile photo?',
-                text: 'Your avatar will be reset to the default profile image.',
-                icon: 'warning',
-                confirmButtonText: 'Remove photo',
-                cancelButtonText: 'Cancel',
-                elderly: true,
-            });
-
-            if (!confirmed) return;
-
-            const statusDiv = document.getElementById('photo-status');
-            statusDiv.innerHTML = '<span class="text-navy-500 text-sm">Removing...</span>';
-
-            try {
-                const response = await fetch('{{ route("profile.photo.remove") }}', {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    }
-                });
-
-                if (response.ok) {
-                    statusDiv.innerHTML = '<span class="text-emerald-600 text-sm">Photo removed!</span>';
-                    setTimeout(() => window.location.reload(), 1000);
-                } else {
-                    statusDiv.innerHTML = '<span class="text-rose-500 text-sm">Failed to remove. Please try again.</span>';
-                }
-            } catch (_) {
-                statusDiv.innerHTML = '<span class="text-rose-500 text-sm">An error occurred. Please try again.</span>';
-            }
-        }
-    </script>
 </x-dashboard-layout>

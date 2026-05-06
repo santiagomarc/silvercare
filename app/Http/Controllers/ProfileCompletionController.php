@@ -84,6 +84,7 @@ class ProfileCompletionController extends Controller
         // Update profile_completed based on completion evaluation
         $profile->update([
             'profile_completed' => $completion['is_complete'],
+            'profile_skipped' => false,
         ]);
 
         if (!$completion['is_complete']) {
@@ -107,5 +108,27 @@ class ProfileCompletionController extends Controller
         }
         
         return redirect()->route('dashboard');
+    }
+
+    /**
+     * Mark the current user's profile as skipped and redirect to dashboard.
+     */
+    public function skip(): RedirectResponse
+    {
+        if (!Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        $user = Auth::user();
+        $profile = $user->profile;
+
+        if ($profile) {
+            $profile->update([
+                'profile_skipped' => true,
+                'profile_completed' => false,
+            ]);
+        }
+
+        return $this->redirectToDashboard($profile->user_type ?? 'elderly');
     }
 }

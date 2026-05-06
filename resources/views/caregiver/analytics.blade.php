@@ -350,7 +350,7 @@
                     </div>
                 @endif
 
-                <a href="{{ route('caregiver.medications.index') }}" class="mt-4 flex items-center justify-center gap-2 w-full py-3 bg-blue-50 text-blue-600 rounded-xl font-[700] hover:bg-blue-100 transition-colors">
+                <a href="{{ route('caregiver.medications.index', ['elderly' => $selectedElderlyId]) }}" class="mt-4 flex items-center justify-center gap-2 w-full py-3 bg-blue-50 text-blue-600 rounded-xl font-[700] hover:bg-blue-100 transition-colors">
                     Manage Medications →
                 </a>
             </div>
@@ -422,7 +422,7 @@
                     </div>
                 @endif
 
-                <a href="{{ route('caregiver.checklists.index') }}" class="mt-4 flex items-center justify-center gap-2 w-full py-3 bg-green-50 text-green-600 rounded-xl font-[700] hover:bg-green-100 transition-colors">
+                <a href="{{ route('caregiver.checklists.index', ['elderly' => $selectedElderlyId]) }}" class="mt-4 flex items-center justify-center gap-2 w-full py-3 bg-green-50 text-green-600 rounded-xl font-[700] hover:bg-green-100 transition-colors">
                     Manage Checklists →
                 </a>
             </div>

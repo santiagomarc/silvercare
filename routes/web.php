@@ -199,6 +199,8 @@ Route::middleware(['prevent.back'])->group(function () {
     
     Route::post('/profile/completion', [ProfileCompletionController::class, 'store'])
         ->name('profile.completion.store');
+        Route::get('/profile/completion/skip', [ProfileCompletionController::class, 'skip'])
+            ->name('profile.completion.skip');
 });
 
 // Shared authenticated routes (profile, calendar) — M5 FIX: prevent.back added

@@ -14,6 +14,7 @@ class EnsureProfileCompleted
      */
     protected array $exceptRouteNames = [
         'profile.completion',
+        'profile.completion.skip',
         'profile.completion.store',
         'logout',
     ];
@@ -43,8 +44,8 @@ class EnsureProfileCompleted
             return $next($request);
         }
 
-        // Redirect to profile completion if not complete
-        if (!$profile->profile_completed) {
+        // Redirect to profile completion if not complete and not explicitly skipped
+        if (!$profile->profile_completed && !$profile->profile_skipped) {
             return redirect()->route('profile.completion')
                 ->with('info', 'Please complete your profile before continuing.');
         }

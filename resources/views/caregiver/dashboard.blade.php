@@ -281,10 +281,13 @@
         <!-- ============================================ -->
         <!-- CARE MANAGEMENT PANEL (Action Buttons) -->
         <!-- ============================================ -->
+        @php
+            $careRouteParams = $selectedElderlyId ? ['elderly' => $selectedElderlyId] : [];
+        @endphp
         <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
             
             <!-- Manage Medications -->
-            <a href="{{ route('caregiver.medications.index', ['elderly' => $selectedElderlyId]) }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
+            <a href="{{ route('caregiver.medications.index', $careRouteParams) }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
                 <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl"></div>
                 <div class="relative p-5 flex flex-col justify-between h-full z-10">
                     <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit">
@@ -301,7 +304,7 @@
             </a>
 
             <!-- Manage Checklists -->
-            <a href="{{ route('caregiver.checklists.index', ['elderly' => $selectedElderlyId]) }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg shadow-green-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
+            <a href="{{ route('caregiver.checklists.index', $careRouteParams) }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg shadow-green-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
                 <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl"></div>
                 <div class="relative p-5 flex flex-col justify-between h-full z-10">
                     <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit">
@@ -318,7 +321,7 @@
             </a>
 
             <!-- Health Analytics -->
-            <a href="{{ route('caregiver.analytics', ['elderly' => $selectedElderlyId]) }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 shadow-lg shadow-purple-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
+            <a href="{{ route('caregiver.analytics', $careRouteParams) }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 shadow-lg shadow-purple-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
                 <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl"></div>
                 <div class="relative p-5 flex flex-col justify-between h-full z-10">
                     <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit">
@@ -335,7 +338,7 @@
             </a>
 
             <!-- Messages -->
-            <a href="{{ route('caregiver.messages.index', ['elderly' => $selectedElderlyId]) }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-sky-600 shadow-lg shadow-indigo-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
+            <a href="{{ route('caregiver.messages.index', $careRouteParams) }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-sky-600 shadow-lg shadow-indigo-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
                 <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl"></div>
                 <div class="relative p-5 flex flex-col justify-between h-full z-10">
                     <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit">
