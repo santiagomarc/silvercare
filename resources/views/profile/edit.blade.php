@@ -16,6 +16,30 @@
             'emergency_relationship',
         ];
         $hasProfileValidationErrors = $errors->hasAny($profileErrorFields);
+
+        // Helper for consistent string conversion
+        $safeImplode = function ($value) {
+            if (is_array($value)) return implode(', ', $value);
+            if (is_string($value)) {
+                $decoded = json_decode($value, true);
+                return (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) ? implode(', ', $decoded) : $value;
+            }
+            return '';
+        };
+
+        // Initialize variables early to avoid undefined variable errors
+        $legacyMedical = $profile->medical_info ?? [];
+        $conditionsVal = $safeImplode($profile->medical_conditions) ?: $safeImplode($legacyMedical['conditions'] ?? []);
+        $medsVal = $safeImplode($profile->medications) ?: $safeImplode($legacyMedical['medications'] ?? []);
+        $allergiesVal = $safeImplode($profile->allergies) ?: $safeImplode($legacyMedical['allergies'] ?? []);
+
+        $legacyEmergency = $profile->emergency_contact ?? [];
+        $caregiver = $profile->caregiver?->user ?? null;
+        $caregiverProfile = $profile->caregiver ?? null;
+
+        $emergencyName = $profile->emergency_name ?: ($legacyEmergency['name'] ?? null) ?: ($caregiver?->name ?? '');
+        $emergencyPhone = $profile->emergency_phone ?: ($legacyEmergency['phone'] ?? null) ?: ($caregiverProfile?->phone_number ?? '');
+        $emergencyRelationship = $profile->emergency_relationship ?: ($legacyEmergency['relationship'] ?? null) ?: ($caregiverProfile?->relationship ?? '');
     @endphp
 
     <x-dashboard-nav
@@ -225,7 +249,28 @@
                                         <p class="profile-field-value">{{ $profile->relationship ?: '—' }}</p>
                                     </template>
                                     <template x-if="editMode">
+                                        <div>
+                                            <input type="text" name="relationship" value="{{ old('relationship', $profile->relationship) }}" placeholder="e.g. Daughter, Son, Professional"
+                                                class="profile-field-input @error('relationship') !border-rose-500 !bg-rose-50 focus:!border-rose-500 @enderror">
+                                            @error('relationship')
+                                                <p class="mt-2 text-sm font-bold text-rose-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+                                    </template>
+                                </div>
+                                @endif
+
+                                @if($profile->isElderly())
+                                {{-- Medical Conditions (Elderly Only) --}}
+                                <div>
+                                    <label class="profile-field-label !text-rose-500">Medical Conditions</label>
+                                    <template x-if="!editMode">
+                                        <p class="profile-field-value">{{ $conditionsVal ?: 'None specified' }}</p>
+                                    </template>
+                                    <template x-if="editMode">
                                         <div class="relative">
+                                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <span class="text-rose-300">📋</span>
                                             </div>
                                             <input type="text" name="medical_conditions" value="{{ old('medical_conditions', $conditionsVal) }}" placeholder="e.g. Diabetes, Hypertension"
                                                 class="profile-field-input pl-12 !border-rose-100 !bg-rose-50/30 placeholder-rose-300 focus:!border-rose-400 @error('medical_conditions') !border-rose-500 !bg-rose-50 focus:!border-rose-500 @enderror">
@@ -299,50 +344,10 @@
                                         </div>
                                     </template>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                    @endif
+                                @endif
 
                     {{-- CARD 3: Emergency Contact (Elderly Only) --}}
                     @if($profile->isElderly())
-                    @php
-                        $safeImplode = function ($value) {
-                            if (is_array($value)) {
-                                return implode(', ', $value);
-                            }
-
-                            if (is_string($value)) {
-                                $decoded = json_decode($value, true);
-                                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                                    return implode(', ', $decoded);
-                                }
-
-                                return $value;
-                            }
-
-                            return '';
-                        };
-
-                        $legacyMedical = $profile->medical_info ?? [];
-                        $conditionsVal = $safeImplode($profile->medical_conditions) ?: $safeImplode($legacyMedical['conditions'] ?? []);
-                        $medsVal = $safeImplode($profile->medications) ?: $safeImplode($legacyMedical['medications'] ?? []);
-                        $allergiesVal = $safeImplode($profile->allergies) ?: $safeImplode($legacyMedical['allergies'] ?? []);
-
-                        $legacyEmergency = $profile->emergency_contact ?? [];
-                        $caregiver = $profile->caregiver?->user ?? null;
-                        $caregiverProfile = $profile->caregiver ?? null;
-
-                        $emergencyName = $profile->emergency_name
-                            ?: ($legacyEmergency['name'] ?? null)
-                            ?: ($caregiver?->name ?? '');
-                        $emergencyPhone = $profile->emergency_phone
-                            ?: ($legacyEmergency['phone'] ?? null)
-                            ?: ($caregiverProfile?->phone_number ?? '');
-                        $emergencyRelationship = $profile->emergency_relationship
-                            ?: ($legacyEmergency['relationship'] ?? null)
-                            ?: ($caregiverProfile?->relationship ?? '');
-                    @endphp
                     <div class="bg-white rounded-2xl p-6 md:p-8 shadow-card mb-6">
                         <div>
                             <div class="flex items-center gap-3 mb-8 pb-4 border-b border-slate-100">
