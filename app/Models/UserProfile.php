@@ -124,7 +124,7 @@ class UserProfile extends Model
      */
     public function elderlyPatients(): HasMany
     {
-        return $this->hasMany(UserProfile::class, 'caregiver_id');
+        return $this->hasMany(UserProfile::class, 'caregiver_id')->whereNull('archived_at');
     }
 
     /**
