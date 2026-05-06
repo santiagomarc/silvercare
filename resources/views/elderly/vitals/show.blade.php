@@ -203,9 +203,10 @@
                             </div>
                             <div class="flex flex-col items-end gap-2">
                                 @if($googleFitConnected)
-                                    <button onclick="syncGoogleFit()" id="syncBtn" class="px-5 py-3 bg-blue-50 text-blue-700 font-[800] rounded-xl hover:bg-blue-100 hover:shadow-md transition-all flex items-center gap-2">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                                        Sync
+                                    <button onclick="syncGoogleFit()" id="syncBtn"
+                                        class="px-5 py-3 bg-blue-50 text-blue-700 font-[800] rounded-xl hover:bg-blue-100 hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <svg id="syncBtnIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                        <span id="syncBtnLabel">Sync</span>
                                     </button>
                                     <form action="{{ route('elderly.googlefit.disconnect') }}" method="POST" class="inline">
                                         @csrf
@@ -525,8 +526,21 @@
 
         async function autoSyncGoogleFit() {
             const statusEl = document.getElementById('autoSyncStatus');
+            const syncBtn  = document.getElementById('syncBtn');
+            const syncIcon = document.getElementById('syncBtnIcon');
+            const syncLbl  = document.getElementById('syncBtnLabel');
+
+            if (syncBtn) {
+                syncBtn.disabled = true;
+                if (syncIcon) syncIcon.classList.add('animate-spin');
+                if (syncLbl)  syncLbl.textContent = 'Syncing...';
+            }
+
             try {
-                const response = await fetch('/google-fit/sync', {
+                const url = new URL('/google-fit/sync', window.location.origin);
+                url.searchParams.set('vital_type', VITAL_TYPE); // only sync this metric
+
+                const response = await fetch(url.toString(), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN, 'X-Requested-With': 'XMLHttpRequest' }
                 });
@@ -542,22 +556,40 @@
                 }
             } catch (error) {
                 if(statusEl) statusEl.innerHTML = '<div class="w-2.5 h-2.5 bg-orange-400 rounded-full"></div><span class="text-orange-500">Sync idle</span>';
+            } finally {
+                if (syncBtn) {
+                    syncBtn.disabled = false;
+                    if (syncIcon) syncIcon.classList.remove('animate-spin');
+                    if (syncLbl)  syncLbl.textContent = 'Sync';
+                }
             }
         }
 
         async function syncGoogleFit() {
-            const syncBtn = document.getElementById('syncBtn');
-            if (!syncBtn) return;
-            const originalContent = syncBtn.innerHTML;
+            const syncBtn  = document.getElementById('syncBtn');
+            const syncIcon = document.getElementById('syncBtnIcon');
+            const syncLbl  = document.getElementById('syncBtnLabel');
+            if (!syncBtn || syncBtn.disabled) return;
+
             syncBtn.disabled = true;
-            syncBtn.innerHTML = '<span>Checking...</span>';
+            if (syncIcon) syncIcon.classList.add('animate-spin');
+            if (syncLbl)  syncLbl.textContent = 'Syncing...';
 
             try {
-                const response = await fetch('/google-fit/sync', {
+                const url = new URL('/google-fit/sync', window.location.origin);
+                url.searchParams.set('vital_type', VITAL_TYPE); // scoped to current metric
+
+                const response = await fetch(url.toString(), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN, 'X-Requested-With': 'XMLHttpRequest' }
                 });
                 const data = await response.json();
+
+                if (response.status === 401) {
+                    window.scToast('Google Fit session expired. Please reconnect.', 'error', { elderly: true });
+                    return;
+                }
+
                 if (!response.ok) throw new Error(data.message || 'Sync failed');
 
                 if (data.synced && Object.keys(data.synced).length > 0) {
@@ -570,7 +602,8 @@
                 window.scToast(error.message, 'error', { elderly: true });
             } finally {
                 syncBtn.disabled = false;
-                syncBtn.innerHTML = originalContent;
+                if (syncIcon) syncIcon.classList.remove('animate-spin');
+                if (syncLbl)  syncLbl.textContent = 'Sync';
             }
         }
 

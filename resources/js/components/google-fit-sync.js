@@ -1,9 +1,12 @@
 /**
  * Alpine.data('googleFitSync') — Google Fit sync button handler.
+ *
+ * Accepts an optional vitalType string so individual vitals screens
+ * can scope the sync to just their relevant metric type.
  */
 import Alpine from 'alpinejs';
 
-export default function googleFitSync() {
+export default function googleFitSync(vitalType = null) {
     return {
         syncing: false,
 
@@ -13,7 +16,12 @@ export default function googleFitSync() {
             const toast = Alpine.store('toast');
 
             try {
-                const resp = await fetch('/google-fit/sync', {
+                // Build URL with optional vital_type param to avoid syncing all 4
+                // vital types when we only need one (e.g. on the heart-rate page).
+                const url = new URL('/google-fit/sync', window.location.origin);
+                if (vitalType) url.searchParams.set('vital_type', vitalType);
+
+                const resp = await fetch(url.toString(), {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -24,6 +32,13 @@ export default function googleFitSync() {
                 });
 
                 const data = await resp.json();
+
+                // 401 = refresh token stale → user must reconnect
+                if (resp.status === 401) {
+                    toast?.error('Google Fit session expired. Please reconnect.');
+                    return;
+                }
+
                 if (!resp.ok) throw new Error(data.message || 'Sync failed');
 
                 toast?.success('Google Fit synced!');

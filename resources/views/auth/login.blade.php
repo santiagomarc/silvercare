@@ -67,11 +67,16 @@
 
                     <!-- Google Sign-In -->
                     <div class="fade-in-section transition-delay-300">
-                        <a href="{{ route('auth.google.redirect') }}" class="w-full inline-flex items-center justify-center gap-3 border-2 border-gray-200 hover:border-[#000080] bg-white py-3 rounded-xl font-bold text-gray-800 transition-all duration-200">
+                        <a
+                            href="{{ route('auth.google.redirect') }}"
+                            id="googleSignInBtn"
+                            onclick="handleGoogleSignIn(event)"
+                            class="w-full inline-flex items-center justify-center gap-3 border-2 border-gray-200 hover:border-[#000080] bg-white py-3 rounded-xl font-bold text-gray-800 transition-all duration-200"
+                        >
                             <svg class="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
                                 <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.2-1.4 3.4-5.5 3.4-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 2.9 14.6 2 12 2 6.5 2 2 6.5 2 12s4.5 10 10 10c5.8 0 9.7-4.1 9.7-9.9 0-.7-.1-1.3-.2-1.9H12z"/>
                             </svg>
-                            Continue with Google
+                            <span id="googleSignInLabel">Continue with Google</span>
                         </a>
                     </div>
 
@@ -168,6 +173,26 @@
     </div>
 
     <script>
+        // ── Google OAuth UX: loading state + SweetAlert2 error toast ──────────
+        function handleGoogleSignIn(e) {
+            const btn   = document.getElementById('googleSignInBtn');
+            const label = document.getElementById('googleSignInLabel');
+            if (btn.dataset.loading) { e.preventDefault(); return; } // prevent double-click
+            btn.dataset.loading = '1';
+            btn.classList.add('opacity-70', 'cursor-not-allowed');
+            label.textContent = 'Redirecting…';
+        }
+
+        // Flash swal_error from ProviderController (OAuth failure) as a premium toast.
+        @if(session('swal_error'))
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof window.scToast === 'function') {
+                window.scToast({{ Js::from(session('swal_error')) }}, 'error');
+            }
+        });
+        @endif
+
+        // ── Intersection observer for fade-in sections ────────────────────────
         document.addEventListener('DOMContentLoaded', function() {
             const observerOptions = {
                 root: null,

@@ -153,7 +153,7 @@ class GoogleFitControllerTest extends TestCase
         $service = $this->mock(GoogleFitService::class, function ($mock) use ($profile, $user): void {
             $mock->shouldReceive('syncAll')
                 ->once()
-                ->with($profile->id, $user->id)
+                ->with($profile->id, $user->id, null)
                 ->andReturn([
                     'heart_rate' => '2 readings',
                     'steps' => 2500,

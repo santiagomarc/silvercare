@@ -52,3 +52,11 @@ Schedule::command('profiles:delete-incomplete --hours=24')
     ->hourly()
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/incomplete-profiles-cleanup.log'));
+
+// Background Google Fit sync — runs every 2 hours for all connected elderly users.
+// Keeps health_metrics up to date without requiring a manual page visit.
+Schedule::command('app:sync-google-fit')
+    ->everyTwoHours()
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/google-fit-sync.log'));
+
