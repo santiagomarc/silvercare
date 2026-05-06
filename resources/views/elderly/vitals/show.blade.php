@@ -342,7 +342,7 @@
     {{-- ─────────────────────────────────────────────
          RECORD MODAL
     ───────────────────────────────────────────── --}}
-    <div id="recordModal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 transition-all duration-300 opacity-0" style="transition: opacity 0.3s;">
+    <div id="recordModal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[60] hidden items-center justify-center p-4 transition-all duration-300 opacity-0" style="transition: opacity 0.3s;">
         <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden transform scale-95 transition-transform duration-300" id="recordModalContent">
             <div class="px-8 py-6 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
                 <div>

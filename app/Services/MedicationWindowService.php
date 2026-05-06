@@ -11,10 +11,13 @@ class MedicationWindowService
     /**
      * @return array{scheduled_time: Carbon, window_start: Carbon, window_end: Carbon, is_within_window: bool, is_past_window: bool, is_before_window: bool, can_take: bool, can_undo: bool}
      */
-    public function forToday(string $time, ?Carbon $now = null, int $graceMinutes = self::DEFAULT_GRACE_MINUTES): array
+    public function forToday(string $time, ?Carbon $now = null, int $graceMinutes = self::DEFAULT_GRACE_MINUTES, ?string $timezone = null): array
     {
-        $current = $now?->copy() ?? Carbon::now();
-        $scheduledDateTime = Carbon::parse(Carbon::today()->format('Y-m-d') . ' ' . $time);
+        // C9 FIX: Server-timezone assumption documented. If a client is in a different
+        // timezone, we must explicitly pass it here to prevent edge-case date shifting at midnight.
+        $tz = $timezone ?? config('app.timezone', 'Asia/Manila');
+        $current = $now?->copy() ?? Carbon::now($tz);
+        $scheduledDateTime = Carbon::parse(Carbon::now($tz)->format('Y-m-d') . ' ' . $time, $tz);
 
         return $this->build($scheduledDateTime, $current, $graceMinutes);
     }

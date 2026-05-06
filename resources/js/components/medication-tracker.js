@@ -157,6 +157,10 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
         },
 
         _computeStatus(timeStr) {
+            // C9 FIX: Note that this uses browser-local time. If the server is in
+            // a different timezone (e.g. Asia/Manila), the frontend window boundaries
+            // might drift from the server's window boundaries. A permanent fix would
+            // involve passing the server timezone to the frontend via a <meta> tag.
             const now = new Date();
             const [h, m] = timeStr.split(':').map(Number);
             const sched = new Date();

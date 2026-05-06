@@ -670,6 +670,6 @@
     </main>
 
     {{-- Caregiver AI Health Analyst Widget --}}
-    <x-caregiver-ai-widget />
+    <x-ai-chat-widget role="caregiver" />
 
 </x-dashboard-layout>

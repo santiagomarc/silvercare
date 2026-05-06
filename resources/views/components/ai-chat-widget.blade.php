@@ -1,3 +1,5 @@
+@props(['role' => 'elderly'])
+
 {{-- ============================================================
      SilverCare Ambient AI Companion
      ============================================================ --}}
@@ -30,6 +32,13 @@
         --ai-accent: #166534;
         --ai-accent-soft: #dcfce7;
         --ai-highlight: #15803d;
+    }
+
+    /* Caregiver default theme */
+    .ai-theme-caregiver {
+        --ai-accent: #7e22ce;
+        --ai-accent-soft: #f3e8ff;
+        --ai-highlight: #9333ea;
     }
 
     .ai-glass-shell {
@@ -172,13 +181,17 @@
             <span class="ai-orb-ring absolute inset-0 rounded-full border-2" style="border-color: color-mix(in srgb, var(--ai-accent) 40%, transparent 60%);"></span>
             <span class="ai-orb absolute inset-2 rounded-full shadow-xl" style="background: radial-gradient(circle at 30% 20%, #ffffff 0%, color-mix(in srgb, var(--ai-highlight) 30%, #ffffff 70%) 42%, color-mix(in srgb, var(--ai-accent) 48%, #ffffff 52%) 100%);"></span>
             <span class="relative z-10 flex h-full w-full items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9 drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M11.25 3.75a8.25 8.25 0 108.25 8.25M11.25 3.75A8.25 8.25 0 0120.4 9M11.25 3.75c2.4 1.9 3.9 4.6 4.2 7.65m-8.7-2.4c.95 1.15 2.35 1.8 3.85 1.8M5.25 12.75h1.5m8.25 0h3" />
-                </svg>
+                @if($role === 'caregiver')
+                    <x-lucide-chart-column class="h-10 w-10 drop-shadow text-white" aria-hidden="true" />
+                @else
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9 drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M11.25 3.75a8.25 8.25 0 108.25 8.25M11.25 3.75A8.25 8.25 0 0120.4 9M11.25 3.75c2.4 1.9 3.9 4.6 4.2 7.65m-8.7-2.4c.95 1.15 2.35 1.8 3.85 1.8M5.25 12.75h1.5m8.25 0h3" />
+                    </svg>
+                @endif
             </span>
-            <span class="pointer-events-none absolute -left-44 top-1/2 -translate-y-1/2 rounded-2xl border px-5 py-3 text-left text-sm font-semibold opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100"
+            <span class="pointer-events-none absolute -left-44 top-1/2 -translate-y-1/2 rounded-2xl border px-5 py-3 text-left text-sm font-semibold opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100 whitespace-nowrap"
                   style="background: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.7); color: #334155; transform: translate(12px, -50%);">
-                Ask your companion
+                @if($role === 'caregiver') AI Health Analyst @else Ask your companion @endif
             </span>
         </button>
     </div>
@@ -224,7 +237,7 @@
                     </div>
                     <div class="flex flex-col justify-center">
                         <div class="flex items-center gap-2">
-                            <h2 class="text-2xl font-extrabold tracking-tight text-slate-900">Silvia</h2>
+                            <h2 class="text-2xl font-extrabold tracking-tight text-slate-900">@if($role === 'caregiver') Analyst @else Silvia @endif</h2>
                             <span x-show="isStreaming" class="text-xs font-bold uppercase tracking-wider" style="color: var(--ai-accent);">Composing...</span>
                         </div>
                     </div>
@@ -272,8 +285,16 @@
 
             <div x-show="!isLoadingHistory && messages.length === 0" class="ai-message-in pb-8" style="display:none;">
                 <div class="rounded-[2rem] border bg-white/85 p-6 shadow-sm" style="border-color: rgba(255,255,255,0.75);">
-                    <h3 class="text-3xl font-extrabold tracking-tight text-slate-900">Let us plan today together.</h3>
-                    <p class="mt-3 text-lg text-slate-600">I can break down medications, summarize health trends, and help you finish tasks with less stress.</p>
+                    <h3 class="text-3xl font-extrabold tracking-tight text-slate-900">
+                        @if($role === 'caregiver') AI Health Analyst @else Let us plan today together. @endif
+                    </h3>
+                    <p class="mt-3 text-lg text-slate-600">
+                        @if($role === 'caregiver')
+                            I can analyze your patient's health data, medication adherence, and identify trends. Ask me anything about their well-being.
+                        @else
+                            I can break down medications, summarize health trends, and help you finish tasks with less stress.
+                        @endif
+                    </p>
                 </div>
 
                 <div class="mt-5 space-y-3">
@@ -321,7 +342,7 @@
                     x-model="input"
                     x-ref="chatInput"
                     @keydown.escape="closeChat()"
-                    placeholder="Tell me what you need help with"
+                    placeholder="@if($role === 'caregiver') Ask about your patient's health... @else Tell me what you need help with @endif"
                     class="w-full rounded-full border-2 bg-white/95 py-4 pl-6 pr-24 text-lg font-medium text-slate-800 shadow-inner transition placeholder:text-slate-400 focus:outline-none"
                     style="border-color: color-mix(in srgb, var(--ai-highlight) 18%, #dbeafe 82%);"
                     :disabled="isLoading"
@@ -386,6 +407,13 @@
 
     document.addEventListener('alpine:init', () => {
         Alpine.data('aiCompanion', () => ({
+            role: '{{ $role }}',
+            historyRoute: '{{ $role === "caregiver" ? route("caregiver.ai-analyst.history") : route("elderly.ai-assistant.history") }}',
+            newSessionRoute: '{{ $role === "caregiver" ? route("caregiver.ai-analyst.new-session") : route("elderly.ai-assistant.new-session") }}',
+            streamRoute: '{{ $role === "caregiver" ? route("caregiver.ai-analyst.stream") : route("elderly.ai-assistant.stream") }}',
+            chatRoute: '{{ $role === "caregiver" ? route("caregiver.ai-analyst.chat") : route("elderly.ai-assistant.chat") }}',
+            sessionStorageKey: '{{ $role === "caregiver" ? "silvercare.caregiver.ai.session_id" : "silvercare.elderly.ai.session_id" }}',
+            
             isOpen: false,
             isExpanded: false,
             messages: [],
@@ -396,20 +424,25 @@
             sessionId: null,
             suggestedPrompts: [],
             historyLoaded: false,
-            sessionStorageKey: 'silvercare.elderly.ai.session_id',
             themeIndex: 0,
-            themes: [
-                { key: 'ai-theme-coast', label: 'Coast' },
-                { key: 'ai-theme-sunrise', label: 'Sunrise' },
-                { key: 'ai-theme-grove', label: 'Grove' },
-            ],
+            
+            themes() {
+                if (this.role === 'caregiver') {
+                    return [{ key: 'ai-theme-caregiver', label: 'Caregiver' }];
+                }
+                return [
+                    { key: 'ai-theme-coast', label: 'Coast' },
+                    { key: 'ai-theme-sunrise', label: 'Sunrise' },
+                    { key: 'ai-theme-grove', label: 'Grove' },
+                ];
+            },
 
             get themeLabel() {
-                return this.themes[this.themeIndex].label;
+                return this.themes()[this.themeIndex].label;
             },
 
             themeClass() {
-                return this.themes[this.themeIndex].key;
+                return this.themes()[this.themeIndex].key;
             },
 
             init() {
@@ -430,7 +463,8 @@
             },
 
             cycleTheme() {
-                this.themeIndex = (this.themeIndex + 1) % this.themes.length;
+                if (this.role === 'caregiver') return;
+                this.themeIndex = (this.themeIndex + 1) % this.themes().length;
             },
 
             openChat() {
@@ -487,7 +521,7 @@
                 this.isLoadingHistory = true;
 
                 try {
-                    const url = new URL('{{ route("elderly.ai-assistant.history") }}', window.location.origin);
+                    const url = new URL(this.historyRoute, window.location.origin);
                     if (this.sessionId) {
                         url.searchParams.set('session_id', this.sessionId);
                     }
@@ -510,11 +544,19 @@
                         this.suggestedPrompts = data.suggested_prompts || [];
 
                         if (this.suggestedPrompts.length === 0) {
-                            this.suggestedPrompts = [
-                                'What medications should I prioritize today?',
-                                'Summarize my progress in simple steps.',
-                                'Help me review my vitals and next actions.'
-                            ];
+                            if (this.role === 'caregiver') {
+                                this.suggestedPrompts = [
+                                    'What is my patient\'s medication adherence?',
+                                    'Are there any worrying vitals?',
+                                    'Summarize the patient\'s health status.'
+                                ];
+                            } else {
+                                this.suggestedPrompts = [
+                                    'What medications should I prioritize today?',
+                                    'Summarize my progress in simple steps.',
+                                    'Help me review my vitals and next actions.'
+                                ];
+                            }
                         }
 
                         this.historyLoaded = true;
@@ -538,7 +580,7 @@
 
             async startNewSession() {
                 try {
-                    const res = await fetch('{{ route("elderly.ai-assistant.new-session") }}', {
+                    const res = await fetch(this.newSessionRoute, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -575,7 +617,7 @@
                 this.scrollToBottom();
 
                 try {
-                    const res = await fetch('{{ route("elderly.ai-assistant.stream") }}', {
+                    const res = await fetch(this.streamRoute, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -649,7 +691,7 @@
 
             async sendMessageFallback(msg) {
                 try {
-                    const res = await fetch('{{ route("elderly.ai-assistant.chat") }}', {
+                    const res = await fetch(this.chatRoute, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

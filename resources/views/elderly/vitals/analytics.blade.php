@@ -637,7 +637,7 @@
 </div>
 
 <!-- Detail Modal/Drawer -->
-<div id="detailModal" class="fixed inset-0 z-50 hidden">
+<div id="detailModal" class="fixed inset-0 z-[60] hidden">
     <div class="absolute inset-0 bg-black/40 modal-backdrop" onclick="closeDetailModal()"></div>
     <div class="absolute right-0 top-0 bottom-0 w-full max-w-xl bg-white shadow-2xl drawer-slide overflow-y-auto" id="detailDrawer">
         <div id="detailModalContent">
