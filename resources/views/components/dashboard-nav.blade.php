@@ -17,6 +17,8 @@
     'role' => 'elderly',
     'unreadNotifications' => 0,
     'showBack' => false,
+    'backUrl' => null,
+    'backLabel' => 'Back to Dashboard',
 ])
 
 @php
@@ -26,6 +28,7 @@
         : 'bg-blue-100 text-[#000080] group-hover:bg-[#000080]';
     $profileNameHover = $isCaregiver ? 'group-hover:text-purple-600' : 'group-hover:text-[#000080]';
     $roleLabel = $isCaregiver ? 'Caregiver' : 'Patient';
+    $actualBackUrl = $backUrl ?? route('caregiver.dashboard');
 @endphp
 
 <nav x-data="{ mobileMenuOpen: false }" class="sticky top-0 z-50 border-b border-white/60 bg-white/70 backdrop-blur-xl shadow-[0_18px_40px_-32px_rgba(15,23,42,0.42)]">
@@ -51,9 +54,9 @@
 
             {{-- Back to Dashboard (Caregiver sub-pages only) --}}
             @if($isCaregiver && $showBack)
-                <a href="{{ route('caregiver.dashboard') }}" class="hidden sm:flex items-center gap-1.5 text-sm font-bold text-gray-500 hover:text-purple-700 hover:bg-purple-50 px-4 py-2 rounded-xl transition-all group">
+                <a href="{{ $actualBackUrl }}" class="hidden sm:flex items-center gap-1.5 text-sm font-bold text-gray-500 hover:text-purple-700 hover:bg-purple-50 px-4 py-2 rounded-xl transition-all group">
                     <svg class="w-4 h-4 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                    Back to Dashboard
+                    {{ $backLabel }}
                 </a>
             @endif
 

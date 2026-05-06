@@ -20,25 +20,48 @@
     @keyframes cgChatFadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
     .cg-typing-cursor::after { content:'▊'; animation: cgBlink 0.7s infinite; color: #6b7280; }
     @keyframes cgBlink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    .cg-ai-companion-root {
+        --ai-accent: #7e22ce;
+        --ai-accent-soft: #f3e8ff;
+        --ai-highlight: #9333ea;
+    }
+    .ai-orb { animation: aiOrbBreath 3s ease-in-out infinite; }
+    .ai-orb-ring { animation: aiRingRipple 2.4s ease-out infinite; }
+    @keyframes aiOrbBreath { 0%, 100% { transform: scale(1); opacity: 0.88; } 50% { transform: scale(1.08); opacity: 1; } }
+    @keyframes aiRingRipple { from { transform: scale(0.92); opacity: 0.45; } to { transform: scale(1.25); opacity: 0; } }
 </style>
 
-<div x-data="caregiverAiWidget()" class="fixed z-50" :class="isFullScreen ? 'inset-0' : 'bottom-6 right-6'">
+<div x-data="caregiverAiWidget()" class="cg-ai-companion-root fixed z-50" :class="isFullScreen ? 'inset-0' : 'bottom-6 right-6'">
     
-    {{-- Floating Button --}}
-    <button 
-        x-show="!isOpen" 
-        @click="openChat()"
-        x-transition:enter="transition ease-out duration-300"
-        x-transition:enter-start="opacity-0 scale-50"
-        x-transition:enter-end="opacity-100 scale-100"
-        x-transition:leave="transition ease-in duration-200"
+    {{-- Trigger Orb --}}
+    <div
+        x-show="!isOpen"
+        class="absolute bottom-6 right-6 sm:bottom-10 sm:right-10 pointer-events-auto"
+        x-transition:enter="transition ease-out duration-500"
+        x-transition:enter-start="opacity-0 translate-y-8 scale-75"
+        x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+        x-transition:leave="transition ease-in duration-250"
         x-transition:leave-start="opacity-100 scale-100"
-        x-transition:leave-end="opacity-0 scale-50"
-        class="w-16 h-16 bg-gradient-to-r from-purple-700 to-purple-500 rounded-full shadow-2xl flex items-center justify-center text-white hover:scale-110 transition-transform border-4 border-white focus:outline-none"
-        aria-label="Open AI Health Analyst"
+        x-transition:leave-end="opacity-0 scale-70"
     >
-        <x-lucide-chart-column class="w-10 h-10" aria-hidden="true" />
-    </button>
+        <button
+            @click="openChat()"
+            class="group relative h-20 w-20 sm:h-24 sm:w-24 rounded-full focus:outline-none focus:ring-4"
+            style="background: linear-gradient(145deg, var(--ai-accent-soft), color-mix(in srgb, var(--ai-accent) 22%, #ffffff 78%)); color: var(--ai-accent);"
+            aria-label="Open AI Health Analyst"
+        >
+            <span class="ai-orb-ring absolute inset-0 rounded-full border-2" style="border-color: color-mix(in srgb, var(--ai-accent) 40%, transparent 60%);"></span>
+            <span class="ai-orb absolute inset-2 rounded-full shadow-xl" style="background: radial-gradient(circle at 30% 20%, #ffffff 0%, color-mix(in srgb, var(--ai-highlight) 30%, #ffffff 70%) 42%, color-mix(in srgb, var(--ai-accent) 48%, #ffffff 52%) 100%);"></span>
+            <span class="relative z-10 flex h-full w-full items-center justify-center text-white">
+                <x-lucide-chart-column class="w-10 h-10 drop-shadow" aria-hidden="true" />
+            </span>
+            <span class="pointer-events-none absolute -left-44 top-1/2 -translate-y-1/2 rounded-2xl border px-5 py-3 text-left text-sm font-semibold opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100"
+                  style="background: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.7); color: #334155; transform: translate(12px, -50%); w-max">
+                AI Analyst
+            </span>
+        </button>
+    </div>
 
     {{-- Chat Window --}}
     <div 

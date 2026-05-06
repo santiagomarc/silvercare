@@ -174,18 +174,48 @@ export async function flushOfflineQueue() {
                     credentials: 'same-origin',
                 });
 
-                if (response.ok || (response.status >= 400 && response.status < 500)) {
+                if (response.ok) {
+                    // 2xx: success — remove from queue.
                     await deleteQueuedRequest(item.id);
                     synced++;
-
                     window.dispatchEvent(new CustomEvent('offline-queue-item-synced', {
                         detail: { url: item.url, method: item.method },
                     }));
                     continue;
                 }
 
+                // C14 FIX: 4xx errors indicate the request is permanently invalid
+                // and will never succeed — remove from queue but NOTIFY the user
+                // instead of silently discarding their offline action.
+                if (response.status >= 400 && response.status < 500) {
+                    let errorMessage = `An offline action could not be saved (error ${response.status}).`;
+
+                    try {
+                        const errData = await response.clone().json();
+                        if (errData?.message) errorMessage = errData.message;
+                    } catch {
+                        // Non-JSON error body — generic message is fine.
+                    }
+
+                    if (response.status === 401 || response.status === 403) {
+                        errorMessage = 'Your session has expired. Please log in again to sync your offline changes.';
+                    }
+
+                    await deleteQueuedRequest(item.id);
+                    window.dispatchEvent(new CustomEvent('offline-queue-item-failed', {
+                        detail: { url: item.url, status: response.status, message: errorMessage },
+                    }));
+
+                    if (typeof window.scToast === 'function') {
+                        window.scToast(errorMessage, 'error');
+                    }
+                    continue;
+                }
+
+                // 5xx = server error — leave in queue and retry next interval.
                 break;
             } catch {
+                // Network error — leave in queue and retry next interval.
                 break;
             }
         }

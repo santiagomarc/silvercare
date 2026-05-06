@@ -1,50 +1,12 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Manage Medications - SilverCare</title>
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="{{ asset('assets/icons/silvercare.png') }}">
-    <link rel="apple-touch-icon" href="{{ asset('assets/icons/silvercare.png') }}">
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<x-dashboard-layout>
+    <x-slot:title>Manage Medications - SilverCare</x-slot:title>
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-
-    <style>
-        body { font-family: 'Montserrat', sans-serif; }
-    </style>
-</head>
-<body class="bg-[#EBEBEB] min-h-screen">
-
-    <!-- NAV BAR -->
-    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div class="max-w-[1600px] mx-auto px-6 lg:px-12 h-16 flex justify-between items-center">
-            <div class="flex items-center gap-6">
-                <a href="{{ route('caregiver.dashboard') }}" class="flex items-center gap-3 group">
-                    <img src="{{ asset('assets/icons/silvercare.png') }}" alt="SilverCare" class="w-9 h-9 object-contain group-hover:scale-105 transition-transform">
-                    <h1 class="text-xl font-[900] tracking-tight text-gray-900 hidden sm:block">SILVER<span class="text-[#000080]">CARE</span></h1>
-                </a>
-                <div class="h-6 w-[1px] bg-gray-200 hidden md:block"></div>
-                <div class="hidden md:block">
-                    <h2 class="text-lg font-[800] text-gray-900">Manage Medications</h2>
-                    <p class="text-xs text-gray-500 font-medium -mt-0.5">{{ now()->format('l, F j, Y') }}</p>
-                </div>
-            </div>
-            
-            <div class="flex items-center gap-4">
-                <a href="{{ route('caregiver.dashboard', ['elderly' => $selectedElderly->id]) }}" class="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-sm transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                    <span class="hidden sm:inline">Back to Dashboard</span>
-                </a>
-            </div>
-        </div>
-    </nav>
+    <x-dashboard-nav
+        title="Manage Medications"
+        subtitle="{{ now()->format('l, F j, Y') }}"
+        role="caregiver"
+        :show-back="true"
+    />
 
     <!-- MAIN CONTENT -->
     <main class="max-w-[1600px] mx-auto px-6 lg:px-12 py-6">
@@ -228,5 +190,4 @@
         </div>
     </main>
 
-</body>
-</html>
+</x-dashboard-layout>

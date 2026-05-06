@@ -130,7 +130,10 @@
                                                 </label>
 
                                                 @if($profile->profile_photo)
-                                                <button type="button" @click="removeProfilePhoto()" class="flex items-center gap-1.5 bg-rose-500 text-white px-4 py-2 rounded-lg font-semibold text-sm shadow hover:-translate-y-0.5 transition-all min-h-touch">
+                                                {{-- C4 FIX: scConfirm guard before removing profile photo --}}
+                                                <button type="button"
+                                                    @click="window.scConfirm({ icon: 'warning', elderly: true, title: 'Remove Photo?', text: 'Are you sure you want to remove your profile photo?', confirmButtonText: 'Yes, Remove It', cancelButtonText: 'Keep Photo' }).then(ok => { if(ok) removeProfilePhoto(); })"
+                                                    class="flex items-center gap-1.5 bg-rose-500 text-white px-4 py-2 rounded-lg font-semibold text-sm shadow hover:-translate-y-0.5 transition-all min-h-touch">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                                     Remove
                                                 </button>
@@ -437,9 +440,9 @@
                             }
                         },
                         async validatePin() {
-                            if (this.pin.length !== 6) { 
-                                window.Swal.fire({ icon: 'warning', title: 'Invalid PIN', text: 'Please enter all 6 digits.', confirmButtonColor: '#000080' });
-                                return; 
+                            if (this.pin.length !== 6) {
+                                window.scAlert({ icon: 'warning', title: 'Invalid PIN', text: 'Please enter all 6 digits.', elderly: true });
+                                return;
                             }
                             this.loading = true;
                             this.error = '';
@@ -458,15 +461,19 @@
                                     this.caregiver = data;
                                     this.step = 'confirm';
                                 } else {
-                                    window.Swal.fire({ icon: 'error', title: 'Invalid PIN', text: data.message || 'The PIN you entered is invalid or expired.', confirmButtonColor: '#000080' });
+                                    window.scAlert({ icon: 'error', title: 'Invalid PIN', text: data.message || 'The PIN you entered is invalid or expired.', elderly: true });
                                 }
                             } catch (e) {
-                                window.Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong. Please try again.', confirmButtonColor: '#000080' });
+                                window.scAlert({ icon: 'error', title: 'Error', text: 'Something went wrong. Please check your connection and try again.', elderly: true });
                             } finally {
                                 this.loading = false;
                             }
                         },
-                        async confirmLink() {
+                        async confirmLink(forceSwitch = false) {
+                            // C1 + C7 FIX: Backend now always returns JSON.
+                            // If the user is already linked to another caregiver,
+                            // a 409 'switch_required' response triggers a SweetAlert2
+                            // confirmation before re-sending with force_switch=true.
                             this.loading = true;
                             try {
                                 const res = await fetch('{{ route('elderly.confirm-link') }}', {
@@ -476,24 +483,45 @@
                                         'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
                                         'Accept': 'application/json',
                                     },
-                                    body: JSON.stringify({ code: this.caregiver.code }),
+                                    body: JSON.stringify({ code: this.caregiver.code, force_switch: forceSwitch }),
                                 });
                                 const data = await res.json();
-                                if (res.ok) {
-                                    await window.Swal.fire({
-                                        icon: 'success',
-                                        title: 'Connected!',
-                                        text: 'You have successfully linked with your caregiver.',
-                                        timer: 1500,
-                                        showConfirmButton: false,
-                                        allowOutsideClick: false
+
+                                // C7: Server signals an existing link must be confirmed
+                                if (res.status === 409 && data.switch_required) {
+                                    this.loading = false;
+                                    const confirmed = await window.scConfirm({
+                                        icon: 'warning',
+                                        elderly: true,
+                                        title: 'Switch Caregiver?',
+                                        html: `<p class="text-lg text-slate-600 mt-2">You are currently connected to <strong>${data.existing_name}</strong>.<br>Do you want to switch to <strong>${data.new_name}</strong>?<br><br>Your current caregiver will lose access.</p>`,
+                                        confirmButtonText: 'Yes, Switch Caregiver',
+                                        cancelButtonText: 'Keep Current Caregiver',
                                     });
-                                    window.location.reload();
-                                } else {
-                                    throw new Error(data.message || 'Failed to connect.');
+                                    if (confirmed) {
+                                        await this.confirmLink(true);
+                                    }
+                                    return;
                                 }
+
+                                if (!res.ok || !data.success) {
+                                    throw new Error(data.message || 'Failed to connect. Please try again.');
+                                }
+
+                                // Success
+                                await window.scAlert({
+                                    icon: 'success',
+                                    elderly: true,
+                                    title: 'Connected! 🎉',
+                                    text: data.message || 'You have successfully linked with your caregiver.',
+                                    timer: 2000,
+                                    timerProgressBar: true,
+                                    showConfirmButton: false,
+                                    allowOutsideClick: false,
+                                });
+                                window.location.reload();
                             } catch (e) {
-                                window.Swal.fire({ icon: 'error', title: 'Connection Failed', text: e.message || 'Please try again.', confirmButtonColor: '#000080' });
+                                window.scAlert({ icon: 'error', elderly: true, title: 'Connection Failed', text: e.message || 'Please try again.' });
                             } finally {
                                 this.loading = false;
                             }
@@ -521,7 +549,18 @@
 
                                     <div x-show="showUnlink" x-cloak class="rounded-xl border border-rose-200 bg-white p-3">
                                         <p class="text-sm font-semibold text-slate-600 mb-2">Confirm unlink by entering your password.</p>
-                                        <form method="POST" action="{{ route('elderly.unlink-caregiver') }}" class="space-y-2">
+                                        {{-- C3 FIX: data-confirm pipes this destructive form through scConfirm SweetAlert2 --}}
+                                        <form
+                                            method="POST"
+                                            action="{{ route('elderly.unlink-caregiver') }}"
+                                            class="space-y-2"
+                                            data-confirm="Are you sure you want to unlink your caregiver?"
+                                            data-confirm-title="Unlink Caregiver?"
+                                            data-confirm-icon="warning"
+                                            data-confirm-confirm-text="Yes, Unlink"
+                                            data-confirm-cancel-text="Keep My Caregiver"
+                                            data-confirm-elderly="true"
+                                        >
                                             @csrf
                                             <input type="password"
                                                    name="password"

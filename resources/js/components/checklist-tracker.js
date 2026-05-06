@@ -10,6 +10,10 @@ export default function checklistTracker(completedCount = 0, totalCount = 0) {
         completed: completedCount,
         total: totalCount,
         expanded: completedCount < totalCount,
+        // C2 FIX: processing flag prevents double-tap race conditions.
+        // Native btn.disabled alone is insufficient — two tap events can
+        // queue before the first async handler flips the button state.
+        processing: false,
 
         init() {
             this.$watch('completed', (value) => {
@@ -63,6 +67,11 @@ export default function checklistTracker(completedCount = 0, totalCount = 0) {
             const item = el.closest('.checklist-item');
             if (!item) return;
 
+            // C2 FIX: Top-level processing guard — must be the very first
+            // check, before any async Swal dialog, to catch double-taps.
+            if (this.processing) return;
+            this.processing = true;
+
             const btn = el;
             const isCompleted = item.dataset.completed === 'true';
 
@@ -85,6 +94,7 @@ export default function checklistTracker(completedCount = 0, totalCount = 0) {
                 });
 
                 if (!confirmed.isConfirmed) {
+                    this.processing = false;
                     return; // Stop execution if they cancel
                 }
             }
@@ -184,6 +194,7 @@ export default function checklistTracker(completedCount = 0, totalCount = 0) {
                 Alpine.store('toast')?.error('Failed to update task');
             } finally {
                 btn.disabled = false;
+                this.processing = false;
             }
         },
     };

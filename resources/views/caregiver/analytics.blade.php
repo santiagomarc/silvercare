@@ -9,24 +9,42 @@
     </style>
     @endpush
 
-    {{-- Navigation --}}
-    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div class="max-w-[1600px] mx-auto px-6 lg:px-12 h-16 flex justify-between items-center">
-            <div class="flex items-center gap-6">
-                <a href="{{ route('caregiver.dashboard') }}" class="flex items-center gap-3 group">
-                    <img src="{{ asset('assets/icons/silvercare.png') }}" alt="SilverCare" class="w-9 h-9 object-contain group-hover:scale-105 transition-transform">
-                    <h1 class="text-xl font-[900] tracking-tight text-gray-900 hidden sm:block">SILVER<span class="text-[#000080]">CARE</span></h1>
-                </a>
-                <div class="h-6 w-[1px] bg-gray-200 hidden md:block"></div>
-                <div class="hidden md:block">
-                    <h2 class="text-lg font-[800] text-gray-900">Health Analytics</h2>
-                    <p class="text-xs text-gray-500 font-medium -mt-0.5">{{ $elderlyUser->name ?? 'Elder' }}'s health insights</p>
+    <x-dashboard-nav
+        title="Health Analytics"
+        subtitle="{{ $elderlyUser->name ?? 'Elder' }}'s health insights"
+        role="caregiver"
+        :show-back="true"
+    />
+
+    {{-- Main Content --}}
+    <main x-data="analyticsManager()" x-init="init()" class="max-w-[1600px] mx-auto px-6 lg:px-12 py-6">
+
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+            @if(($elderlyPatients ?? collect())->count() > 1)
+                <div class="rounded-2xl border border-blue-100 bg-blue-50/80 p-4 shadow-sm flex-grow lg:flex-grow-0">
+                    <form method="GET" action="{{ route('caregiver.analytics') }}" class="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <label for="elderly" class="text-sm font-bold text-blue-900">Analytics for</label>
+                        <select
+                            id="elderly"
+                            name="elderly"
+                            onchange="this.form.submit()"
+                            class="rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800"
+                        >
+                            @foreach(($elderlyPatients ?? collect()) as $patient)
+                                <option value="{{ $patient->id }}" @selected(($selectedElderlyId ?? null) === $patient->id)>
+                                    {{ $patient->user?->name ?? ('Patient #' . $patient->id) }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </form>
                 </div>
-            </div>
-            
-            <div class="flex items-center gap-4">
+            @else
+                <div></div>
+            @endif
+
+            <div class="flex flex-wrap items-center gap-4">
                 {{-- Time Period Selector --}}
-                <div class="flex bg-gray-100 rounded-xl p-1 hidden md:flex">
+                <div class="flex bg-gray-100 rounded-xl p-1">
                     <button @click="setPeriod('7days')" :class="period === '7days' ? 'active bg-white text-gray-900 shadow' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-2 rounded-lg text-sm font-[700] transition-all">Week</button>
                     <button @click="setPeriod('30days')" :class="period === '30days' ? 'active bg-white text-gray-900 shadow' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-2 rounded-lg text-sm font-[700] transition-all">Month</button>
                     <button @click="setPeriod('90days')" :class="period === '90days' ? 'active bg-white text-gray-900 shadow' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-2 rounded-lg text-sm font-[700] transition-all">3 Months</button>
@@ -39,37 +57,8 @@
                     </svg>
                     <span class="hidden sm:inline">Export Report</span>
                 </a>
-
-                <a href="{{ route('caregiver.dashboard', ['elderly' => $selectedElderlyId]) }}" class="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-sm transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                    <span class="hidden sm:inline">Back</span>
-                </a>
             </div>
         </div>
-    </nav>
-
-    {{-- Main Content --}}
-    <main x-data="analyticsManager()" x-init="init()" class="max-w-[1600px] mx-auto px-6 lg:px-12 py-6">
-
-        @if(($elderlyPatients ?? collect())->count() > 1)
-            <div class="mb-6 rounded-2xl border border-blue-100 bg-blue-50/80 p-4 shadow-sm">
-                <form method="GET" action="{{ route('caregiver.analytics') }}" class="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <label for="elderly" class="text-sm font-bold text-blue-900">Analytics for</label>
-                    <select
-                        id="elderly"
-                        name="elderly"
-                        onchange="this.form.submit()"
-                        class="rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800"
-                    >
-                        @foreach(($elderlyPatients ?? collect()) as $patient)
-                            <option value="{{ $patient->id }}" @selected(($selectedElderlyId ?? null) === $patient->id)>
-                                {{ $patient->user?->name ?? ('Patient #' . $patient->id) }}
-                            </option>
-                        @endforeach
-                    </select>
-                </form>
-            </div>
-        @endif
         
         @if(!$elderly)
             <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-2xl mb-6 shadow-sm">

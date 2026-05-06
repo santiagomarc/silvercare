@@ -13,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\URL;
+use RuntimeException;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class CareLinkController extends Controller
@@ -46,7 +47,11 @@ class CareLinkController extends Controller
                 ->with('success', 'Your active PIN is ready to share.');
         }
 
-        $code = $this->generateUniqueCode();
+        try {
+            $code = $this->generateUniqueCode();
+        } catch (RuntimeException) {
+            return back()->with('error', 'Could not generate a new PIN right now. Please try again in a moment.');
+        }
 
         $newCode = LinkCode::create([
             'code'               => $code,
@@ -142,28 +147,63 @@ class CareLinkController extends Controller
     /**
      * Step 2 of linking: confirm and persist the caregiver link.
      * Requires the same validated PIN from step 1.
+     *
+     * C1 FIX: Always returns JSON so the AJAX fetch() in the frontend
+     * never tries to parse an HTML redirect body and silently fails.
+     *
+     * C7 FIX: Detects an existing caregiver link and returns a
+     * 'switch_required' signal so the frontend can show a SweetAlert2
+     * confirmation before overwriting the link.
      */
-    public function confirmLink(ValidateCareLinkCodeRequest $request): RedirectResponse
+    public function confirmLink(ValidateCareLinkCodeRequest $request): JsonResponse
     {
         $validated = $request->validated();
 
         $profile = $request->user()?->profile;
         if (! $profile || ! $profile->isElderly()) {
-            abort(403);
+            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
         $linkCode = LinkCode::where('code', $validated['code'])
             ->whereNull('used_at')
             ->where('expires_at', '>', now())
-            ->with('caregiverProfile')
+            ->with('caregiverProfile.user')
             ->first();
 
         if (! $linkCode || ! $linkCode->caregiverProfile?->isCaregiver()) {
-            return back()->withErrors(['code' => 'Invalid or expired PIN. Please ask your caregiver for a new one.']);
+            return response()->json([
+                'success' => false,
+                'message' => 'This PIN is invalid or has already expired. Please ask your caregiver for a new one.',
+            ], 422);
+        }
+
+        $newCaregiverProfileId = $linkCode->caregiver_profile_id;
+
+        // C7 FIX: If already linked to a DIFFERENT caregiver, require explicit
+        // confirmation from the frontend before overwriting the existing link.
+        if ($profile->caregiver_id && $profile->caregiver_id !== $newCaregiverProfileId) {
+            $existingCaregiver = $profile->caregiver;
+            $existingName = $existingCaregiver?->user?->name
+                ?? $existingCaregiver?->username
+                ?? 'your current caregiver';
+
+            // If the request includes the 'force_switch' flag, proceed.
+            // Otherwise, signal the frontend to ask for confirmation.
+            if (! $request->boolean('force_switch')) {
+                return response()->json([
+                    'success'        => false,
+                    'switch_required' => true,
+                    'existing_name'  => $existingName,
+                    'new_name'       => $linkCode->caregiverProfile->user?->name
+                        ?? $linkCode->caregiverProfile->username
+                        ?? 'your new caregiver',
+                    'message'        => "You are already connected to {$existingName}. Do you want to switch?",
+                ], 409);
+            }
         }
 
         $profile->update([
-            'caregiver_id' => $linkCode->caregiver_profile_id,
+            'caregiver_id' => $newCaregiverProfileId,
         ]);
 
         $linkCode->update([
@@ -171,7 +211,15 @@ class CareLinkController extends Controller
             'used_at'            => now(),
         ]);
 
-        return back()->with('success', '✅ You are now connected to your caregiver!');
+        $caregiverName = $linkCode->caregiverProfile->user?->name
+            ?? $linkCode->caregiverProfile->username
+            ?? 'your caregiver';
+
+        return response()->json([
+            'success'        => true,
+            'caregiver_name' => $caregiverName,
+            'message'        => "You are now connected to {$caregiverName}!",
+        ]);
     }
 
     /**
@@ -252,6 +300,7 @@ class CareLinkController extends Controller
     protected function generateUniqueCode(): string
     {
         $attempts = 0;
+        $code = '';
 
         do {
             $attempts++;
@@ -261,6 +310,12 @@ class CareLinkController extends Controller
                 ->where('expires_at', '>', now())
                 ->exists();
         } while ($exists && $attempts < 10);
+
+        // C8 FIX: If all attempts collided, fail loudly rather than
+        // silently returning a potentially duplicate PIN.
+        if ($exists) {
+            throw new RuntimeException('Could not generate a unique linking PIN after 10 attempts. Please try again.');
+        }
 
         return $code;
     }

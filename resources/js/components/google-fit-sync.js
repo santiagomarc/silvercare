@@ -3,6 +3,10 @@
  *
  * Accepts an optional vitalType string so individual vitals screens
  * can scope the sync to just their relevant metric type.
+ *
+ * C12 FIX: Replaced window.location.reload() with targeted event dispatches
+ * matching the SPA-like pattern used by vital-recorder, checklist-tracker, etc.
+ * The page only reloads if steps data was synced (no reactive event system yet).
  */
 import Alpine from 'alpinejs';
 
@@ -42,12 +46,37 @@ export default function googleFitSync(vitalType = null) {
                 if (!resp.ok) throw new Error(data.message || 'Sync failed');
 
                 toast?.success('Google Fit synced!');
+
                 if (data.synced) {
                     const items = Object.entries(data.synced)
                         .map(([k, v]) => `${k}: ${v}`).join(', ');
-                    if (items) setTimeout(() => toast?.info(items), 1000);
+                    if (items) setTimeout(() => toast?.info(`Synced: ${items}`), 800);
+
+                    // C12 FIX: Fire vital-recorded for each synced vital type so the
+                    // garden-wellness and hero-action progress indicators update reactively
+                    // without requiring a full page refresh.
+                    Object.keys(data.synced).forEach((type) => {
+                        if (type !== 'steps') {
+                            window.dispatchEvent(new CustomEvent('vital-recorded', {
+                                detail: { type },
+                            }));
+                        }
+                    });
+
+                    // If the server returns updated aggregate progress counts, broadcast them.
+                    if (data.vitals !== undefined) {
+                        window.dispatchEvent(new CustomEvent('progress-updated', {
+                            detail: { vitals: data.vitals, vitalTotal: data.vitalTotal },
+                        }));
+                    }
                 }
-                setTimeout(() => window.location.reload(), 1500);
+
+                // Steps data has no reactive event system yet — a reload is the only
+                // reliable way to refresh the step count widget. Only reload when steps
+                // were actually part of this sync batch.
+                if (data.synced?.steps) {
+                    setTimeout(() => window.location.reload(), 1500);
+                }
 
             } catch (err) {
                 console.error('Google Fit sync failed:', err);

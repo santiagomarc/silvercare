@@ -37,6 +37,8 @@ export default function heroAction({ progress = 0, steps = [], initialTotal = nu
                 this.markDoneById('mood-today');
             });
 
+            // C11 FIX: vital-recorded now also triggers a progress recalculation
+            // so the hero card stays in sync with garden-wellness.js.
             window.addEventListener('vital-recorded', (e) => {
                 const type = e.detail?.type;
                 if (type) {
@@ -235,17 +237,35 @@ export default function heroAction({ progress = 0, steps = [], initialTotal = nu
         },
 
         _recalculateProgress(detail) {
-            const medTaken = detail.medications ?? 0;
-            const medTotal = detail.medicationTotal ?? 1;
-            const tasksDone = detail.checklists ?? null;
-            const tasksTotal = detail.checklistTotal ?? null;
+            // C11 FIX: Use the same 40/40/20 weighted formula as garden-wellness.js
+            // (checklists 40%, medications 40%, vitals 20%) so both progress
+            // indicators on the dashboard always show the same number.
+            // Previously this used an equal 50/50 split and ignored vitals entirely.
+            const medTaken   = detail.medications    ?? 0;
+            const medTotal   = detail.medicationTotal ?? 0;
+            const tasksDone  = detail.checklists      ?? null;
+            const tasksTotal = detail.checklistTotal  ?? null;
+            const vitalsDone = detail.vitals          ?? null;
+            const vitalsTotal = detail.vitalTotal     ?? null;
 
-            if (tasksDone !== null && tasksTotal !== null && tasksTotal > 0) {
-                const medPct = medTotal > 0 ? (medTaken / medTotal) * 100 : 100;
-                const taskPct = (tasksDone / tasksTotal) * 100;
-                this.currentProgress = Math.round((medPct + taskPct) / 2);
-            } else {
-                this.currentProgress = medTotal > 0 ? Math.round((medTaken / medTotal) * 100) : this.currentProgress;
+            let weight = 0;
+            let weighted = 0;
+
+            if (tasksTotal !== null && tasksTotal > 0) {
+                const p = Math.round((tasksDone / tasksTotal) * 100);
+                weight += 40; weighted += p * 40;
+            }
+            if (medTotal > 0) {
+                const p = Math.round((medTaken / medTotal) * 100);
+                weight += 40; weighted += p * 40;
+            }
+            if (vitalsTotal !== null && vitalsTotal > 0) {
+                const p = Math.round((vitalsDone / vitalsTotal) * 100);
+                weight += 20; weighted += p * 20;
+            }
+
+            if (weight > 0) {
+                this.currentProgress = Math.round(weighted / weight);
             }
         },
     };

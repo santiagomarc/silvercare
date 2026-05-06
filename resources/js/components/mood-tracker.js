@@ -82,6 +82,10 @@ export default function moodTracker(initialMood = 3) {
         },
 
         async save() {
+            // C5 FIX: Guard against overlapping saves triggered when a user
+            // moves the slider right as the debounce timeout fires a save.
+            if (this.saving) return;
+
             const moodToSave = normalizeMood(this.value);
             this.saving = true;
 
