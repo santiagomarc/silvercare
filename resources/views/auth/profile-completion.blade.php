@@ -177,7 +177,7 @@
 
                     <!-- Navigation Buttons -->
                     <div class="flex justify-between items-center mt-8 pt-6 border-t-2 border-gray-100">
-                        <button type="button" id="btn-back" class="px-6 py-3 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition-all duration-200 hidden-step">
+                        <button type="button" id="btn-back" class="px-6 py-3 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition-all duration-200 hidden-step order-last ml-4">
                             ← Back
                         </button>
 

@@ -15,9 +15,11 @@
             <div class="rounded-2xl border border-amber-200 bg-amber-50 p-5">
                 <h2 class="text-lg font-extrabold text-amber-800">No linked patient yet</h2>
                 <p class="text-sm text-amber-700 mt-1">Generate a linking PIN from your dashboard first.</p>
-                <a href="{{ route('caregiver.dashboard') }}" class="inline-flex mt-4 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-amber-700 transition-colors">
-                    Back to Dashboard
-                </a>
+                <div class="mt-4 flex justify-end w-full">
+                    <a href="{{ route('caregiver.dashboard') }}" class="inline-flex rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-amber-700 transition-colors">
+                        Back to Dashboard
+                    </a>
+                </div>
             </div>
         @else
             <section class="rounded-2xl border border-white/70 bg-white/90 p-4 shadow-sm">

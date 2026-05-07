@@ -14,7 +14,7 @@
             
             {{-- Back Navigation & Date --}}
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
-                <a href="{{ route('elderly.wellness.index') }}" class="back-nav-pill !text-yellow-800 !bg-white/50 hover:!bg-white">
+                <a href="{{ route('elderly.wellness.index') }}" class="back-nav-pill order-last !text-yellow-800 !bg-white/50 hover:!bg-white">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                     Back to Wellness
                 </a>

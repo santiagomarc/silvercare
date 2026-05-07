@@ -12,7 +12,7 @@
     <main id="main-content" x-data="breathingApp()" class="max-w-4xl mx-auto px-6 py-8 flex flex-col items-center">
         
         {{-- Back Navigation --}}
-        <div class="w-full mb-8">
+        <div class="w-full mb-8 flex justify-end">
             <a href="{{ route('elderly.wellness.index') }}" class="back-nav-pill !text-teal-700 !bg-white/50 hover:!bg-white">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                 Back to Wellness
