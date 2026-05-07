@@ -31,20 +31,20 @@
     $actualBackUrl = $backUrl ?? route('caregiver.dashboard');
 @endphp
 
-<nav x-data="{ mobileMenuOpen: false }" class="sticky top-0 z-50 border-b border-white/60 bg-white/70 backdrop-blur-xl shadow-[0_18px_40px_-32px_rgba(15,23,42,0.42)]">
+<nav x-data="{ mobileMenuOpen: false }" class="sticky top-0 z-50 border-b border-white/60 bg-white/70 backdrop-blur-xl shadow-[0_18px_40px_-32px_rgba(15,23,42,0.42)] dark:border-slate-800/80 dark:bg-slate-900/80 dark:shadow-[0_18px_40px_-32px_rgba(2,6,23,0.7)]">
     <div class="max-w-[1600px] mx-auto px-6 lg:px-12 h-16 flex justify-between items-center">
 
         {{-- Left Side: Logo + Title --}}
         <div class="flex items-center gap-6">
             <div class="flex items-center gap-3">
                 <img src="{{ asset('assets/icons/silvercare.png') }}" alt="SilverCare" class="w-9 h-9 object-contain">
-                <h1 class="text-xl font-[900] tracking-tight text-gray-900 hidden sm:block">SILVER<span class="text-[#000080]">CARE</span></h1>
+                <h1 class="text-xl font-[900] tracking-tight text-gray-900 hidden sm:block dark:text-slate-100">SILVER<span class="text-[#000080] dark:text-sky-300">CARE</span></h1>
             </div>
-            <div class="h-6 w-[1px] bg-gray-200 hidden md:block"></div>
+            <div class="h-6 w-[1px] bg-gray-200 hidden md:block dark:bg-slate-700"></div>
             <div class="hidden md:block">
-                <h2 class="text-lg font-[800] text-gray-900">{{ $title }}</h2>
+                <h2 class="text-lg font-[800] text-gray-900 dark:text-slate-100">{{ $title }}</h2>
                 @if(!empty($subtitle))
-                    <p class="text-xs text-gray-500 font-medium -mt-0.5">{{ $subtitle }}</p>
+                    <p class="text-xs text-gray-500 font-medium -mt-0.5 dark:text-slate-400">{{ $subtitle }}</p>
                 @endif
             </div>
         </div>
@@ -54,7 +54,7 @@
 
             {{-- Back to Dashboard (Caregiver sub-pages only) --}}
             @if($isCaregiver && $showBack)
-                <a href="{{ $actualBackUrl }}" class="hidden sm:flex items-center gap-1.5 text-sm font-bold text-gray-500 hover:text-purple-700 hover:bg-purple-50 px-4 py-2 rounded-xl transition-all group">
+                <a href="{{ $actualBackUrl }}" class="hidden sm:flex items-center gap-1.5 text-sm font-bold text-gray-500 hover:text-purple-700 hover:bg-purple-50 px-4 py-2 rounded-xl transition-all group dark:text-slate-300 dark:hover:text-slate-100 dark:hover:bg-slate-800/80">
                     <svg class="w-4 h-4 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                     {{ $backLabel }}
                 </a>
@@ -62,8 +62,8 @@
 
             {{-- Notifications Bell (Elderly Only) --}}
             @if(!$isCaregiver)
-                <a href="{{ route('elderly.notifications.index') }}" aria-label="Notifications" class="hidden sm:flex relative rounded-xl border border-transparent p-2 transition-all group hover:border-white/70 hover:bg-white/60" title="Notifications">
-                    <svg class="w-6 h-6 text-gray-600 group-hover:text-[#000080] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <a href="{{ route('elderly.notifications.index') }}" aria-label="Notifications" class="hidden sm:flex relative rounded-xl border border-transparent p-2 transition-all group hover:border-white/70 hover:bg-white/60 dark:hover:border-slate-700 dark:hover:bg-slate-800/70" title="Notifications">
+                    <svg class="w-6 h-6 text-gray-600 group-hover:text-[#000080] transition-colors dark:text-slate-300 dark:group-hover:text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                     </svg>
                     @if($unreadNotifications > 0)
@@ -78,10 +78,10 @@
             <a
                 href="{{ $isCaregiver ? route('caregiver.messages.index') : route('elderly.messages.index') }}"
                 aria-label="Messages"
-                class="hidden sm:flex relative rounded-xl border border-transparent p-2 transition-all group hover:border-white/70 hover:bg-white/60"
+                class="hidden sm:flex relative rounded-xl border border-transparent p-2 transition-all group hover:border-white/70 hover:bg-white/60 dark:hover:border-slate-700 dark:hover:bg-slate-800/70"
                 title="Messages"
             >
-                <svg class="w-6 h-6 text-gray-600 group-hover:text-[#000080] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-6 h-6 text-gray-600 group-hover:text-[#000080] transition-colors dark:text-slate-300 dark:group-hover:text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h8m-8 4h5m-7 6l-3-3H3a2 2 0 01-2-2V7a2 2 0 012-2h18a2 2 0 012 2v8a2 2 0 01-2 2h-8l-5 5z"/>
                 </svg>
             </a>
@@ -91,14 +91,14 @@
                 type="button"
                 x-data="{ dark: document.documentElement.classList.contains('dark') }"
                 @click="dark = window.toggleSilverCareTheme ? window.toggleSilverCareTheme() : dark"
-                class="hidden sm:flex rounded-xl border border-transparent p-2 transition-all hover:border-white/70 hover:bg-white/60"
+                class="hidden sm:flex rounded-xl border border-transparent p-2 transition-all hover:border-white/70 hover:bg-white/60 dark:hover:border-slate-700 dark:hover:bg-slate-800/70"
                 :title="dark ? 'Switch to light mode' : 'Switch to dark mode'"
                 :aria-label="dark ? 'Switch to light mode' : 'Switch to dark mode'"
             >
-                <svg x-show="!dark" class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg x-show="!dark" class="w-6 h-6 text-gray-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646a9 9 0 1011.708 11.708z"/>
                 </svg>
-                <svg x-show="dark" x-cloak class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg x-show="dark" x-cloak class="w-6 h-6 text-amber-500 dark:text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364 6.364l-1.414-1.414M7.05 7.05 5.636 5.636m12.728 0L16.95 7.05M7.05 16.95l-1.414 1.414M12 8a4 4 0 100 8 4 4 0 000-8z"/>
                 </svg>
             </button>
@@ -187,7 +187,7 @@
             </form>
             
             {{-- Mobile Menu Button --}}
-            <button type="button" @click="mobileMenuOpen = true" aria-label="Open mobile menu" :aria-expanded="mobileMenuOpen.toString()" class="sm:hidden p-2 text-gray-600 hover:text-gray-900 focus:outline-none">
+            <button type="button" @click="mobileMenuOpen = true" aria-label="Open mobile menu" :aria-expanded="mobileMenuOpen.toString()" class="sm:hidden p-2 text-gray-600 hover:text-gray-900 focus:outline-none dark:text-slate-300 dark:hover:text-slate-100">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
             </button>
 
@@ -203,7 +203,7 @@
         <!-- Backdrop -->
         <div x-show="mobileMenuOpen" 
              x-transition.opacity 
-             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm"
+             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm dark:bg-slate-950/70"
              @click="mobileMenuOpen = false"></div>
 
         <!-- Drawer -->
@@ -214,18 +214,18 @@
              x-transition:leave="transition ease-in duration-200"
              x-transition:leave-start="translate-x-0"
              x-transition:leave-end="translate-x-full"
-             class="fixed right-0 top-0 bottom-0 w-64 bg-white shadow-xl overflow-y-auto"
+                 class="fixed right-0 top-0 bottom-0 w-64 bg-white shadow-xl overflow-y-auto dark:bg-slate-900 dark:shadow-[0_24px_60px_-32px_rgba(2,6,23,0.75)]"
              @click.away="mobileMenuOpen = false">
              
-             <div class="p-4 border-b border-gray-100 flex justify-between items-center">
-                <h2 class="font-bold text-lg text-navy-800">Menu</h2>
-                <button @click="mobileMenuOpen = false" aria-label="Close menu" class="p-2 text-gray-500 hover:text-gray-700">
+                 <div class="p-4 border-b border-gray-100 flex justify-between items-center dark:border-slate-800">
+                     <h2 class="font-bold text-lg text-navy-800 dark:text-slate-100">Menu</h2>
+                     <button @click="mobileMenuOpen = false" aria-label="Close menu" class="p-2 text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-100">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
              </div>
              
              <div class="p-4 space-y-4">
-                <div class="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
+                <div class="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100 dark:border-slate-800">
                     <div class="w-10 h-10 rounded-full {{ $profileBgColor }} font-[900] flex items-center justify-center overflow-hidden">
                         @if(Auth::user()->profile && Auth::user()->profile->profile_photo)
                             <img src="{{ Storage::url(Auth::user()->profile->profile_photo) }}" alt="Profile" class="w-full h-full object-cover">
@@ -234,15 +234,15 @@
                         @endif
                     </div>
                     <div>
-                        <p class="font-bold text-gray-900">{{ Auth::user()->name }}</p>
-                        <p class="text-xs text-gray-500">{{ $roleLabel }}</p>
+                        <p class="font-bold text-gray-900 dark:text-slate-100">{{ Auth::user()->name }}</p>
+                        <p class="text-xs text-gray-500 dark:text-slate-400">{{ $roleLabel }}</p>
                     </div>
                 </div>
              
-                <a href="{{ route('profile.edit') }}" class="block font-bold text-gray-800 hover:text-navy-600">Manage Profile</a>
-                <a href="{{ $isCaregiver ? route('caregiver.messages.index') : route('elderly.messages.index') }}" class="block font-bold text-gray-800 hover:text-navy-600">Messages</a>
+                <a href="{{ route('profile.edit') }}" class="block font-bold text-gray-800 hover:text-navy-600 dark:text-slate-200 dark:hover:text-sky-300">Manage Profile</a>
+                <a href="{{ $isCaregiver ? route('caregiver.messages.index') : route('elderly.messages.index') }}" class="block font-bold text-gray-800 hover:text-navy-600 dark:text-slate-200 dark:hover:text-sky-300">Messages</a>
                 @if(!$isCaregiver)
-                    <a href="{{ route('elderly.notifications.index') }}" class="block font-bold text-gray-800 hover:text-navy-600">
+                    <a href="{{ route('elderly.notifications.index') }}" class="block font-bold text-gray-800 hover:text-navy-600 dark:text-slate-200 dark:hover:text-sky-300">
                         Notifications
                         @if($unreadNotifications > 0)
                             <span class="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{{ $unreadNotifications }}</span>
@@ -250,10 +250,10 @@
                     </a>
                 @endif
                 
-                <div class="pt-4 mt-4 border-t border-gray-100">
+                <div class="pt-4 mt-4 border-t border-gray-100 dark:border-slate-800">
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button type="submit" class="w-full text-left font-bold text-rose-600 hover:text-rose-800">
+                        <button type="submit" class="w-full text-left font-bold text-rose-600 hover:text-rose-800 dark:text-rose-300 dark:hover:text-rose-200">
                             Log Out
                         </button>
                     </form>

@@ -22,8 +22,10 @@
     }
 
     html.dark body {
+        background-image: none;
         background-color: #0b1220;
         color: #e2e8f0;
+        color-scheme: dark;
     }
 
     html.dark nav {
@@ -32,6 +34,19 @@
     }
 
     html.dark .bg-white {
+        background-color: rgba(15, 23, 42, 0.92) !important;
+    }
+
+    html.dark .bg-white\/70 {
+        background-color: rgba(15, 23, 42, 0.72) !important;
+    }
+
+    html.dark .bg-white\/80 {
+        background-color: rgba(15, 23, 42, 0.8) !important;
+    }
+
+    html.dark .bg-white\/90,
+    html.dark .bg-white\/95 {
         background-color: rgba(15, 23, 42, 0.92) !important;
     }
 
@@ -442,23 +457,43 @@
                backdrop-blur-sm transition-all duration-200
                hover:bg-white hover:shadow-card hover:text-navy-500
                active:scale-95
-               focus:outline-none focus:ring-2 focus:ring-navy-200 focus:ring-offset-2;
+               focus:outline-none focus:ring-2 focus:ring-navy-200 focus:ring-offset-2
+               dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700
+               dark:hover:bg-slate-800 dark:hover:text-sky-300;
     }
 
 
 
     .profile-field-label {
-        @apply mb-2 block text-sm font-extrabold uppercase tracking-wider text-slate-400;
+        @apply mb-2 block text-sm font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500;
     }
 
     .profile-field-value {
-        @apply px-4 py-3 text-lg font-bold text-slate-800;
+        @apply px-4 py-3 text-lg font-bold text-slate-800 dark:text-slate-100;
     }
 
     .profile-field-input {
         @apply w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-4 py-3.5
                text-lg font-bold text-slate-800
-               transition-all focus:border-navy-400 focus:bg-white focus:ring-0 outline-none;
+               transition-all focus:border-navy-400 focus:bg-white focus:ring-0 outline-none
+               dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:bg-slate-900;
+    }
+
+    /* Ensure profile cards adapt to theme and force vertical stacking of fields */
+    .profile-card {
+        @apply bg-white;
+    }
+
+    html.dark .profile-card {
+        background-color: rgba(15, 23, 42, 0.94) !important;
+        color: #e6eef8;
+        border-color: rgba(148, 163, 184, 0.18) !important;
+    }
+
+    .profile-grid-vertical {
+        display: grid;
+        grid-template-columns: 1fr !important;
+        gap: 1.5rem;
     }
 }
 

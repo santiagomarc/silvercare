@@ -202,25 +202,25 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
 
             <!-- ELDER PROFILE CARD (2 cols) -->
-            <div class="lg:col-span-2 relative overflow-hidden rounded-[24px] bg-gradient-to-br from-teal-500 to-emerald-600 p-6 text-white shadow-xl shadow-teal-900/20">
-                <div class="absolute top-0 right-0 -mr-10 -mt-10 h-40 w-40 rounded-full bg-white/10 blur-xl"></div>
-                <div class="absolute bottom-0 left-0 -ml-8 -mb-8 h-32 w-32 rounded-full bg-black/10 blur-xl"></div>
+            <div class="lg:col-span-2 relative overflow-hidden rounded-[24px] bg-gradient-to-br from-teal-100 via-emerald-100 to-cyan-100 p-6 text-slate-900 shadow-xl shadow-teal-900/10 border border-teal-200/70 dark:from-slate-900 dark:via-slate-850 dark:to-slate-800 dark:text-slate-100 dark:border-slate-700 dark:shadow-[0_24px_60px_-30px_rgba(2,6,23,0.8)]">
+                <div class="absolute top-0 right-0 -mr-10 -mt-10 h-40 w-40 rounded-full bg-white/40 dark:bg-white/10 blur-xl"></div>
+                <div class="absolute bottom-0 left-0 -ml-8 -mb-8 h-32 w-32 rounded-full bg-black/5 dark:bg-black/20 blur-xl"></div>
 
                 <div class="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-5">
                     <!-- Avatar -->
-                    <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border-4 border-white/30 flex-shrink-0 overflow-hidden">
+                    <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white/60 dark:bg-white/10 backdrop-blur-sm flex items-center justify-center border-4 border-white/60 dark:border-white/25 flex-shrink-0 overflow-hidden">
                         @if($elderly->profile_photo)
                             <img src="{{ Storage::url($elderly->profile_photo) }}" alt="{{ $elderlyUser->name ?? 'Elder' }}" class="w-full h-full object-cover">
                         @else
-                            <span class="text-4xl sm:text-5xl font-[900] text-white/90">{{ substr($elderlyUser->name ?? $elderly->username ?? 'E', 0, 1) }}</span>
+                            <span class="text-4xl sm:text-5xl font-[900] text-slate-800 dark:text-white/90">{{ substr($elderlyUser->name ?? $elderly->username ?? 'E', 0, 1) }}</span>
                         @endif
                     </div>
 
                     <!-- Elder Details -->
                     <div class="flex-1">
-                        <p class="text-teal-100 text-xs font-bold uppercase tracking-wider mb-1">Your Patient</p>
+                        <p class="text-teal-700 dark:text-teal-200 text-xs font-bold uppercase tracking-wider mb-1">Your Patient</p>
                         <h2 class="text-2xl sm:text-3xl font-[900] mb-2 leading-tight">{{ $elderlyUser->name ?? $elderly->username ?? 'Elder' }}</h2>
-                        <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-teal-50/90 font-medium">
+                        <div class="flex flex-col gap-y-1.5 text-sm text-teal-800 dark:text-teal-100/90 font-medium">
                             @if($elderly->age)
                                 <span class="flex items-center gap-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>{{ $elderly->age }} years old</span>
                             @endif
@@ -236,34 +236,34 @@
 
                 <!-- Medical Conditions Badge -->
                 @if(!empty($conditions) || !empty($medications) || !empty($allergies))
-                    <div class="relative z-10 mt-5 pt-5 border-t border-white/20">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div class="relative z-10 mt-5 pt-5 border-t border-teal-200/60 dark:border-white/20">
+                        <div class="grid grid-cols-1 gap-4">
                             @if(!empty($conditions))
                             <div>
-                                <p class="text-xs font-bold uppercase tracking-wider text-teal-100 mb-2.5">Known Conditions</p>
+                                <p class="text-xs font-bold uppercase tracking-wider text-teal-700 dark:text-teal-200 mb-2.5">Known Conditions</p>
                                 <div class="flex flex-wrap gap-2">
                                     @foreach($conditions as $condition)
-                                        <span class="bg-white/20 backdrop-blur-sm text-white text-sm font-bold px-3 py-1.5 rounded-full">{{ $condition }}</span>
+                                        <span class="bg-teal-200/70 dark:bg-white/20 backdrop-blur-sm text-teal-900 dark:text-white text-sm font-bold px-3 py-1.5 rounded-full">{{ $condition }}</span>
                                     @endforeach
                                 </div>
                             </div>
                             @endif
                             @if(!empty($medications))
                             <div>
-                                <p class="text-xs font-bold uppercase tracking-wider text-blue-100 mb-2.5">💊 Medications</p>
+                                <p class="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-200 mb-2.5">💊 Medications</p>
                                 <div class="flex flex-wrap gap-2">
                                     @foreach($medications as $med)
-                                        <span class="bg-blue-500/30 backdrop-blur-sm text-white text-sm font-bold px-3 py-1.5 rounded-full">{{ $med }}</span>
+                                        <span class="bg-blue-200/70 dark:bg-blue-500/30 backdrop-blur-sm text-blue-900 dark:text-white text-sm font-bold px-3 py-1.5 rounded-full">{{ $med }}</span>
                                     @endforeach
                                 </div>
                             </div>
                             @endif
                             @if(!empty($allergies))
                             <div>
-                                <p class="text-xs font-bold uppercase tracking-wider text-amber-200 mb-2.5">⚠️ Allergies</p>
+                                <p class="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-200 mb-2.5">⚠️ Allergies</p>
                                 <div class="flex flex-wrap gap-2">
                                     @foreach($allergies as $allergy)
-                                        <span class="bg-amber-500/30 backdrop-blur-sm text-white text-sm font-bold px-3 py-1.5 rounded-full">{{ $allergy }}</span>
+                                        <span class="bg-amber-200/80 dark:bg-amber-500/30 backdrop-blur-sm text-amber-900 dark:text-white text-sm font-bold px-3 py-1.5 rounded-full">{{ $allergy }}</span>
                                     @endforeach
                                 </div>
                             </div>
@@ -445,13 +445,13 @@
             <div class="lg:col-span-8 space-y-6">
                 
                 <!-- MOOD TRACKER (Elder's Mood) -->
-                <div class="bg-gradient-to-br from-amber-50 to-orange-100 rounded-2xl p-6 md:p-8 shadow-lg border border-amber-200">
+                <div class="bg-gradient-to-br from-amber-50 to-orange-100 rounded-2xl p-6 md:p-8 shadow-lg border border-amber-200 dark:from-slate-900 dark:to-slate-800 dark:border-slate-700 dark:shadow-[0_24px_60px_-30px_rgba(2,6,23,0.8)]">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-[800] text-lg text-gray-900 flex items-center gap-2">
+                        <h3 class="font-[800] text-lg text-gray-900 dark:text-slate-100 flex items-center gap-2">
                             <span class="text-2xl">😊</span> {{ $elderlyUser->name ?? 'Elder' }}'s Mood Today
                         </h3>
                         @if($mood)
-                            <span class="text-xs text-gray-500 font-medium">{{ $mood->measured_at->diffForHumans() }}</span>
+                            <span class="text-xs text-gray-500 dark:text-slate-400 font-medium">{{ $mood->measured_at->diffForHumans() }}</span>
                         @endif
                     </div>
                     
@@ -467,20 +467,20 @@
                             <div>
                                 <p class="font-[900] text-2xl {{ $moodColors[$moodValue] ?? 'text-gray-600' }}">{{ $moodLabels[$moodValue] ?? 'Unknown' }}</p>
                                 @if($mood->notes)
-                                    <p class="text-gray-500 text-sm mt-1">{{ $mood->notes }}</p>
+                                    <p class="text-gray-500 dark:text-slate-400 text-sm mt-1">{{ $mood->notes }}</p>
                                 @endif
                             </div>
                         </div>
                         <!-- Mood Scale Indicator -->
                         <div class="mt-4 flex items-center space-x-2">
                             @foreach($moodEmojis as $level => $emoji)
-                                <div class="flex-1 h-2.5 rounded-full {{ $moodValue >= $level ? 'bg-amber-400' : 'bg-gray-200' }}"></div>
+                                <div class="flex-1 h-2.5 rounded-full {{ $moodValue >= $level ? 'bg-amber-400' : 'bg-gray-200 dark:bg-slate-700' }}"></div>
                             @endforeach
                         </div>
                     @else
                         <div class="text-center py-4">
                             <span class="text-5xl mb-2 block opacity-50">😶</span>
-                            <p class="text-gray-400 italic font-medium">No mood recorded today</p>
+                            <p class="text-slate-600 dark:text-slate-300 italic font-semibold">No mood recorded today</p>
                         </div>
                     @endif
                 </div>
@@ -593,14 +593,14 @@
             <div class="lg:col-span-4 space-y-6">
                 
                 <!-- Recent Activity -->
-                <div class="bg-white rounded-[24px] shadow-md border border-gray-100 p-6 flex flex-col" style="height: 490px;">
+                <div class="bg-white rounded-[24px] shadow-md border border-gray-100 p-6 flex flex-col dark:bg-slate-900 dark:border-slate-800 dark:shadow-[0_24px_60px_-30px_rgba(2,6,23,0.8)]" style="height: 490px;">
                     <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                        <h3 class="font-[800] text-lg text-gray-900">Recent Activity</h3>
-                        <span class="text-xs text-gray-400 font-bold">Last 7 days</span>
+                        <h3 class="font-[800] text-lg text-gray-900 dark:text-slate-100">Recent Activity</h3>
+                        <span class="text-xs text-gray-400 dark:text-slate-400 font-bold">Last 7 days</span>
                     </div>
                     
                     @if($recentActivity->count() > 0)
-                        <ul class="space-y-3 flex-1 overflow-y-auto pr-2" style="scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;">
+                        <ul class="space-y-3 flex-1 overflow-y-auto pr-2" style="scrollbar-width: thin; scrollbar-color: #64748b transparent;">
                             @foreach($recentActivity as $activity)
                                 @php
                                     // Determine border color based on severity or color
@@ -612,16 +612,16 @@
                                         'warning', 'amber' => 'border-l-amber-400',
                                         'negative', 'red' => 'border-l-red-400',
                                         'reminder', 'blue' => 'border-l-blue-400',
-                                        default => 'border-l-gray-200',
+                                        default => 'border-l-slate-300 dark:border-l-slate-600',
                                     };
                                 @endphp
-                                <li class="flex items-start py-2 pl-3 border-l-4 {{ $borderClass }} bg-gray-50/50 rounded-r-lg">
-                                    <div class="text-xl mr-3 flex-shrink-0">{{ $activity['icon'] }}</div>
+                                <li class="flex items-start gap-3 py-3 px-3 border-l-4 {{ $borderClass }} bg-gray-50/80 rounded-r-xl transition-colors hover:bg-gray-100 dark:bg-slate-800/70 dark:hover:bg-slate-800">
+                                    <div class="text-xl mr-1 flex-shrink-0">{{ $activity['icon'] }}</div>
                                     <div class="flex-1 min-w-0">
-                                        <p class="text-sm text-gray-800 font-[700] truncate">{{ $activity['title'] }}</p>
-                                        <p class="text-xs text-gray-500 font-medium">{{ $activity['subtitle'] }}</p>
+                                        <p class="text-sm text-gray-800 dark:text-slate-100 font-[700] truncate">{{ $activity['title'] }}</p>
+                                        <p class="text-xs text-gray-500 dark:text-slate-400 font-medium">{{ $activity['subtitle'] }}</p>
                                     </div>
-                                    <div class="text-[10px] text-gray-400 ml-2 whitespace-nowrap font-bold">
+                                    <div class="text-[10px] text-gray-400 dark:text-slate-500 ml-2 whitespace-nowrap font-bold">
                                         {{ \Carbon\Carbon::parse($activity['timestamp'])->diffForHumans(null, true, true) }}
                                     </div>
                                 </li>
@@ -630,35 +630,35 @@
                     @else
                         <div class="text-center py-8">
                             <div class="text-4xl mb-2 opacity-30">📭</div>
-                            <p class="text-gray-400 text-sm font-medium">No recent activity</p>
-                            <p class="text-gray-300 text-xs mt-1">Activity will appear here as it happens</p>
+                            <p class="text-gray-400 dark:text-slate-400 text-sm font-medium">No recent activity</p>
+                            <p class="text-gray-300 dark:text-slate-500 text-xs mt-1">Activity will appear here as it happens</p>
                         </div>
                     @endif
                 </div>
 
                 <!-- Quick Health Legend -->
-                <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-                    <h4 class="text-sm font-[800] text-gray-700 mb-3">Health Status Legend</h4>
+                <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 dark:bg-slate-900 dark:border-slate-800">
+                    <h4 class="text-sm font-[800] text-gray-700 dark:text-slate-200 mb-3">Health Status Legend</h4>
                     <div class="grid grid-cols-2 gap-2 text-xs">
                         <div class="flex items-center">
                             <span class="w-3 h-3 rounded-full bg-green-500 mr-2"></span>
-                            <span class="text-gray-600 font-medium">Normal</span>
+                            <span class="text-gray-600 dark:text-slate-300 font-medium">Normal</span>
                         </div>
                         <div class="flex items-center">
                             <span class="w-3 h-3 rounded-full bg-yellow-500 mr-2"></span>
-                            <span class="text-gray-600 font-medium">Elevated</span>
+                            <span class="text-gray-600 dark:text-slate-300 font-medium">Elevated</span>
                         </div>
                         <div class="flex items-center">
                             <span class="w-3 h-3 rounded-full bg-orange-500 mr-2"></span>
-                            <span class="text-gray-600 font-medium">High/Fever</span>
+                            <span class="text-gray-600 dark:text-slate-300 font-medium">High/Fever</span>
                         </div>
                         <div class="flex items-center">
                             <span class="w-3 h-3 rounded-full bg-red-500 mr-2"></span>
-                            <span class="text-gray-600 font-medium">Critical</span>
+                            <span class="text-gray-600 dark:text-slate-300 font-medium">Critical</span>
                         </div>
                         <div class="flex items-center">
                             <span class="w-3 h-3 rounded-full bg-blue-500 mr-2"></span>
-                            <span class="text-gray-600 font-medium">Low</span>
+                            <span class="text-gray-600 dark:text-slate-300 font-medium">Low</span>
                         </div>
                     </div>
                 </div>

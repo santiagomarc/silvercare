@@ -37,7 +37,7 @@
     </script>
     @endif
 </head>
-<body class="{{ $bodyClass ?? 'bg-gradient-to-br from-slate-100 via-sky-50 to-rose-50 min-h-screen' }}" style="font-family: 'Montserrat', sans-serif;">
+<body class="{{ $bodyClass ?? 'bg-gradient-to-br from-slate-100 via-sky-50 to-rose-50 min-h-screen dark:bg-slate-950 dark:bg-none dark:text-slate-100' }}" style="font-family: 'Montserrat', sans-serif;">
 
     {{-- Root Page Back Button Interceptor --}}
     @if(request()->routeIs('caregiver.dashboard') || request()->routeIs('dashboard'))

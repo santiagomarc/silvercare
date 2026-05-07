@@ -24,13 +24,13 @@
         <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
         <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
     </head>
-    <body class="font-sans antialiased">
-        <div class="min-h-screen bg-[#EBEBEB]">
+    <body class="font-sans antialiased bg-[#EBEBEB] text-gray-900 dark:bg-slate-950 dark:text-slate-100">
+        <div class="min-h-screen bg-[#EBEBEB] text-gray-900 dark:bg-slate-950 dark:text-slate-100">
             @include('layouts.navigation')
 
             <!-- Page Heading -->
             @isset($header)
-                <header class="bg-white shadow">
+                <header class="bg-white shadow dark:border-b dark:border-slate-800 dark:bg-slate-900">
                     <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
                         {{ $header }}
                     </div>
