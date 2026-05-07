@@ -83,4 +83,33 @@ try {
 
 window.TomSelect = TomSelect;
 window.Chart = Chart;
+
+// ── Patient Modal Store ──────────────────────────────────────────
+Alpine.store('patientModal', {
+    removeOpen: false,
+    restoreOpen: false,
+    removeAction: '',
+    restoreAction: '',
+
+    openRemove(action) {
+        this.removeAction = action;
+        this.removeOpen = true;
+    },
+
+    closeRemove() {
+        this.removeOpen = false;
+        this.removeAction = '';
+    },
+
+    openRestore(action) {
+        this.restoreAction = action;
+        this.restoreOpen = true;
+    },
+
+    closeRestore() {
+        this.restoreOpen = false;
+        this.restoreAction = '';
+    },
+});
+
 Alpine.start();
