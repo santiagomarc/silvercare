@@ -5,6 +5,7 @@
         title="Daily Checklists"
         subtitle="{{ now()->format('l, F j, Y') }}"
         role="caregiver"
+        :show-back="true"
     />
 
     <!-- MAIN CONTENT -->

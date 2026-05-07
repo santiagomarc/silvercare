@@ -8,7 +8,92 @@
         :show-back="true"
     />
 
-    <main class="max-w-[1200px] mx-auto px-6 lg:px-12 py-6 space-y-8">
+    {{-- Alpine Store --}}
+    {{-- ===== REMOVE PATIENT MODAL ===== --}}
+    <div
+        x-data
+        x-show="$store.patientModal.removeOpen"
+        x-cloak
+        class="fixed inset-0 z-50 flex items-center justify-center"
+        @keydown.escape.window="$store.patientModal.closeRemove()"
+    >
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="$store.patientModal.closeRemove()"></div>
+        <div
+            class="relative bg-white rounded-3xl shadow-2xl p-8 w-full max-w-sm mx-4 flex flex-col items-center text-center"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 scale-100"
+            x-transition:leave-end="opacity-0 scale-95"
+        >
+            <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </div>
+            <h2 class="text-xl font-[900] text-gray-900 mb-2">Remove Patient</h2>
+            <p class="text-gray-500 text-sm leading-relaxed mb-6">
+                Are you sure you want to remove this patient? This will unlink their profile and they will no longer be in your active list.
+            </p>
+            <div class="flex items-center gap-3 w-full">
+                <button
+                    @click="$store.patientModal.closeRemove()"
+                    class="flex-1 rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3 text-sm font-bold text-gray-700 hover:bg-gray-200 transition-colors"
+                >Cancel</button>
+                <form method="POST" :action="$store.patientModal.removeAction" class="flex-1">
+                    @csrf
+                    <button type="submit" class="w-full rounded-2xl bg-red-600 px-4 py-3 text-sm font-bold text-white hover:bg-red-700 transition-colors">
+                        Remove Patient
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {{-- ===== RESTORE PATIENT MODAL ===== --}}
+    <div
+        x-data
+        x-show="$store.patientModal.restoreOpen"
+        x-cloak
+        class="fixed inset-0 z-50 flex items-center justify-center"
+        @keydown.escape.window="$store.patientModal.closeRestore()"
+    >
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="$store.patientModal.closeRestore()"></div>
+        <div
+            class="relative bg-white rounded-3xl shadow-2xl p-8 w-full max-w-sm mx-4 flex flex-col items-center text-center"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 scale-100"
+            x-transition:leave-end="opacity-0 scale-95"
+        >
+            <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+                <svg class="w-8 h-8 text-[#000080]" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+            </div>
+            <h2 class="text-xl font-[900] text-gray-900 mb-2">Restore Patient</h2>
+            <p class="text-gray-500 text-sm leading-relaxed mb-6">
+                Are you sure you want to restore? This will reactivate their profile and make them available again.
+            </p>
+            <div class="flex items-center gap-3 w-full">
+                <button
+                    @click="$store.patientModal.closeRestore()"
+                    class="flex-1 rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3 text-sm font-bold text-gray-700 hover:bg-gray-200 transition-colors"
+                >Cancel</button>
+                <form method="POST" :action="$store.patientModal.restoreAction" class="flex-1">
+                    @csrf
+                    <button type="submit" class="w-full rounded-2xl bg-[#000080] px-4 py-3 text-sm font-bold text-white hover:bg-blue-900 transition-colors">
+                        Restore Patient
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <main x-data class="max-w-[1200px] mx-auto px-6 lg:px-12 py-6 space-y-8">
         <x-flash-messages />
 
         {{-- ACTIVE PATIENTS --}}
@@ -82,26 +167,11 @@
                                     class="flex-1 text-center rounded-xl bg-[#000080] px-3 py-2 text-sm font-bold text-white hover:bg-blue-900 transition-colors">
                                     View Dashboard
                                 </a>
-
-                                <div x-data="{ confirm: false }">
-                                    <button x-show="!confirm"
-                                        @click="confirm = true"
-                                        class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700 hover:bg-rose-100 transition-colors">
-                                        Remove
-                                    </button>
-                                    <div x-show="confirm" x-cloak class="flex items-center gap-2">
-                                        <span class="text-xs font-semibold text-gray-500">Are you sure?</span>
-                                        <form method="POST" action="{{ route('caregiver.patients.remove', $patient->id) }}">
-                                            @csrf
-                                            <button type="submit" class="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-700">
-                                                Yes, Remove
-                                            </button>
-                                        </form>
-                                        <button @click="confirm = false" class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-bold text-gray-600">
-                                            Cancel
-                                        </button>
-                                    </div>
-                                </div>
+                                <button
+                                    @click="$store.patientModal.openRemove('{{ route('caregiver.patients.remove', $patient->id) }}')"
+                                    class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700 hover:bg-rose-100 transition-colors">
+                                    Remove
+                                </button>
                             </div>
                         </div>
                     @endforeach
@@ -142,12 +212,11 @@
                         </div>
 
                         <div class="flex items-center gap-2 pt-1 border-t border-gray-200">
-                            <form method="POST" action="{{ route('caregiver.patients.restore', $patient->id) }}" class="flex-1">
-                                @csrf
-                                <button type="submit" class="w-full rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-bold text-teal-700 hover:bg-teal-100 transition-colors">
-                                    Restore Patient
-                                </button>
-                            </form>
+                            <button
+                                @click="$store.patientModal.openRestore('{{ route('caregiver.patients.restore', $patient->id) }}')"
+                                class="flex-1 w-full rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-bold text-[#000080] hover:bg-blue-100 transition-colors">
+                                Restore Patient
+                            </button>
                         </div>
                     </div>
                 @endforeach

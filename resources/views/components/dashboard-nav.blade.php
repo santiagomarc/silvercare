@@ -52,14 +52,6 @@
 	{{-- Right Side: Actions --}}
         <div class="flex items-center gap-4">
 
-            {{-- Back to Dashboard (Caregiver sub-pages only) --}}
-            @if($isCaregiver && $showBack)
-                <a href="{{ $actualBackUrl }}" class="hidden sm:flex items-center gap-1.5 text-sm font-bold text-gray-500 hover:text-purple-700 hover:bg-purple-50 px-4 py-2 rounded-xl transition-all group dark:text-slate-300 dark:hover:text-slate-100 dark:hover:bg-slate-800/80">
-                    <svg class="w-4 h-4 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                    {{ $backLabel }}
-                </a>
-            @endif
-
             {{-- Notifications Bell (Elderly Only) --}}
             @if(!$isCaregiver)
                 <a href="{{ route('elderly.notifications.index') }}" aria-label="Notifications" class="hidden sm:flex relative rounded-xl border border-transparent p-2 transition-all group hover:border-white/70 hover:bg-white/60 dark:hover:border-slate-700 dark:hover:bg-slate-800/70" title="Notifications">
@@ -103,6 +95,15 @@
                 </svg>
             </button>
 
+            {{-- Back to Dashboard (Caregiver sub-pages only) --}}
+            @if($isCaregiver && $showBack)
+                <a href="{{ $actualBackUrl }}" class="hidden sm:inline-flex items-center gap-2 bg-[#000080] hover:bg-blue-900 text-white text-sm font-bold px-5 py-2.5 rounded-full transition-all shadow-sm hover:shadow-md">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    {{ $backLabel }}
+                </a>
+            @endif
             {{-- Header SOS (elderly only when linked) --}}
             @if(!$isCaregiver)
                 @php $linkedCg = Auth::user()->profile?->caregiver; @endphp
@@ -162,6 +163,8 @@
                 @endif
             @endif
 
+
+            @if(!($isCaregiver && $showBack))
             {{-- Profile Link --}}
             <a href="{{ route('profile.edit') }}" class="hidden sm:flex cursor-pointer items-center gap-2 rounded-xl border border-transparent px-2 py-1.5 transition-all group hover:border-white/70 hover:bg-white/60" title="Manage Profile">
                 <div class="relative">
@@ -178,13 +181,17 @@
                     <p class="text-xs text-gray-500 font-medium">{{ $roleLabel }}</p>
                 </div>
             </a>
+            @endif
 
+
+            @if(!($isCaregiver && $showBack))
             <form method="POST" action="{{ route('logout') }}" class="hidden sm:block">
                 @csrf
                 <button type="submit" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700 transition-all hover:bg-rose-100">
                     Log Out
                 </button>
             </form>
+            @endif
             
             {{-- Mobile Menu Button --}}
             <button type="button" @click="mobileMenuOpen = true" aria-label="Open mobile menu" :aria-expanded="mobileMenuOpen.toString()" class="sm:hidden p-2 text-gray-600 hover:text-gray-900 focus:outline-none dark:text-slate-300 dark:hover:text-slate-100">
@@ -250,6 +257,16 @@
                     </a>
                 @endif
                 
+
+                {{-- Mobile Back to Dashboard --}}
+                @if($isCaregiver && $showBack)
+                    <a href="{{ $actualBackUrl }}" class="flex items-center gap-2 font-bold text-[#000080] dark:text-sky-300">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                        </svg>
+                        {{ $backLabel }}
+                    </a>
+                @endif
                 <div class="pt-4 mt-4 border-t border-gray-100 dark:border-slate-800">
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
