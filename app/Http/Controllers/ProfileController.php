@@ -13,7 +13,10 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Redirect;
-
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Cache;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use App\Models\LinkCode;
 class ProfileController extends Controller
 {
     public function __construct(
@@ -39,7 +42,41 @@ class ProfileController extends Controller
 
         $unreadNotifications = $profile->id ? $notificationService->getUnreadCount($profile->id) : 0;
 
-        return view('profile.edit', compact('user', 'profile', 'unreadNotifications'));
+        $activeLinkCode = null;
+        $activeLinkQrSvg = null;
+        $activeLinkSignedUrl = null;
+
+        if ($profile && $profile->isCaregiver()) {
+            $activeLinkCode = LinkCode::where('caregiver_profile_id', $profile->id)
+                ->whereNull('used_at')
+                ->where('expires_at', '>', now())
+                ->latest('id')
+                ->first();
+
+            if ($activeLinkCode) {
+                $activeLinkSignedUrl = URL::temporarySignedRoute(
+                    'elderly.link',
+                    $activeLinkCode->expires_at,
+                    [
+                        'code' => $activeLinkCode->code,
+                        'caregiver' => $profile->id,
+                    ]
+                );
+
+                $cacheKey = "caregiver_link_qr_svg_{$activeLinkCode->id}";
+                $ttlSeconds = max(60, now()->diffInSeconds($activeLinkCode->expires_at, false));
+
+                $activeLinkQrSvg = Cache::remember($cacheKey, $ttlSeconds, function () use ($activeLinkSignedUrl) {
+                    return (string) QrCode::format('svg')
+                        ->size(200)
+                        ->margin(1)
+                        ->errorCorrection('M')
+                        ->generate($activeLinkSignedUrl);
+                });
+            }
+        }
+
+        return view('profile.edit', compact('user', 'profile', 'unreadNotifications', 'activeLinkCode', 'activeLinkQrSvg', 'activeLinkSignedUrl'));
     }
 
     /**
