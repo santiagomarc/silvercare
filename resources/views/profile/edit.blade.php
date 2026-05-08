@@ -47,26 +47,21 @@
         subtitle="Your personal information"
         role="{{ $profile->isCaregiver() ? 'caregiver' : 'elderly' }}"
         :unread-notifications="$unreadNotifications ?? 0"
+        :show-back="$profile->isCaregiver()"
+        :back-url="$profile->isCaregiver() ? route('caregiver.dashboard') : null"
+        back-label="Back to Dashboard"
     />
 
-    <div class="min-h-screen bg-slate-50 py-8" x-data="{ editMode: {{ $hasProfileValidationErrors ? 'true' : 'false' }}, showLogoutConfirm: false }">
+    <div class="min-h-screen bg-slate-50 dark:bg-[#070e1a] py-8" x-data="{ editMode: {{ $hasProfileValidationErrors ? 'true' : 'false' }}, showLogoutConfirm: false }">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-
-            {{-- Back Navigation --}}
-            <div class="mb-6 flex justify-end">
-                <a href="{{ route($dashboardRoute) }}" class="back-nav-pill">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                    Back to Home
-                </a>
-            </div>
 
             {{-- Header Section --}}
             <div class="mb-8 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                 <div>
                     <div class="flex items-center gap-3 mb-2">
-                        <h2 class="text-3xl font-black text-slate-900">My Profile</h2>
+                        <h2 class="text-3xl font-black text-slate-900 dark:text-slate-100">My Profile</h2>
                     </div>
-                    <p class="text-base text-slate-500 font-medium">View and update your personal information</p>
+                    <p class="text-base text-slate-500 dark:text-slate-400 font-medium">View and update your personal information</p>
                 </div>
 
                 <div class="flex items-center gap-4 mt-2 md:mt-0">
@@ -102,21 +97,41 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('profile.update') }}">
+            <form method="POST" action="{{ route('profile.update') }}"
+                x-data="{
+                    validateForm(e) {
+                        const phone = document.querySelector('input[name=phone_number]');
+                        if (phone && phone.value && !/^[0-9+\-\s\(\)]+$/.test(phone.value)) {
+                            e.preventDefault();
+                            phone.classList.add('!border-rose-500', '!bg-rose-50');
+                            phone.nextElementSibling.style.display = 'block';
+                            phone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            return false;
+                        }
+                        const name = document.querySelector('input[name=name]');
+                        if (name && name.value.trim() === '') {
+                            e.preventDefault();
+                            name.classList.add('!border-rose-500', '!bg-rose-50');
+                            name.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            return false;
+                        }
+                    }
+                }"
+                @submit="validateForm($event)">
                 @csrf
                 @method('PATCH')
 
                 <div class="space-y-6">
 
                     {{-- CARD 1: Personal Details --}}
-                    <div class="bg-white rounded-2xl p-6 md:p-8 shadow-card mb-6">
+                    <div class="bg-white dark:bg-slate-800 dark:ring-1 dark:ring-slate-700 rounded-2xl p-6 md:p-8 shadow-card mb-6">
                         <div>
-                            <div class="flex items-center gap-3 mb-8 pb-4 border-b border-slate-100">
-                                <h3 class="font-extrabold text-xl text-slate-900">Personal Details</h3>
+                            <div class="flex items-center justify-center gap-3 mb-8 pb-4 border-b border-slate-300 dark:border-slate-700">
+                                <h3 class="font-black text-base text-slate-900 dark:text-slate-100 text-center uppercase tracking-[0.25em]">Personal Details</h3>
                             </div>
 
                             {{-- Profile Photo Section --}}
-                            <div class="flex flex-col sm:flex-row items-center gap-6 mb-8 pb-8 border-b border-slate-100">
+                            <div class="flex flex-col sm:flex-row items-center gap-6 mb-8 pb-8 border-b border-slate-300 dark:border-slate-700">
                                 <div class="relative group">
                                     <div class="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-navy-500 to-navy-400 shadow-glow-brand flex items-center justify-center">
                                         @if($profile->profile_photo)
@@ -137,10 +152,10 @@
                                 </div>
 
                                 <div class="flex flex-col gap-2">
-                                    <p class="text-base font-bold text-slate-900">Profile Photo</p>
+                                    <p class="text-base font-bold text-slate-900 dark:text-slate-100">Profile Photo</p>
 
                                     <template x-if="!editMode">
-                                        <p class="text-sm text-slate-500">{{ $profile->profile_photo ? 'Photo uploaded' : 'No photo uploaded' }}</p>
+                                        <p class="text-sm text-slate-500 dark:text-slate-400">{{ $profile->profile_photo ? 'Photo uploaded' : 'No photo uploaded' }}</p>
                                     </template>
 
                                     <template x-if="editMode">
@@ -164,7 +179,7 @@
                                                 @endif
                                             </div>
 
-                                            <p class="text-xs text-slate-400">JPG, PNG, GIF or WebP. Max 5MB. You'll be able to crop your photo before uploading.</p>
+                                            <p class="text-xs text-slate-400 dark:text-slate-500">JPG, PNG, GIF or WebP. Max 5MB. You'll be able to crop your photo before uploading.</p>
                                             <div id="photo-status"></div>
                                         </div>
                                     </template>
@@ -200,9 +215,9 @@
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-1 gap-y-8 gap-x-6 md:grid-cols-2 lg:grid-cols-3">
+                            <div class="grid grid-cols-1 gap-y-6">
                                 {{-- Full Name --}}
-                                <div class="md:col-span-2 lg:col-span-1">
+                                <div>
                                     <label class="profile-field-label">Full Name</label>
                                     <template x-if="!editMode">
                                         <p class="profile-field-value">{{ $user->name ?: '—' }}</p>
@@ -411,7 +426,7 @@
                     @endif
 
                     {{-- ACTION BUTTONS (only show in edit mode) --}}
-                    <div x-show="editMode" class="flex justify-end gap-4">
+                    <div x-show="editMode" class="flex justify-end gap-6 mb-2">
                         <button type="button" @click="editMode = false"
                             class="px-8 py-4 rounded-2xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all min-h-touch">
                             Cancel
@@ -634,16 +649,16 @@
             @endif
 
             {{-- CARD 5: Account Session --}}
-            <div class="bg-white rounded-2xl p-6 md:p-8 shadow-card mb-6">
+            <div class="bg-white ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700 dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] rounded-2xl p-6 md:p-8 shadow-card mt-8 mb-6">
                 <div class="flex items-center justify-between gap-8 flex-col sm:flex-row">
                     <div>
-                        <h3 class="font-extrabold text-xl text-slate-900">Account Session</h3>
-                        <p class="text-base text-slate-500 font-medium">Sign out safely from your profile page.</p>
+                        <h3 class="font-extrabold text-xl text-slate-900 dark:text-white">Account Session</h3>
+                        <p class="text-base text-slate-500 dark:text-slate-400 font-medium">Sign out safely from your account.</p>
                     </div>
                     <button
                         type="button"
                         @click="showLogoutConfirm = true"
-                        class="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-5 py-3 text-base font-bold text-rose-700 hover:bg-rose-100 transition-colors min-h-touch"
+                        class="inline-flex items-center gap-2 rounded-xl border border-rose-200 dark:border-slate-700 bg-rose-50 dark:bg-slate-800 px-5 py-3 text-base font-bold text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-slate-700 transition-colors min-h-touch"
                     >
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>

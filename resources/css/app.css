@@ -450,6 +450,18 @@
         @apply text-base text-slate-500 font-medium max-w-sm;
     }
 
+    
+    /* Force dark-mode error input text to be readable — overrides Tailwind !important */
+    html.dark .profile-field-input {
+        color-scheme: dark;
+    }
+    html.dark .profile-field-input.\!bg-rose-50,
+    html.dark .profile-field-input.\!border-rose-500 {
+        background-color: rgb(30 8 16) !important;
+        color: rgb(252 165 165) !important;
+        border-color: rgb(239 68 68) !important;
+    }
+
     /* ── Back Navigation Pill ────────────────────────────────────── */
     .back-nav-pill {
         @apply inline-flex items-center gap-2 min-h-touch px-4 py-2.5 rounded-xl
