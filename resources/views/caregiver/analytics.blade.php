@@ -6,6 +6,95 @@
     <style>
         .period-btn.active { background: white; color: #1f2937; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .health-ring { transition: stroke-dashoffset 1s ease-out; }
+        /* Fix card header light backgrounds */
+        .dark main [class*="from-"][class*="to-white"],
+        .dark main [class*="bg-gradient"] { background: #1e293b !important; }
+        .dark main [style*="background"] { background-color: #1e293b !important; }
+
+        /* Dark mode fixes */
+
+        /* Quick stat cards */
+        .dark main .bg-white {
+            background-color: #1e293b !important;
+            border-color: #334155 !important;
+        }
+
+        /* Text colors */
+        .dark main .text-gray-900 { color: #f1f5f9 !important; }
+        .dark main .text-gray-800 { color: #e2e8f0 !important; }
+        .dark main .text-gray-700 { color: #cbd5e1 !important; }
+        .dark main .text-gray-600 { color: #94a3b8 !important; }
+        .dark main .text-gray-500 { color: #94a3b8 !important; }
+        .dark main .text-gray-400 { color: #64748b !important; }
+        .dark main .text-gray-300 { color: #475569 !important; }
+
+        /* Stat mini backgrounds */
+        .dark main .bg-gray-50 { background-color: #0f172a !important; }
+        .dark main .bg-gray-100 { background-color: #0f172a !important; }
+
+        /* Icon backgrounds - keep tinted */
+        .dark main .bg-blue-50 { background-color: rgba(59,130,246,0.2) !important; }
+        .dark main .bg-green-50 { background-color: rgba(34,197,94,0.2) !important; }
+        .dark main .bg-purple-50 { background-color: rgba(168,85,247,0.2) !important; }
+        .dark main .bg-amber-50 { background-color: rgba(245,158,11,0.2) !important; }
+        .dark main .bg-rose-50 { background-color: rgba(244,63,94,0.2) !important; }
+        .dark main .bg-red-50 { background-color: rgba(239,68,68,0.2) !important; }
+
+        /* Borders */
+        .dark main .border-gray-100 { border-color: #334155 !important; }
+        .dark main .border-gray-200 { border-color: #334155 !important; }
+        .dark main .border-blue-100 { border-color: rgba(59,130,246,0.3) !important; }
+        .dark main .border-red-100 { border-color: rgba(239,68,68,0.3) !important; }
+        .dark main .border-amber-100 { border-color: rgba(245,158,11,0.3) !important; }
+
+        /* VITAL CARD HEADERS - make them pop with solid dark tinted backgrounds */
+        .dark main [class*="from-red-50"],
+        .dark main [class*="from-rose-50"] { background: linear-gradient(to right, rgba(239,68,68,0.25), rgba(239,68,68,0.1)) !important; border-color: rgba(239,68,68,0.3) !important; }
+        .dark main [class*="from-blue-50"] { background: linear-gradient(to right, rgba(59,130,246,0.25), rgba(59,130,246,0.1)) !important; border-color: rgba(59,130,246,0.3) !important; }
+        .dark main [class*="from-pink-50"] { background: linear-gradient(to right, rgba(236,72,153,0.25), rgba(236,72,153,0.1)) !important; border-color: rgba(236,72,153,0.3) !important; }
+        .dark main [class*="from-orange-50"] { background: linear-gradient(to right, rgba(249,115,22,0.25), rgba(249,115,22,0.1)) !important; border-color: rgba(249,115,22,0.3) !important; }
+        .dark main [class*="from-green-50"] { background: linear-gradient(to right, rgba(34,197,94,0.25), rgba(34,197,94,0.1)) !important; border-color: rgba(34,197,94,0.3) !important; }
+        .dark main [class*="from-purple-50"] { background: linear-gradient(to right, rgba(168,85,247,0.25), rgba(168,85,247,0.1)) !important; border-color: rgba(168,85,247,0.3) !important; }
+        .dark main [class*="from-amber-50"] { background: linear-gradient(to right, rgba(245,158,11,0.25), rgba(245,158,11,0.1)) !important; border-color: rgba(245,158,11,0.3) !important; }
+
+        /* HEALTH SCORE CARD - make it glow/pop in dark mode */
+        /* Health score card glow - only the lg:col-span-1 card */
+        .dark main .lg\:col-span-1[class*="from-red-500"],
+        .dark main .lg\:col-span-1[class*="from-green-500"],
+        .dark main .lg\:col-span-1[class*="from-yellow-500"] {
+            box-shadow: 0 0 40px rgba(239,68,68,0.4), 0 20px 40px rgba(0,0,0,0.4) !important;
+            filter: brightness(1.1) !important;
+        }
+
+        /* EXPORT PDF BUTTON - keep blue in both modes */
+        .dark main a[href*="export"],
+        .dark a[href*="export"] {
+            background: linear-gradient(to right, #000080, #1d4ed8) !important;
+            color: white !important;
+            box-shadow: 0 4px 15px rgba(29,78,216,0.5) !important;
+        }
+
+        /* Period selector */
+        .dark .bg-gray-100.rounded-xl { background-color: #1e293b !important; }
+        .dark .period-btn { color: #94a3b8 !important; }
+        .dark .period-btn.active,
+        .dark .period-btn.active.bg-white,
+        .dark .flex.bg-gray-100.rounded-xl button.bg-white,
+        .dark .flex.bg-gray-100.rounded-xl button[class*="bg-white"] {
+            background: #3b82f6 !important;
+            color: #ffffff !important;
+            box-shadow: 0 1px 6px rgba(59,130,246,0.4) !important;
+        }
+        .dark .flex.bg-gray-100.rounded-xl {
+            background-color: #1e293b !important;
+        }
+        .dark .flex.bg-gray-100.rounded-xl button {
+            color: #94a3b8 !important;
+        }
+
+        /* Medication/Task summary cards */
+        .dark main .bg-blue-50.border { background-color: rgba(59,130,246,0.15) !important; }
+        .dark main .bg-green-50.border { background-color: rgba(34,197,94,0.15) !important; }
     </style>
     @endpush
 
@@ -47,7 +136,7 @@
                 <div class="flex bg-gray-100 rounded-xl p-1">
                     <button @click="setPeriod('7days')" :class="period === '7days' ? 'active bg-white text-gray-900 shadow' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-2 rounded-lg text-sm font-[700] transition-all">Week</button>
                     <button @click="setPeriod('30days')" :class="period === '30days' ? 'active bg-white text-gray-900 shadow' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-2 rounded-lg text-sm font-[700] transition-all">Month</button>
-                    <button @click="setPeriod('90days')" :class="period === '90days' ? 'active bg-white text-gray-900 shadow' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-2 rounded-lg text-sm font-[700] transition-all">3 Months</button>
+                    <button @click="setPeriod('365days')" :class="period === '365days' ? 'active bg-white text-gray-900 shadow' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-2 rounded-lg text-sm font-[700] transition-all">Year</button>
                 </div>
                 
                 {{-- Export PDF Button --}}
@@ -191,7 +280,7 @@
 
                 <!-- Card Body -->
                 <div class="p-5">
-                    @foreach(['7days', '30days', '90days'] as $period)
+                    @foreach(['7days', '30days', '365days'] as $period)
                     <div x-show="period === '{{ $period }}'" x-cloak>
                         @if(($data[$period]['count'] ?? 0) > 0)
                             <!-- Mini Chart -->
@@ -460,7 +549,7 @@
                 initCharts() {
                     Object.keys(this.analyticsData).forEach(type => {
                         const data = this.analyticsData[type];
-                        ['7days', '30days', '90days'].forEach(p => {
+                        ['7days', '30days', '365days'].forEach(p => {
                             const periodData = data[p];
                             if (periodData && periodData.count > 0) {
                                 const canvasId = `chart-${type}-${p}`;

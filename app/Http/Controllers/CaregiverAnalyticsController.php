@@ -57,7 +57,7 @@ class CaregiverAnalyticsController extends Controller
         $periods = [
             '7days'  => Carbon::now()->subDays(7),
             '30days' => Carbon::now()->subDays(30),
-            '90days' => Carbon::now()->subDays(90),
+            '365days' => Carbon::now()->subDays(365),
         ];
 
         $analyticsData = $this->analyticsService->getAnalyticsData($elderlyId, $periods);
