@@ -74,33 +74,49 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
 
             <!-- ELDER PROFILE CARD (2 cols) -->
-            <div class="lg:col-span-2 relative overflow-hidden rounded-[24px] bg-gradient-to-br from-teal-100 via-emerald-100 to-cyan-100 p-6 text-slate-900 shadow-xl shadow-teal-900/10 border border-teal-200/70 dark:from-slate-900 dark:via-slate-850 dark:to-slate-800 dark:text-slate-100 dark:border-slate-700 dark:shadow-[0_24px_60px_-30px_rgba(2,6,23,0.8)]">
-                <div class="absolute top-0 right-0 -mr-10 -mt-10 h-40 w-40 rounded-full bg-white/40 dark:bg-white/10 blur-xl"></div>
-                <div class="absolute bottom-0 left-0 -ml-8 -mb-8 h-32 w-32 rounded-full bg-black/5 dark:bg-black/20 blur-xl"></div>
+            <div class="lg:col-span-2 relative overflow-hidden rounded-[24px] bg-gradient-to-br from-indigo-50/90 via-white/80 to-teal-50/90 dark:from-slate-800/90 dark:via-slate-900/80 dark:to-slate-800/90 backdrop-blur-xl p-6 sm:p-8 shadow-card border border-white/60 dark:border-slate-700/50 transition-all hover:shadow-lg flex flex-col justify-between">
+                <!-- Decorative glass shapes -->
+                <div class="absolute top-0 right-0 w-72 h-72 bg-gradient-to-br from-indigo-400/10 to-purple-400/10 dark:from-indigo-400/20 dark:to-purple-400/20 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+                <div class="absolute bottom-0 left-0 w-56 h-56 bg-gradient-to-tr from-teal-400/10 to-emerald-400/10 dark:from-teal-400/20 dark:to-emerald-400/20 rounded-full blur-3xl -ml-20 -mb-20 pointer-events-none"></div>
 
-                <div class="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-5">
+                <div class="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-6">
                     <!-- Avatar -->
-                    <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white/60 dark:bg-white/10 backdrop-blur-sm flex items-center justify-center border-4 border-white/60 dark:border-white/25 flex-shrink-0 overflow-hidden">
-                        @if($elderly->profile_photo)
-                            <img src="{{ Storage::url($elderly->profile_photo) }}" alt="{{ $elderlyUser->name ?? 'Elder' }}" class="w-full h-full object-cover">
-                        @else
-                            <span class="text-4xl sm:text-5xl font-[900] text-slate-800 dark:text-white/90">{{ substr($elderlyUser->name ?? $elderly->username ?? 'E', 0, 1) }}</span>
-                        @endif
+                    <div class="relative w-20 h-20 sm:w-28 sm:h-28 flex-shrink-0">
+                        <div class="absolute inset-0 bg-gradient-to-br from-indigo-400 to-teal-400 rounded-full shadow-lg opacity-30 blur-md transform translate-y-1"></div>
+                        <div class="relative w-full h-full rounded-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-md flex items-center justify-center border-4 border-white dark:border-slate-700 shadow-sm overflow-hidden z-10">
+                            @if($elderly->profile_photo)
+                                <img src="{{ Storage::url($elderly->profile_photo) }}" alt="{{ $elderlyUser->name ?? 'Elder' }}" class="w-full h-full object-cover">
+                            @else
+                                <span class="text-4xl sm:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-br from-indigo-600 to-teal-600 dark:from-indigo-400 dark:to-teal-400">{{ substr($elderlyUser->name ?? $elderly->username ?? 'E', 0, 1) }}</span>
+                            @endif
+                        </div>
                     </div>
 
                     <!-- Elder Details -->
-                    <div class="flex-1">
-                        <p class="text-teal-700 dark:text-teal-200 text-xs font-bold uppercase tracking-wider mb-1">Your Patient</p>
-                        <h2 class="text-2xl sm:text-3xl font-[900] mb-2 leading-tight">{{ $elderlyUser->name ?? $elderly->username ?? 'Elder' }}</h2>
-                        <div class="flex flex-col gap-y-1.5 text-sm text-teal-800 dark:text-teal-100/90 font-medium">
+                    <div class="flex-1 w-full">
+                        <div class="flex items-center justify-between mb-1">
+                            <p class="text-indigo-600/80 dark:text-indigo-400/80 text-xs font-bold uppercase tracking-widest">Your Patient</p>
+                        </div>
+                        <h2 class="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white mb-3 tracking-tight">{{ $elderlyUser->name ?? $elderly->username ?? 'Elder' }}</h2>
+                        
+                        <div class="flex flex-wrap items-center gap-3 sm:gap-5 text-sm font-semibold text-slate-600 dark:text-slate-300">
                             @if($elderly->age)
-                                <span class="flex items-center gap-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>{{ $elderly->age }} years old</span>
+                                <div class="flex items-center gap-1.5 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/50 dark:border-slate-700/50 shadow-sm">
+                                    <svg class="w-4 h-4 text-indigo-500/70 dark:text-indigo-400/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                    <span>{{ $elderly->age }} yrs</span>
+                                </div>
                             @endif
                             @if($elderly->sex)
-                                <span class="flex items-center gap-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>{{ $elderly->sex }}</span>
+                                <div class="flex items-center gap-1.5 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/50 dark:border-slate-700/50 shadow-sm">
+                                    <svg class="w-4 h-4 text-teal-500/70 dark:text-teal-400/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                    <span>{{ $elderly->sex }}</span>
+                                </div>
                             @endif
                             @if($elderly->phone_number)
-                                <span class="flex items-center gap-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>{{ $elderly->phone_number }}</span>
+                                <div class="flex items-center gap-1.5 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/50 dark:border-slate-700/50 shadow-sm">
+                                    <svg class="w-4 h-4 text-purple-500/70 dark:text-purple-400/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                                    <span>{{ $elderly->phone_number }}</span>
+                                </div>
                             @endif
                         </div>
                     </div>
@@ -108,90 +124,113 @@
 
                 <!-- Medical Conditions Badge -->
                 @if(!empty($conditions) || !empty($medications) || !empty($allergies))
-                    <div class="relative z-10 mt-5 pt-5 border-t border-teal-200/60 dark:border-white/20">
-                        <div class="grid grid-cols-1 gap-4">
+                    <div class="relative z-10 mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                        <div class="flex flex-col gap-4">
                             @if(!empty($conditions))
                             <div>
-                                <p class="text-xs font-bold uppercase tracking-wider text-teal-700 dark:text-teal-200 mb-2.5">Known Conditions</p>
+                                <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">Conditions</p>
                                 <div class="flex flex-wrap gap-2">
                                     @foreach($conditions as $condition)
-                                        <span class="bg-teal-200/70 dark:bg-white/20 backdrop-blur-sm text-teal-900 dark:text-white text-sm font-bold px-3 py-1.5 rounded-full">{{ $condition }}</span>
+                                        <span class="bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 text-xs font-bold px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-500/20">{{ $condition }}</span>
                                     @endforeach
                                 </div>
                             </div>
                             @endif
-                            @if(!empty($medications))
-                            <div>
-                                <p class="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-200 mb-2.5">💊 Medications</p>
-                                <div class="flex flex-wrap gap-2">
-                                    @foreach($medications as $med)
-                                        <span class="bg-blue-200/70 dark:bg-blue-500/30 backdrop-blur-sm text-blue-900 dark:text-white text-sm font-bold px-3 py-1.5 rounded-full">{{ $med }}</span>
-                                    @endforeach
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                @if(!empty($medications))
+                                <div class="flex-1">
+                                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">Medications</p>
+                                    <div class="flex flex-wrap gap-2">
+                                        @foreach($medications as $med)
+                                            <span class="bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 text-xs font-bold px-3 py-1 rounded-full border border-blue-100 dark:border-blue-500/20">💊 {{ $med }}</span>
+                                        @endforeach
+                                    </div>
                                 </div>
-                            </div>
-                            @endif
-                            @if(!empty($allergies))
-                            <div>
-                                <p class="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-200 mb-2.5">⚠️ Allergies</p>
-                                <div class="flex flex-wrap gap-2">
-                                    @foreach($allergies as $allergy)
-                                        <span class="bg-amber-200/80 dark:bg-amber-500/30 backdrop-blur-sm text-amber-900 dark:text-white text-sm font-bold px-3 py-1.5 rounded-full">{{ $allergy }}</span>
-                                    @endforeach
+                                @endif
+                                @if(!empty($allergies))
+                                <div class="flex-1">
+                                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">Allergies</p>
+                                    <div class="flex flex-wrap gap-2">
+                                        @foreach($allergies as $allergy)
+                                            <span class="bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 text-xs font-bold px-3 py-1 rounded-full border border-rose-100 dark:border-rose-500/20">⚠️ {{ $allergy }}</span>
+                                        @endforeach
+                                    </div>
                                 </div>
+                                @endif
                             </div>
-                            @endif
                         </div>
                     </div>
                 @endif
             </div>
 
             <!-- TODAY'S STATS CARD (1 col) -->
-            <div class="bg-white rounded-[24px] p-6 shadow-md border border-gray-100 flex flex-col">
-                <h3 class="font-[800] text-lg text-gray-900 mb-4 flex items-center gap-2">
-                    <span class="text-xl">📊</span> Today's Summary
-                </h3>
+            <div class="bg-white dark:bg-slate-900 rounded-[24px] p-6 sm:p-8 shadow-card border border-slate-100 dark:border-slate-800 flex flex-col justify-between transition-all hover:shadow-lg">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    </div>
+                    <h3 class="font-black text-xl text-slate-900 dark:text-white tracking-tight">Today's Summary</h3>
+                </div>
+                
                 @if(!empty($stats))
-                <div class="space-y-4 flex-1">
+                <div class="space-y-5 flex-1">
                     <!-- Medication Stat -->
-                    <div>
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="text-sm text-gray-600 font-medium">Medication</span>
-                            <span class="text-sm font-bold {{ $stats['medication_adherence'] === 100 ? 'text-green-600' : ($stats['medication_adherence'] >= 50 ? 'text-yellow-600' : 'text-gray-500') }}">
-                                @if($stats['medication_adherence'] !== null) {{ $stats['medication_adherence'] }}% @else N/A @endif
-                            </span>
+                    <div class="group">
+                        <div class="flex justify-between items-end mb-2">
+                            <span class="text-sm font-bold text-slate-600 dark:text-slate-300">Medication Adherence</span>
+                            <div class="text-right">
+                                <span class="text-lg font-black {{ $stats['medication_adherence'] === 100 ? 'text-emerald-500' : ($stats['medication_adherence'] >= 50 ? 'text-amber-500' : 'text-slate-400') }}">
+                                    @if($stats['medication_adherence'] !== null) {{ $stats['medication_adherence'] }}% @else N/A @endif
+                                </span>
+                            </div>
                         </div>
-                        <div class="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div class="h-full rounded-full transition-all {{ $stats['medication_adherence'] === 100 ? 'bg-green-500' : ($stats['medication_adherence'] >= 50 ? 'bg-yellow-400' : 'bg-gray-300') }}" style="width: {{ $stats['medication_adherence'] ?? 0 }}%"></div>
+                        <div class="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
+                            <div class="h-full rounded-full transition-all duration-1000 ease-out {{ $stats['medication_adherence'] === 100 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : ($stats['medication_adherence'] >= 50 ? 'bg-gradient-to-r from-amber-400 to-amber-500' : 'bg-slate-300 dark:bg-slate-600') }}" style="width: {{ $stats['medication_adherence'] ?? 0 }}%"></div>
                         </div>
-                        <p class="text-[11px] text-gray-400 mt-1">{{ $stats['doses_taken'] }}/{{ $stats['doses_total'] }} doses taken</p>
+                        <p class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mt-1.5 uppercase tracking-wider">{{ $stats['doses_taken'] }} of {{ $stats['doses_total'] }} doses taken</p>
                     </div>
+                    
                     <!-- Task Stat -->
-                    <div>
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="text-sm text-gray-600 font-medium">Tasks</span>
-                            <span class="text-sm font-bold {{ $stats['task_completion'] === 100 ? 'text-green-600' : ($stats['task_completion'] >= 50 ? 'text-yellow-600' : 'text-gray-500') }}">
-                                @if($stats['task_completion'] !== null) {{ $stats['task_completion'] }}% @else N/A @endif
-                            </span>
+                    <div class="group">
+                        <div class="flex justify-between items-end mb-2">
+                            <span class="text-sm font-bold text-slate-600 dark:text-slate-300">Daily Tasks</span>
+                            <div class="text-right">
+                                <span class="text-lg font-black {{ $stats['task_completion'] === 100 ? 'text-blue-500' : ($stats['task_completion'] >= 50 ? 'text-indigo-500' : 'text-slate-400') }}">
+                                    @if($stats['task_completion'] !== null) {{ $stats['task_completion'] }}% @else N/A @endif
+                                </span>
+                            </div>
                         </div>
-                        <div class="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div class="h-full rounded-full transition-all {{ $stats['task_completion'] === 100 ? 'bg-green-500' : ($stats['task_completion'] >= 50 ? 'bg-yellow-400' : 'bg-gray-300') }}" style="width: {{ $stats['task_completion'] ?? 0 }}%"></div>
+                        <div class="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
+                            <div class="h-full rounded-full transition-all duration-1000 ease-out {{ $stats['task_completion'] === 100 ? 'bg-gradient-to-r from-blue-400 to-blue-500' : ($stats['task_completion'] >= 50 ? 'bg-gradient-to-r from-indigo-400 to-indigo-500' : 'bg-slate-300 dark:bg-slate-600') }}" style="width: {{ $stats['task_completion'] ?? 0 }}%"></div>
                         </div>
-                        <p class="text-[11px] text-gray-400 mt-1">{{ $stats['tasks_completed'] }}/{{ $stats['tasks_total'] }} completed</p>
+                        <p class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mt-1.5 uppercase tracking-wider">{{ $stats['tasks_completed'] }} of {{ $stats['tasks_total'] }} tasks completed</p>
                     </div>
+                    
                     <!-- Vitals Stat -->
-                    <div>
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="text-sm text-gray-600 font-medium">Vitals Recorded</span>
-                            <span class="text-sm font-bold {{ $stats['vitals_recorded'] === $stats['vitals_total'] ? 'text-green-600' : 'text-blue-600' }}">{{ $stats['vitals_recorded'] }}/{{ $stats['vitals_total'] }}</span>
+                    <div class="group">
+                        <div class="flex justify-between items-end mb-2">
+                            <span class="text-sm font-bold text-slate-600 dark:text-slate-300">Vitals Recorded</span>
+                            <div class="text-right">
+                                <span class="text-lg font-black {{ $stats['vitals_recorded'] === $stats['vitals_total'] ? 'text-purple-500' : 'text-pink-500' }}">
+                                    {{ $stats['vitals_recorded'] }}/{{ $stats['vitals_total'] }}
+                                </span>
+                            </div>
                         </div>
-                        <div class="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div class="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
                             @php $vp = $stats['vitals_total'] > 0 ? ($stats['vitals_recorded'] / $stats['vitals_total']) * 100 : 0; @endphp
-                            <div class="h-full bg-blue-500 rounded-full transition-all" style="width: {{ $vp }}%"></div>
+                            <div class="h-full rounded-full transition-all duration-1000 ease-out {{ $vp === 100 ? 'bg-gradient-to-r from-purple-400 to-purple-500' : 'bg-gradient-to-r from-pink-400 to-pink-500' }}" style="width: {{ $vp }}%"></div>
                         </div>
+                        <p class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mt-1.5 uppercase tracking-wider">Metrics logged today</p>
                     </div>
                 </div>
                 @else
-                    <p class="text-gray-400 text-sm">No stats available.</p>
+                    <div class="flex-1 flex flex-col items-center justify-center py-8 text-center">
+                        <div class="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-3">
+                            <svg class="w-8 h-8 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                        </div>
+                        <p class="text-sm font-bold text-slate-500 dark:text-slate-400">No stats available</p>
+                        <p class="text-xs font-semibold text-slate-400 dark:text-slate-500 mt-1">Check back later today</p>
+                    </div>
                 @endif
             </div>
 
