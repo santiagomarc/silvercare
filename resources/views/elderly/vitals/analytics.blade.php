@@ -1,3 +1,10 @@
+{{-- ============================================================
+     Health Analytics — SilverCare
+     Nav updated to match dashboard-nav pattern (consistent with
+     other pages). Period selector + Export moved to toolbar row
+     below nav. Old sticky header removed.
+     ============================================================ --}}
+
 <x-dashboard-layout>
     <x-slot:title>Health Analytics - SilverCare</x-slot:title>
     <x-slot:bodyClass>bg-gray-100 min-h-screen</x-slot:bodyClass>
@@ -20,6 +27,14 @@
         .health-ring { transition: stroke-dashoffset 1s ease-out; }
     </style>
     @endpush
+
+    {{-- ── Nav (consistent with medications page) ── --}}
+    <x-dashboard-nav
+        title="Health Analytics"
+        subtitle="Your vitals insights & trends"
+        role="elderly"
+        :unread-notifications="$unreadNotifications ?? 0"
+    />
 
 @php
     // Calculate health score based on latest readings and normal ranges
@@ -67,50 +82,47 @@
     $healthColor = $healthScore >= 90 ? 'emerald' : ($healthScore >= 75 ? 'blue' : ($healthScore >= 60 ? 'amber' : 'red'));
     $vitalIconMap = [
         'blood_pressure' => 'heart-pulse',
-        'sugar_level' => 'droplets',
-        'temperature' => 'thermometer',
-        'heart_rate' => 'activity',
+        'sugar_level'    => 'droplets',
+        'temperature'    => 'thermometer',
+        'heart_rate'     => 'activity',
     ];
 @endphp
 
 <div class="min-h-screen pb-24">
-    <!-- Header -->
-    <div class="bg-white border-b border-gray-200 sticky top-0 z-30">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <a href="{{ route('dashboard') }}" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors">
-                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                        </svg>
-                    </a>
-                    <div>
-                        <h1 class="text-2xl font-[900] text-gray-900">Health Analytics</h1>
-                        <p class="text-sm text-gray-500 font-[600]">Your vitals insights & trends</p>
-                    </div>
+
+    {{-- ── Toolbar: period selector (left) + Export & Back (right) ── --}}
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+
+            {{-- Left: period pills + Export --}}
+            <div class="flex items-center gap-3 flex-wrap">
+                <div class="flex bg-white border border-gray-200 rounded-xl p-1 shadow-sm">
+                    <button onclick="changePeriod('7days')"  class="period-btn active px-4 py-2 rounded-lg text-sm font-[700] transition-all" data-period="7days">Week</button>
+                    <button onclick="changePeriod('30days')" class="period-btn px-4 py-2 rounded-lg text-sm font-[700] transition-all" data-period="30days">Month</button>
+                    <button onclick="changePeriod('90days')" class="period-btn px-4 py-2 rounded-lg text-sm font-[700] transition-all" data-period="90days">3 Months</button>
                 </div>
-                
-                <!-- Global Time Period Selector -->
-                <div class="flex items-center gap-3">
-                    <div class="flex bg-gray-100 rounded-xl p-1">
-                        <button onclick="changePeriod('7days')" class="period-btn active px-4 py-2 rounded-lg text-sm font-[700] transition-all" data-period="7days">Week</button>
-                        <button onclick="changePeriod('30days')" class="period-btn px-4 py-2 rounded-lg text-sm font-[700] transition-all" data-period="30days">Month</button>
-                        <button onclick="changePeriod('90days')" class="period-btn px-4 py-2 rounded-lg text-sm font-[700] transition-all" data-period="90days">3 Months</button>
-                    </div>
-                    
-                    <!-- Export PDF Button -->
-                    <a href="{{ route('elderly.vitals.export') }}" class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#000080] to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                        <span class="hidden sm:inline">Export</span>
-                    </a>
-                </div>
+
+                <a href="{{ route('elderly.vitals.export') }}"
+                   class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#000080] to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <span>Export</span>
+                </a>
             </div>
+
+            {{-- Right: back button (same back-nav-pill class as medications page) --}}
+            <a href="{{ route('dashboard') }}" class="back-nav-pill">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Back to Dashboard
+            </a>
+
         </div>
     </div>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 space-y-6">
         
         <!-- Health Score + Quick Stats Row -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -211,8 +223,6 @@
             </div>
         </div>
 
-        <!-- Insights Section (Now in Grid with BMI) -->
-
         <!-- AI Vitals Trend Analyzer -->
         @if($totalFactors > 0)
         <div x-data="vitalsAiAnalyzer()" class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-xl overflow-hidden">
@@ -236,7 +246,6 @@
                     </button>
                 </div>
 
-                <!-- AI Analysis Result -->
                 <div x-show="analysis" x-transition class="mt-5 bg-white/10 backdrop-blur rounded-xl p-5 text-white">
                     <div class="prose prose-invert prose-sm max-w-none" x-html="renderMarkdown(analysis)"></div>
                     <p class="text-xs text-white/50 mt-3 font-[600] inline-flex items-center gap-1.5">
@@ -245,7 +254,6 @@
                     </p>
                 </div>
 
-                <!-- Error -->
                 <div x-show="error" x-transition class="mt-4 bg-red-500/20 rounded-xl p-4 text-white text-sm font-[600]">
                     <span x-text="error"></span>
                 </div>
@@ -306,7 +314,7 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
-            <!-- Personalized Insights Card (Swapped - now in big square) -->
+            <!-- Personalized Insights -->
             @if($totalFactors > 0)
             <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
                 <div class="bg-gradient-to-r from-indigo-50 to-purple-100 p-5 border-b border-indigo-100">
@@ -353,7 +361,7 @@
                                     
                                     $insightColors = [
                                         'success' => 'bg-green-50 border-green-200 text-green-800',
-                                        'info' => 'bg-blue-50 border-blue-200 text-blue-800',
+                                        'info'    => 'bg-blue-50 border-blue-200 text-blue-800',
                                         'warning' => 'bg-amber-50 border-amber-200 text-amber-800',
                                     ];
                                 @endphp
@@ -391,7 +399,6 @@
                 </div>
                 <div class="p-5">
                     @if($bmiData['bmi'])
-                        <!-- BMI Score Display -->
                         <div class="text-center mb-6">
                             <div class="inline-flex items-center justify-center w-28 h-28 rounded-full bg-{{ $bmiData['color'] }}-100 mb-3">
                                 <div class="text-center">
@@ -402,7 +409,6 @@
                             <p class="text-lg font-[900] text-gray-900">{{ $bmiData['category'] }}</p>
                         </div>
 
-                        <!-- Weight & Height Cards -->
                         <div class="grid grid-cols-2 gap-3 mb-4">
                             <div class="bg-gray-50 rounded-xl p-4 text-center">
                                 <div class="mb-1 flex justify-center">
@@ -420,7 +426,6 @@
                             </div>
                         </div>
 
-                        <!-- BMI Scale Reference -->
                         <div class="bg-gray-50 rounded-xl p-3">
                             <p class="text-xs font-[700] text-gray-500 mb-2 text-center">BMI Categories</p>
                             <div class="flex justify-between text-xs font-[600]">
@@ -437,7 +442,6 @@
                             </div>
                         </div>
                     @else
-                        <!-- No BMI Data -->
                         <div class="text-center py-8">
                             <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 opacity-50">
                                 <x-lucide-scale class="w-8 h-8 text-gray-500" aria-hidden="true" />
@@ -453,10 +457,9 @@
             </div>
         </div>
 
-        <!-- Steps Section (Now horizontal rectangular card) -->
+        <!-- Steps Section -->
         <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-100 shadow-lg">
             <div class="flex flex-col md:flex-row items-center gap-6">
-                <!-- Left: Icon and Title -->
                 <div class="flex items-center gap-4 flex-shrink-0">
                     <div class="w-14 h-14 bg-white rounded-xl flex items-center justify-center shadow-sm">
                         <x-lucide-footprints class="w-8 h-8 text-emerald-600" aria-hidden="true" />
@@ -468,7 +471,6 @@
                 </div>
                 
                 @if($stepsData['today'])
-                    <!-- Center: Progress Ring -->
                     <div class="flex-shrink-0">
                         <div class="relative w-20 h-20">
                             <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
@@ -489,7 +491,6 @@
                         </div>
                     </div>
                     
-                    <!-- Right: Stats -->
                     <div class="flex-1 grid grid-cols-3 gap-4">
                         <div class="bg-white/80 rounded-xl p-3 text-center">
                             <p class="text-xs font-[700] text-gray-500 uppercase">Today</p>
@@ -528,7 +529,6 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             @foreach($analyticsData as $type => $data)
             <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden" id="card-{{ $type }}">
-                <!-- Card Header -->
                 <div class="bg-gradient-to-r from-{{ $data['config']['color'] }}-50 to-{{ $data['config']['color'] }}-100/50 p-5 border-b border-{{ $data['config']['color'] }}-100">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-3">
@@ -542,7 +542,6 @@
                             </div>
                         </div>
                         
-                        <!-- Expand Button -->
                         <button onclick="openDetailModal('{{ $type }}')" class="px-4 py-2 bg-white rounded-xl text-sm font-[700] text-{{ $data['config']['color'] }}-600 hover:bg-{{ $data['config']['color'] }}-50 transition-all flex items-center gap-2 shadow-sm border border-{{ $data['config']['color'] }}-200">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
@@ -552,17 +551,14 @@
                     </div>
                 </div>
 
-                <!-- Card Body -->
                 <div class="p-5">
                     @foreach(['7days', '30days', '90days'] as $period)
                     <div class="period-data {{ $period !== '7days' ? 'hidden' : '' }}" data-period="{{ $period }}" data-type="{{ $type }}">
                         @if(($data[$period]['count'] ?? 0) > 0)
-                            <!-- Mini Chart -->
                             <div class="mb-4 bg-gray-50 rounded-xl p-3 h-[140px]">
                                 <canvas id="chart-{{ $type }}-{{ $period }}" class="w-full h-full"></canvas>
                             </div>
 
-                            <!-- Key Stats Row -->
                             <div class="grid grid-cols-3 gap-3 mb-4">
                                 @if($type === 'blood_pressure')
                                     <div class="text-center bg-gray-50 rounded-xl p-3">
@@ -598,7 +594,6 @@
                                 @endif
                             </div>
 
-                            <!-- Latest Reading -->
                             @if($data[$period]['metrics']->count() > 0)
                             <div class="flex items-center justify-between py-3 px-4 bg-{{ $data['config']['color'] }}-50 rounded-xl border border-{{ $data['config']['color'] }}-100">
                                 <div>
@@ -615,7 +610,6 @@
                             </div>
                             @endif
                         @else
-                            <!-- No Data -->
                             <div class="text-center py-10">
                                 <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl opacity-50 grayscale">
                                     {{ $data['config']['icon'] }}
@@ -640,9 +634,7 @@
 <div id="detailModal" class="fixed inset-0 z-[60] hidden">
     <div class="absolute inset-0 bg-black/40 modal-backdrop" onclick="closeDetailModal()"></div>
     <div class="absolute right-0 top-0 bottom-0 w-full max-w-xl bg-white shadow-2xl drawer-slide overflow-y-auto" id="detailDrawer">
-        <div id="detailModalContent">
-            <!-- Content will be injected by JS -->
-        </div>
+        <div id="detailModalContent"></div>
     </div>
 </div>
 
@@ -652,7 +644,6 @@
     const analyticsData = @json($analyticsData);
     let currentPeriod = '7days';
 
-    // Initialize charts
     function initCharts() {
         Object.keys(analyticsData).forEach(type => {
             const data = analyticsData[type];
@@ -677,10 +668,10 @@
         });
         
         const colorMap = {
-            'red': { bg: 'rgba(239, 68, 68, 0.15)', border: 'rgb(239, 68, 68)' },
-            'blue': { bg: 'rgba(59, 130, 246, 0.15)', border: 'rgb(59, 130, 246)' },
+            'red':    { bg: 'rgba(239, 68, 68, 0.15)',  border: 'rgb(239, 68, 68)' },
+            'blue':   { bg: 'rgba(59, 130, 246, 0.15)', border: 'rgb(59, 130, 246)' },
             'orange': { bg: 'rgba(249, 115, 22, 0.15)', border: 'rgb(249, 115, 22)' },
-            'rose': { bg: 'rgba(244, 63, 94, 0.15)', border: 'rgb(244, 63, 94)' },
+            'rose':   { bg: 'rgba(244, 63, 94, 0.15)',  border: 'rgb(244, 63, 94)' },
         };
         const colors = colorMap[config.color] || colorMap.blue;
 
@@ -756,9 +747,7 @@
                                 <p class="text-xs text-gray-500 font-[600]">${dateStr} • ${timeStr}</p>
                             </div>
                         </div>
-                        <div class="text-right">
-                            ${source}
-                        </div>
+                        <div class="text-right">${source}</div>
                     </div>
                 `;
             }).join('');
@@ -817,19 +806,16 @@
             </div>
             
             <div class="p-5 space-y-6">
-                <!-- Stats Summary -->
                 <div>
                     <h3 class="text-sm font-[800] text-gray-500 uppercase mb-3">Statistics</h3>
                     ${statsHtml}
                 </div>
                 
-                <!-- Add Reading Button -->
                 <a href="${window.location.origin}/my-vitals/${type}" class="flex items-center justify-center gap-2 w-full py-4 bg-${data.config.color}-500 text-white rounded-xl font-[800] hover:bg-${data.config.color}-600 transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
                     Add New Reading
                 </a>
                 
-                <!-- Full History -->
                 <div>
                     <h3 class="text-sm font-[800] text-gray-500 uppercase mb-3">All Readings</h3>
                     <div class="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 max-h-[400px] overflow-y-auto">
@@ -849,12 +835,9 @@
         const modal = document.getElementById('detailModal');
         const drawer = document.getElementById('detailDrawer');
         drawer.classList.add('hidden');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-        }, 300);
+        setTimeout(() => { modal.classList.add('hidden'); }, 300);
     }
 
-    // Close on escape
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeDetailModal();
     });
