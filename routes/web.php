@@ -199,8 +199,6 @@ Route::middleware(['prevent.back'])->group(function () {
     
     Route::post('/profile/completion', [ProfileCompletionController::class, 'store'])
         ->name('profile.completion.store');
-        Route::get('/profile/completion/skip', [ProfileCompletionController::class, 'skip'])
-            ->name('profile.completion.skip');
 });
 
 // Shared authenticated routes (profile, calendar) — M5 FIX: prevent.back added
@@ -213,6 +211,7 @@ Route::middleware(['auth', 'prevent.back'])->group(function () {
     // Profile Photo
     Route::post('/profile/photo', [ProfileController::class, 'uploadPhoto'])->name('profile.photo.upload');
     Route::delete('/profile/photo', [ProfileController::class, 'removePhoto'])->name('profile.photo.remove');
+    Route::delete('/profile/photo/remove', [ProfileController::class, 'removePhoto'])->name('profile.photo.remove.legacy');
 
     // Calendar
     Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar.index');

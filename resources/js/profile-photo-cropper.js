@@ -163,14 +163,16 @@ window.cancelCrop = function cancelCrop() {
 };
 
 window.removeProfilePhoto = async function removeProfilePhoto() {
-    const confirmed = await window.scConfirm({
-        title: 'Remove profile photo?',
-        text: 'Your avatar will be reset to the default profile image.',
-        icon: 'warning',
-        confirmButtonText: 'Remove photo',
-        cancelButtonText: 'Cancel',
-        elderly: true,
-    });
+    const confirmed = typeof window.scConfirm === 'function'
+        ? await window.scConfirm({
+            title: 'Remove profile photo?',
+            text: 'Your avatar will be reset to the default profile image.',
+            icon: 'warning',
+            confirmButtonText: 'Remove photo',
+            cancelButtonText: 'Cancel',
+            elderly: true,
+        })
+        : window.confirm('Remove profile photo?');
 
     if (!confirmed) {
         return;
@@ -179,8 +181,14 @@ window.removeProfilePhoto = async function removeProfilePhoto() {
     const statusDiv = document.getElementById('photo-status');
     statusDiv.innerHTML = '<span class="text-navy-500 text-sm">Removing...</span>';
 
+    const removeForm = document.getElementById('profile-photo-remove-form');
+    if (removeForm) {
+        removeForm.submit();
+        return;
+    }
+
     try {
-        const response = await fetch('/profile/photo/remove', {
+        const response = await fetch('/profile/photo', {
             method: 'DELETE',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
