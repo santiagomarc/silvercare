@@ -148,6 +148,9 @@ class ProfileController extends Controller
         $profile = UserProfile::where('user_id', $user->id)->first();
 
         if (!$profile) {
+            if ($request->wantsJson()) {
+                return response()->json(['error' => 'Profile not found'], 404);
+            }
             return back()->with('error', 'Profile not found');
         }
 
@@ -162,6 +165,13 @@ class ProfileController extends Controller
         // Update the profile
         $profile->update(['profile_photo' => $path]);
 
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'path' => Storage::url($path)
+            ]);
+        }
+
         return back()->with('status', 'photo-updated');
     }
 
@@ -175,6 +185,9 @@ class ProfileController extends Controller
         $profile = UserProfile::where('user_id', $user->id)->first();
 
         if (!$profile) {
+            if ($request->wantsJson()) {
+                return response()->json(['error' => 'Profile not found'], 404);
+            }
             return back()->with('error', 'Profile not found');
         }
 
@@ -185,6 +198,10 @@ class ProfileController extends Controller
 
         // Clear the profile photo path
         $profile->update(['profile_photo' => null]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
 
         return back()->with('status', 'photo-removed');
     }

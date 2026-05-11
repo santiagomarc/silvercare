@@ -106,6 +106,7 @@ window.applyCrop = async function applyCrop() {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                        'Accept': 'application/json',
                     },
                     body: formData,
                 });
@@ -163,27 +164,15 @@ window.cancelCrop = function cancelCrop() {
 };
 
 window.removeProfilePhoto = async function removeProfilePhoto() {
-    const confirmed = await window.scConfirm({
-        title: 'Remove profile photo?',
-        text: 'Your avatar will be reset to the default profile image.',
-        icon: 'warning',
-        confirmButtonText: 'Remove photo',
-        cancelButtonText: 'Cancel',
-        elderly: true,
-    });
-
-    if (!confirmed) {
-        return;
-    }
-
     const statusDiv = document.getElementById('photo-status');
     statusDiv.innerHTML = '<span class="text-navy-500 text-sm">Removing...</span>';
 
     try {
-        const response = await fetch('/profile/photo/remove', {
+        const response = await fetch('/profile/photo', {
             method: 'DELETE',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                'Accept': 'application/json',
             },
         });
 
