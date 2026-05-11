@@ -6,6 +6,7 @@ use App\Http\Requests\StoreCalendarEventRequest;
 use App\Models\CalendarEvent;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Carbon;
 
 class CalendarController extends Controller
 {
@@ -13,32 +14,40 @@ class CalendarController extends Controller
     {
         $this->authorize('viewAny', CalendarEvent::class);
 
-        // Get events for the current user
-        // Some environments may not yet have the `start_time` column
-        // (migration not run or schema differs). Guard the query to
-        // avoid throwing an SQL error by falling back to `created_at`.
-        // Prefer ordering by `start_time` when available, otherwise fall
-        // back to `event_date` (legacy) or `created_at`.
-        if (Schema::hasColumn('calendar_events', 'start_time')) {
-            $events = CalendarEvent::where('user_id', Auth::id())
-                ->orderBy('start_time')
-                ->get();
-        } elseif (Schema::hasColumn('calendar_events', 'event_date')) {
-            $events = CalendarEvent::where('user_id', Auth::id())
-                ->orderBy('event_date')
-                ->get();
-        } else {
-            $events = CalendarEvent::where('user_id', Auth::id())
-                ->orderBy('created_at')
-                ->get();
-        }
+        $now = Carbon::now();
 
-        return view('calendar.index', compact('events'));
+        // Determine which column to use for time ordering
+        $timeColumn = match (true) {
+            Schema::hasColumn('calendar_events', 'start_time') => 'start_time',
+            Schema::hasColumn('calendar_events', 'event_date') => 'event_date',
+            default => 'created_at',
+        };
+
+        $allEvents = CalendarEvent::where('user_id', Auth::id())
+            ->orderBy($timeColumn)
+            ->get();
+
+        // Split into upcoming (now or future) and past (already happened)
+        // Uses the full datetime — so a 9:59 PM event at 10:00 PM is already "past"
+        $events     = $allEvents->filter(fn($e) => Carbon::parse($e->{$timeColumn})->greaterThan($now))->values();
+        $pastEvents = $allEvents->filter(fn($e) => Carbon::parse($e->{$timeColumn})->lessThanOrEqualTo($now))
+                                ->sortByDesc($timeColumn) // most recent past first
+                                ->values();
+
+        return view('calendar.index', compact('events', 'pastEvents'));
     }
 
     public function store(StoreCalendarEventRequest $request)
     {
         $this->authorize('create', CalendarEvent::class);
+
+        // Extra server-side guard: reject events scheduled in the past
+        $startTime = Carbon::parse($request->validated()['start_time']);
+        if ($startTime->lessThanOrEqualTo(Carbon::now())) {
+            return back()
+                ->withInput()
+                ->withErrors(['start_time' => 'You cannot schedule an event in the past. Please choose a future date and time.']);
+        }
 
         CalendarEvent::create([
             'user_id' => Auth::id(),

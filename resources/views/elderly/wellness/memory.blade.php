@@ -41,11 +41,11 @@
             </div>
 
             <!-- Game Grid -->
-            <div class="max-w-2xl mx-auto grid grid-cols-3 sm:grid-cols-4 gap-4">
+            <div class="max-w-6xl mx-auto grid grid-cols-6 gap-4">
                 <template x-for="(card, index) in cards" :key="card.id">
                     <div 
                         @click="flipCard(index)"
-                        class="aspect-[3/4] rounded-2xl shadow-lg cursor-pointer relative transition-all duration-500 transform hover:-translate-y-1 perspective-1000"
+                        class="h-40 rounded-2xl shadow-lg cursor-pointer relative transition-all duration-500 transform hover:-translate-y-1 perspective-1000"
                         :class="card.revealed || card.matched ? 'rotate-y-180' : ''"
                     >
                         <!-- Card Back -->

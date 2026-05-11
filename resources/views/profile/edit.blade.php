@@ -1,6 +1,6 @@
 <x-dashboard-layout>
     <x-slot:title>My Profile - SilverCare</x-slot:title>
-
+ 
     @php
         $dashboardRoute = $profile->isCaregiver() ? 'caregiver.dashboard' : 'dashboard';
         $profileErrorFields = [
@@ -16,7 +16,7 @@
             'emergency_relationship',
         ];
         $hasProfileValidationErrors = $errors->hasAny($profileErrorFields);
-
+ 
         // Helper for consistent string conversion
         $safeImplode = function ($value) {
             if (is_array($value)) return implode(', ', $value);
@@ -26,22 +26,22 @@
             }
             return '';
         };
-
+ 
         // Initialize variables early to avoid undefined variable errors
         $legacyMedical = $profile->medical_info ?? [];
         $conditionsVal = $safeImplode($profile->medical_conditions) ?: $safeImplode($legacyMedical['conditions'] ?? []);
         $medsVal = $safeImplode($profile->medications) ?: $safeImplode($legacyMedical['medications'] ?? []);
         $allergiesVal = $safeImplode($profile->allergies) ?: $safeImplode($legacyMedical['allergies'] ?? []);
-
+ 
         $legacyEmergency = $profile->emergency_contact ?? [];
         $caregiver = $profile->caregiver?->user ?? null;
         $caregiverProfile = $profile->caregiver ?? null;
-
+ 
         $emergencyName = $profile->emergency_name ?: ($legacyEmergency['name'] ?? null) ?: ($caregiver?->name ?? '');
         $emergencyPhone = $profile->emergency_phone ?: ($legacyEmergency['phone'] ?? null) ?: ($caregiverProfile?->phone_number ?? '');
         $emergencyRelationship = $profile->emergency_relationship ?: ($legacyEmergency['relationship'] ?? null) ?: ($caregiverProfile?->relationship ?? '');
     @endphp
-
+ 
     <x-dashboard-nav
         title="My Profile"
         subtitle="Your personal information"
@@ -51,10 +51,142 @@
         :back-url="$profile->isCaregiver() ? route('caregiver.dashboard') : null"
         back-label="Back to Dashboard"
     />
-
+ 
+    {{-- ============================================================
+         FIX: caregiverConnector is registered as Alpine.data()
+         instead of inline x-data so that template literals with
+         ${data.existing_name} / ${data.new_name} are evaluated as
+         JS — not rendered as raw text by the browser.
+         The html: value uses string concatenation (no backticks).
+         Routes are injected via data attributes to avoid Blade/JS conflicts.
+         ============================================================ --}}
+    @if($profile->isElderly())
+    @push('scripts')
+    <script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('caregiverConnector', () => ({
+            pin: @js(session('prefill_link_code', '')),
+            step: 'enter',
+            loading: false,
+            error: '',
+            caregiver: null,
+ 
+            // Routes injected via data attributes on the element
+            validateUrl: '',
+            confirmUrl: '',
+ 
+            init() {
+                // Read routes from data attributes set on the x-data element
+                this.validateUrl = this.$el.dataset.validateUrl;
+                this.confirmUrl  = this.$el.dataset.confirmUrl;
+ 
+                if (this.pin && this.pin.length === 6) {
+                    this.$nextTick(() => this.validatePin());
+                }
+            },
+ 
+            async validatePin() {
+                if (this.pin.length !== 6) {
+                    window.scAlert({ icon: 'warning', title: 'Invalid PIN', text: 'Please enter all 6 digits.', elderly: true });
+                    return;
+                }
+                this.loading = true;
+                this.error = '';
+                try {
+                    const res = await fetch(this.validateUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({ code: this.pin }),
+                    });
+                    const data = await res.json();
+                    if (data.valid) {
+                        this.caregiver = data;
+                        this.step = 'confirm';
+                    } else {
+                        window.scAlert({ icon: 'error', title: 'Invalid PIN', text: data.message || 'The PIN you entered is invalid or expired.', elderly: true });
+                    }
+                } catch (e) {
+                    window.scAlert({ icon: 'error', title: 'Error', text: 'Something went wrong. Please check your connection and try again.', elderly: true });
+                } finally {
+                    this.loading = false;
+                }
+            },
+ 
+            async confirmLink(forceSwitch = false) {
+                this.loading = true;
+                try {
+                    const res = await fetch(this.confirmUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({ code: this.caregiver.code, force_switch: forceSwitch }),
+                    });
+                    const data = await res.json();
+ 
+                    // C7: Server signals an existing link must be confirmed
+                    if (res.status === 409 && data.switch_required) {
+                        this.loading = false;
+ 
+                        // FIX: string concatenation instead of backtick template literal
+                        const confirmed = await window.scConfirm({
+                            icon: 'warning',
+                            elderly: true,
+                            title: 'Switch Caregiver?',
+                            html: '<p class="text-lg text-slate-600 mt-2">You are currently connected to <strong>' + data.existing_name + '</strong>.<br>Do you want to switch to <strong>' + data.new_name + '</strong>?<br><br>Your current caregiver will lose access.</p>',
+                            confirmButtonText: 'Yes, Switch Caregiver',
+                            cancelButtonText: 'Keep Current Caregiver',
+                        });
+                        if (confirmed) {
+                            await this.confirmLink(true);
+                        }
+                        return;
+                    }
+ 
+                    if (!res.ok || !data.success) {
+                        throw new Error(data.message || 'Failed to connect. Please try again.');
+                    }
+ 
+                    // Success
+                    await window.scAlert({
+                        icon: 'success',
+                        elderly: true,
+                        title: 'Connected! 🎉',
+                        text: data.message || 'You have successfully linked with your caregiver.',
+                        timer: 2000,
+                        timerProgressBar: true,
+                        showConfirmButton: false,
+                        allowOutsideClick: false,
+                    });
+                    window.location.reload();
+                } catch (e) {
+                    window.scAlert({ icon: 'error', elderly: true, title: 'Connection Failed', text: e.message || 'Please try again.' });
+                } finally {
+                    this.loading = false;
+                }
+            },
+ 
+            reset() {
+                this.step = 'enter';
+                this.pin = '';
+                this.error = '';
+                this.caregiver = null;
+            },
+        }));
+    });
+    </script>
+    @endpush
+    @endif
+ 
     <div class="min-h-screen bg-slate-50 dark:bg-[#070e1a] py-8" x-data="{ editMode: {{ $hasProfileValidationErrors ? 'true' : 'false' }}, showLogoutConfirm: false }">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-
+ 
             {{-- Header Section --}}
             <div class="mb-8 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                 <div>
@@ -63,7 +195,7 @@
                     </div>
                     <p class="text-base text-slate-500 dark:text-slate-400 font-medium">View and update your personal information</p>
                 </div>
-
+ 
                 <div class="flex items-center gap-4 mt-2 md:mt-0">
                     {{-- Success Message --}}
                     @if (session('status') === 'profile-updated')
@@ -73,7 +205,7 @@
                             <span class="font-bold">Saved!</span>
                         </div>
                     @endif
-
+ 
                     {{-- Edit Button --}}
                     <button x-show="!editMode" @click="editMode = true" type="button"
                         class="flex items-center gap-2 bg-navy-500 text-white px-6 py-3 rounded-2xl font-bold shadow-glow-brand hover:-translate-y-0.5 transition-all min-h-touch">
@@ -82,7 +214,7 @@
                     </button>
                 </div>
             </div>
-
+ 
             @if($hasProfileValidationErrors)
                 <div class="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-rose-800 shadow-sm" role="alert" aria-live="assertive">
                     <div class="flex items-start gap-3">
@@ -96,7 +228,7 @@
                     </div>
                 </div>
             @endif
-
+ 
             <form method="POST" action="{{ route('profile.update') }}"
                 x-data="{
                     validateForm(e) {
@@ -120,16 +252,16 @@
                 @submit="validateForm($event)">
                 @csrf
                 @method('PATCH')
-
+ 
                 <div class="space-y-6">
-
+ 
                     {{-- CARD 1: Personal Details --}}
                     <div class="bg-white dark:bg-slate-800 dark:ring-1 dark:ring-slate-700 rounded-2xl p-6 md:p-8 shadow-card mb-6">
                         <div>
                             <div class="flex items-center justify-center gap-3 mb-8 pb-4 border-b border-slate-300 dark:border-slate-700">
                                 <h3 class="font-black text-base text-slate-900 dark:text-slate-100 text-center uppercase tracking-[0.25em]">Personal Details</h3>
                             </div>
-
+ 
                             {{-- Profile Photo Section --}}
                             <div class="flex flex-col sm:flex-row items-center gap-6 mb-8 pb-8 border-b border-slate-300 dark:border-slate-700">
                                 <div class="relative group">
@@ -140,36 +272,35 @@
                                             <span id="profile-photo-initial" class="text-white text-3xl font-bold">{{ strtoupper(substr($user->name ?? 'U', 0, 1)) }}</span>
                                         @endif
                                     </div>
-
+ 
                                     <template x-if="editMode">
                                         <label for="photo-upload" class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                                             <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0118.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                             </svg>
                                         </label>
                                     </template>
                                 </div>
-
+ 
                                 <div class="flex flex-col gap-2">
                                     <p class="text-base font-bold text-slate-900 dark:text-slate-100">Profile Photo</p>
-
+ 
                                     <template x-if="!editMode">
                                         <p class="text-sm text-slate-500 dark:text-slate-400">{{ $profile->profile_photo ? 'Photo uploaded' : 'No photo uploaded' }}</p>
                                     </template>
-
+ 
                                     <template x-if="editMode">
                                         <div class="flex flex-col gap-2">
                                             <input type="file" id="photo-upload" name="profile_photo" accept="image/jpeg,image/png,image/gif,image/webp" class="hidden" @change="openCropModal($event)">
-
+ 
                                             <div class="flex items-center gap-2">
                                                 <label for="photo-upload" class="flex items-center gap-1.5 bg-navy-500 text-white px-4 py-2 rounded-lg font-semibold text-sm shadow hover:-translate-y-0.5 transition-all cursor-pointer min-h-touch">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                                                     {{ $profile->profile_photo ? 'Change' : 'Upload' }}
                                                 </label>
-
+ 
                                                 @if($profile->profile_photo)
-                                                {{-- C4 FIX: scConfirm guard before removing profile photo --}}
                                                 <button type="button"
                                                     @click="window.scConfirm({ icon: 'warning', elderly: true, title: 'Remove Photo?', text: 'Are you sure you want to remove your profile photo?', confirmButtonText: 'Yes, Remove It', cancelButtonText: 'Keep Photo' }).then(ok => { if(ok) removeProfilePhoto(); })"
                                                     class="flex items-center gap-1.5 bg-rose-500 text-white px-4 py-2 rounded-lg font-semibold text-sm shadow hover:-translate-y-0.5 transition-all min-h-touch">
@@ -178,14 +309,14 @@
                                                 </button>
                                                 @endif
                                             </div>
-
+ 
                                             <p class="text-xs text-slate-400 dark:text-slate-500">JPG, PNG, GIF or WebP. Max 5MB. You'll be able to crop your photo before uploading.</p>
                                             <div id="photo-status"></div>
                                         </div>
                                     </template>
                                 </div>
                             </div>
-
+ 
                             {{-- CROP MODAL --}}
                             <div id="profile-photo-crop-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
                                 <div class="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
@@ -195,14 +326,14 @@
                                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                                         </button>
                                     </div>
-
+ 
                                     <div class="p-6">
                                         <div class="mb-6 flex justify-center rounded-lg bg-slate-100 p-4">
                                             <img id="crop-image" alt="Crop preview" class="max-h-96 max-w-full" style="max-width: 100%;">
                                         </div>
-
+ 
                                         <p class="mb-4 text-sm text-slate-500">Click and drag to reposition. Use the handles to resize the crop area. Aim for a square crop for best profile picture results.</p>
-
+ 
                                         <div class="flex justify-end gap-2">
                                             <button type="button" onclick="cancelCrop()" class="rounded-lg bg-slate-100 px-4 py-2 font-semibold text-slate-700 transition-all hover:bg-slate-200">
                                                 Cancel
@@ -214,7 +345,7 @@
                                     </div>
                                 </div>
                             </div>
-
+ 
                             <div class="grid grid-cols-1 gap-y-6">
                                 {{-- Full Name --}}
                                 <div>
@@ -232,13 +363,13 @@
                                         </div>
                                     </template>
                                 </div>
-
+ 
                                 {{-- Email --}}
                                 <div>
                                     <label class="profile-field-label">Email</label>
                                     <p class="profile-field-value">{{ $user->email ?: '—' }}</p>
                                 </div>
-
+ 
                                 {{-- Phone --}}
                                 <div>
                                     <label class="profile-field-label">Phone Number</label>
@@ -255,7 +386,7 @@
                                         </div>
                                     </template>
                                 </div>
-
+ 
                                 @if($profile->isCaregiver())
                                 {{-- Relationship (Caregiver Only) --}}
                                 <div>
@@ -274,7 +405,7 @@
                                     </template>
                                 </div>
                                 @endif
-
+ 
                                 @if($profile->isElderly())
                                 {{-- Medical Conditions (Elderly Only) --}}
                                 <div>
@@ -295,7 +426,7 @@
                                         </div>
                                     </template>
                                 </div>
-
+ 
                                 {{-- Medications --}}
                                 <div>
                                     <label class="profile-field-label !text-navy-400">Medications</label>
@@ -327,7 +458,7 @@
                                         </div>
                                     </template>
                                 </div>
-
+ 
                                 {{-- Allergies --}}
                                 <div>
                                     <label class="profile-field-label !text-amber-500">Allergies</label>
@@ -360,7 +491,7 @@
                                     </template>
                                 </div>
                                 @endif
-
+ 
                     {{-- CARD 3: Emergency Contact (Elderly Only) --}}
                     @if($profile->isElderly())
                     <div class="bg-white rounded-2xl p-6 md:p-8 shadow-card mb-6">
@@ -368,7 +499,7 @@
                             <div class="flex items-center gap-3 mb-8 pb-4 border-b border-slate-100">
                                 <h3 class="font-extrabold text-xl text-slate-900">Emergency Contact</h3>
                             </div>
-
+ 
                             <div class="grid grid-cols-1 gap-y-8 gap-x-6 md:grid-cols-3">
                                 {{-- Contact Name --}}
                                 <div>
@@ -386,7 +517,7 @@
                                         </div>
                                     </template>
                                 </div>
-
+ 
                                 {{-- Phone Number --}}
                                 <div>
                                     <label class="profile-field-label">Phone Number</label>
@@ -403,7 +534,7 @@
                                         </div>
                                     </template>
                                 </div>
-
+ 
                                 {{-- Relationship --}}
                                 <div>
                                     <label class="profile-field-label">Relationship</label>
@@ -424,14 +555,14 @@
                         </div>
                     </div>
                     @endif
-
+ 
                     {{-- ACTION BUTTONS (only show in edit mode) --}}
                     <div x-show="editMode" class="flex justify-end gap-6 mb-2">
                         <button type="button" @click="editMode = false"
                             class="px-8 py-4 rounded-2xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all min-h-touch">
                             Cancel
                         </button>
-
+ 
                         <button type="submit"
                             class="group relative overflow-hidden rounded-2xl bg-gradient-to-r from-navy-500 to-navy-600 py-4 px-8 text-lg font-bold text-white shadow-glow-brand transition-all hover:-translate-y-1 hover:shadow-xl active:scale-95 min-h-touch">
                             <div class="relative z-10 flex items-center justify-center gap-2">
@@ -441,117 +572,26 @@
                             <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 group-hover:translate-x-full"></div>
                         </button>
                     </div>
-
+ 
                 </div>
             </form>
-
+ 
             {{-- CARD 4: Care Connection (Elderly Only) --}}
             @if($profile->isElderly())
+                {{--
+                    FIX: x-data now just references the registered Alpine.data component name.
+                    Routes are passed as data attributes so JS can read them cleanly
+                    without Blade/template-literal conflicts.
+                --}}
                 <div class="bg-white rounded-2xl p-6 md:p-8 shadow-card mb-6"
-                     x-data="{
-                        pin: @js(session('prefill_link_code', '')),
-                        step: 'enter',
-                        loading: false,
-                        error: '',
-                        caregiver: null,
-                        init() {
-                            if (this.pin && this.pin.length === 6) {
-                                this.$nextTick(() => this.validatePin());
-                            }
-                        },
-                        async validatePin() {
-                            if (this.pin.length !== 6) {
-                                window.scAlert({ icon: 'warning', title: 'Invalid PIN', text: 'Please enter all 6 digits.', elderly: true });
-                                return;
-                            }
-                            this.loading = true;
-                            this.error = '';
-                            try {
-                                const res = await fetch('{{ route('elderly.validate-link-code') }}', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                                        'Accept': 'application/json',
-                                    },
-                                    body: JSON.stringify({ code: this.pin }),
-                                });
-                                const data = await res.json();
-                                if (data.valid) {
-                                    this.caregiver = data;
-                                    this.step = 'confirm';
-                                } else {
-                                    window.scAlert({ icon: 'error', title: 'Invalid PIN', text: data.message || 'The PIN you entered is invalid or expired.', elderly: true });
-                                }
-                            } catch (e) {
-                                window.scAlert({ icon: 'error', title: 'Error', text: 'Something went wrong. Please check your connection and try again.', elderly: true });
-                            } finally {
-                                this.loading = false;
-                            }
-                        },
-                        async confirmLink(forceSwitch = false) {
-                            // C1 + C7 FIX: Backend now always returns JSON.
-                            // If the user is already linked to another caregiver,
-                            // a 409 'switch_required' response triggers a SweetAlert2
-                            // confirmation before re-sending with force_switch=true.
-                            this.loading = true;
-                            try {
-                                const res = await fetch('{{ route('elderly.confirm-link') }}', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                                        'Accept': 'application/json',
-                                    },
-                                    body: JSON.stringify({ code: this.caregiver.code, force_switch: forceSwitch }),
-                                });
-                                const data = await res.json();
-
-                                // C7: Server signals an existing link must be confirmed
-                                if (res.status === 409 && data.switch_required) {
-                                    this.loading = false;
-                                    const confirmed = await window.scConfirm({
-                                        icon: 'warning',
-                                        elderly: true,
-                                        title: 'Switch Caregiver?',
-                                        html: `<p class="text-lg text-slate-600 mt-2">You are currently connected to <strong>${data.existing_name}</strong>.<br>Do you want to switch to <strong>${data.new_name}</strong>?<br><br>Your current caregiver will lose access.</p>`,
-                                        confirmButtonText: 'Yes, Switch Caregiver',
-                                        cancelButtonText: 'Keep Current Caregiver',
-                                    });
-                                    if (confirmed) {
-                                        await this.confirmLink(true);
-                                    }
-                                    return;
-                                }
-
-                                if (!res.ok || !data.success) {
-                                    throw new Error(data.message || 'Failed to connect. Please try again.');
-                                }
-
-                                // Success
-                                await window.scAlert({
-                                    icon: 'success',
-                                    elderly: true,
-                                    title: 'Connected! 🎉',
-                                    text: data.message || 'You have successfully linked with your caregiver.',
-                                    timer: 2000,
-                                    timerProgressBar: true,
-                                    showConfirmButton: false,
-                                    allowOutsideClick: false,
-                                });
-                                window.location.reload();
-                            } catch (e) {
-                                window.scAlert({ icon: 'error', elderly: true, title: 'Connection Failed', text: e.message || 'Please try again.' });
-                            } finally {
-                                this.loading = false;
-                            }
-                        },
-                        reset() { this.step = 'enter'; this.pin = ''; this.error = ''; this.caregiver = null; }
-                    }">
+                     x-data="caregiverConnector"
+                     data-validate-url="{{ route('elderly.validate-link-code') }}"
+                     data-confirm-url="{{ route('elderly.confirm-link') }}">
+ 
                     <div class="flex items-center gap-3 mb-8 pb-4 border-b border-slate-100">
                         <h3 class="font-extrabold text-xl text-slate-900">Care Connection</h3>
                     </div>
-
+ 
                     @if($profile->caregiver)
                         <div class="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
                             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -559,17 +599,16 @@
                                     <p class="text-base font-extrabold text-slate-900">Connected to {{ $profile->caregiver->user?->name ?? $profile->caregiver->username ?? 'Your Caregiver' }}</p>
                                     <p class="text-sm text-slate-500 mt-1">Manage unlinking here with password confirmation for account safety.</p>
                                 </div>
-
+ 
                                 <div x-data="{ showUnlink: false }" class="w-full md:w-auto">
                                     <button x-show="!showUnlink"
                                             @click="showUnlink = true"
                                             class="w-full md:w-auto rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-bold text-rose-700 hover:bg-rose-100 transition-colors min-h-touch">
                                         Unlink Caregiver
                                     </button>
-
+ 
                                     <div x-show="showUnlink" x-cloak class="rounded-xl border border-rose-200 bg-white p-3">
                                         <p class="text-sm font-semibold text-slate-600 mb-2">Confirm unlink by entering your password.</p>
-                                        {{-- C3 FIX: data-confirm pipes this destructive form through scConfirm SweetAlert2 --}}
                                         <form
                                             method="POST"
                                             action="{{ route('elderly.unlink-caregiver') }}"
@@ -604,7 +643,7 @@
                         <div class="rounded-2xl border border-navy-200 bg-navy-50/50 p-4">
                             <p class="text-base font-extrabold text-slate-900">Link a caregiver</p>
                             <p class="text-sm text-slate-500 mt-1">Enter your caregiver's 6-digit PIN and confirm the profile before connecting.</p>
-
+ 
                             <div class="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
                                 <input type="text"
                                        x-model="pin"
@@ -621,9 +660,9 @@
                                     <span x-show="loading">Checking...</span>
                                 </button>
                             </div>
-
+ 
                             <p x-show="error" x-text="error" class="mt-2 text-sm font-semibold text-rose-600"></p>
-
+ 
                             <div x-show="step === 'confirm'" x-cloak class="mt-3 rounded-xl border border-navy-200 bg-white p-4">
                                 <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Confirm connection with:</p>
                                 <div class="flex items-center gap-3 mb-3">
@@ -647,14 +686,14 @@
                     @endif
                 </div>
             @endif
-
+ 
             {{-- CARD 4.5: Patient Linking (Caregiver Only) --}}
             @if($profile->isCaregiver())
                 <div class="bg-white rounded-2xl p-6 md:p-8 shadow-card mb-6">
                     <div class="flex items-center gap-3 mb-8 pb-4 border-b border-slate-100">
                         <h3 class="font-extrabold text-xl text-slate-900">Patient Linking</h3>
                     </div>
-
+ 
                     <div class="rounded-2xl border border-navy-200 bg-navy-50/50 p-6">
                         @if(session('link_code') || $activeLinkCode)
                             @php
@@ -670,7 +709,7 @@
                                         <p class="text-center text-[10px] text-slate-400 font-semibold mt-1 uppercase tracking-wide">Scan with phone</p>
                                     </div>
                                 @endif
-
+ 
                                 {{-- PIN + Actions --}}
                                 <div class="flex flex-col gap-3" x-data="{ copied: false }">
                                     <div class="inline-flex items-center gap-3 rounded-xl bg-white px-4 py-3 border border-navy-200 shadow-sm">
@@ -708,7 +747,7 @@
                                 <p class="text-xs text-slate-500 mt-1">Generate a PIN to link your patients.</p>
                             </div>
                         @endif
-
+ 
                         <div class="mt-5 pt-5 border-t border-navy-100" x-data="{
                                 loading: false,
                                 async generate() {
@@ -740,7 +779,7 @@
                     </div>
                 </div>
             @endif
-
+ 
             {{-- CARD 5: Account Session --}}
             <div class="bg-white ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700 dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] rounded-2xl p-6 md:p-8 shadow-card mt-8 mb-6">
                 <div class="flex items-center justify-between gap-8 flex-col sm:flex-row">
@@ -760,7 +799,7 @@
                     </button>
                 </div>
             </div>
-
+ 
             {{-- Logout Confirmation Modal --}}
             <div
                 x-show="showLogoutConfirm"
@@ -772,11 +811,11 @@
                 aria-labelledby="logout-confirm-title"
             >
                 <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" @click="showLogoutConfirm = false"></div>
-
+ 
                 <div class="relative w-full max-w-md rounded-2xl border border-white/70 bg-white p-6 shadow-elevated">
                     <h4 id="logout-confirm-title" class="text-xl font-black text-slate-900">Confirm logout</h4>
                     <p class="mt-2 text-base text-slate-600 font-medium">Are you sure you want to log out now?</p>
-
+ 
                     <div class="mt-5 flex items-center justify-end gap-2">
                         <button
                             type="button"
@@ -785,7 +824,7 @@
                         >
                             Cancel
                         </button>
-
+ 
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <button
@@ -800,5 +839,5 @@
             </div>
         </div>
     </div>
-
+ 
 </x-dashboard-layout>

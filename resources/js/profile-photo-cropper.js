@@ -167,6 +167,12 @@ window.removeProfilePhoto = async function removeProfilePhoto() {
     const statusDiv = document.getElementById('photo-status');
     statusDiv.innerHTML = '<span class="text-navy-500 text-sm">Removing...</span>';
 
+    const removeForm = document.getElementById('profile-photo-remove-form');
+    if (removeForm) {
+        removeForm.submit();
+        return;
+    }
+
     try {
         const response = await fetch('/profile/photo', {
             method: 'DELETE',

@@ -1,5 +1,5 @@
-const STATIC_CACHE = 'silvercare-static-v1';
-const RUNTIME_CACHE = 'silvercare-runtime-v1';
+const STATIC_CACHE = 'silvercare-static-v2';
+const RUNTIME_CACHE = 'silvercare-runtime-v2';
 const OFFLINE_URL = '/offline.html';
 
 const STATIC_ASSETS = [

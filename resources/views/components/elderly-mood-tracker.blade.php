@@ -1,10 +1,12 @@
 {{-- ============================================================
-     ElderlyMoodTracker — Mood slider with Alpine auto-save.
+     ElderlyMoodTracker — Mood buttons with Alpine auto-save.
+     Slider removed: buttons are now the sole interaction method
+     for better elderly UX (direct tap > drag precision).
      Uses Alpine.data('moodTracker').
      ============================================================ --}}
-
+ 
 @props(['initialMood' => 3])
-
+ 
 <div
     x-data="moodTracker({{ $initialMood }})"
     class="surface-warm relative overflow-hidden p-6"
@@ -13,41 +15,43 @@
 >
     <div class="ambient-orb -right-8 top-0 h-28 w-28 bg-amber-200/45"></div>
     <div class="ambient-orb -bottom-8 left-8 h-24 w-24 bg-rose-200/30 blur-2xl"></div>
+ 
     <div class="flex flex-col sm:flex-row items-center gap-5">
+ 
         {{-- Mood icon display --}}
         <div class="flex flex-col items-center justify-center w-28 sm:w-32 flex-shrink-0">
             <div
-                class="w-16 h-16 rounded-2xl bg-white/80 border border-white/90 flex items-center justify-center transition-transform duration-300 shadow-sm"
+                class="w-20 h-20 rounded-2xl bg-white/80 border border-white/90 flex items-center justify-center transition-transform duration-300 shadow-sm"
                 :style="`transform: scale(${saved ? 1.1 : 1})`"
                 aria-hidden="true"
             >
                 <template x-if="isSelected(1)">
-                    <x-lucide-frown class="w-10 h-10" x-bind:style="`color: ${color}`" />
+                    <x-lucide-frown class="w-12 h-12" x-bind:style="`color: ${color}`" />
                 </template>
                 <template x-if="isSelected(2)">
-                    <x-lucide-frown class="w-9 h-9" x-bind:style="`color: ${color}`" />
+                    <x-lucide-frown class="w-11 h-11" x-bind:style="`color: ${color}`" />
                 </template>
                 <template x-if="isSelected(3)">
-                    <x-lucide-meh class="w-9 h-9" x-bind:style="`color: ${color}`" />
+                    <x-lucide-meh class="w-11 h-11" x-bind:style="`color: ${color}`" />
                 </template>
                 <template x-if="isSelected(4)">
-                    <x-lucide-smile class="w-9 h-9" x-bind:style="`color: ${color}`" />
+                    <x-lucide-smile class="w-11 h-11" x-bind:style="`color: ${color}`" />
                 </template>
                 <template x-if="isSelected(5)">
-                    <x-lucide-laugh class="w-9 h-9" x-bind:style="`color: ${color}`" />
+                    <x-lucide-laugh class="w-11 h-11" x-bind:style="`color: ${color}`" />
                 </template>
             </div>
             <p
-                class="font-extrabold text-lg mt-1 transition-colors duration-300 text-center"
+                class="font-extrabold text-xl mt-2 transition-colors duration-300 text-center"
                 x-text="label"
                 :style="`color: ${color}`"
             ></p>
         </div>
-
-        {{-- Slider --}}
+ 
+        {{-- Mood buttons --}}
         <div class="flex-1 w-full">
-            <div class="flex items-center justify-between mb-2 gap-2">
-                <label for="mood-slider" class="font-bold text-base text-gray-800">
+            <div class="flex items-center justify-between mb-4 gap-2">
+                <label class="font-bold text-lg text-gray-900">
                     How are you feeling today?
                 </label>
                 <div class="flex items-center gap-2">
@@ -77,94 +81,104 @@
                     </span>
                 </div>
             </div>
-
-            <input
-                id="mood-slider"
-                x-ref="moodSlider"
-                type="range"
-                min="1"
-                max="5"
-                x-model.number="value"
-                @input="onInput()"
-                @change="onInput()"
-                :style="`accent-color: ${color}`"
-                class="w-full h-3 rounded-full appearance-none cursor-pointer bg-gray-200"
-                aria-label="Mood level"
-                aria-valuemin="1"
-                aria-valuemax="5"
-                :aria-valuenow="value"
-                :aria-valuetext="label"
+ 
+            {{--
+                Mood buttons — the ONLY interaction method.
+                Slider removed: elderly users perform better with
+                direct tap targets than drag interactions.
+                Changes from original:
+                - h-10 → h-14: larger touch target (56px) for reduced dexterity
+                - w-4 h-4 → w-7 h-7: icons 16px → 28px for low-vision users
+                - Added short text label under each icon (co-located label)
+                - End labels darkened from gray-400 to slate-600 for WCAG AA contrast
+            --}}
+            <div
+                class="grid grid-cols-5 gap-2"
+                role="radiogroup"
+                aria-label="Choose your mood"
             >
-
-            <div class="relative mt-3">
-                <div class="absolute left-3 right-3 top-1/2 -translate-y-1/2 h-0.5 bg-slate-200" aria-hidden="true"></div>
-                <div class="relative grid grid-cols-5 gap-2" role="radiogroup" aria-label="Choose your mood">
-                    <button
-                        type="button"
-                        role="radio"
-                        :aria-checked="isSelected(1)"
-                        @click="setMood(1)"
-                        class="h-10 rounded-full border transition-all duration-200 flex items-center justify-center"
-                        :class="isSelected(1) ? 'bg-rose-50 border-rose-300 text-rose-600 shadow-sm scale-105' : 'bg-white/85 border-slate-200 text-slate-400 hover:text-slate-600'"
-                        aria-label="Very Sad"
-                    >
-                        <x-lucide-frown class="w-4 h-4" aria-hidden="true" />
-                    </button>
-
-                    <button
-                        type="button"
-                        role="radio"
-                        :aria-checked="isSelected(2)"
-                        @click="setMood(2)"
-                        class="h-10 rounded-full border transition-all duration-200 flex items-center justify-center"
-                        :class="isSelected(2) ? 'bg-orange-50 border-orange-300 text-orange-600 shadow-sm scale-105' : 'bg-white/85 border-slate-200 text-slate-400 hover:text-slate-600'"
-                        aria-label="Sad"
-                    >
-                        <x-lucide-frown class="w-4 h-4" aria-hidden="true" />
-                    </button>
-
-                    <button
-                        type="button"
-                        role="radio"
-                        :aria-checked="isSelected(3)"
-                        @click="setMood(3)"
-                        class="h-10 rounded-full border transition-all duration-200 flex items-center justify-center"
-                        :class="isSelected(3) ? 'bg-slate-100 border-slate-300 text-slate-600 shadow-sm scale-105' : 'bg-white/85 border-slate-200 text-slate-400 hover:text-slate-600'"
-                        aria-label="Neutral"
-                    >
-                        <x-lucide-meh class="w-4 h-4" aria-hidden="true" />
-                    </button>
-
-                    <button
-                        type="button"
-                        role="radio"
-                        :aria-checked="isSelected(4)"
-                        @click="setMood(4)"
-                        class="h-10 rounded-full border transition-all duration-200 flex items-center justify-center"
-                        :class="isSelected(4) ? 'bg-lime-50 border-lime-300 text-lime-600 shadow-sm scale-105' : 'bg-white/85 border-slate-200 text-slate-400 hover:text-slate-600'"
-                        aria-label="Happy"
-                    >
-                        <x-lucide-smile class="w-4 h-4" aria-hidden="true" />
-                    </button>
-
-                    <button
-                        type="button"
-                        role="radio"
-                        :aria-checked="isSelected(5)"
-                        @click="setMood(5)"
-                        class="h-10 rounded-full border transition-all duration-200 flex items-center justify-center"
-                        :class="isSelected(5) ? 'bg-emerald-50 border-emerald-300 text-emerald-600 shadow-sm scale-105' : 'bg-white/85 border-slate-200 text-slate-400 hover:text-slate-600'"
-                        aria-label="Very Happy"
-                    >
-                        <x-lucide-laugh class="w-4 h-4" aria-hidden="true" />
-                    </button>
-                </div>
+                <button
+                    type="button"
+                    role="radio"
+                    :aria-checked="isSelected(1)"
+                    @click="setMood(1)"
+                    class="h-14 rounded-full border-2 transition-all duration-200 flex flex-col items-center justify-center gap-0.5"
+                    :class="isSelected(1)
+                        ? 'bg-rose-50 border-rose-400 text-rose-600 shadow-sm scale-105'
+                        : 'bg-white/85 border-slate-200 text-slate-500 hover:border-slate-400 hover:text-slate-700'"
+                    aria-label="Very Sad"
+                >
+                    <x-lucide-frown class="w-7 h-7" aria-hidden="true" />
+                    <span class="text-[10px] font-bold leading-none">Very Sad</span>
+                </button>
+ 
+                <button
+                    type="button"
+                    role="radio"
+                    :aria-checked="isSelected(2)"
+                    @click="setMood(2)"
+                    class="h-14 rounded-full border-2 transition-all duration-200 flex flex-col items-center justify-center gap-0.5"
+                    :class="isSelected(2)
+                        ? 'bg-orange-50 border-orange-400 text-orange-600 shadow-sm scale-105'
+                        : 'bg-white/85 border-slate-200 text-slate-500 hover:border-slate-400 hover:text-slate-700'"
+                    aria-label="Sad"
+                >
+                    <x-lucide-frown class="w-7 h-7" aria-hidden="true" />
+                    <span class="text-[10px] font-bold leading-none">Sad</span>
+                </button>
+ 
+                <button
+                    type="button"
+                    role="radio"
+                    :aria-checked="isSelected(3)"
+                    @click="setMood(3)"
+                    class="h-14 rounded-full border-2 transition-all duration-200 flex flex-col items-center justify-center gap-0.5"
+                    :class="isSelected(3)
+                        ? 'bg-slate-100 border-slate-400 text-slate-700 shadow-sm scale-105'
+                        : 'bg-white/85 border-slate-200 text-slate-500 hover:border-slate-400 hover:text-slate-700'"
+                    aria-label="Neutral"
+                >
+                    <x-lucide-meh class="w-7 h-7" aria-hidden="true" />
+                    <span class="text-[10px] font-bold leading-none">Neutral</span>
+                </button>
+ 
+                <button
+                    type="button"
+                    role="radio"
+                    :aria-checked="isSelected(4)"
+                    @click="setMood(4)"
+                    class="h-14 rounded-full border-2 transition-all duration-200 flex flex-col items-center justify-center gap-0.5"
+                    :class="isSelected(4)
+                        ? 'bg-lime-50 border-lime-400 text-lime-700 shadow-sm scale-105'
+                        : 'bg-white/85 border-slate-200 text-slate-500 hover:border-slate-400 hover:text-slate-700'"
+                    aria-label="Happy"
+                >
+                    <x-lucide-smile class="w-7 h-7" aria-hidden="true" />
+                    <span class="text-[10px] font-bold leading-none">Happy</span>
+                </button>
+ 
+                <button
+                    type="button"
+                    role="radio"
+                    :aria-checked="isSelected(5)"
+                    @click="setMood(5)"
+                    class="h-14 rounded-full border-2 transition-all duration-200 flex flex-col items-center justify-center gap-0.5"
+                    :class="isSelected(5)
+                        ? 'bg-emerald-50 border-emerald-400 text-emerald-700 shadow-sm scale-105'
+                        : 'bg-white/85 border-slate-200 text-slate-500 hover:border-slate-400 hover:text-slate-700'"
+                    aria-label="Very Happy"
+                >
+                    <x-lucide-laugh class="w-7 h-7" aria-hidden="true" />
+                    <span class="text-[10px] font-bold leading-none">Very Happy</span>
+                </button>
             </div>
-
-            <div class="flex justify-between mt-1.5 px-0.5">
-                <span class="text-xs font-bold text-gray-400">Very Sad</span>
-                <span class="text-xs font-bold text-gray-400">Very Happy</span>
+ 
+            {{-- End labels — darkened for WCAG AA contrast on cream background --}}
+            <div class="flex justify-between mt-2 px-0.5">
+                <span class="text-sm font-bold text-slate-600">← Very Sad</span>
+                <span class="text-sm font-bold text-slate-600">Very Happy →</span>
             </div>
         </div>
+ 
     </div>
 </div>
