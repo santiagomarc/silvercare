@@ -210,7 +210,7 @@ export default function vitalRecorder() {
                 
                 // Dispatch events instead of reloading the page
                 window.dispatchEvent(new CustomEvent('vital-recorded', {
-                    detail: { type: this.type }
+                    detail: { type: this.type, metric: result.data?.metric }
                 }));
 
                 if (result.data && result.data.vitals !== undefined) {
