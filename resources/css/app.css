@@ -260,7 +260,7 @@
     .toast-card {
         @apply relative px-5 py-4 pl-4 pr-11 rounded-2xl shadow-2xl overflow-hidden
                transform transition-all duration-300 pointer-events-auto
-               border border-white/20 bg-gray-900/70 backdrop-blur-xl supports-[backdrop-filter]:bg-gray-900/60;
+               border border-white/20 bg-gray-900/90;
     }
     .toast-card::before {
         content: '';
@@ -544,6 +544,11 @@
 .swal2-container.swal2-backdrop-show {
     background: rgba(15, 23, 42, 0.5);
     backdrop-filter: blur(4px);
+}
+
+body.swal2-toast-shown .swal2-container {
+    background: transparent !important;
+    backdrop-filter: none !important;
 }
 
 .swal2-popup.swal2-silvercare-popup {

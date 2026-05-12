@@ -116,16 +116,6 @@
                     <div class="rounded-3xl p-5 shadow-lg border-2 flex-1 min-h-0 relative overflow-hidden
                         {{ $isDangerous ? 'bg-red-50 border-red-200' : 'bg-white border-gray-100' }}">
 
-                        {{-- Dangerous warning stripe --}}
-                        @if($isDangerous)
-                            <div class="flex items-center gap-2 mb-4 px-3 py-2 bg-red-100 rounded-xl border border-red-200">
-                                <svg class="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path>
-                                </svg>
-                                <span class="text-red-700 font-[800] text-sm">Attention needed — check your reading</span>
-                            </div>
-                        @endif
-
                         <p class="text-xs uppercase tracking-widest font-[800] text-gray-500 mb-2">Latest Reading</p>
 
                         <div class="flex items-baseline gap-2 mb-1">
