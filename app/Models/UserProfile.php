@@ -79,6 +79,21 @@ class UserProfile extends Model
         return $this->hasMany(MedicationLog::class, 'elderly_id');
     }
 
+    public function doseInstances(): HasMany
+    {
+        return $this->hasMany(DoseInstance::class, 'elderly_id');
+    }
+
+    public function alerts(): HasMany
+    {
+        return $this->hasMany(Alert::class, 'elderly_id');
+    }
+
+    public function patientAlertThresholds(): HasMany
+    {
+        return $this->hasMany(PatientAlertThreshold::class, 'elderly_id');
+    }
+
     public function healthMetrics(): HasMany
     {
         return $this->hasMany(HealthMetric::class, 'elderly_id');
@@ -123,6 +138,11 @@ class UserProfile extends Model
      * compatibility, or access via $caregiver->elderlyPatients->first().
      */
     public function elderlyPatients(): HasMany
+    {
+        return $this->hasMany(UserProfile::class, 'caregiver_id')->whereNull('archived_at');
+    }
+
+    public function linkedElderly(): HasMany
     {
         return $this->hasMany(UserProfile::class, 'caregiver_id')->whereNull('archived_at');
     }

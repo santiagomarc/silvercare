@@ -13,8 +13,10 @@ use Illuminate\Http\Request;
 
 class HealthMetricController extends Controller
 {
-    public function __construct(protected HealthAnalyticsService $analyticsService)
-    {
+    public function __construct(
+        protected HealthAnalyticsService $analyticsService,
+        protected \App\Services\ClinicalRulesService $rulesService,
+    ) {
     }
 
     /**
@@ -63,9 +65,14 @@ class HealthMetricController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
+        // Evaluate against clinical threshold rules (triggers caregiver alert if critical/warning)
+        $alert = $this->rulesService->evaluateVitalReading($metric);
+
         return response()->json([
             'success' => true,
             'message' => $config['name'] . ' recorded successfully!',
+            'alert_triggered' => ($alert !== null),
+            'alert_severity' => $alert?->severity,
             'metric' => [
                 'id' => $metric->id,
                 'type' => $metric->type,

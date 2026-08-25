@@ -30,7 +30,11 @@ class SendDailyReminders extends Command
     /**
      * Execute the console command.
      */
-    public function handle(NotificationService $notificationService, AiAssistantService $aiAssistantService)
+    public function handle(
+        NotificationService $notificationService,
+        AiAssistantService $aiAssistantService,
+        \App\Services\DoseAdministrationService $doseService
+    )
     {
         $this->info('Starting daily reminders check...');
         
@@ -48,7 +52,7 @@ class SendDailyReminders extends Command
             // -----------------------------------------------------
             // 1. Check for MISSED MEDICATIONS (past grace period)
             // -----------------------------------------------------
-            $this->checkMissedMedications($notificationService, $profile, $now);
+            $this->checkMissedMedications($notificationService, $doseService, $profile, $now);
             
             // -----------------------------------------------------
             // 2. Check if VITALS have been logged today
@@ -80,18 +84,18 @@ class SendDailyReminders extends Command
                 ->exists();
             
             if (!$moodToday) {
-                // Only send reminder if it's after 9 AM
-                if ($now->hour >= 9) {
+                // Only send reminder if it's after 2 PM
+                if ($now->hour >= 14) {
                     try {
                         $notificationService->createDailyReminderNotification($elderlyId, 'mood');
                         $this->info("  - Sent mood reminder to profile #{$elderlyId}");
                     } catch (\Exception $e) {
-                        // Duplicate prevention
+                        // Duplicate prevention - custom_id already exists
                         $this->line("  - Mood reminder already sent to profile #{$elderlyId}");
                     }
                 }
             }
-
+            
             // ---------------------------------------------------------
             // 4. AI MORNING HEALTH SUMMARY (once per day, after 7 AM)
             // ---------------------------------------------------------
@@ -115,13 +119,13 @@ class SendDailyReminders extends Command
                             $this->info("  - Sent AI morning summary to profile #{$elderlyId}");
                         }
                     } catch (\Exception $e) {
-                        $this->error("  - AI summary failed for profile #{$elderlyId}: {$e->getMessage()}");
+                        $this->error("  - AI summary failed for profile #{$elderlyId}: " . $e->getMessage());
                     }
                 }
             }
         }
         
-        $this->info('Daily reminders check completed!');
+        $this->info('Daily reminders check completed successfully!');
         
         return Command::SUCCESS;
     }
@@ -129,62 +133,73 @@ class SendDailyReminders extends Command
     /**
      * Check for missed medications and send notifications
      */
-    private function checkMissedMedications(NotificationService $notificationService, UserProfile $profile, Carbon $now)
+    private function checkMissedMedications(
+        NotificationService $notificationService,
+        \App\Services\DoseAdministrationService $doseService,
+        UserProfile $profile,
+        Carbon $now
+    )
     {
         $elderlyId = $profile->id;
-        $today = Carbon::today();
-        
-        // Get all active medications for this elderly
+        $timezone = $profile->timezone ?: config('app.timezone', 'Asia/Manila');
+        $today = Carbon::now($timezone)->startOfDay();
+        $graceMinutes = \App\Services\DoseAdministrationService::DEFAULT_GRACE_MINUTES;
+
+        // 1. Check existing pending DoseInstances that are overdue
+        $overdueInstances = \App\Models\DoseInstance::where('elderly_id', $elderlyId)
+            ->where('state', 'pending')
+            ->where('scheduled_at_utc', '<=', $now->copy()->subMinutes($graceMinutes)->setTimezone('UTC'))
+            ->get();
+
+        foreach ($overdueInstances as $instance) {
+            $doseService->markMissed($instance);
+            $this->info("  - Marked missed dose instance #{$instance->id} for profile #{$elderlyId}");
+        }
+
+        // 2. Also check normalized schedules for any active medications for today
         $medications = Medication::where('elderly_id', $elderlyId)
             ->where('is_active', true)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('start_date')->orWhere('start_date', '<=', $today);
+            })
+            ->where(function ($q) use ($today) {
+                $q->whereNull('end_date')->orWhere('end_date', '>=', $today);
+            })
+            ->with('schedules')
             ->get();
-        
+
         foreach ($medications as $medication) {
-            $scheduledTimes = is_array($medication->scheduled_times) 
-                ? $medication->scheduled_times 
-                : json_decode($medication->scheduled_times, true) ?? [];
-            
-            foreach ($scheduledTimes as $scheduledTime) {
-                // Parse the scheduled time for today
-                $scheduledDateTime = Carbon::parse($today->format('Y-m-d') . ' ' . $scheduledTime);
-                
-                // Check if 1 hour (grace period) has passed
-                $gracePeriodEnd = $scheduledDateTime->copy()->addHour();
-                
+            if (!$medication->isScheduledForDate($today)) {
+                continue;
+            }
+
+            $scheduleTimes = $medication->scheduleTimesForDate($today);
+            foreach ($scheduleTimes as $scheduledTime) {
+                $scheduledDateTime = Carbon::parse($today->format('Y-m-d') . ' ' . $scheduledTime, $timezone);
+                $gracePeriodEnd = $scheduledDateTime->copy()->addMinutes($graceMinutes);
+
                 if ($now->greaterThan($gracePeriodEnd)) {
-                    // Check if medication was logged for this time
-                    $wasTaken = MedicationLog::where('elderly_id', $elderlyId)
+                    $scheduledUtc = $scheduledDateTime->copy()->setTimezone('UTC');
+                    $instance = \App\Models\DoseInstance::where('elderly_id', $elderlyId)
                         ->where('medication_id', $medication->id)
-                        ->whereDate('scheduled_time', $today)
-                        ->where('scheduled_time', $scheduledDateTime)
-                        ->where('is_taken', true)
-                        ->exists();
-                    
-                    if (!$wasTaken) {
-                        // Create a unique custom_id to prevent duplicate notifications
-                        $customId = "missed_med_{$medication->id}_{$scheduledDateTime->format('Y-m-d_H-i')}";
-                        
-                        // Check if this notification was already sent
-                        $alreadySent = \App\Models\Notification::where('custom_id', $customId)->exists();
-                        
-                        if (!$alreadySent) {
-                            $notificationService->createMedicationMissedNotification(
-                                $elderlyId,
-                                $medication->name,
-                                $scheduledDateTime->format('g:i A')
-                            );
-                            
-                            // Set the custom_id on the notification we just created
-                            $lastNotification = \App\Models\Notification::where('elderly_id', $elderlyId)
-                                ->where('type', 'medication_missed')
-                                ->latest()
-                                ->first();
-                            if ($lastNotification) {
-                                $lastNotification->update(['custom_id' => $customId]);
-                            }
-                            
-                            $this->info("  - Sent missed medication notification for {$medication->name} at {$scheduledTime} to profile #{$elderlyId}");
-                        }
+                        ->where('scheduled_at_utc', $scheduledUtc)
+                        ->first();
+
+                    if (!$instance) {
+                        $instance = \App\Models\DoseInstance::create([
+                            'elderly_id' => $elderlyId,
+                            'medication_id' => $medication->id,
+                            'scheduled_at_utc' => $scheduledUtc,
+                            'local_date' => $today->format('Y-m-d'),
+                            'timezone' => $timezone,
+                            'state' => 'pending',
+                            'version' => 1,
+                        ]);
+                    }
+
+                    if ($instance->isPending()) {
+                        $doseService->markMissed($instance);
+                        $this->info("  - Sent missed medication notification for {$medication->name} at {$scheduledTime} to profile #{$elderlyId}");
                     }
                 }
             }

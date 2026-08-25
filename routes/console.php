@@ -8,12 +8,23 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Schedule the daily reminders command to run every 30 minutes between 8 AM and 9 PM
+// Schedule the daily reminders command to run 24/7 every 30 minutes to detect missed doses accurately
 Schedule::command('silvercare:send-reminders')
     ->everyThirtyMinutes()
-    ->between('08:00', '21:00')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/reminders.log'));
+
+// Generate upcoming 7-day dose instances daily just after midnight
+Schedule::command('doses:generate-instances --days=7')
+    ->dailyAt('00:05')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/dose-instances.log'));
+
+// Escalate unacknowledged critical clinical alerts every 5 minutes
+Schedule::command('alerts:escalate')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/alert-escalations.log'));
 
 // Check medication stock levels daily at 9 AM
 Schedule::command('medications:check-stock')

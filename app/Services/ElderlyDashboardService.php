@@ -79,12 +79,19 @@ class ElderlyDashboardService
 
     private function getMedicationData(int $elderlyId): array
     {
+        $today = Carbon::today();
+
         $medications = Medication::where('elderly_id', $elderlyId)
             ->where('is_active', true)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('start_date')->orWhere('start_date', '<=', $today);
+            })
+            ->where(function ($q) use ($today) {
+                $q->whereNull('end_date')->orWhere('end_date', '>=', $today);
+            })
             ->with('schedules')
             ->get();
 
-        $today = Carbon::today();
         $todayMedications = $medications->filter(function (Medication $med) use ($today) {
             return $med->isScheduledForDate($today);
         });

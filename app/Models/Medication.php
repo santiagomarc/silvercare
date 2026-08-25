@@ -62,6 +62,16 @@ class Medication extends Model
         return $this->hasMany(MedicationSchedule::class);
     }
 
+    public function doseInstances(): HasMany
+    {
+        return $this->hasMany(DoseInstance::class);
+    }
+
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(PrescriptionRevision::class);
+    }
+
     /**
      * @return array<int, string>
      */

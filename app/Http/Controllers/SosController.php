@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\ClinicalRulesService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class SosController extends Controller
 {
     public function __construct(
-        protected NotificationService $notificationService
+        protected NotificationService $notificationService,
+        protected ClinicalRulesService $rulesService,
     ) {}
 
     /**
@@ -35,50 +36,20 @@ class SosController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'No caregiver linked. Please link a caregiver first.',
+                'emergency_notice' => config('alerts.emergency_disclaimer'),
             ], 422);
         }
 
-        $caregiver = $profile->caregiver;
-
         try {
-            // Create an urgent in-app notification
-            $this->notificationService->createNotification([
-                'elderly_id' => $profile->id,
-                'type' => 'sos_alert',
-                'title' => '🚨 SOS Alert from ' . $user->name,
-                'message' => $user->name . ' has triggered an emergency SOS alert and may need immediate assistance.',
-                'severity' => 'warning',
-                'metadata' => [
-                    'source' => 'sos_button',
-                    'timestamp' => now()->toIso8601String(),
-                    'user_name' => $user->name,
-                ],
-            ]);
+            $alert = $this->rulesService->evaluateSos($profile, $request->input('notes'));
 
-            // Also send email to caregiver if available
-            if ($caregiver?->user?->email) {
-                try {
-                    Mail::raw(
-                        "🚨 URGENT: {$user->name} has triggered an emergency SOS alert on SilverCare.\n\n" .
-                        "Time: " . now()->format('l, F j, Y g:i A') . "\n\n" .
-                        "Please check on them immediately.\n\n" .
-                        "— SilverCare",
-                        function ($message) use ($caregiver, $user) {
-                            $message->to($caregiver->user->email)
-                                ->subject("🚨 SOS Alert: {$user->name} needs help!");
-                        }
-                    );
-                } catch (\Exception $e) {
-                    Log::warning('SOS email failed: ' . $e->getMessage());
-                    // Don't fail the whole request if email fails
-                }
-            }
-
-            Log::warning("SOS triggered by user {$user->id} ({$user->name})");
+            Log::warning("SOS triggered by user {$user->id} ({$user->name}), Alert #{$alert->id}");
 
             return response()->json([
                 'success' => true,
                 'message' => 'SOS alert sent to your caregiver!',
+                'alert_id' => $alert->id,
+                'emergency_notice' => config('alerts.emergency_disclaimer'),
             ]);
 
         } catch (\Exception $e) {
@@ -86,7 +57,8 @@ class SosController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Something went wrong. Please try calling your caregiver directly.',
+                'message' => 'Something went wrong. Please try calling your caregiver or emergency services directly.',
+                'emergency_notice' => config('alerts.emergency_disclaimer'),
             ], 500);
         }
     }

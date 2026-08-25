@@ -52,17 +52,18 @@ self.addEventListener('fetch', (event) => {
     }
 });
 
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.action === 'CLEAR_USER_DATA') {
+        event.waitUntil(
+            caches.delete(RUNTIME_CACHE)
+        );
+    }
+});
+
 async function networkFirstNavigation(request) {
-    const runtime = await caches.open(RUNTIME_CACHE);
-
     try {
-        const response = await fetch(request);
-        runtime.put(request, response.clone());
-        return response;
+        return await fetch(request);
     } catch {
-        const cached = await runtime.match(request);
-        if (cached) return cached;
-
         const offline = await caches.match(OFFLINE_URL);
         return offline || new Response('Offline', { status: 503, statusText: 'Offline' });
     }
@@ -74,7 +75,9 @@ async function staleWhileRevalidate(request) {
 
     const fetchPromise = fetch(request)
         .then((response) => {
-            runtime.put(request, response.clone());
+            if (response && response.ok) {
+                runtime.put(request, response.clone());
+            }
             return response;
         })
         .catch(() => null);

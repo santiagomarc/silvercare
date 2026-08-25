@@ -22,6 +22,7 @@ class ElderlyDashboardController extends Controller
         protected MedicationWindowService $windowService,
         protected ProfileCompletionService $profileCompletionService,
         protected NotificationService $notificationService,
+        protected \App\Services\DoseAdministrationService $doseService,
     )
     {
     }
@@ -170,97 +171,28 @@ class ElderlyDashboardController extends Controller
         $this->authorize('take', $medication);
 
         $scheduledTime = $request->validated('time');
-        $now = Carbon::now();
-        $validTimes = $medication->scheduleTimesForDate(Carbon::today());
+        $idempotencyKey = $request->header('X-Idempotency-Key');
 
-        if (!in_array($scheduledTime, $validTimes, true)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This medication is not scheduled at the selected time today.',
-            ], 422);
+        $result = $this->doseService->confirmDoseByMedicationAndTime(
+            $medication,
+            $elderlyId,
+            $scheduledTime,
+            'senior_ui',
+            Auth::id(),
+            $idempotencyKey
+        );
+
+        if (!$result['success']) {
+            $status = match ($result['error_code'] ?? '') {
+                'DOSE_TOO_EARLY' => 400,
+                'UNSCHEDULED_DOSE', 'MEDICATION_EXPIRED', 'MEDICATION_NOT_STARTED' => 422,
+                default => 400,
+            };
+
+            return response()->json($result, $status);
         }
 
-        $window = $this->windowService->forToday($scheduledTime, $now);
-        $scheduledDateTime = $window['scheduled_time'];
-        $windowStart = $window['window_start'];
-        $windowEnd = $window['window_end'];
-        $isWithinWindow = $window['is_within_window'];
-        $isPastWindow = $window['is_past_window'];
-        $isBeforeWindow = $window['is_before_window'];
-
-        // Determine status
-        $status = 'pending';
-        $takenLate = false;
-
-        if ($isWithinWindow) {
-            $status = 'taken';
-        } elseif ($isPastWindow) {
-            $status = 'taken_late';
-            $takenLate = true;
-        } else {
-            // Before window - cannot take yet
-            return response()->json([
-                'success' => false,
-                'message' => 'Too early to take this medication. Please wait until ' . $windowStart->format('g:i A'),
-                'can_take' => false,
-                'window_start' => $windowStart->toISOString(),
-            ], 400);
-        }
-
-        // C1 FIX: Wrap in transaction + pessimistic lock to prevent race condition
-        // on rapid double-clicks which previously caused double stock decrements.
-        return DB::transaction(function () use (
-            $elderlyId, $medication, $scheduledDateTime, $now, $windowEnd, $takenLate, $status
-        ) {
-            $existingLog = MedicationLog::where('elderly_id', $elderlyId)
-                ->where('medication_id', $medication->id)
-                ->where('scheduled_time', $scheduledDateTime)
-                ->lockForUpdate()
-                ->first();
-
-            if ($existingLog?->is_taken) {
-                return response()->json([
-                    'success' => true,
-                    'is_taken' => true,
-                    'taken_at' => $existingLog->taken_at?->toISOString(),
-                    'taken_late' => $existingLog->taken_at?->gt($windowEnd) ?? false,
-                    'status' => $existingLog->taken_at?->gt($windowEnd) ? 'taken_late' : 'taken',
-                    'message' => 'Medication already marked as taken.',
-                ]);
-            }
-
-            $log = MedicationLog::updateOrCreate(
-                [
-                    'elderly_id' => $elderlyId,
-                    'medication_id' => $medication->id,
-                    'scheduled_time' => $scheduledDateTime,
-                ],
-                [
-                    'is_taken' => true,
-                    'taken_at' => $now,
-                ]
-            );
-
-            if ($medication->track_inventory && $medication->current_stock > 0) {
-                $medication->decrement('current_stock');
-            }
-
-            // Create notification for medication taken (with late flag)
-            $this->notificationService->createMedicationTakenNotification(
-                $elderlyId,
-                $medication->name,
-                $takenLate
-            );
-
-            return response()->json([
-                'success' => true,
-                'is_taken' => true,
-                'taken_at' => $log->taken_at->toISOString(),
-                'taken_late' => $takenLate,
-                'status' => $status,
-                'message' => $takenLate ? 'Medication marked as taken (late)' : 'Medication taken!',
-            ]);
-        });
+        return response()->json($result);
     }
 
     /**
@@ -272,49 +204,20 @@ class ElderlyDashboardController extends Controller
         $this->authorize('take', $medication);
 
         $scheduledTime = $request->validated('time');
-        $now = Carbon::now();
-        $validTimes = $medication->scheduleTimesForDate(Carbon::today());
 
-        if (!in_array($scheduledTime, $validTimes, true)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This medication is not scheduled at the selected time today.',
-            ], 422);
+        $result = $this->doseService->undoDoseByMedicationAndTime(
+            $medication,
+            $elderlyId,
+            $scheduledTime,
+            'senior_ui',
+            Auth::id()
+        );
+
+        if (!$result['success']) {
+            return response()->json($result, 400);
         }
 
-        $window = $this->windowService->forToday($scheduledTime, $now);
-        $scheduledDateTime = $window['scheduled_time'];
-        $windowEnd = $window['window_end'];
-        $isPastWindow = $window['is_past_window'];
-
-        // Find the existing log
-        $log = MedicationLog::where('elderly_id', $elderlyId)
-            ->where('medication_id', $medication->id)
-            ->where('scheduled_time', $scheduledDateTime)
-            ->first();
-
-        // If past grace period, don't allow unmarking
-        if ($isPastWindow) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot unmark - grace period has ended',
-                'can_undo' => false,
-            ], 400);
-        }
-
-        // Delete the log if it exists
-        if ($log) {
-            if ($medication->track_inventory && $log->is_taken) {
-                $medication->increment('current_stock');
-            }
-            $log->delete();
-        }
-
-        return response()->json([
-            'success' => true,
-            'is_taken' => false,
-            'message' => 'Medication unmarked',
-        ]);
+        return response()->json($result);
     }
 
     /**

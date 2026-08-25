@@ -52,9 +52,17 @@ class AiAssistantService
         '📋 What tasks are pending for my patient?',
     ];
 
-    public function __construct(NotificationService $notificationService)
-    {
+    protected DoseAdministrationService $doseService;
+    protected \App\Services\ClinicalRulesService $rulesService;
+
+    public function __construct(
+        NotificationService $notificationService,
+        ?DoseAdministrationService $doseService = null,
+        ?\App\Services\ClinicalRulesService $rulesService = null
+    ) {
         $this->notificationService = $notificationService;
+        $this->doseService = $doseService ?? app(DoseAdministrationService::class);
+        $this->rulesService = $rulesService ?? app(\App\Services\ClinicalRulesService::class);
     }
 
     // =========================================================================
@@ -597,28 +605,28 @@ PROMPT;
                         $now
                     );
 
-                    MedicationLog::updateOrCreate([
-                        'elderly_id' => $profile->id,
-                        'medication_id' => $medication->id,
-                        'scheduled_time' => $scheduledDateTime,
-                    ], [
-                        'is_taken' => true,
-                        'taken_at' => $now,
-                    ]);
-
-                    $this->notificationService->createMedicationTakenNotification(
+                    $result = $this->doseService->confirmDoseByMedicationAndTime(
+                        $medication,
                         $profile->id,
-                        $medication->name
+                        $scheduledDateTime->format('H:i'),
+                        'ai_assistant',
+                        $user->id,
+                        null,
+                        $now
                     );
 
-                    $this->pushActionEvent([
-                        'type' => 'medication_logged',
-                        'medication_id' => $medication->id,
-                        'scheduled_time' => $scheduledDateTime->format('H:i'),
-                        'taken_late' => $now->gt($scheduledDateTime->copy()->addMinutes(60)),
-                    ]);
+                    if ($result['success']) {
+                        $this->pushActionEvent([
+                            'type' => 'medication_logged',
+                            'medication_id' => $medication->id,
+                            'scheduled_time' => $scheduledDateTime->format('H:i'),
+                            'taken_late' => $result['taken_late'] ?? false,
+                        ]);
 
-                    return "\n\n💊 *{$medication->name} logged as taken!*";
+                        return "\n\n💊 *{$medication->name} logged as taken!*";
+                    } else {
+                        return "\n\n⚠️ *Could not log {$medication->name}: {$result['message']}*";
+                    }
                 }
             } catch (\Exception $e) {
                 Log::warning("AI action failed (LOG_MEDICATION:{$medId}): " . $e->getMessage());
@@ -685,25 +693,9 @@ PROMPT;
             $profile = $user->profile;
             if (!$profile) return;
 
-            // Find the caregiver linked to this elderly user
-            $caregiverId = $profile->caregiver_id;
-            if (!$caregiverId) return;
+            $this->rulesService->evaluateAiEmergencyIntent($profile, $matchedKeyword, $message);
 
-            $this->notificationService->createNotification([
-                'elderly_id' => $profile->id,
-                'type' => 'emergency_alert',
-                'title' => '🚨 Emergency Alert from ' . $user->name,
-                'message' => "{$user->name} may need urgent help. They mentioned: \"{$message}\" (detected: {$matchedKeyword})",
-                'severity' => 'critical',
-                'metadata' => [
-                    'source' => 'ai_chat',
-                    'keyword' => $matchedKeyword,
-                    'original_message' => $message,
-                    'timestamp' => now()->toIso8601String(),
-                ],
-            ]);
-
-            Log::warning("Emergency alert fired for user {$user->id}: keyword '{$matchedKeyword}'");
+            Log::warning("AI Emergency alert fired for user {$user->id}: keyword '{$matchedKeyword}'");
         } catch (\Exception $e) {
             Log::error("Failed to fire emergency alert: " . $e->getMessage());
         }

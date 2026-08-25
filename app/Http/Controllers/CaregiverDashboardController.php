@@ -95,6 +95,17 @@ class CaregiverDashboardController extends Controller
         $medications = $elderly->resolvedMedications();
         $allergies = $elderly->resolvedAllergies();
 
-        return view('caregiver.dashboard', compact('elderly', 'elderlyPatients', 'selectedElderlyId', 'elderlyUser', 'mood', 'vitals', 'recentActivity', 'stats', 'conditions', 'medications', 'allergies', 'activeLinkCode', 'activeLinkQrSvg', 'activeLinkSignedUrl'));
+        $activeAlerts = \App\Models\Alert::where('elderly_id', $elderly->id)
+            ->whereIn('state', ['open', 'acknowledged'])
+            ->orderByRaw("
+                CASE severity
+                    WHEN 'emergency' THEN 1
+                    WHEN 'critical' THEN 2
+                    WHEN 'warning' THEN 3
+                    ELSE 4
+                END
+            ")->latest()->get();
+
+        return view('caregiver.dashboard', compact('elderly', 'elderlyPatients', 'selectedElderlyId', 'elderlyUser', 'mood', 'vitals', 'recentActivity', 'stats', 'conditions', 'medications', 'allergies', 'activeLinkCode', 'activeLinkQrSvg', 'activeLinkSignedUrl', 'activeAlerts'));
     }
 }

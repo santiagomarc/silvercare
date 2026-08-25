@@ -68,6 +68,87 @@
         @endif
 
 
+        @if(($activeAlerts ?? collect())->isNotEmpty())
+            <div class="mb-6 space-y-3" id="clinical-alert-center">
+                @foreach($activeAlerts as $alert)
+                    <div class="relative overflow-hidden rounded-2xl p-5 border shadow-md transition-all {{ $alert->severity === 'emergency' ? 'bg-red-500/10 border-red-500 text-red-950 dark:text-red-100' : ($alert->severity === 'critical' ? 'bg-rose-500/10 border-rose-400 text-rose-950 dark:text-rose-100' : 'bg-amber-500/10 border-amber-400 text-amber-950 dark:text-amber-100') }}" id="alert-card-{{ $alert->id }}">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div class="flex items-start gap-3.5">
+                                <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-xl {{ $alert->severity === 'emergency' ? 'bg-red-600 text-white animate-pulse' : ($alert->severity === 'critical' ? 'bg-rose-600 text-white' : 'bg-amber-500 text-white') }}">
+                                    @if($alert->severity === 'emergency') 🚨 @elseif($alert->severity === 'critical') ⚠️ @else 🔔 @endif
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-md {{ $alert->severity === 'emergency' ? 'bg-red-600 text-white' : ($alert->severity === 'critical' ? 'bg-rose-600 text-white' : 'bg-amber-500 text-white') }}">
+                                            {{ strtoupper($alert->severity) }}
+                                        </span>
+                                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">{{ $alert->created_at->diffForHumans() }}</span>
+                                        @if($alert->isAcknowledged())
+                                            <span class="text-xs font-bold bg-green-100 text-green-800 dark:bg-green-900/60 dark:text-green-200 px-2 py-0.5 rounded-md">✓ Acknowledged</span>
+                                        @endif
+                                    </div>
+                                    <h4 class="text-base font-extrabold mt-1 text-slate-900 dark:text-white">{{ $alert->title }}</h4>
+                                    <p class="text-sm font-medium text-slate-700 dark:text-slate-200 mt-0.5">{{ $alert->message }}</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2.5 flex-shrink-0 self-end sm:self-center">
+                                @if($alert->isOpen())
+                                    <button
+                                        onclick="acknowledgeAlert({{ $alert->id }})"
+                                        class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow transition-colors"
+                                    >
+                                        Acknowledge
+                                    </button>
+                                @endif
+                                @if($alert->isAcknowledged() || $alert->isOpen())
+                                    <button
+                                        onclick="resolveAlert({{ $alert->id }})"
+                                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-xl shadow transition-colors"
+                                    >
+                                        Resolve
+                                    </button>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+            <script>
+                function acknowledgeAlert(alertId) {
+                    fetch(`/caregiver/alerts/${alertId}/acknowledge`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        }
+                    }).then(r => r.json()).then(data => {
+                        if (data.success) {
+                            window.location.reload();
+                        }
+                    });
+                }
+
+                function resolveAlert(alertId) {
+                    fetch(`/caregiver/alerts/${alertId}/resolve`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        }
+                    }).then(r => r.json()).then(data => {
+                        if (data.success) {
+                            const card = document.getElementById(`alert-card-${alertId}`);
+                            if (card) card.remove();
+                        }
+                    });
+                }
+            </script>
+        @endif
+
         <!-- ============================================ -->
         <!-- TOP ROW: Elder Profile Card + Management Panel -->
         <!-- ============================================ -->

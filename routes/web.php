@@ -27,43 +27,6 @@ Route::get('/', function () {
     return view('welcome');
 })->middleware('role.redirect')->name('welcome');
 
-// Temporary debug route: reports available PDO drivers and attempts a DB connection
-Route::get('/__debug/pdo', function () {
-    try {
-        $drivers = PDO::getAvailableDrivers();
-        $pdo = DB::connection()->getPdo();
-        return response()->json([
-            'drivers' => $drivers,
-            'connected' => true,
-            'db_config' => DB::getConfig(),
-            'php_sapi' => php_sapi_name(),
-            'php_binary' => PHP_BINARY,
-            'loaded_extensions' => in_array('pdo_sqlite', get_loaded_extensions()),
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'drivers' => PDO::getAvailableDrivers(),
-            'db_config' => DB::getConfig(),
-            'php_sapi' => php_sapi_name(),
-            'php_binary' => PHP_BINARY,
-            'loaded_extensions' => in_array('pdo_sqlite', get_loaded_extensions()),
-            'error' => $e->getMessage(),
-        ], 500);
-    }
-});
-
-// Lightweight debug route: no DB use, just report PHP runtime info
-Route::get('/__debug/ping', function () {
-    return response()->json([
-        'ok' => true,
-        'php_sapi' => php_sapi_name(),
-        'php_binary' => PHP_BINARY,
-        'loaded_extensions' => in_array('pdo_sqlite', get_loaded_extensions()),
-        'php_ini' => php_ini_loaded_file(),
-        'php_ini_scanned' => php_ini_scanned_files(),
-        'extension_dir' => ini_get('extension_dir'),
-    ]);
-});
 
 // Caregiver Password Setup (Signed Route - No Auth Required)
 Route::get('/caregiver/set-password/{userId}', [CaregiverSetPasswordController::class, 'show'])
@@ -93,6 +56,10 @@ Route::middleware(['auth', 'verified', 'elderly', 'profile.complete', 'prevent.b
     Route::post('/my-medications/{medication}/take', [ElderlyDashboardController::class, 'takeMedication'])->name('elderly.medications.take');
     Route::post('/my-medications/{medication}/undo', [ElderlyDashboardController::class, 'undoMedication'])->name('elderly.medications.undo');
     Route::post('/my-medications/{medication}/refill', [ElderlyDashboardController::class, 'requestRefill'])->name('elderly.medications.refill');
+
+    // Dose Instance API (idempotent operations)
+    Route::post('/api/doses/{doseInstance}/confirm', [\App\Http\Controllers\DoseInstanceController::class, 'confirm'])->name('doses.confirm');
+    Route::post('/api/doses/{doseInstance}/undo', [\App\Http\Controllers\DoseInstanceController::class, 'undo'])->name('doses.undo');
 
     // Health Metrics (Vitals)
     Route::post('/my-vitals', [HealthMetricController::class, 'store'])->name('elderly.vitals.store');
@@ -149,8 +116,8 @@ Route::middleware(['auth', 'verified', 'elderly', 'profile.complete', 'prevent.b
     Route::get('/notifications/unread-count', [NotificationController::class, 'getUnreadCount'])->name('elderly.notifications.unread-count');
     Route::get('/notifications/latest', [NotificationController::class, 'getLatest'])->name('elderly.notifications.latest');
 
-    // SOS Emergency
-    Route::post('/sos', [SosController::class, 'trigger'])->name('elderly.sos');
+    // SOS Emergency — rate-limited to 5 per minute to prevent accidental spam while ensuring safety
+    Route::post('/sos', [SosController::class, 'trigger'])->middleware('throttle:5,1')->name('elderly.sos');
 
     // Care Messages (elderly <-> caregiver)
     Route::get('/messages', [CareMessageController::class, 'elderlyIndex'])->name('elderly.messages.index');
@@ -167,6 +134,11 @@ Route::middleware(['auth', 'verified', 'caregiver', 'profile.complete', 'prevent
     Route::get('/dashboard', [CaregiverDashboardController::class, 'index'])->name('dashboard');
     Route::post('/link-code', [CareLinkController::class, 'generate'])->name('link-code.generate');
     
+    // Clinical Alert Center (Caregiver)
+    Route::get('/alerts', [\App\Http\Controllers\AlertController::class, 'index'])->name('alerts.index');
+    Route::post('/alerts/{alert}/acknowledge', [\App\Http\Controllers\AlertController::class, 'acknowledge'])->name('alerts.acknowledge');
+    Route::post('/alerts/{alert}/resolve', [\App\Http\Controllers\AlertController::class, 'resolve'])->name('alerts.resolve');
+
     Route::get('/profile', [CaregiverProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [CaregiverProfileController::class, 'update'])->name('profile.update');
     
@@ -199,6 +171,9 @@ Route::middleware(['prevent.back'])->group(function () {
     
     Route::post('/profile/completion', [ProfileCompletionController::class, 'store'])
         ->name('profile.completion.store');
+
+    Route::match(['get', 'post'], '/profile/completion/skip', [ProfileCompletionController::class, 'skip'])
+        ->name('profile.completion.skip');
 });
 
 // Shared authenticated routes (profile, calendar) — M5 FIX: prevent.back added

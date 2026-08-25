@@ -115,10 +115,10 @@ class CareLinkingTest extends TestCase
         [$elderlyUser, $elderlyProfile]  = $this->makeElderlyUser();
 
         $response = $this->actingAs($elderlyUser)
-            ->post(route('elderly.confirm-link'), ['code' => '123456']);
+            ->postJson(route('elderly.confirm-link'), ['code' => '123456']);
 
-        $response->assertRedirect();
-        $response->assertSessionHasNoErrors();
+        $response->assertOk()
+            ->assertJson(['success' => true]);
 
         $this->assertSame($caregiverProfile->id, $elderlyProfile->fresh()->caregiver_id);
         $this->assertNotNull($linkCode->fresh()->used_at);
@@ -130,10 +130,10 @@ class CareLinkingTest extends TestCase
         [$elderlyUser] = $this->makeElderlyUser();
 
         $response = $this->actingAs($elderlyUser)
-            ->post(route('elderly.confirm-link'), ['code' => '999999']);
+            ->postJson(route('elderly.confirm-link'), ['code' => '999999']);
 
-        $response->assertRedirect();
-        $response->assertSessionHasErrors('code');
+        $response->assertStatus(422)
+            ->assertJson(['success' => false]);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
