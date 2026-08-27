@@ -177,6 +177,11 @@ class DoseAdministrationService
                 $takenLate
             );
 
+            // Realtime Reverb Broadcast to linked caregiver
+            if ($lockedInstance->elderly?->caregiver_id) {
+                event(new \App\Events\DoseConfirmedEvent($lockedInstance, $lockedInstance->elderly->caregiver_id));
+            }
+
             return [
                 'success' => true,
                 'is_taken' => true,

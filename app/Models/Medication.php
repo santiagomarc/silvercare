@@ -95,7 +95,9 @@ class Medication extends Model
             return [];
         }
 
-        return collect($this->times_of_day ?? [])
+        $times = $this->times_of_day ?? $this->schedule_times ?? [];
+
+        return collect($times)
             ->filter(fn ($time) => is_string($time) && $time !== '')
             ->map(fn ($time) => Carbon::parse($time)->format('H:i'))
             ->unique()

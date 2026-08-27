@@ -77,3 +77,9 @@ Schedule::command('app:sync-google-fit')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/google-fit-sync.log'));
 
+// Monitor third-party integration telemetry and alert on disconnections daily at 4 AM
+Schedule::command('telemetry:monitor-integrations')
+    ->dailyAt('04:00')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/integration-telemetry.log'));
+

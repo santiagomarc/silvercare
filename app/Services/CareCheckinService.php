@@ -68,6 +68,11 @@ class CareCheckinService
             $this->alertDeliveryService->deliver($alert);
         }
 
+        // Realtime Reverb Broadcast to linked caregiver
+        if ($elderly->caregiver_id) {
+            event(new \App\Events\CheckinReceivedEvent($checkin, $elderly->caregiver_id));
+        }
+
         return $checkin;
     }
 

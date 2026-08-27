@@ -104,6 +104,16 @@ class UserProfile extends Model
         return $this->hasMany(CaptureSession::class, 'elderly_id');
     }
 
+    public function offlineSyncLogs(): HasMany
+    {
+        return $this->hasMany(OfflineSyncLog::class, 'elderly_id');
+    }
+
+    public function syncTelemetryLogs(): HasMany
+    {
+        return $this->hasMany(SyncTelemetryLog::class, 'elderly_id');
+    }
+
     public function todayCheckin(): ?CareCheckin
     {
         return $this->careCheckins()->whereDate('checkin_date', \Carbon\Carbon::today($this->timezone ?? 'Asia/Manila')->toDateString())->first();

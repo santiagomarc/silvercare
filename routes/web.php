@@ -207,6 +207,10 @@ Route::middleware(['auth', 'prevent.back'])->group(function () {
     Route::post('/api/capture/upload', [\App\Http\Controllers\CaptureSessionController::class, 'upload'])->name('capture.upload');
     Route::get('/api/capture/{session}', [\App\Http\Controllers\CaptureSessionController::class, 'show'])->name('capture.show');
     Route::post('/api/capture/{session}/confirm', [\App\Http\Controllers\CaptureSessionController::class, 'confirm'])->name('capture.confirm');
+
+    // Offline Batch Reconciliation API
+    Route::post('/api/offline/sync', [\App\Http\Controllers\OfflineSyncController::class, 'sync'])->name('offline.sync');
+    Route::get('/api/offline/status', [\App\Http\Controllers\OfflineSyncController::class, 'status'])->name('offline.status');
 });
 
 require __DIR__.'/auth.php';

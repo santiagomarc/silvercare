@@ -840,3 +840,36 @@ body.swal2-toast-shown .swal2-container {
     .stagger-4 { animation-delay: 200ms; }
     .stagger-5 { animation-delay: 250ms; }
 }
+
+/* ── Senior High Contrast Mode Utilities (WCAG 2.1 AA) ───────────── */
+html.high-contrast {
+    filter: contrast(120%);
+}
+
+html.high-contrast body {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+}
+
+html.high-contrast .card,
+html.high-contrast .card-glass,
+html.high-contrast .panel-shell {
+    background-color: #111111 !important;
+    border: 2px solid #ffffff !important;
+    color: #ffffff !important;
+}
+
+html.high-contrast a,
+html.high-contrast button {
+    border: 2px solid currentColor !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+

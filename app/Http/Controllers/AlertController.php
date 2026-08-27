@@ -65,6 +65,8 @@ class AlertController extends Controller
 
         $alert->acknowledge($user->id);
 
+        event(new \App\Events\AlertStatusUpdated($alert, $profile->id));
+
         return response()->json([
             'success' => true,
             'message' => 'Alert acknowledged successfully.',
@@ -90,6 +92,8 @@ class AlertController extends Controller
         }
 
         $alert->resolve($user->id);
+
+        event(new \App\Events\AlertStatusUpdated($alert, $profile->id));
 
         return response()->json([
             'success' => true,
