@@ -32,6 +32,12 @@ Schedule::command('medications:check-stock')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/stock-alerts.log'));
 
+// Check for missing daily check-ins every evening at 6:30 PM
+Schedule::command('checkins:check-missed')
+    ->dailyAt('18:30')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/missed-checkins.log'));
+
 // Check upcoming appointments/reminders every 15 minutes
 Schedule::command('appointments:send-reminders')
     ->everyFifteenMinutes()

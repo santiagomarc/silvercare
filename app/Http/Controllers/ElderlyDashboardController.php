@@ -40,6 +40,8 @@ class ElderlyDashboardController extends Controller
         $profile = $user->profile;
         $data['linkedCaregiver'] = $profile?->caregiver;
         $data['profileCompletion'] = $this->profileCompletionService->evaluate($profile);
+        $data['todayCheckin'] = $profile?->todayCheckin();
+        $data['hasCheckedInToday'] = $profile?->hasCheckedInToday() ?? false;
 
         return view('elderly.dashboard', $data);
     }

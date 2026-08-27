@@ -18,6 +18,7 @@ class CaregiverAnalyticsController extends Controller
     public function __construct(
         protected HealthAnalyticsService $analyticsService,
         protected MedicationAdherenceService $adherenceService,
+        protected \App\Services\ClinicalInsightService $insightService,
     ) {
     }
 
@@ -78,6 +79,8 @@ class CaregiverAnalyticsController extends Controller
         // Task Summary (7 days)
         $taskSummary = $this->getTaskSummary($elderly);
 
+        $briefing = $this->insightService->getDailyBriefing($elderly);
+
         return view('caregiver.analytics', compact(
             'elderly', 
             'elderlyPatients',
@@ -92,7 +95,8 @@ class CaregiverAnalyticsController extends Controller
             'totalReadings',
             'readingsThisWeek',
             'medicationSummary',
-            'taskSummary'
+            'taskSummary',
+            'briefing'
         ));
     }
 
@@ -174,6 +178,8 @@ class CaregiverAnalyticsController extends Controller
         $medicationSummary = $this->adherenceService->weekSummary($elderly);
         $taskSummary = $this->getTaskSummary($elderly);
 
+        $briefing = $this->insightService->getDailyBriefing($elderly);
+
         $pdf = Pdf::loadView('caregiver.analytics_pdf', compact(
             'elderly',
             'elderlyUser',
@@ -184,7 +190,8 @@ class CaregiverAnalyticsController extends Controller
             'totalReadings',
             'readingsThisWeek',
             'medicationSummary',
-            'taskSummary'
+            'taskSummary',
+            'briefing'
         ));
 
         $filename = 'SilverCare_Health_Report_' . ($elderlyUser->name ?? 'Patient') . '_' . now()->format('Y-m-d') . '.pdf';

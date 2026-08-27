@@ -94,6 +94,27 @@ class UserProfile extends Model
         return $this->hasMany(PatientAlertThreshold::class, 'elderly_id');
     }
 
+    public function careCheckins(): HasMany
+    {
+        return $this->hasMany(CareCheckin::class, 'elderly_id');
+    }
+
+    public function captureSessions(): HasMany
+    {
+        return $this->hasMany(CaptureSession::class, 'elderly_id');
+    }
+
+    public function todayCheckin(): ?CareCheckin
+    {
+        return $this->careCheckins()->whereDate('checkin_date', \Carbon\Carbon::today($this->timezone ?? 'Asia/Manila')->toDateString())->first();
+    }
+
+    public function hasCheckedInToday(): bool
+    {
+        $today = $this->todayCheckin();
+        return $today !== null && $today->status !== 'missed';
+    }
+
     public function healthMetrics(): HasMany
     {
         return $this->hasMany(HealthMetric::class, 'elderly_id');

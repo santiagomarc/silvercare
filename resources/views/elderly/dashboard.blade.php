@@ -113,6 +113,82 @@
             </div>
         </div>
 
+        {{-- ╔══════════════════════════════════╗
+             ║  DAILY WELLNESS CHECK-IN CARD    ║
+             ╚══════════════════════════════════╝ --}}
+        <div class="mb-6 rounded-3xl p-5 sm:p-6 transition-all border shadow-sm {{ ($hasCheckedInToday ?? false) ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950' : 'bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 border-blue-200 text-blue-950' }}" id="daily-checkin-banner">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 {{ ($hasCheckedInToday ?? false) ? 'bg-emerald-500 text-white' : 'bg-[#000080] text-white shadow-md' }}">
+                        @if($hasCheckedInToday ?? false)
+                            ✓
+                        @else
+                            👋
+                        @endif
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-black tracking-tight">
+                            @if($hasCheckedInToday ?? false)
+                                Checked In For Today!
+                            @else
+                                Daily Wellness Check-in
+                            @endif
+                        </h3>
+                        <p class="text-xs sm:text-sm font-medium opacity-80 mt-0.5">
+                            @if($hasCheckedInToday ?? false)
+                                You checked in at {{ $todayCheckin?->checked_in_at?->format('g:i A') ?? 'Today' }}. Your caregiver knows you're safe!
+                            @else
+                                Let your caregiver know you are doing well today with a single tap.
+                            @endif
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    @if(!($hasCheckedInToday ?? false))
+                        <button
+                            type="button"
+                            onclick="submitDailyCheckin('ok')"
+                            class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[#000080] hover:bg-blue-900 text-white font-extrabold text-sm shadow-md transition-transform active:scale-95"
+                        >
+                            <span>🌟 I'm Doing OK</span>
+                        </button>
+                        <button
+                            type="button"
+                            onclick="submitDailyCheckin('need_help')"
+                            class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-sm transition-transform active:scale-95"
+                        >
+                            <span>Need Help?</span>
+                        </button>
+                    @else
+                        <span class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-black">
+                            ✓ All Good
+                        </span>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        <script>
+            function submitDailyCheckin(status) {
+                fetch('{{ route("elderly.checkin") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ status: status })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    }
+                });
+            }
+        </script>
+
         {{-- ╔══════════════════════════════╗
              ║  ONBOARDING NUDGE BANNER     ║
              ╚══════════════════════════════╝ --}}
@@ -496,5 +572,29 @@
 
     {{-- AI Assistant Chat Widget --}}
     <x-ai-chat-widget />
+
+    {{-- Floating Senior Voice Assistant Button --}}
+    <div class="fixed bottom-6 left-6 z-40">
+        <button
+            type="button"
+            id="senior-voice-mic-btn"
+            onclick="window.SilverCareVoice.start()"
+            title="Speak a vital reading (e.g. 'Blood pressure 120 over 80')"
+            class="w-14 h-14 rounded-full bg-[#000080] hover:bg-blue-900 text-white shadow-2xl flex items-center justify-center text-2xl transition-all active:scale-95 border-2 border-white focus:outline-none focus:ring-4 focus:ring-blue-300"
+        >
+            🎙️
+        </button>
+    </div>
+
+    @push('scripts')
+    <script src="{{ asset('js/voice-vital-capture.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.SilverCareVoice && window.SilverCareVoice.isSupported()) {
+                window.SilverCareVoice.init();
+            }
+        });
+    </script>
+    @endpush
 
 </x-dashboard-layout>

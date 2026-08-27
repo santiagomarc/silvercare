@@ -17,6 +17,7 @@ class CaregiverDashboardController extends Controller
 
     public function __construct(
         protected CaregiverDashboardService $dashboardService,
+        protected \App\Services\ClinicalInsightService $insightService,
     ) {
     }
 
@@ -79,6 +80,7 @@ class CaregiverDashboardController extends Controller
                 'activeLinkCode' => $activeLinkCode,
                 'activeLinkQrSvg' => $activeLinkQrSvg,
                 'activeLinkSignedUrl' => $activeLinkSignedUrl,
+                'briefing' => null,
             ]);
         }
 
@@ -106,6 +108,8 @@ class CaregiverDashboardController extends Controller
                 END
             ")->latest()->get();
 
-        return view('caregiver.dashboard', compact('elderly', 'elderlyPatients', 'selectedElderlyId', 'elderlyUser', 'mood', 'vitals', 'recentActivity', 'stats', 'conditions', 'medications', 'allergies', 'activeLinkCode', 'activeLinkQrSvg', 'activeLinkSignedUrl', 'activeAlerts'));
+        $briefing = $this->insightService->getDailyBriefing($elderly);
+
+        return view('caregiver.dashboard', compact('elderly', 'elderlyPatients', 'selectedElderlyId', 'elderlyUser', 'mood', 'vitals', 'recentActivity', 'stats', 'conditions', 'medications', 'allergies', 'activeLinkCode', 'activeLinkQrSvg', 'activeLinkSignedUrl', 'activeAlerts', 'briefing'));
     }
 }

@@ -149,6 +149,58 @@
             </script>
         @endif
 
+        @if(!empty($briefing))
+            <div class="mb-6 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 flex items-center justify-center text-blue-600 dark:text-blue-400 font-black text-lg">
+                            📊
+                        </div>
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Daily Clinical Briefing & Risk Overview</h3>
+                            <p class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">Automated safety telemetry updated just now</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2.5">
+                        <!-- Risk Score Badge -->
+                        <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-black {{ $briefing['risk']['level'] === 'high' ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/50 dark:text-red-300 dark:border-red-800' : ($briefing['risk']['level'] === 'moderate' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800' : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800') }}">
+                            <span>Risk Score: {{ $briefing['risk']['score'] }}/100</span>
+                            <span class="uppercase">({{ $briefing['risk']['level'] }})</span>
+                        </div>
+
+                        <!-- 7-Day Adherence -->
+                        <div class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-black">
+                            💊 {{ $briefing['medication_adherence']['rate'] }}% Med Adherence
+                        </div>
+
+                        <!-- Today Check-in -->
+                        @if($briefing['today_checkin'])
+                            <div class="px-3 py-1.5 rounded-xl {{ $briefing['today_checkin']->status === 'need_help' ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-900' }} text-xs font-black">
+                                👋 {{ $briefing['today_checkin']->status === 'need_help' ? 'Needs Help' : 'Checked In' }} ({{ $briefing['today_checkin']->checked_in_at?->format('g:i A') ?? 'Today' }})
+                            </div>
+                        @else
+                            <div class="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 dark:bg-slate-800 dark:text-slate-400 text-xs font-bold">
+                                ⏳ Check-in Pending
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                <!-- Highlights List -->
+                @if(!empty($briefing['highlights']))
+                    <div class="mt-3.5 grid grid-cols-1 md:grid-cols-2 gap-2">
+                        @foreach($briefing['highlights'] as $highlight)
+                            <div class="flex items-start gap-2 text-xs font-medium text-slate-700 dark:text-slate-300">
+                                <span class="text-blue-500 font-bold mt-0.5">•</span>
+                                <span>{{ $highlight }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        @endif
+
         <!-- ============================================ -->
         <!-- TOP ROW: Elder Profile Card + Management Panel -->
         <!-- ============================================ -->

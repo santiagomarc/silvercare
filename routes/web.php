@@ -61,6 +61,10 @@ Route::middleware(['auth', 'verified', 'elderly', 'profile.complete', 'prevent.b
     Route::post('/api/doses/{doseInstance}/confirm', [\App\Http\Controllers\DoseInstanceController::class, 'confirm'])->name('doses.confirm');
     Route::post('/api/doses/{doseInstance}/undo', [\App\Http\Controllers\DoseInstanceController::class, 'undo'])->name('doses.undo');
 
+    // Voice Capture API
+    Route::post('/api/voice/parse', [\App\Http\Controllers\VoiceCaptureController::class, 'parse'])->name('voice.parse');
+    Route::post('/api/voice/confirm', [\App\Http\Controllers\VoiceCaptureController::class, 'confirm'])->name('voice.confirm');
+
     // Health Metrics (Vitals)
     Route::post('/my-vitals', [HealthMetricController::class, 'store'])->name('elderly.vitals.store');
     Route::post('/my-mood', [HealthMetricController::class, 'storeMood'])->name('elderly.mood.store');
@@ -116,6 +120,9 @@ Route::middleware(['auth', 'verified', 'elderly', 'profile.complete', 'prevent.b
     Route::get('/notifications/unread-count', [NotificationController::class, 'getUnreadCount'])->name('elderly.notifications.unread-count');
     Route::get('/notifications/latest', [NotificationController::class, 'getLatest'])->name('elderly.notifications.latest');
 
+    // Daily Care Check-in ("I'm OK")
+    Route::post('/checkin', [\App\Http\Controllers\CareCheckinController::class, 'store'])->name('elderly.checkin');
+
     // SOS Emergency — rate-limited to 5 per minute to prevent accidental spam while ensuring safety
     Route::post('/sos', [SosController::class, 'trigger'])->middleware('throttle:5,1')->name('elderly.sos');
 
@@ -130,6 +137,9 @@ Route::middleware(['auth', 'verified', 'caregiver', 'profile.complete', 'prevent
     Route::get('/patients', [App\Http\Controllers\PatientListController::class, 'index'])->name('patients.index');
     Route::post('/patients/{patient}/remove', [App\Http\Controllers\PatientListController::class, 'remove'])->name('patients.remove');
     Route::post('/patients/{patient}/restore', [App\Http\Controllers\PatientListController::class, 'restore'])->name('patients.restore');
+    Route::get('/patients/{patient}/checkins', [\App\Http\Controllers\CareCheckinController::class, 'history'])->name('patients.checkins');
+    Route::get('/patients/{patient}/thresholds', [\App\Http\Controllers\PatientThresholdController::class, 'index'])->name('patients.thresholds.index');
+    Route::post('/patients/{patient}/thresholds', [\App\Http\Controllers\PatientThresholdController::class, 'update'])->name('patients.thresholds.update');
 
     Route::get('/dashboard', [CaregiverDashboardController::class, 'index'])->name('dashboard');
     Route::post('/link-code', [CareLinkController::class, 'generate'])->name('link-code.generate');
@@ -192,6 +202,11 @@ Route::middleware(['auth', 'prevent.back'])->group(function () {
     Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar.index');
     Route::post('/calendar', [CalendarController::class, 'store'])->name('calendar.store');
     Route::delete('/calendar/{event}', [CalendarController::class, 'destroy'])->name('calendar.destroy');
+
+    // Multimodal Camera / OCR Capture Sessions (Caregiver & Senior)
+    Route::post('/api/capture/upload', [\App\Http\Controllers\CaptureSessionController::class, 'upload'])->name('capture.upload');
+    Route::get('/api/capture/{session}', [\App\Http\Controllers\CaptureSessionController::class, 'show'])->name('capture.show');
+    Route::post('/api/capture/{session}/confirm', [\App\Http\Controllers\CaptureSessionController::class, 'confirm'])->name('capture.confirm');
 });
 
 require __DIR__.'/auth.php';
