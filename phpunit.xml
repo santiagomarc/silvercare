@@ -23,8 +23,16 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
+        <!--
+            Tests run against PostgreSQL, the same engine as production.
+            SQLite silently ignores the CHECK constraints Laravel's enum()
+            emits on Postgres, which hid a broken alert path behind a green
+            suite. Create the database once with:
+                CREATE DATABASE silvercare_testing;
+            Connection details (host/port/credentials) come from .env.
+        -->
+        <env name="DB_CONNECTION" value="pgsql"/>
+        <env name="DB_DATABASE" value="silvercare_testing"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
