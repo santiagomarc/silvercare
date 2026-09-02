@@ -60,6 +60,7 @@ Route::middleware(['auth', 'verified', 'elderly', 'profile.complete', 'prevent.b
     // Dose Instance API (idempotent operations)
     Route::post('/api/doses/{doseInstance}/confirm', [\App\Http\Controllers\DoseInstanceController::class, 'confirm'])->name('doses.confirm');
     Route::post('/api/doses/{doseInstance}/undo', [\App\Http\Controllers\DoseInstanceController::class, 'undo'])->name('doses.undo');
+    Route::post('/api/doses/{doseInstance}/skip', [\App\Http\Controllers\DoseInstanceController::class, 'skip'])->name('doses.skip');
 
     // Voice Capture API
     Route::post('/api/voice/parse', [\App\Http\Controllers\VoiceCaptureController::class, 'parse'])->name('voice.parse');
@@ -148,6 +149,9 @@ Route::middleware(['auth', 'verified', 'caregiver', 'profile.complete', 'prevent
     Route::get('/alerts', [\App\Http\Controllers\AlertController::class, 'index'])->name('alerts.index');
     Route::post('/alerts/{alert}/acknowledge', [\App\Http\Controllers\AlertController::class, 'acknowledge'])->name('alerts.acknowledge');
     Route::post('/alerts/{alert}/resolve', [\App\Http\Controllers\AlertController::class, 'resolve'])->name('alerts.resolve');
+
+    // H5: holding a dose is a clinical instruction, so it is caregiver-only.
+    Route::post('/doses/{doseInstance}/hold', [\App\Http\Controllers\DoseInstanceController::class, 'hold'])->name('doses.hold');
 
     Route::get('/profile', [CaregiverProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [CaregiverProfileController::class, 'update'])->name('profile.update');

@@ -59,6 +59,69 @@ class DoseInstanceController extends Controller
     }
 
     /**
+     * H5 — caregiver places a dose on hold (patient is NPO, pre-op, unwell).
+     *
+     * Caregiver-only: holding is a clinical instruction, not something the
+     * senior decides for themselves.
+     */
+    public function hold(Request $request, DoseInstance $doseInstance): JsonResponse
+    {
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        $user = Auth::user();
+        $profile = $user->profile;
+
+        if (! $profile || ! $profile->isCaregiver() || $doseInstance->elderly?->caregiver_id !== $profile->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only the linked caregiver can hold a dose.',
+            ], 403);
+        }
+
+        $result = $this->doseService->holdDose($doseInstance, $user->id, $validated['reason']);
+
+        return response()->json($result, $result['success'] ? 200 : 409);
+    }
+
+    /**
+     * H5 — senior or caregiver skips a dose with a reason.
+     *
+     * Gives the senior an honest way to say "I'm not taking this" instead of
+     * leaving the dose to silently rot into 'missed'.
+     */
+    public function skip(Request $request, DoseInstance $doseInstance): JsonResponse
+    {
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        $user = Auth::user();
+        $profile = $user->profile;
+
+        if (! $profile) {
+            return response()->json(['success' => false, 'message' => 'Profile not found'], 404);
+        }
+
+        $isOwner = ($doseInstance->elderly_id === $profile->id);
+        $isCaregiver = ($profile->isCaregiver() && $doseInstance->elderly?->caregiver_id === $profile->id);
+
+        if (! $isOwner && ! $isCaregiver) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+        }
+
+        $result = $this->doseService->skipDose(
+            $doseInstance,
+            $isCaregiver ? 'caregiver' : 'senior_ui',
+            $user->id,
+            $validated['reason']
+        );
+
+        return response()->json($result, $result['success'] ? 200 : 409);
+    }
+
+    /**
      * Undo a dose instance.
      */
     public function undo(Request $request, DoseInstance $doseInstance): JsonResponse

@@ -3,7 +3,7 @@
 namespace App\Presenters;
 
 use App\Models\MedicationLog;
-use App\Services\MedicationWindowService;
+use App\Services\DoseAdministrationService;
 
 class MedicationPresenter
 {
@@ -12,7 +12,7 @@ class MedicationPresenter
      */
     public static function getDoseStatus(string $time, ?MedicationLog $log): array
     {
-        $window = app(MedicationWindowService::class)->forToday($time);
+        $window = app(DoseAdministrationService::class)->evaluateWindowForTime($time);
         $windowEnd = $window['window_end'];
         $isWithinWindow = $window['is_within_window'];
         $isPastWindow = $window['is_past_window'];
@@ -37,14 +37,21 @@ class MedicationPresenter
         }
         
         if ($isPastWindow) {
+            // C5: past the outer bound the dose can no longer be confirmed —
+            // marking it taken hours later would misreport it to the caregiver.
+            // The honest action then is to skip it with a reason.
+            $isExpired = $window['is_expired'];
+
             return [
-                'status' => 'Missed', 
-                'icon' => '!', 
-                'bg' => 'bg-red-50 border-red-300', 
-                'iconBg' => 'bg-red-200', 
-                'canTake' => true, 
+                'status' => $isExpired ? 'Missed' : 'Late — take now',
+                'icon' => '!',
+                'bg' => 'bg-red-50 border-red-300',
+                'iconBg' => 'bg-red-200',
+                'canTake' => $canTake,
                 'canUndo' => false,
+                'canSkip' => $isExpired,
                 'isTaken' => false,
+                'isExpired' => $isExpired,
                 'isWithinWindow' => false,
             ];
         }

@@ -27,13 +27,18 @@ class DoseInstance extends Model
         'actor_id',
         'version',
         'notes',
+        'inventory_delta',
+        'state_reason',
+        'state_changed_at',
     ];
 
     protected $casts = [
         'scheduled_at_utc' => 'datetime',
         'local_date' => 'date:Y-m-d',
         'taken_at' => 'datetime',
+        'state_changed_at' => 'datetime',
         'version' => 'integer',
+        'inventory_delta' => 'integer',
     ];
 
     public function getScheduledAtUtcAttribute($value): ?Carbon
@@ -97,5 +102,24 @@ class DoseInstance extends Model
     public function isMissed(): bool
     {
         return $this->state === 'missed';
+    }
+
+    public function isHeld(): bool
+    {
+        return $this->state === 'held';
+    }
+
+    public function isSkipped(): bool
+    {
+        return $this->state === 'skipped';
+    }
+
+    /**
+     * Deliberate non-administration — a clinical decision, not a lapse.
+     * These never become 'missed' and never feed a missed-dose alert.
+     */
+    public function isDeliberatelyNotTaken(): bool
+    {
+        return in_array($this->state, ['held', 'skipped'], true);
     }
 }

@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 class DoseAdministrationService
 {
     public const DEFAULT_GRACE_MINUTES = 60;
+    public const DEFAULT_MAX_LATE_MINUTES = 360;
 
     public function __construct(
         protected NotificationService $notificationService,
@@ -22,30 +23,69 @@ class DoseAdministrationService
     }
 
     /**
-     * Build dose window parameters (consolidated from MedicationWindowService).
+     * Build dose window parameters. Sole owner of this rule — MedicationWindowService
+     * was deleted in favour of this method so the logic cannot drift in two places.
      *
-     * @return array{scheduled_time: Carbon, window_start: Carbon, window_end: Carbon, is_within_window: bool, is_past_window: bool, is_before_window: bool, can_take: bool, can_undo: bool}
+     * C5: `can_take` is bounded. The previous expression was
+     * `$isWithinWindow || $isPastWindow`, which stayed true forever, so an 08:00
+     * dose could be confirmed at 23:00 and recorded as merely "late". Past
+     * max_late_minutes the dose is expired: it can no longer be truthfully
+     * confirmed and must be skipped with a reason instead.
+     *
+     * @return array{scheduled_time: Carbon, window_start: Carbon, window_end: Carbon, late_deadline: Carbon, is_within_window: bool, is_past_window: bool, is_before_window: bool, is_expired: bool, can_take: bool, can_undo: bool}
      */
-    public function evaluateWindow(Carbon $scheduledDateTime, ?Carbon $now = null, int $graceMinutes = self::DEFAULT_GRACE_MINUTES): array
-    {
+    public function evaluateWindow(
+        Carbon $scheduledDateTime,
+        ?Carbon $now = null,
+        ?int $graceMinutes = null,
+        ?int $maxLateMinutes = null
+    ): array {
+        $graceMinutes ??= (int) config('medications.grace_minutes', self::DEFAULT_GRACE_MINUTES);
+        $maxLateMinutes ??= (int) config('medications.max_late_minutes', self::DEFAULT_MAX_LATE_MINUTES);
+
+        // A max-late shorter than the grace window would make doses expire
+        // before they stop being on time. Treat grace as the floor.
+        $maxLateMinutes = max($maxLateMinutes, $graceMinutes);
+
         $current = $now ? $now->copy() : Carbon::now();
         $windowStart = $scheduledDateTime->copy();
         $windowEnd = $scheduledDateTime->copy()->addMinutes($graceMinutes);
+        $lateDeadline = $scheduledDateTime->copy()->addMinutes($maxLateMinutes);
 
         $isWithinWindow = $current->between($windowStart, $windowEnd);
         $isPastWindow = $current->gt($windowEnd);
         $isBeforeWindow = $current->lt($windowStart);
+        $isExpired = $current->gt($lateDeadline);
 
         return [
             'scheduled_time' => $scheduledDateTime,
             'window_start' => $windowStart,
             'window_end' => $windowEnd,
+            'late_deadline' => $lateDeadline,
             'is_within_window' => $isWithinWindow,
             'is_past_window' => $isPastWindow,
             'is_before_window' => $isBeforeWindow,
-            'can_take' => $isWithinWindow || $isPastWindow,
-            'can_undo' => !$isPastWindow,
+            'is_expired' => $isExpired,
+            'can_take' => ($isWithinWindow || $isPastWindow) && ! $isExpired,
+            'can_undo' => ! $isPastWindow,
         ];
+    }
+
+    /**
+     * Evaluate the window for a "HH:MM" time on today's local date.
+     *
+     * Replaces MedicationWindowService::forToday() for the presenter and
+     * controller call sites.
+     *
+     * @return array{scheduled_time: Carbon, window_start: Carbon, window_end: Carbon, late_deadline: Carbon, is_within_window: bool, is_past_window: bool, is_before_window: bool, is_expired: bool, can_take: bool, can_undo: bool}
+     */
+    public function evaluateWindowForTime(string $timeStr, ?Carbon $now = null, ?string $timezone = null): array
+    {
+        $tz = $timezone ?: config('app.timezone', 'Asia/Manila');
+        $current = $now ? $now->copy() : Carbon::now($tz);
+        $scheduled = Carbon::parse(Carbon::now($tz)->format('Y-m-d') . ' ' . $timeStr, $tz);
+
+        return $this->evaluateWindow($scheduled, $current);
     }
 
     /**
@@ -61,10 +101,26 @@ class DoseAdministrationService
     ): array {
         $now = $now ? $now->copy() : Carbon::now();
 
-        // 1. Check idempotency key if provided
+        // 1. Idempotency. A replayed key for this same dose is a duplicate
+        //    submission and returns the original outcome. A key already spent
+        //    on a *different* dose is a client bug or a collision: previously
+        //    this fell through to an UPDATE that violated the unique index and
+        //    surfaced as a 500 (H2). Now it is an explicit conflict.
         if (!empty($idempotencyKey)) {
-            $existingIdempotent = DoseInstance::where('idempotency_key', $idempotencyKey)->first();
-            if ($existingIdempotent && $existingIdempotent->id === $instance->id && $existingIdempotent->isTaken()) {
+            $existingIdempotent = DoseInstance::where('elderly_id', $instance->elderly_id)
+                ->where('idempotency_key', $idempotencyKey)
+                ->first();
+
+            if ($existingIdempotent && $existingIdempotent->id !== $instance->id) {
+                return [
+                    'success' => false,
+                    'error_code' => 'IDEMPOTENCY_KEY_REUSED',
+                    'message' => 'This request key was already used for a different dose.',
+                    'conflicting_dose_instance_id' => $existingIdempotent->id,
+                ];
+            }
+
+            if ($existingIdempotent && $existingIdempotent->isTaken()) {
                 return [
                     'success' => true,
                     'is_taken' => true,
@@ -82,6 +138,19 @@ class DoseAdministrationService
             $lockedInstance = DoseInstance::where('id', $instance->id)
                 ->lockForUpdate()
                 ->firstOrFail();
+
+            // A dose the caregiver deliberately held or the senior skipped is
+            // not pending — confirming it would silently overwrite that decision.
+            if (in_array($lockedInstance->state, ['held', 'skipped'], true)) {
+                return [
+                    'success' => false,
+                    'error_code' => $lockedInstance->state === 'held' ? 'DOSE_HELD' : 'DOSE_SKIPPED',
+                    'message' => $lockedInstance->state === 'held'
+                        ? 'This dose was put on hold by your caregiver.'
+                        : 'This dose was already marked as skipped.',
+                    'state_reason' => $lockedInstance->state_reason,
+                ];
+            }
 
             // Idempotent check on locked row
             if ($lockedInstance->isTaken()) {
@@ -140,8 +209,39 @@ class DoseAdministrationService
                 ];
             }
 
+            // C5: past the outer bound this is no longer a truthful record of
+            // taking the dose near its scheduled time. Refuse, and point the
+            // senior at the honest alternative.
+            if ($window['is_expired']) {
+                return [
+                    'success' => false,
+                    'error_code' => 'DOSE_WINDOW_EXPIRED',
+                    'message' => 'This dose is too far past its scheduled time to mark as taken. '
+                        . 'Please skip it and tell your caregiver.',
+                    'can_take' => false,
+                    'scheduled_time' => $window['scheduled_time']->toISOString(),
+                    'late_deadline' => $window['late_deadline']->toISOString(),
+                ];
+            }
+
             $state = $window['is_past_window'] ? 'taken_late' : 'taken';
             $takenLate = ($state === 'taken_late');
+
+            // H1: decrement first so we know what actually came off stock, and
+            // record it on the instance. Undo returns exactly this amount, so
+            // confirming at zero stock and undoing can no longer mint a pill.
+            $inventoryDelta = 0;
+
+            if ($medication->track_inventory) {
+                // Conditional UPDATE rather than read-then-decrement: two
+                // concurrent confirms of different doses of the same medication
+                // can no longer drive stock negative.
+                $decremented = Medication::where('id', $medication->id)
+                    ->where('current_stock', '>', 0)
+                    ->update(['current_stock' => DB::raw('current_stock - 1')]);
+
+                $inventoryDelta = $decremented > 0 ? 1 : 0;
+            }
 
             // Update DoseInstance
             $lockedInstance->update([
@@ -150,6 +250,9 @@ class DoseAdministrationService
                 'source' => $source,
                 'actor_id' => $actorId,
                 'idempotency_key' => $idempotencyKey,
+                'inventory_delta' => $inventoryDelta,
+                'state_reason' => null,
+                'state_changed_at' => $now,
                 'version' => $lockedInstance->version + 1,
             ]);
 
@@ -165,11 +268,6 @@ class DoseAdministrationService
                     'taken_at' => $now,
                 ]
             );
-
-            // Atomically decrement stock if tracked
-            if ($medication->track_inventory && $medication->current_stock > 0) {
-                $medication->decrement('current_stock');
-            }
 
             // Create notification
             $this->notificationService->createMedicationTakenNotification(
@@ -284,12 +382,18 @@ class DoseAdministrationService
             }
 
             $medication = $lockedInstance->medication;
+            $inventoryDelta = (int) ($lockedInstance->inventory_delta ?? 0);
 
             $lockedInstance->update([
                 'state' => 'pending',
                 'taken_at' => null,
                 'source' => $source,
                 'actor_id' => $actorId,
+                'inventory_delta' => 0,
+                'state_changed_at' => $now,
+                // Undo clears the key so the senior can genuinely re-confirm
+                // later within the window.
+                'idempotency_key' => null,
                 'version' => $lockedInstance->version + 1,
             ]);
 
@@ -303,9 +407,12 @@ class DoseAdministrationService
                 $log->delete();
             }
 
-            // Restore inventory
-            if ($medication && $medication->track_inventory) {
-                $medication->increment('current_stock');
+            // H1: return exactly what the confirm took, not a blanket +1.
+            // A confirm that found zero stock decremented nothing, so undoing
+            // it must add nothing back.
+            if ($medication && $inventoryDelta > 0) {
+                Medication::where('id', $medication->id)
+                    ->update(['current_stock' => DB::raw("current_stock + {$inventoryDelta}")]);
             }
 
             return [
@@ -373,7 +480,104 @@ class DoseAdministrationService
     }
 
     /**
+     * H5 — caregiver puts a dose on hold (patient is NPO, pre-op, vomiting).
+     *
+     * A held dose is a clinical decision, not a lapse: it must never become
+     * 'missed' and never contribute to a missed-dose alert.
+     */
+    public function holdDose(DoseInstance $instance, int $caregiverId, string $reason, ?Carbon $now = null): array
+    {
+        return $this->applyNonAdministration($instance, 'held', 'caregiver', $caregiverId, $reason, $now);
+    }
+
+    /**
+     * H5 — senior or caregiver skips a dose, with a reason.
+     *
+     * Gives the senior an honest way to say "I'm not taking this" instead of
+     * leaving the dose to silently rot into 'missed'.
+     */
+    public function skipDose(
+        DoseInstance $instance,
+        string $source,
+        ?int $actorId,
+        string $reason,
+        ?Carbon $now = null
+    ): array {
+        return $this->applyNonAdministration($instance, 'skipped', $source, $actorId, $reason, $now);
+    }
+
+    /**
+     * Shared transition for the two deliberate non-administration states.
+     */
+    protected function applyNonAdministration(
+        DoseInstance $instance,
+        string $targetState,
+        string $source,
+        ?int $actorId,
+        string $reason,
+        ?Carbon $now = null
+    ): array {
+        $now = $now ? $now->copy() : Carbon::now();
+        $reason = trim($reason);
+
+        if ($reason === '') {
+            return [
+                'success' => false,
+                'error_code' => 'REASON_REQUIRED',
+                'message' => 'Please give a reason so the care team has a record.',
+            ];
+        }
+
+        return DB::transaction(function () use ($instance, $targetState, $source, $actorId, $reason, $now) {
+            /** @var DoseInstance $locked */
+            $locked = DoseInstance::where('id', $instance->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->state === $targetState) {
+                return [
+                    'success' => true,
+                    'status' => $locked->state,
+                    'message' => $targetState === 'held' ? 'Dose is already on hold.' : 'Dose is already skipped.',
+                    'instance' => $locked,
+                ];
+            }
+
+            // Holding or skipping a dose already recorded as taken would erase
+            // an administration the caregiver has seen. Undo it first.
+            if ($locked->isTaken()) {
+                return [
+                    'success' => false,
+                    'error_code' => 'DOSE_ALREADY_TAKEN',
+                    'message' => 'This dose is already recorded as taken. Undo it first if that was a mistake.',
+                ];
+            }
+
+            $locked->update([
+                'state' => $targetState,
+                'taken_at' => null,
+                'source' => $source,
+                'actor_id' => $actorId,
+                'state_reason' => $reason,
+                'state_changed_at' => $now,
+                'version' => $locked->version + 1,
+            ]);
+
+            return [
+                'success' => true,
+                'status' => $targetState,
+                'message' => $targetState === 'held'
+                    ? 'Dose placed on hold.'
+                    : 'Dose marked as skipped.',
+                'state_reason' => $reason,
+                'instance' => $locked,
+            ];
+        });
+    }
+
+    /**
      * Mark a dose as missed (called by scheduler or rules engine).
+     *
+     * Only a still-pending dose can be missed. A held or skipped dose is a
+     * deliberate decision and is left alone.
      */
     public function markMissed(DoseInstance $instance): void
     {

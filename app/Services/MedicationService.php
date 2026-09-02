@@ -2,12 +2,15 @@
 
 namespace App\Services;
 
+use App\Models\DoseInstance;
 use App\Models\Medication;
 use App\Models\MedicationLog;
+use App\Models\PrescriptionRevision;
 use App\Models\MedicationSchedule;
 use App\Models\UserProfile;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class MedicationService
@@ -38,6 +41,12 @@ class MedicationService
 
             $this->syncSchedules($medication, $data);
 
+            // H4: materialise the upcoming doses now. Waiting for the nightly
+            // 00:05 job would leave a medication added at 09:00 invisible to
+            // the caregiver briefing, adherence view and escalation sweep for
+            // the rest of the day.
+            $this->regenerateUpcomingInstances($medication->fresh('schedules'));
+
             return $medication->load('schedules');
         });
     }
@@ -48,6 +57,10 @@ class MedicationService
     public function updateMedicationSchedule(Medication $medication, array $data): Medication
     {
         return DB::transaction(function () use ($medication, $data) {
+            // H3: capture the prior values before mutating, so the caregiver
+            // record shows what a prescription looked like before each edit.
+            $before = $this->revisionSnapshot($medication);
+
             $medication->update([
                 'name' => $data['name'] ?? $medication->name,
                 'dosage' => $data['dosage'] ?? $medication->dosage,
@@ -68,8 +81,82 @@ class MedicationService
                 $this->syncSchedules($medication, $data);
             }
 
+            $medication->refresh()->load('schedules');
+            $after = $this->revisionSnapshot($medication);
+
+            if ($before !== $after) {
+                PrescriptionRevision::create([
+                    'medication_id' => $medication->id,
+                    'changed_by' => Auth::id(),
+                    'old_values' => $before,
+                    'new_values' => $after,
+                ]);
+
+                // H3: regenerate forward only. History is never rewritten — a
+                // dose already taken, missed, held or skipped is what actually
+                // happened, and a later prescription edit must not restate it.
+                $this->regenerateUpcomingInstances($medication);
+            }
+
             return $medication->load('schedules');
         });
+    }
+
+    /**
+     * The prescription fields worth auditing. Stock level is deliberately
+     * excluded: it changes on every dose and would bury real schedule edits.
+     *
+     * @return array<string, mixed>
+     */
+    protected function revisionSnapshot(Medication $medication): array
+    {
+        return [
+            'name' => $medication->name,
+            'dosage' => $medication->dosage,
+            'dosage_unit' => $medication->dosage_unit,
+            'instructions' => $medication->instructions,
+            'days_of_week' => $medication->days_of_week,
+            'specific_dates' => $medication->specific_dates,
+            'times_of_day' => $medication->times_of_day,
+            'start_date' => $medication->start_date?->toDateString(),
+            'end_date' => $medication->end_date?->toDateString(),
+            'is_active' => (bool) $medication->is_active,
+            'schedules' => $medication->schedules
+                ->map(fn ($s) => [
+                    'schedule_type' => $s->schedule_type,
+                    'time_of_day' => substr((string) $s->time_of_day, 0, 5),
+                    'day_of_week' => $s->day_of_week ?? null,
+                    'specific_date' => $s->specific_date ?? null,
+                ])
+                ->sortBy(fn ($s) => $s['schedule_type'] . '|' . $s['time_of_day'])
+                ->values()
+                ->all(),
+        ];
+    }
+
+    /**
+     * Drop future doses that no longer match the schedule and regenerate them.
+     *
+     * Only *pending* instances from now forward are removed. Anything already
+     * resolved — taken, missed, held, skipped — is history and stays untouched.
+     */
+    protected function regenerateUpcomingInstances(Medication $medication): void
+    {
+        $timezone = $medication->elderly?->timezone ?: config('app.timezone', 'Asia/Manila');
+        $from = Carbon::now($timezone);
+
+        DoseInstance::where('medication_id', $medication->id)
+            ->where('state', 'pending')
+            ->where('scheduled_at_utc', '>=', $from->copy()->setTimezone('UTC'))
+            ->delete();
+
+        if ($medication->is_active) {
+            app(DoseInstanceGeneratorService::class)->generateForMedication(
+                $medication,
+                $from,
+                (int) config('medications.generation_horizon_days', 7)
+            );
+        }
     }
 
     /**

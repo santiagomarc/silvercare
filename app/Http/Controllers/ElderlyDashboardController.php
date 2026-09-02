@@ -8,8 +8,8 @@ use App\Models\MedicationLog;
 use App\Models\Checklist;
 use App\Models\HealthMetric;
 use App\Services\ElderlyDashboardService;
-use App\Services\MedicationWindowService;
 use App\Services\ProfileCompletionService;
+use App\Services\DoseAdministrationService;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +19,6 @@ class ElderlyDashboardController extends Controller
 {
     public function __construct(
         protected ElderlyDashboardService $dashboardService,
-        protected MedicationWindowService $windowService,
         protected ProfileCompletionService $profileCompletionService,
         protected NotificationService $notificationService,
         protected \App\Services\DoseAdministrationService $doseService,
@@ -270,7 +269,7 @@ class ElderlyDashboardController extends Controller
      */
     public static function canTakeDose(string $scheduledTime): array
     {
-        $window = app(MedicationWindowService::class)->forToday($scheduledTime);
+        $window = app(DoseAdministrationService::class)->evaluateWindowForTime($scheduledTime);
 
         return [
             'can_take' => $window['can_take'],

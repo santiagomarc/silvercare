@@ -23,6 +23,24 @@ class RealtimeBroadcastTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * These tests confirm an 08:00 dose. Without a frozen clock the result
+     * depended on the wall-clock hour the suite happened to run at — after the
+     * dose window's outer bound the confirm is correctly refused (C5). Pin the
+     * time so the test asserts behaviour, not the time of day.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Carbon::setTestNow(Carbon::parse('2026-08-24 08:15:00', 'Asia/Manila'));
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
+    }
+
     private function createLinkedPair(): array
     {
         $caregiverUser = User::factory()->create(['name' => 'Dr. Caregiver']);

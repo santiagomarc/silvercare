@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Services\MedicationWindowService;
+use App\Services\DoseAdministrationService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -33,9 +33,9 @@ class MedicationLog extends Model
     }
 
     // Helper to check if dose was taken late.
-    // Defaults to MedicationWindowService::DEFAULT_GRACE_MINUTES (60 min) to match
-    // the controller's window logic (C2 fix: was previously hardcoded to 15 min).
-    public function wasTakenLate(int $graceMinutes = MedicationWindowService::DEFAULT_GRACE_MINUTES): bool
+    // Defaults to DoseAdministrationService::DEFAULT_GRACE_MINUTES (60 min), the
+    // single owner of dose-window rules.
+    public function wasTakenLate(int $graceMinutes = DoseAdministrationService::DEFAULT_GRACE_MINUTES): bool
     {
         if (!$this->is_taken || !$this->taken_at) {
             return false;
@@ -46,9 +46,9 @@ class MedicationLog extends Model
     }
 
     // Helper to check if dose is currently missed.
-    // Defaults to MedicationWindowService::DEFAULT_GRACE_MINUTES (60 min) to match
-    // the controller's window logic (C2 fix: was previously hardcoded to 15 min).
-    public function isMissed(int $graceMinutes = MedicationWindowService::DEFAULT_GRACE_MINUTES): bool
+    // Defaults to DoseAdministrationService::DEFAULT_GRACE_MINUTES (60 min), the
+    // single owner of dose-window rules.
+    public function isMissed(int $graceMinutes = DoseAdministrationService::DEFAULT_GRACE_MINUTES): bool
     {
         if ($this->is_taken) {
             return false;
