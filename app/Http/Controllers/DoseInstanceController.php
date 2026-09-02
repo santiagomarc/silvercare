@@ -48,7 +48,9 @@ class DoseInstanceController extends Controller
         if (!$result['success']) {
             $status = match ($result['error_code'] ?? '') {
                 'DOSE_TOO_EARLY' => 400,
-                'MEDICATION_EXPIRED', 'MEDICATION_NOT_STARTED' => 422,
+                'MEDICATION_EXPIRED', 'MEDICATION_NOT_STARTED',
+                'DOSE_WINDOW_EXPIRED' => 422,
+                'IDEMPOTENCY_KEY_REUSED', 'DOSE_HELD', 'DOSE_SKIPPED' => 409,
                 default => 400,
             };
 

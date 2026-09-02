@@ -16,6 +16,18 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
                 this._applyAiMedicationLog(event.detail || {});
             });
 
+            // C2: a queued dose only becomes a checkmark once the server has
+            // actually confirmed it.
+            window.addEventListener('offline-queue-item-synced', (event) => {
+                this._resolvePending(event.detail || {}, 'synced');
+            });
+            window.addEventListener('offline-queue-item-failed', (event) => {
+                this._resolvePending(event.detail || {}, 'failed');
+            });
+            window.addEventListener('offline-queue-item-conflict', (event) => {
+                this._resolvePending(event.detail || {}, 'conflict');
+            });
+
             this.$watch('taken', (value) => {
                 if (this.total > 0 && value >= this.total) {
                     this.expanded = false;
@@ -90,29 +102,21 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
                     body: { time },
                 });
 
-                // Offline Queue Handling
+                // C2: a queued action has NOT reached the server. Show it as
+                // waiting to sync — never a checkmark, and never confetti. The
+                // senior must not be told a dose was recorded when it wasn't.
                 if (result.queued) {
-                    if (!isTaken) {
-                        entry.dataset.taken = 'true';
-                        entry.dataset.canTake = 'false';
-                        entry.dataset.canUndo = 'true'; // Optimistically allow undo
-                        
-                        this.taken++;
-                        this._updateEntryAppearance(entry, 'taken');
-                        createConfetti(entry);
-                    } else {
-                        entry.dataset.taken = 'false';
-                        entry.dataset.canTake = 'true'; // Re-enable taking
-                        entry.dataset.canUndo = 'false';
-                        
-                        this.taken--;
-                        this._updateEntryAppearance(entry, this._computeStatus(time));
-                    }
+                    entry.dataset.pendingSync = 'true';
+                    entry.dataset.pendingIntent = isTaken ? 'undo' : 'take';
+                    entry.dataset.idempotencyKey = result.idempotencyKey || '';
 
-                    toast?.info('Saved offline. Changes will sync automatically.');
-                    window.dispatchEvent(new CustomEvent('progress-updated', {
-                        detail: { medications: this.taken, medicationTotal: this.total }
-                    }));
+                    // The dose is locked while it waits: tapping again would
+                    // queue a second, contradictory intent.
+                    entry.dataset.canTake = 'false';
+                    entry.dataset.canUndo = 'false';
+
+                    this._updateEntryAppearance(entry, 'pending-sync');
+                    toast?.info('Saved on your device. It will sync when you are back online.');
                     return;
                 }
 
@@ -156,6 +160,59 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
             }
         },
 
+        /**
+         * Settle a dose that was waiting to sync, once the server has ruled on it.
+         *
+         * synced   -> the intent was applied; show it for real
+         * failed   -> permanently rejected; roll back to the real status
+         * conflict -> server disagrees; flag for review rather than guessing
+         */
+        _resolvePending({ idempotencyKey }, outcome) {
+            if (!idempotencyKey) return;
+
+            const entry = document.querySelector(
+                `.medication-entry[data-idempotency-key="${CSS.escape(idempotencyKey)}"]`
+            );
+            if (!entry) return;
+
+            const intent = entry.dataset.pendingIntent;
+            const time = entry.dataset.time;
+
+            delete entry.dataset.pendingSync;
+            delete entry.dataset.pendingIntent;
+            delete entry.dataset.idempotencyKey;
+
+            if (outcome === 'synced') {
+                if (intent === 'take') {
+                    entry.dataset.taken = 'true';
+                    entry.dataset.canTake = 'false';
+                    entry.dataset.canUndo = 'true';
+                    this.taken = Math.min(this.total, this.taken + 1);
+                    this._updateEntryAppearance(entry, 'taken');
+                    createConfetti(entry);
+                } else {
+                    entry.dataset.taken = 'false';
+                    entry.dataset.canTake = 'true';
+                    entry.dataset.canUndo = 'false';
+                    this.taken = Math.max(0, this.taken - 1);
+                    this._updateEntryAppearance(entry, this._computeStatus(time));
+                }
+            } else if (outcome === 'conflict') {
+                entry.dataset.canTake = 'false';
+                entry.dataset.canUndo = 'false';
+                this._updateEntryAppearance(entry, 'conflict');
+            } else {
+                // Rejected: nothing was applied, so restore the real state.
+                entry.dataset.canTake = intent === 'take' ? 'true' : 'false';
+                entry.dataset.canUndo = 'false';
+                this._updateEntryAppearance(entry, this._computeStatus(time));
+            }
+
+            window.dispatchEvent(new CustomEvent('progress-updated', {
+                detail: { medications: this.taken, medicationTotal: this.total }
+            }));
+        },
+
         _computeStatus(timeStr) {
             // C9 FIX: Note that this uses browser-local time. If the server is in
             // a different timezone (e.g. Asia/Manila), the frontend window boundaries
@@ -175,7 +232,8 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
 
         _updateEntryAppearance(entry, status) {
             entry.classList.remove(
-                'dose-taken', 'dose-taken-late', 'dose-missed', 'dose-active', 'dose-upcoming', 'opacity-75'
+                'dose-taken', 'dose-taken-late', 'dose-missed', 'dose-active',
+                'dose-upcoming', 'dose-pending-sync', 'dose-conflict', 'opacity-75'
             );
             entry.classList.add(`dose-${status}`);
 
@@ -184,11 +242,15 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
             const title = entry.querySelector('[data-med-name]');
 
             const statusMap = {
-                'taken':      { icon: '✓', text: 'Taken',      css: 'text-green-700'  },
-                'taken-late': { icon: '✓', text: 'Taken Late', css: 'text-orange-600' },
-                'missed':     { icon: '!', text: 'Missed',     css: 'text-red-600'    },
-                'active':     { icon: '●', text: 'Take Now',   css: 'text-amber-600'  },
-                'upcoming':   { icon: '○', text: 'Upcoming',   css: 'text-gray-400'   },
+                'taken':        { icon: '✓', text: 'Taken',           css: 'text-green-700'  },
+                'taken-late':   { icon: '✓', text: 'Taken Late',      css: 'text-orange-600' },
+                'missed':       { icon: '!', text: 'Missed',          css: 'text-red-600'    },
+                'active':       { icon: '●', text: 'Take Now',        css: 'text-amber-600'  },
+                'upcoming':     { icon: '○', text: 'Upcoming',        css: 'text-gray-400'   },
+                // Distinct icon and wording, not just a colour — dose status
+                // must be readable without relying on colour alone (WCAG 1.4.1).
+                'pending-sync': { icon: '⏳', text: 'Waiting to sync', css: 'text-amber-700'  },
+                'conflict':     { icon: '⚠', text: 'Needs review',    css: 'text-rose-700'   },
             };
 
             const s = statusMap[status] || statusMap.upcoming;

@@ -307,11 +307,14 @@ class AlertDeliveryService
         try {
             event(new CriticalAlertFired($alert, $caregiverProfileId));
 
+            // C3: 'sent', not 'delivered'. Dispatching to Reverb proves the
+            // server handed the event off, not that a browser received it —
+            // and a clinical audit trail must not claim otherwise.
             AlertDelivery::create([
                 'alert_id' => $alert->id,
                 'recipient_profile_id' => $caregiverProfileId,
                 'channel' => 'reverb',
-                'state' => 'delivered',
+                'state' => 'sent',
                 'sent_at' => Carbon::now(),
             ]);
         } catch (\Exception $e) {

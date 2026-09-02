@@ -186,7 +186,11 @@ class ElderlyDashboardController extends Controller
         if (!$result['success']) {
             $status = match ($result['error_code'] ?? '') {
                 'DOSE_TOO_EARLY' => 400,
-                'UNSCHEDULED_DOSE', 'MEDICATION_EXPIRED', 'MEDICATION_NOT_STARTED' => 422,
+                'UNSCHEDULED_DOSE', 'MEDICATION_EXPIRED', 'MEDICATION_NOT_STARTED',
+                'DOSE_WINDOW_EXPIRED' => 422,
+                // 409 tells the offline queue this is a conflict needing review,
+                // not a request to silently discard.
+                'IDEMPOTENCY_KEY_REUSED', 'DOSE_HELD', 'DOSE_SKIPPED' => 409,
                 default => 400,
             };
 

@@ -23,6 +23,8 @@ import checklistPageItem  from './components/checklist-page-item.js';
 import { initOfflineQueue } from './utils/offline-queue.js';
 import { installDialogHelpers } from './utils/dialogs.js';
 import pushToggle, { syncExistingSubscription } from './utils/push-notifications.js';
+import { initRealtime } from './utils/realtime.js';
+import highContrastToggle, { initHighContrast } from './utils/high-contrast.js';
 
 // ── Theme bootstrap (5H: Dark Mode Toggle) ──────────────────────
 const preferredDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
@@ -61,6 +63,13 @@ installDialogHelpers();
 // caregiver never silently stops receiving urgent alerts (H8).
 syncExistingSubscription();
 
+// C3: subscribe to the Reverb channel for this profile. Four broadcast events
+// have existed since sprint 5 and reached no browser until now.
+initRealtime();
+
+// M7: apply the stored (or OS-preferred) contrast setting before first paint.
+initHighContrast();
+
 // ── Register global store ────────────────────────────────────────
 Alpine.store('toast', toastStore);
 
@@ -75,6 +84,7 @@ Alpine.data('dashboardTabs',      (tab)                 => dashboardTabs(tab));
 Alpine.data('googleFitSync',      ()                    => googleFitSync());
 Alpine.data('heroAction',         (opts)                => heroAction(opts));
 Alpine.data('pushToggle',         ()                    => pushToggle());
+Alpine.data('highContrastToggle', ()                    => highContrastToggle());
 
 window.Alpine = Alpine;
 

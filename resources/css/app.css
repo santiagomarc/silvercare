@@ -842,10 +842,17 @@ body.swal2-toast-shown .swal2-container {
 }
 
 /* ── Senior High Contrast Mode Utilities (WCAG 2.1 AA) ───────────── */
-html.high-contrast {
-    filter: contrast(120%);
-}
-
+/* M7 — High contrast mode.
+ *
+ * The previous rule opened with `filter: contrast(120%)` on <html>. A filter on
+ * an ancestor creates a containing block for fixed-position descendants, which
+ * silently breaks every `position: fixed` modal, toast and sticky bar on the
+ * page. Contrast is raised by choosing stronger colours instead, so layout is
+ * untouched.
+ *
+ * Toggled by resources/js/utils/high-contrast.js, which also persists the
+ * choice and honours prefers-contrast: more.
+ */
 html.high-contrast body {
     background-color: #000000 !important;
     color: #ffffff !important;
@@ -854,14 +861,37 @@ html.high-contrast body {
 html.high-contrast .card,
 html.high-contrast .card-glass,
 html.high-contrast .panel-shell {
-    background-color: #111111 !important;
+    background-color: #0a0a0a !important;
     border: 2px solid #ffffff !important;
     color: #ffffff !important;
 }
 
+/* Links and buttons need a visible edge, but inputs must keep their own
+ * affordance rather than inheriting a generic outline. */
 html.high-contrast a,
 html.high-contrast button {
     border: 2px solid currentColor !important;
+}
+
+html.high-contrast a {
+    color: #7dd3fc !important;
+    text-decoration: underline !important;
+}
+
+/* Muted greys fail contrast against black; lift every low-emphasis text token. */
+html.high-contrast .text-slate-400,
+html.high-contrast .text-slate-500,
+html.high-contrast .text-slate-600,
+html.high-contrast .text-gray-400,
+html.high-contrast .text-gray-500,
+html.high-contrast .text-gray-600 {
+    color: #e5e7eb !important;
+}
+
+/* Keyboard focus must remain obvious against a black ground. */
+html.high-contrast :focus-visible {
+    outline: 3px solid #fde047 !important;
+    outline-offset: 2px !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

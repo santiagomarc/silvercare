@@ -33,10 +33,13 @@ class FrontendAssetReachabilityTest extends TestCase
      * @var array<string, string>
      */
     private const KNOWN_ORPHANS = [
-        'public/js/offline-sync-queue.js' => 'C2 — port into resources/js/utils/offline-queue.js, then delete',
-        'public/js/caregiver-realtime.js' => 'C3 — fold into the Vite bundle once Echo is uncommented, then delete',
-        'resources/js/components/vital-recorder.js' => 'S6 — superseded by voice capture; scheduled for deletion',
-        'resources/js/echo.js' => 'C3 — imported by bootstrap.js only as a commented-out line',
+        // Wave 3 cleared this list:
+        //   offline-sync-queue.js  ported into resources/js/utils/offline-queue.js
+        //   caregiver-realtime.js  ported into resources/js/utils/realtime.js
+        //   vital-recorder.js      superseded by voice capture
+        //   echo.js                bootstrap.js now imports it for real
+        // Add an entry only for a file that is deliberately parked, and name
+        // the finding that tracks it. Never add one just to make this pass.
     ];
 
     public function test_no_unexpected_orphaned_javascript(): void

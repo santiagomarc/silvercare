@@ -32,9 +32,12 @@ Schedule::command('medications:check-stock')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/stock-alerts.log'));
 
-// Check for missing daily check-ins every evening at 6:30 PM
+// H6: every 15 minutes, not once a day. CareCheckinService skips any patient
+// whose *local* hour is before 18:00, so a single daily run at server-local
+// 18:30 permanently skipped patients in timezones behind the server — the
+// timezone column existed precisely to support them.
 Schedule::command('checkins:check-missed')
-    ->dailyAt('18:30')
+    ->everyFifteenMinutes()
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/missed-checkins.log'));
 

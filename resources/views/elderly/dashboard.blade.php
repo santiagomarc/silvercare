@@ -277,6 +277,24 @@
             :daily-goals-progress="$dailyGoalsProgress"
         />
 
+        {{-- M7: High contrast toggle. The CSS for this shipped with no way to
+             turn it on; this is the switch. Large target, plain wording, and
+             state shown in text as well as position. --}}
+        <div x-data="highContrastToggle()" class="mt-4 mb-2 flex justify-end">
+            <button
+                type="button"
+                x-on:click="toggle()"
+                x-bind:aria-pressed="enabled ? 'true' : 'false'"
+                class="inline-flex items-center gap-2.5 min-h-[44px] px-4 py-2.5 rounded-xl border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 transition"
+            >
+                <span aria-hidden="true" class="text-lg">◐</span>
+                <span>High contrast</span>
+                <span class="text-xs font-black px-2 py-0.5 rounded-md"
+                      x-bind:class="enabled ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700 dark:bg-slate-600 dark:text-slate-100'"
+                      x-text="enabled ? 'ON' : 'OFF'"></span>
+            </button>
+        </div>
+
         {{-- ╔══════════════════╗
              ║  TAB BAR         ║
              ╚══════════════════╝ --}}

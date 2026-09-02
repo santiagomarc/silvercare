@@ -4,6 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    @auth
+        {{-- C3: identifies which Reverb channel this page should subscribe to. --}}
+        <meta name="sc-profile"
+              data-profile-id="{{ auth()->user()->profile?->id }}"
+              data-user-type="{{ auth()->user()->profile?->user_type }}">
+    @endauth
     <meta name="theme-color" content="#000080">
     <title>{{ $title ?? config('app.name', 'SilverCare') }}</title>
 
