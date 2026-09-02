@@ -146,9 +146,14 @@ class SendDailyReminders extends Command
         $graceMinutes = \App\Services\DoseAdministrationService::DEFAULT_GRACE_MINUTES;
 
         // 1. Check existing pending DoseInstances that are overdue
+        // Oldest first: ClinicalRulesService counts the run of consecutive
+        // misses ending at each dose, so an earlier instance must already be
+        // marked missed before a later one is evaluated. Sweeping in arbitrary
+        // order would undercount the run and suppress the caregiver alert.
         $overdueInstances = \App\Models\DoseInstance::where('elderly_id', $elderlyId)
             ->where('state', 'pending')
             ->where('scheduled_at_utc', '<=', $now->copy()->subMinutes($graceMinutes)->setTimezone('UTC'))
+            ->orderBy('scheduled_at_utc')
             ->get();
 
         foreach ($overdueInstances as $instance) {

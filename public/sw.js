@@ -60,6 +60,69 @@ self.addEventListener('message', (event) => {
     }
 });
 
+// ── Browser push (H8) ────────────────────────────────────────────────
+// Clinical alerts reach a caregiver whose phone is locked and whose email
+// is unread. Only critical and emergency alerts are pushed; the server
+// decides that, so anything arriving here is worth showing.
+
+self.addEventListener('push', (event) => {
+    let data = {};
+
+    try {
+        data = event.data ? event.data.json() : {};
+    } catch {
+        // A payload we cannot parse is still a signal something happened —
+        // show a generic prompt rather than swallowing it.
+        data = {};
+    }
+
+    const isEmergency = data.severity === 'emergency';
+    const title = data.title || 'SilverCare alert';
+    const body = data.body || 'Open SilverCare to review this alert.';
+
+    event.waitUntil(
+        self.registration.showNotification(title, {
+            body,
+            icon: '/assets/icons/silvercare.png',
+            badge: '/assets/icons/silvercare.png',
+            // Alerts for the same patient replace each other rather than
+            // stacking, but a new alert always re-notifies.
+            tag: data.alert_id ? `silvercare-alert-${data.alert_id}` : 'silvercare-alert',
+            renotify: true,
+            // Emergencies stay on screen until the caregiver acts on them.
+            requireInteraction: isEmergency,
+            vibrate: isEmergency ? [200, 100, 200, 100, 200] : [200, 100, 200],
+            data: {
+                url: data.url || '/caregiver/dashboard',
+                alertId: data.alert_id || null,
+            },
+            actions: [
+                { action: 'open', title: 'Review alert' },
+            ],
+        })
+    );
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+
+    const target = (event.notification.data && event.notification.data.url) || '/caregiver/dashboard';
+
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            // Focus an already-open SilverCare tab instead of piling up new ones.
+            for (const client of clientList) {
+                if ('focus' in client) {
+                    client.navigate?.(target);
+                    return client.focus();
+                }
+            }
+
+            return self.clients.openWindow ? self.clients.openWindow(target) : undefined;
+        })
+    );
+});
+
 async function networkFirstNavigation(request) {
     try {
         return await fetch(request);

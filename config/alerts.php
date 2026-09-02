@@ -42,6 +42,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Missed Dose Escalation
+    |--------------------------------------------------------------------------
+    |
+    | A single missed dose produces a patient-facing reminder only. A caregiver
+    | alert is raised once a run of consecutive misses of the same medication
+    | reaches these thresholds, so an ordinary late morning does not page a
+    | caregiver but a genuine lapse in adherence does.
+    |
+    */
+    'missed_dose' => [
+        'consecutive_warning' => 2,
+        'consecutive_critical' => 3,
+
+        // How many prior instances to walk when measuring the run. Bounded so
+        // a patient with years of history does not load their whole timeline.
+        'lookback_instances' => 20,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Alert Escalation Timing
     |--------------------------------------------------------------------------
     |

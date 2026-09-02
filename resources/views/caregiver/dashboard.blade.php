@@ -68,6 +68,39 @@
         @endif
 
 
+        {{-- Urgent alert notifications (H8). Push is the only channel that
+             reaches a caregiver whose phone is locked and whose email is unread. --}}
+        <div x-data="pushToggle()" x-show="supported" x-cloak class="mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 px-5 py-4 shadow-sm">
+                <div class="flex items-start gap-3 flex-1">
+                    <span class="mt-0.5 text-xl" aria-hidden="true">🔔</span>
+                    <div>
+                        <p class="text-sm font-extrabold text-slate-900 dark:text-white">Urgent alert notifications</p>
+                        <p class="text-xs font-medium text-slate-600 dark:text-slate-300 mt-0.5">
+                            <span x-show="enabled">On for this device — critical and emergency alerts will reach you even when SilverCare is closed.</span>
+                            <span x-show="canEnable">Get critical and emergency alerts on this device, even when SilverCare is closed.</span>
+                            <span x-show="blocked">Blocked in your browser settings. Allow notifications for this site to turn them back on.</span>
+                        </p>
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    x-on:click="toggle()"
+                    x-bind:disabled="busy"
+                    x-bind:aria-pressed="enabled ? 'true' : 'false'"
+                    class="shrink-0 min-h-[44px] px-5 py-2.5 rounded-xl text-sm font-extrabold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    x-bind:class="enabled
+                        ? 'bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600'
+                        : 'bg-blue-600 text-white hover:bg-blue-700'"
+                >
+                    <span x-show="busy">Working…</span>
+                    <span x-show="showTurnOff">Turn off</span>
+                    <span x-show="showTurnOn">Turn on</span>
+                </button>
+            </div>
+        </div>
+
         @if(($activeAlerts ?? collect())->isNotEmpty())
             <div class="mb-6 space-y-3" id="clinical-alert-center">
                 @foreach($activeAlerts as $alert)

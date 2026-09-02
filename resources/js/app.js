@@ -22,6 +22,7 @@ import heroAction         from './components/hero-action.js';
 import checklistPageItem  from './components/checklist-page-item.js';
 import { initOfflineQueue } from './utils/offline-queue.js';
 import { installDialogHelpers } from './utils/dialogs.js';
+import pushToggle, { syncExistingSubscription } from './utils/push-notifications.js';
 
 // ── Theme bootstrap (5H: Dark Mode Toggle) ──────────────────────
 const preferredDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
@@ -56,6 +57,10 @@ if ('serviceWorker' in navigator) {
 initOfflineQueue();
 installDialogHelpers();
 
+// Browser endpoints rotate; re-register an already-granted subscription so a
+// caregiver never silently stops receiving urgent alerts (H8).
+syncExistingSubscription();
+
 // ── Register global store ────────────────────────────────────────
 Alpine.store('toast', toastStore);
 
@@ -69,6 +74,7 @@ Alpine.data('gardenWellness',     (c, m, v, meta)       => gardenWellness(c, m, 
 Alpine.data('dashboardTabs',      (tab)                 => dashboardTabs(tab));
 Alpine.data('googleFitSync',      ()                    => googleFitSync());
 Alpine.data('heroAction',         (opts)                => heroAction(opts));
+Alpine.data('pushToggle',         ()                    => pushToggle());
 
 window.Alpine = Alpine;
 

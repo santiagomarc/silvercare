@@ -211,6 +211,12 @@ Route::middleware(['auth', 'prevent.back'])->group(function () {
     // Offline Batch Reconciliation API
     Route::post('/api/offline/sync', [\App\Http\Controllers\OfflineSyncController::class, 'sync'])->name('offline.sync');
     Route::get('/api/offline/status', [\App\Http\Controllers\OfflineSyncController::class, 'status'])->name('offline.status');
+
+    // Browser push subscriptions (H8). Shared: the caregiver toggle lives on
+    // their dashboard, and the elderly PWA registers from the same bundle.
+    Route::get('/api/push/config', [\App\Http\Controllers\PushSubscriptionController::class, 'config'])->name('push.config');
+    Route::post('/api/push/subscribe', [\App\Http\Controllers\PushSubscriptionController::class, 'store'])->name('push.subscribe');
+    Route::delete('/api/push/subscribe', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->name('push.unsubscribe');
 });
 
 require __DIR__.'/auth.php';

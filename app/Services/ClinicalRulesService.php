@@ -74,6 +74,147 @@ class ClinicalRulesService
     }
 
     /**
+     * Evaluate a dose that has just been marked missed.
+     *
+     * One missed dose is noise — a senior running late, a nap, a slow morning.
+     * A run of them is the signal a caregiver needs. This counts the unbroken
+     * run of misses for the same medication and raises a caregiver alert once
+     * the run reaches the configured threshold, escalating to critical as it
+     * lengthens.
+     *
+     * While a run continues, the existing alert is updated in place rather than
+     * a new one created per missed dose, so a patient who stops taking a
+     * medication produces one escalating alert instead of a wall of them.
+     *
+     * Returns null when the run is still below the alerting threshold.
+     */
+    public function evaluateMissedDose(DoseInstance $dose): ?Alert
+    {
+        $elderly = $dose->elderly;
+        $medication = $dose->medication;
+
+        if (!$elderly || !$medication) {
+            return null;
+        }
+
+        $warningAt = (int) config('alerts.missed_dose.consecutive_warning', 2);
+        $criticalAt = (int) config('alerts.missed_dose.consecutive_critical', 3);
+
+        $consecutive = $this->countConsecutiveMisses($dose);
+
+        if ($consecutive < $warningAt) {
+            return null;
+        }
+
+        $severity = $consecutive >= $criticalAt ? 'critical' : 'warning';
+        $patientName = $elderly->user?->name ?? 'Patient';
+        $icon = $severity === 'critical' ? '🚨' : '⚠️';
+
+        $timezone = $dose->timezone ?: config('app.timezone', 'Asia/Manila');
+        $localTime = $dose->scheduled_at_utc?->copy()->setTimezone($timezone);
+
+        $title = "{$icon} {$consecutive} missed doses: {$medication->name}";
+        $message = "{$patientName} has missed {$consecutive} consecutive doses of {$medication->name}"
+            . ($medication->dosage ? " ({$medication->dosage} {$medication->dosage_unit})" : '')
+            . '. The most recent was scheduled for '
+            . ($localTime?->format('D j M, g:i A') ?? 'an earlier time') . '.';
+
+        $metadata = [
+            'medication_id' => $medication->id,
+            'medication_name' => $medication->name,
+            'dose_instance_id' => $dose->id,
+            'consecutive_missed' => $consecutive,
+            'scheduled_at_utc' => $dose->scheduled_at_utc?->toISOString(),
+            'local_scheduled_time' => $localTime?->toISOString(),
+        ];
+
+        // An unresolved alert already tracking this run gets updated in place.
+        $existing = Alert::where('elderly_id', $elderly->id)
+            ->where('source_type', 'missed_dose')
+            ->whereIn('state', ['open', 'acknowledged'])
+            ->whereJsonContains('metadata->medication_id', $medication->id)
+            ->orderByDesc('created_at')
+            ->first();
+
+        if ($existing) {
+            $escalated = $severity === 'critical' && $existing->severity !== 'critical';
+
+            $existing->update([
+                'severity' => $severity,
+                'source_id' => $dose->id,
+                'title' => $title,
+                'message' => $message,
+                'metadata' => $metadata,
+                // A worsening run re-opens an acknowledged alert: the caregiver
+                // acknowledged two misses, not three.
+                'state' => $escalated ? 'open' : $existing->state,
+                'acknowledged_at' => $escalated ? null : $existing->acknowledged_at,
+                'acknowledged_by' => $escalated ? null : $existing->acknowledged_by,
+                'escalate_at' => Carbon::now()->addMinutes(
+                    (int) config("alerts.escalation_minutes.{$severity}", 15)
+                ),
+            ]);
+
+            if ($escalated) {
+                $this->deliveryService->deliver($existing->fresh());
+            }
+
+            return $existing->fresh();
+        }
+
+        $alert = Alert::create([
+            'elderly_id' => $elderly->id,
+            'severity' => $severity,
+            'source_type' => 'missed_dose',
+            'source_id' => $dose->id,
+            'title' => $title,
+            'message' => $message,
+            'metadata' => $metadata,
+            'state' => 'open',
+            'escalate_at' => Carbon::now()->addMinutes(
+                (int) config("alerts.escalation_minutes.{$severity}", 15)
+            ),
+        ]);
+
+        $this->deliveryService->deliver($alert);
+
+        return $alert;
+    }
+
+    /**
+     * Length of the unbroken run of missed doses for this medication, ending at
+     * (and including) the given dose.
+     *
+     * A taken dose breaks the run. So does a held or skipped one — those are
+     * deliberate decisions, not lapses. A still-pending earlier dose also breaks
+     * it: the scheduler has not judged it yet, and counting it would overstate
+     * the run.
+     */
+    protected function countConsecutiveMisses(DoseInstance $dose): int
+    {
+        $lookback = (int) config('alerts.missed_dose.lookback_instances', 20);
+
+        $recent = DoseInstance::where('elderly_id', $dose->elderly_id)
+            ->where('medication_id', $dose->medication_id)
+            ->where('scheduled_at_utc', '<=', $dose->scheduled_at_utc)
+            ->orderByDesc('scheduled_at_utc')
+            ->limit(max($lookback, 1))
+            ->get();
+
+        $run = 0;
+
+        foreach ($recent as $instance) {
+            if ($instance->state !== 'missed') {
+                break;
+            }
+
+            $run++;
+        }
+
+        return $run;
+    }
+
+    /**
      * Evaluate an SOS trigger event.
      */
     public function evaluateSos(UserProfile $elderly, ?string $notes = null): Alert

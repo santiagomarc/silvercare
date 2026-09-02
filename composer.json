@@ -15,6 +15,7 @@
         "laravel/socialite": "^5.23",
         "laravel/tinker": "^2.10.1",
         "mallardduck/blade-lucide-icons": "^1.26",
+        "minishlink/web-push": "^11.0",
         "simplesoftwareio/simple-qrcode": "^4.2"
     },
     "require-dev": {

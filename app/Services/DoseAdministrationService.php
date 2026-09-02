@@ -17,6 +17,7 @@ class DoseAdministrationService
     public function __construct(
         protected NotificationService $notificationService,
         protected DoseInstanceGeneratorService $generatorService,
+        protected ClinicalRulesService $rulesService,
     ) {
     }
 
@@ -376,23 +377,39 @@ class DoseAdministrationService
      */
     public function markMissed(DoseInstance $instance): void
     {
-        if ($instance->isPending()) {
-            $instance->update([
-                'state' => 'missed',
-                'version' => $instance->version + 1,
-            ]);
+        if (!$instance->isPending()) {
+            return;
+        }
 
-            $medication = $instance->medication;
-            if ($medication) {
-                $timezone = $instance->timezone ?: config('app.timezone', 'Asia/Manila');
-                $localTime = $instance->scheduled_at_utc->copy()->setTimezone($timezone);
+        $instance->update([
+            'state' => 'missed',
+            'version' => $instance->version + 1,
+        ]);
 
-                $this->notificationService->createMedicationMissedNotification(
-                    $instance->elderly_id,
-                    $medication->name,
-                    $localTime->format('g:i A')
-                );
-            }
+        $medication = $instance->medication;
+        if (!$medication) {
+            return;
+        }
+
+        $timezone = $instance->timezone ?: config('app.timezone', 'Asia/Manila');
+        $localTime = $instance->scheduled_at_utc->copy()->setTimezone($timezone);
+
+        // Patient-facing reminder for every miss.
+        $this->notificationService->createMedicationMissedNotification(
+            $instance->elderly_id,
+            $medication->name,
+            $localTime->format('g:i A')
+        );
+
+        // Caregiver-facing alert once a run of misses crosses the threshold.
+        // Never let alerting failure leave the dose stuck in 'pending' — the
+        // state transition above is the authoritative record.
+        try {
+            $this->rulesService->evaluateMissedDose($instance->fresh());
+        } catch (\Throwable $e) {
+            Log::error(
+                "Missed-dose evaluation failed for dose instance #{$instance->id}: " . $e->getMessage()
+            );
         }
     }
 }
