@@ -20,6 +20,8 @@ import dashboardTabs      from './components/dashboard-tabs.js';
 import googleFitSync      from './components/google-fit-sync.js';
 import heroAction         from './components/hero-action.js';
 import checklistPageItem  from './components/checklist-page-item.js';
+import dailyCheckin       from './components/daily-checkin.js';
+import thresholdEditor    from './components/threshold-editor.js';
 import { initOfflineQueue } from './utils/offline-queue.js';
 import { installDialogHelpers } from './utils/dialogs.js';
 import pushToggle, { syncExistingSubscription } from './utils/push-notifications.js';
@@ -85,6 +87,8 @@ Alpine.data('googleFitSync',      ()                    => googleFitSync());
 Alpine.data('heroAction',         (opts)                => heroAction(opts));
 Alpine.data('pushToggle',         ()                    => pushToggle());
 Alpine.data('highContrastToggle', ()                    => highContrastToggle());
+Alpine.data('dailyCheckin',       (opts)                => dailyCheckin(opts));
+Alpine.data('thresholdEditor',    (opts)                => thresholdEditor(opts));
 
 window.Alpine = Alpine;
 

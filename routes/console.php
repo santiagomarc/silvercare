@@ -86,3 +86,26 @@ Schedule::command('telemetry:monitor-integrations')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/integration-telemetry.log'));
 
+// M4: Scheduler heartbeat. If the scheduler stops, every time-based feature in
+// this system stops with it — missed-dose detection, alert escalation, check-in
+// sweeps — and nothing else would notice. This writes a timestamp the health
+// check reads.
+Schedule::call(function () {
+    \Illuminate\Support\Facades\Cache::put(
+        \App\Console\Commands\HealthCheck::HEARTBEAT_KEY,
+        now()->toISOString(),
+        now()->addDay()
+    );
+})->everyFiveMinutes()->name('scheduler-heartbeat');
+
+// M4: Operational health report every 15 minutes.
+Schedule::command('silvercare:health-check')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/health-check.log'));
+
+// M5: Delete capture-session images past their PHI retention window.
+Schedule::command('captures:purge-expired')
+    ->hourly()
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/capture-purge.log'));

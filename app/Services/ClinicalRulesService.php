@@ -322,6 +322,22 @@ class ClinicalRulesService
             ];
         }
 
+        // M8: the low side. A systolic in the 90s is hypotensive for an older
+        // adult and a fall risk, and previously produced nothing between
+        // "normal" and the critical floor.
+        $warnSysLow = $thresholds['warning_systolic_low'] ?? null;
+        $warnDiaLow = $thresholds['warning_diastolic_low'] ?? null;
+
+        if (($warnSysLow !== null && $systolic <= $warnSysLow)
+            || ($warnDiaLow !== null && $diastolic <= $warnDiaLow)) {
+            return [
+                'severity' => 'warning',
+                'title' => "⚠️ Low Blood Pressure ({$text} mmHg)",
+                'message' => "A low blood pressure reading of {$text} mmHg was recorded for {$patientName}. "
+                    . 'Low readings can cause dizziness and increase fall risk.',
+            ];
+        }
+
         return null;
     }
 

@@ -111,13 +111,13 @@
                                     @if($alert->severity === 'emergency') 🚨 @elseif($alert->severity === 'critical') ⚠️ @else 🔔 @endif
                                 </div>
                                 <div>
-                                    <div class="flex items-center gap-2 flex-wrap">
+                                    <div class="flex items-center gap-2 flex-wrap" data-alert-badges>
                                         <span class="text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-md {{ $alert->severity === 'emergency' ? 'bg-red-600 text-white' : ($alert->severity === 'critical' ? 'bg-rose-600 text-white' : 'bg-amber-500 text-white') }}">
                                             {{ strtoupper($alert->severity) }}
                                         </span>
                                         <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">{{ $alert->created_at->diffForHumans() }}</span>
                                         @if($alert->isAcknowledged())
-                                            <span class="text-xs font-bold bg-green-100 text-green-800 dark:bg-green-900/60 dark:text-green-200 px-2 py-0.5 rounded-md">✓ Acknowledged</span>
+                                            <span data-ack-badge class="text-xs font-bold bg-green-100 text-green-800 dark:bg-green-900/60 dark:text-green-200 px-2 py-0.5 rounded-md">✓ Acknowledged</span>
                                         @endif
                                     </div>
                                     <h4 class="text-base font-extrabold mt-1 text-slate-900 dark:text-white">{{ $alert->title }}</h4>
@@ -128,16 +128,20 @@
                             <div class="flex items-center gap-2.5 flex-shrink-0 self-end sm:self-center">
                                 @if($alert->isOpen())
                                     <button
+                                        type="button"
+                                        data-alert-action="acknowledge"
                                         onclick="acknowledgeAlert({{ $alert->id }})"
-                                        class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow transition-colors"
+                                        class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow transition-colors disabled:opacity-50"
                                     >
                                         Acknowledge
                                     </button>
                                 @endif
                                 @if($alert->isAcknowledged() || $alert->isOpen())
                                     <button
+                                        type="button"
+                                        data-alert-action="resolve"
                                         onclick="resolveAlert({{ $alert->id }})"
-                                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-xl shadow transition-colors"
+                                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-xl shadow transition-colors disabled:opacity-50"
                                     >
                                         Resolve
                                     </button>
@@ -148,36 +152,81 @@
                 @endforeach
             </div>
 
+            {{-- Acknowledge previously called window.location.reload(), which did
+                 not repaint reliably — the caregiver clicked and nothing changed
+                 until they refreshed by hand. Both actions now update the card in
+                 place and surface failures instead of swallowing them. --}}
             <script>
+                async function updateAlertState(alertId, action) {
+                    const card = document.getElementById(`alert-card-${alertId}`);
+                    const buttons = card ? card.querySelectorAll('button') : [];
+                    buttons.forEach((b) => { b.disabled = true; });
+
+                    try {
+                        const response = await fetch(`/caregiver/alerts/${alertId}/${action}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                Accept: 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                            },
+                            credentials: 'same-origin',
+                            cache: 'no-store',
+                        });
+
+                        if (response.status === 419) {
+                            window.Alpine?.store('toast')?.show('Your session timed out. Please refresh and try again.', 'error');
+                            return;
+                        }
+
+                        const data = await response.json().catch(() => null);
+
+                        if (!response.ok || !data?.success) {
+                            window.Alpine?.store('toast')?.show(data?.message || 'Could not update the alert.', 'error');
+                            buttons.forEach((b) => { b.disabled = false; });
+                            return;
+                        }
+
+                        if (action === 'resolve') {
+                            card?.remove();
+                            if (!document.querySelector('#clinical-alert-center [id^="alert-card-"]')) {
+                                document.getElementById('clinical-alert-center')?.remove();
+                            }
+                        } else {
+                            markCardAcknowledged(card, data.alert);
+                        }
+
+                        window.Alpine?.store('toast')?.show(data.message || 'Alert updated.', 'success');
+                    } catch {
+                        window.Alpine?.store('toast')?.show('Could not reach the server. Please try again.', 'error');
+                        buttons.forEach((b) => { b.disabled = false; });
+                    }
+                }
+
+                function markCardAcknowledged(card, alert) {
+                    if (!card) return;
+
+                    // Drop the acknowledge button; leave resolve available.
+                    card.querySelector('[data-alert-action="acknowledge"]')?.remove();
+
+                    if (!card.querySelector('[data-ack-badge]')) {
+                        const badge = document.createElement('span');
+                        badge.setAttribute('data-ack-badge', '');
+                        badge.className = 'text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-700 text-white';
+                        badge.textContent = 'Acknowledged';
+                        card.querySelector('[data-alert-badges]')?.appendChild(badge);
+                    }
+
+                    card.classList.add('opacity-75');
+                }
+
                 function acknowledgeAlert(alertId) {
-                    fetch(`/caregiver/alerts/${alertId}/acknowledge`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                            'Accept': 'application/json'
-                        }
-                    }).then(r => r.json()).then(data => {
-                        if (data.success) {
-                            window.location.reload();
-                        }
-                    });
+                    return updateAlertState(alertId, 'acknowledge');
                 }
 
                 function resolveAlert(alertId) {
-                    fetch(`/caregiver/alerts/${alertId}/resolve`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                            'Accept': 'application/json'
-                        }
-                    }).then(r => r.json()).then(data => {
-                        if (data.success) {
-                            const card = document.getElementById(`alert-card-${alertId}`);
-                            if (card) card.remove();
-                        }
-                    });
+                    return updateAlertState(alertId, 'resolve');
                 }
             </script>
         @endif

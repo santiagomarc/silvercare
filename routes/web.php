@@ -139,6 +139,7 @@ Route::middleware(['auth', 'verified', 'caregiver', 'profile.complete', 'prevent
     Route::post('/patients/{patient}/remove', [App\Http\Controllers\PatientListController::class, 'remove'])->name('patients.remove');
     Route::post('/patients/{patient}/restore', [App\Http\Controllers\PatientListController::class, 'restore'])->name('patients.restore');
     Route::get('/patients/{patient}/checkins', [\App\Http\Controllers\CareCheckinController::class, 'history'])->name('patients.checkins');
+    Route::get('/patients/{patient}/clinical-summary', [\App\Http\Controllers\CaregiverAnalyticsController::class, 'clinicalSummary'])->name('patients.clinical-summary');
     Route::get('/patients/{patient}/thresholds', [\App\Http\Controllers\PatientThresholdController::class, 'index'])->name('patients.thresholds.index');
     Route::post('/patients/{patient}/thresholds', [\App\Http\Controllers\PatientThresholdController::class, 'update'])->name('patients.thresholds.update');
 

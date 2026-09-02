@@ -408,6 +408,11 @@ PROMPT;
         $healthMetrics = $this->buildCaregiverVitalsContext($elderlyProfileId, $weekAgo, $today);
         $taskSummary = $this->buildCaregiverTaskContext($elderlyProfileId, $weekAgo, $today);
 
+        // M1: deterministic facts from ClinicalInsightService. Risk scores,
+        // threshold crossings and data freshness are computed by rules, never
+        // by the model — the model may only narrate them.
+        $clinicalFacts = $this->buildClinicalFactsContext($elderlyProfile);
+
         return <<<PROMPT
 You are the SilverCare Caregiver AI Analyst — a clinical, data-driven assistant for caregivers monitoring their elderly patient.
 
@@ -424,15 +429,125 @@ ANALYSIS PERIOD: {$weekAgo->format('M j')} – {$today->format('M j, Y')}
 === TASK COMPLETION (7 days) ===
 {$taskSummary}
 
+=== COMPUTED CLINICAL FACTS ===
+These are calculated by SilverCare's deterministic rules engine, not by you.
+Treat them as the authoritative record.
+{$clinicalFacts}
+
+=== GROUNDING RULES (these override every other instruction) ===
+A. You may summarise, group and explain the facts above in plain language.
+   You MUST NOT invent risk levels, thresholds, diagnoses, trends, causes, or
+   remediation decisions that are not present in the data above.
+B. If the data needed to answer is not above, say plainly what is missing —
+   e.g. "There is no blood pressure reading in the last 7 days." Never estimate,
+   extrapolate, or fill a gap with a typical value.
+C. Never state or imply a diagnosis. Describe what was measured and when.
+   Anything beyond that is a question for the patient's physician.
+D. Risk level and thresholds come only from the COMPUTED CLINICAL FACTS block.
+   Do not compute your own, and do not disagree with them.
+E. Every number and date you cite must appear verbatim above.
+F. You are not an emergency service. If the data suggests an urgent situation,
+   tell the caregiver to contact their local emergency number directly.
+
 === INSTRUCTIONS ===
 1. Provide clinical, factual analysis based on the real data above. Output your analysis strictly in Markdown format. Use an H3 `###` for sections, and always end with a `**Actionable Recommendation:**` block.
-2. Highlight any concerning trends (declining adherence, abnormal vitals, etc.).
+2. Highlight any concerning trends (declining adherence, abnormal vitals, etc.) that are visible in the data above.
 3. Use **bold** for emphasis, bullet points for clarity, and keep insights actionable.
 4. NEVER make medical diagnoses — suggest the caregiver consult a physician if metrics are concerning.
-5. If the caregiver asks about OTC medication interactions (e.g. "Can I give them Ibuprofen?"), check for interactions with their medication adherence list.
-6. If asked about specific metrics, reference exact numbers and dates.
+5. If the caregiver asks about OTC medication interactions (e.g. "Can I give them Ibuprofen?"), point them to the patient's prescriber or pharmacist. Do not assess the interaction yourself.
+6. If asked about specific metrics, reference exact numbers and dates from above.
 7. Be professional but compassionate — the caregiver cares about their patient.
 PROMPT;
+    }
+
+    /**
+     * M1 — render ClinicalInsightService output as structured facts for the prompt.
+     *
+     * The caregiver assistant previously received only raw 7-day summaries and
+     * was free to characterise them however it liked: it could call a reading
+     * "concerning", invent a threshold, or suggest a cause. Risk scoring and
+     * threshold evaluation are deterministic rules in this system, so the model
+     * is given their output and told to narrate it rather than reproduce it.
+     */
+    protected function buildClinicalFactsContext(?\App\Models\UserProfile $elderly): string
+    {
+        if (! $elderly) {
+            return "No patient profile is linked, so no computed facts are available.";
+        }
+
+        try {
+            $briefing = app(ClinicalInsightService::class)->getDailyBriefing($elderly);
+        } catch (\Throwable $e) {
+            Log::warning("Clinical facts unavailable for profile #{$elderly->id}: " . $e->getMessage());
+
+            return "Computed clinical facts are unavailable right now. Do not substitute your own assessment; tell the caregiver the analysis is temporarily incomplete.";
+        }
+
+        $lines = [];
+
+        $risk = $briefing['risk'] ?? [];
+        $lines[] = sprintf(
+            '- Risk score: %s/100 (%s). This value is computed by the rules engine.',
+            $risk['score'] ?? 'n/a',
+            strtoupper((string) ($risk['level'] ?? 'unknown'))
+        );
+
+        foreach ((array) ($risk['factors'] ?? []) as $factor) {
+            $lines[] = '  - Contributing factor: ' . (is_string($factor) ? $factor : json_encode($factor));
+        }
+
+        $adherence = $briefing['medication_adherence'] ?? [];
+        $lines[] = sprintf(
+            '- Medication adherence (7 days): %s%% (%s of %s scheduled doses taken).',
+            $adherence['rate'] ?? 'n/a',
+            $adherence['taken'] ?? 'n/a',
+            $adherence['total'] ?? 'n/a'
+        );
+
+        $lines[] = '- Data freshness (how recently each vital was recorded):';
+        foreach ((array) ($briefing['freshness'] ?? []) as $type => $info) {
+            if (! is_array($info)) {
+                continue;
+            }
+
+            if (($info['last_recorded'] ?? null) === null) {
+                $lines[] = sprintf('  - %s: never recorded.', $type);
+                continue;
+            }
+
+            $lines[] = sprintf(
+                '  - %s: last reading %s (%s), %d hours ago.%s',
+                $type,
+                $info['value_text'] ?? 'value unavailable',
+                $info['status_label'] ?? 'recently',
+                (int) ($info['hours_ago'] ?? 0),
+                ! empty($info['is_stale']) ? ' Flagged STALE by the rules engine (over 48 hours).' : ''
+            );
+        }
+
+        $lines[] = sprintf('- Open or unacknowledged alerts: %d.', (int) ($briefing['open_alerts_count'] ?? 0));
+
+        foreach (($briefing['open_alerts'] ?? []) as $alert) {
+            $lines[] = sprintf(
+                '  - [%s] %s (raised %s)',
+                strtoupper((string) $alert->severity),
+                $alert->title,
+                $alert->created_at?->diffForHumans() ?? 'recently'
+            );
+        }
+
+        $checkin = $briefing['today_checkin'] ?? null;
+        $lines[] = $checkin
+            ? sprintf("- Today's check-in: %s.", $checkin->status)
+            : "- Today's check-in: not yet completed.";
+
+        foreach ((array) ($briefing['highlights'] ?? []) as $highlight) {
+            $lines[] = '- Highlight: ' . (is_string($highlight) ? $highlight : json_encode($highlight));
+        }
+
+        $lines[] = sprintf('- Facts computed at: %s.', $briefing['generated_at'] ?? 'unknown');
+
+        return implode("\n", $lines);
     }
 
     // =========================================================================

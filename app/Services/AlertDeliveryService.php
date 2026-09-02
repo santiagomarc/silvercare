@@ -33,8 +33,11 @@ class AlertDeliveryService
 
         $caregiver = $elderly->caregiver;
 
-        // 1. In-app notification for patient
-        $this->deliverInApp($alert, $elderly->id);
+        // 1. In-app notification for the patient.
+        //    M8: seniors get gentler wording than the caregiver. "Immediate
+        //    clinical review is recommended" is written for a caregiver; shown
+        //    to the patient it is alarming without being actionable.
+        $this->deliverInApp($alert, $elderly->id, forPatient: true);
 
         if (!$caregiver) {
             Log::info("Alert #{$alert->id} created for patient #{$elderly->id} without linked caregiver.");
@@ -259,7 +262,7 @@ class AlertDeliveryService
         }
     }
 
-    protected function deliverInApp(Alert $alert, int $profileId): void
+    protected function deliverInApp(Alert $alert, int $profileId, bool $forPatient = false): void
     {
         try {
             $severity = match ($alert->severity) {
@@ -270,11 +273,14 @@ class AlertDeliveryService
 
             $notifType = ($alert->source_type === 'sos') ? 'sos_alert' : 'alert_' . $alert->source_type;
 
+            $title = $forPatient ? $this->patientFacingTitle($alert) : $alert->title;
+            $message = $forPatient ? $this->patientFacingMessage($alert) : $alert->message;
+
             $this->notificationService->createNotification([
                 'elderly_id' => $profileId,
                 'type' => $notifType,
-                'title' => $alert->title,
-                'message' => $alert->message,
+                'title' => $title,
+                'message' => $message,
                 'severity' => $severity,
                 'metadata' => [
                     'alert_id' => $alert->id,
@@ -300,6 +306,40 @@ class AlertDeliveryService
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * M8 — patient-facing wording.
+     *
+     * The alert title and message are written for a caregiver ("Immediate
+     * clinical review is recommended"). Shown to the senior who just took the
+     * reading, that is frightening without telling them what to do. They get a
+     * calm, actionable version; the caregiver still gets the clinical one.
+     */
+    protected function patientFacingTitle(Alert $alert): string
+    {
+        return match ($alert->source_type) {
+            'sos' => 'Help is on the way',
+            'vital_threshold' => 'We shared your reading with your caregiver',
+            'missed_dose' => 'A reminder about your medicine',
+            'check_in_missed', 'check_in_need_help' => 'We let your caregiver know',
+            default => 'Your caregiver has been notified',
+        };
+    }
+
+    protected function patientFacingMessage(Alert $alert): string
+    {
+        $urgent = in_array($alert->severity, ['critical', 'emergency'], true);
+
+        return match ($alert->source_type) {
+            'sos' => 'Your caregiver has been alerted. If this is a medical emergency, call your local emergency number now.',
+            'vital_threshold' => $urgent
+                ? 'Your caregiver has been told about your latest reading and will check in with you. If you feel unwell, call your caregiver or your doctor.'
+                : 'Your caregiver has been told about your latest reading. No action is needed from you right now.',
+            'missed_dose' => 'It looks like a dose was missed. Your caregiver has been let know so they can help.',
+            'check_in_missed', 'check_in_need_help' => 'Your caregiver has been notified and will be in touch.',
+            default => 'Your caregiver has been notified.',
+        };
     }
 
     protected function deliverReverb(Alert $alert, int $caregiverProfileId): void

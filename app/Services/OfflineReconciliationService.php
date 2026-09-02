@@ -91,6 +91,19 @@ class OfflineReconciliationService
                 } else {
                     $conflictCount++;
                 }
+            } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                // M8: the existence check above and the insert below are not
+                // atomic. Two overlapping flushes of the same queue both pass
+                // the check; the unique index on client_mutation_id then turns
+                // the loser into a 500. It is a duplicate, so report it as one.
+                $results[] = [
+                    'client_mutation_id' => $mutationId,
+                    'action_type' => $actionType,
+                    'status' => 'applied',
+                    'message' => 'Mutation was already synced concurrently (idempotent skipped).',
+                ];
+                $appliedCount++;
+                continue;
             } catch (\Exception $e) {
                 Log::error("Offline mutation sync error [{$mutationId}]: " . $e->getMessage());
 

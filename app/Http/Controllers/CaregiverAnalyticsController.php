@@ -96,7 +96,11 @@ class CaregiverAnalyticsController extends Controller
             'readingsThisWeek',
             'medicationSummary',
             'taskSummary',
-            'briefing'
+            'briefing',
+            'sourceAttribution',
+            'doseLateness',
+            'alertHistory',
+            'reportGeneratedAt'
         ));
     }
 
@@ -180,6 +184,40 @@ class CaregiverAnalyticsController extends Controller
 
         $briefing = $this->insightService->getDailyBriefing($elderly);
 
+        // M3: provenance, dose lateness and alert history for the report.
+        // A clinician reading this needs to know which numbers the patient
+        // typed, which a device supplied, and how current any of it is.
+        $sourceAttribution = \App\Models\HealthMetric::where('elderly_id', $elderly->id)
+            ->where('measured_at', '>=', now()->subDays(7))
+            ->select('source', \Illuminate\Support\Facades\DB::raw('count(*) as total'))
+            ->groupBy('source')
+            ->pluck('total', 'source');
+
+        $doseLateness = \App\Models\DoseInstance::where('elderly_id', $elderly->id)
+            ->where('state', 'taken_late')
+            ->where('scheduled_at_utc', '>=', now()->subDays(7))
+            ->with('medication:id,name')
+            ->get()
+            ->groupBy('medication_id')
+            ->map(fn ($rows) => [
+                'name' => $rows->first()->medication?->name ?? 'Medication',
+                'late_count' => $rows->count(),
+                'average_minutes_late' => (int) round(
+                    $rows->avg(fn ($r) => $r->taken_at && $r->scheduled_at_utc
+                        ? $r->scheduled_at_utc->diffInMinutes($r->taken_at)
+                        : 0)
+                ),
+            ])
+            ->values();
+
+        $alertHistory = \App\Models\Alert::where('elderly_id', $elderly->id)
+            ->where('created_at', '>=', now()->subDays(7))
+            ->orderByDesc('created_at')
+            ->limit(25)
+            ->get();
+
+        $reportGeneratedAt = now();
+
         $pdf = Pdf::loadView('caregiver.analytics_pdf', compact(
             'elderly',
             'elderlyUser',
@@ -191,12 +229,62 @@ class CaregiverAnalyticsController extends Controller
             'readingsThisWeek',
             'medicationSummary',
             'taskSummary',
-            'briefing'
+            'briefing',
+            'sourceAttribution',
+            'doseLateness',
+            'alertHistory',
+            'reportGeneratedAt'
         ));
 
         $filename = 'SilverCare_Health_Report_' . ($elderlyUser->name ?? 'Patient') . '_' . now()->format('Y-m-d') . '.pdf';
 
         return $pdf->download($filename);
+    }
+
+    /**
+     * M2 — machine-readable clinical summary for a patient.
+     *
+     * Everything here comes from ClinicalInsightService's deterministic rules.
+     * The `as_of` timestamp and per-vital freshness are part of the payload on
+     * purpose: a caregiver reading "blood pressure normal" needs to know
+     * whether that reading is from this morning or from nine days ago.
+     */
+    public function clinicalSummary(\Illuminate\Http\Request $request, \App\Models\UserProfile $patient): \Illuminate\Http\JsonResponse
+    {
+        $caregiver = \Illuminate\Support\Facades\Auth::user()->profile;
+
+        if (! $caregiver || ! $caregiver->isCaregiver() || $patient->caregiver_id !== $caregiver->id) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+        }
+
+        $briefing = $this->insightService->getDailyBriefing($patient);
+
+        $sources = \App\Models\HealthMetric::where('elderly_id', $patient->id)
+            ->where('measured_at', '>=', now()->subDays(7))
+            ->select('source', \Illuminate\Support\Facades\DB::raw('count(*) as total'))
+            ->groupBy('source')
+            ->pluck('total', 'source');
+
+        return response()->json([
+            'success' => true,
+            'as_of' => $briefing['generated_at'] ?? now()->toISOString(),
+            'patient' => [
+                'id' => $patient->id,
+                'name' => $patient->user?->name,
+                'timezone' => $patient->timezone,
+            ],
+            'risk' => $briefing['risk'] ?? null,
+            'medication_adherence' => $briefing['medication_adherence'] ?? null,
+            'freshness' => $briefing['freshness'] ?? [],
+            'open_alerts_count' => $briefing['open_alerts_count'] ?? 0,
+            'highlights' => $briefing['highlights'] ?? [],
+            'today_checkin' => $briefing['today_checkin'],
+            // Provenance: manual entry, Google Fit, voice, camera OCR, offline
+            // sync. A caregiver should know which readings the patient typed and
+            // which a device supplied.
+            'source_attribution' => $sources,
+            'disclaimer' => 'Computed by SilverCare\'s rules engine from recorded data. Not a medical assessment.',
+        ]);
     }
 }
 

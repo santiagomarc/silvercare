@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PatientAlertThreshold;
 use App\Models\UserProfile;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,12 +14,16 @@ class PatientThresholdController extends Controller
     /**
      * Get patient's custom and default alert thresholds.
      */
-    public function index(Request $request, UserProfile $patient): JsonResponse
+    public function index(Request $request, UserProfile $patient): JsonResponse|View
     {
         $caregiver = Auth::user()->profile;
 
         if (!$caregiver || !$caregiver->isCaregiver() || $patient->caregiver_id !== $caregiver->id) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+            }
+
+            abort(403, 'You do not have access to this patient.');
         }
 
         $defaults = config('alerts.thresholds', []);
@@ -34,9 +39,17 @@ class PatientThresholdController extends Controller
             ];
         }
 
-        return response()->json([
-            'success' => true,
-            'patient_id' => $patient->id,
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'patient_id' => $patient->id,
+                'metrics' => $result,
+            ]);
+        }
+
+        // M2: the plan called for a caregiver-facing form, not raw JSON.
+        return view('caregiver.thresholds', [
+            'patient' => $patient,
             'metrics' => $result,
         ]);
     }

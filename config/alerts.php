@@ -19,6 +19,11 @@ return [
             'critical_diastolic_low' => 50,
             'warning_systolic_high' => 140,
             'warning_diastolic_high' => 90,
+            // M8: the low side previously jumped straight from "normal" to the
+            // critical floor, so a systolic of 95 — genuinely hypotensive for
+            // an older adult, and a fall risk — produced nothing at all.
+            'warning_systolic_low' => 100,
+            'warning_diastolic_low' => 60,
         ],
         'sugar_level' => [
             'critical_high' => 250,

@@ -79,7 +79,12 @@ class ElderlyDashboardService
 
     private function getMedicationData(int $elderlyId): array
     {
-        $today = Carbon::today();
+        // M8: use the patient's own timezone. The rest of the system reads
+        // profile->timezone; this used the server's, so a patient in a
+        // different zone saw the wrong day's medications near midnight.
+        $timezone = \App\Models\UserProfile::find($elderlyId)?->timezone
+            ?: config('app.timezone', 'Asia/Manila');
+        $today = Carbon::today($timezone);
 
         $medications = Medication::where('elderly_id', $elderlyId)
             ->where('is_active', true)
@@ -97,7 +102,7 @@ class ElderlyDashboardService
         });
 
         $medicationLogs = MedicationLog::where('elderly_id', $elderlyId)
-            ->whereDate('scheduled_time', Carbon::today())
+            ->whereDate('scheduled_time', $today)
             ->get()
             ->keyBy(fn ($log) => $this->doseLogKey($log->medication_id, $log->scheduled_time));
 

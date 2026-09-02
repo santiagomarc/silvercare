@@ -116,78 +116,79 @@
         {{-- ╔══════════════════════════════════╗
              ║  DAILY WELLNESS CHECK-IN CARD    ║
              ╚══════════════════════════════════╝ --}}
-        <div class="mb-6 rounded-3xl p-5 sm:p-6 transition-all border shadow-sm {{ ($hasCheckedInToday ?? false) ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950' : 'bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 border-blue-200 text-blue-950' }}" id="daily-checkin-banner">
+        {{-- Daily check-in.
+             Previously this posted and then called window.location.reload().
+             The reload did not repaint reliably, so a senior tapped the button
+             and nothing appeared to happen. It is now a reactive Alpine
+             component that updates in place — no reload, no lost scroll
+             position, and failures are actually shown instead of swallowed. --}}
+        <div
+            x-data="dailyCheckin({
+                checkedIn: {{ ($hasCheckedInToday ?? false) ? 'true' : 'false' }},
+                checkedInAt: @js($todayCheckin?->checked_in_at?->format('g:i A')),
+                status: @js($todayCheckin?->status),
+                endpoint: @js(route('elderly.checkin')),
+            })"
+            id="daily-checkin-banner"
+            class="mb-6 rounded-3xl p-5 sm:p-6 transition-all border shadow-sm"
+            x-bind:class="checkedIn
+                ? (needsHelp ? 'bg-amber-50/80 border-amber-200 text-amber-950' : 'bg-emerald-50/80 border-emerald-200 text-emerald-950')
+                : 'bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 border-blue-200 text-blue-950'"
+        >
             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 {{ ($hasCheckedInToday ?? false) ? 'bg-emerald-500 text-white' : 'bg-[#000080] text-white shadow-md' }}">
-                        @if($hasCheckedInToday ?? false)
-                            ✓
-                        @else
-                            👋
-                        @endif
+                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 transition-colors"
+                         x-bind:class="checkedIn
+                            ? (needsHelp ? 'bg-amber-500 text-white' : 'bg-emerald-500 text-white')
+                            : 'bg-[#000080] text-white shadow-md'">
+                        <span x-show="!checkedIn" aria-hidden="true">👋</span>
+                        <span x-show="checkedIn &amp;&amp; !needsHelp" aria-hidden="true">✓</span>
+                        <span x-show="needsHelp" aria-hidden="true">🔔</span>
                     </div>
                     <div>
-                        <h3 class="text-lg font-black tracking-tight">
-                            @if($hasCheckedInToday ?? false)
-                                Checked In For Today!
-                            @else
-                                Daily Wellness Check-in
-                            @endif
-                        </h3>
-                        <p class="text-xs sm:text-sm font-medium opacity-80 mt-0.5">
-                            @if($hasCheckedInToday ?? false)
-                                You checked in at {{ $todayCheckin?->checked_in_at?->format('g:i A') ?? 'Today' }}. Your caregiver knows you're safe!
-                            @else
-                                Let your caregiver know you are doing well today with a single tap.
-                            @endif
-                        </p>
+                        {{-- Server-rendered text inside x-text: the correct wording
+                             is in the HTML for screen readers and for the moment
+                             before Alpine boots, then Alpine keeps it in sync. --}}
+                        <h3 class="text-lg font-black tracking-tight" x-text="heading">@if($hasCheckedInToday ?? false)Checked In For Today!@else Daily Wellness Check-in @endif</h3>
+                        <p class="text-xs sm:text-sm font-medium opacity-80 mt-0.5" x-text="subheading">@if($hasCheckedInToday ?? false)You checked in at {{ $todayCheckin?->checked_in_at?->format('g:i A') ?? 'today' }}. Your caregiver knows you're safe!@else Let your caregiver know you are doing well today with a single tap. @endif</p>
                     </div>
                 </div>
 
                 <div class="flex items-center gap-3 w-full sm:w-auto">
-                    @if(!($hasCheckedInToday ?? false))
-                        <button
-                            type="button"
-                            onclick="submitDailyCheckin('ok')"
-                            class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[#000080] hover:bg-blue-900 text-white font-extrabold text-sm shadow-md transition-transform active:scale-95"
-                        >
-                            <span>🌟 I'm Doing OK</span>
-                        </button>
-                        <button
-                            type="button"
-                            onclick="submitDailyCheckin('need_help')"
-                            class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-sm transition-transform active:scale-95"
-                        >
-                            <span>Need Help?</span>
-                        </button>
-                    @else
-                        <span class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-black">
-                            ✓ All Good
-                        </span>
-                    @endif
+                    <div x-show="!checkedIn" class="flex items-center gap-3 w-full sm:w-auto"
+                         @if($hasCheckedInToday ?? false) style="display:none" @endif>
+                        <div class="flex items-center gap-3 w-full sm:w-auto">
+                            <button
+                                type="button"
+                                x-on:click="submit('ok')"
+                                x-bind:disabled="busy"
+                                class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[#000080] hover:bg-blue-900 text-white font-extrabold text-sm shadow-md transition-transform active:scale-95 disabled:opacity-60"
+                            >
+                                <span x-show="!busy">🌟 I'm Doing OK</span>
+                                <span x-show="busy">Sending…</span>
+                            </button>
+                            <button
+                                type="button"
+                                x-on:click="submit('need_help')"
+                                x-bind:disabled="busy"
+                                class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-sm transition-transform active:scale-95 disabled:opacity-60"
+                            >
+                                <span>Need Help?</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <span x-show="checkedIn"
+                          @if(!($hasCheckedInToday ?? false)) style="display:none" @endif
+                          class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black"
+                          x-bind:class="needsHelp ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-800'"
+                          x-text="needsHelp ? 'Caregiver notified' : '✓ All Good'">@if(($todayCheckin?->status ?? null) === 'need_help')Caregiver notified@else ✓ All Good @endif</span>
                 </div>
             </div>
-        </div>
 
-        <script>
-            function submitDailyCheckin(status) {
-                fetch('{{ route("elderly.checkin") }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({ status: status })
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        window.location.reload();
-                    }
-                });
-            }
-        </script>
+            <p x-show="error" x-cloak x-text="error"
+               class="mt-3 text-sm font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-2.5"></p>
+        </div>
 
         {{-- ╔══════════════════════════════╗
              ║  ONBOARDING NUDGE BANNER     ║

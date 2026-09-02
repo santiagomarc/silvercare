@@ -32,6 +32,9 @@ class PrescriptionCaptureService
             'elderly_id' => $elderly->id,
             'session_type' => $sessionType,
             'image_path' => $path,
+            // M5: PHI retention deadline. The purge command deletes the row and
+            // the stored image once this passes.
+            'expires_at' => now()->addHours((int) config('capture.retention_hours', 24)),
             'status' => 'pending',
         ]);
 
