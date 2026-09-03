@@ -12,7 +12,7 @@
         <fieldset class="space-y-3">
             <legend class="sc-label sc-label-req mb-3">{{ __('I am joining as') }}</legend>
 
-            <label class="sc-check sc-card-quiet p-4 flex items-start gap-3.5 cursor-pointer transition-colors hover:border-[var(--sc-brand-line)]">
+            <label class="sc-choice">
                 <input type="radio" id="role-elderly" name="user_type" value="elderly"
                        {{ old('user_type') === 'elderly' ? 'checked' : '' }} required>
                 <span class="space-y-0.5">
@@ -21,7 +21,7 @@
                 </span>
             </label>
 
-            <label class="sc-check sc-card-quiet p-4 flex items-start gap-3.5 cursor-pointer transition-colors hover:border-[var(--sc-brand-line)]">
+            <label class="sc-choice">
                 <input type="radio" id="role-caregiver" name="user_type" value="caregiver"
                        {{ old('user_type') === 'caregiver' ? 'checked' : '' }} required>
                 <span class="space-y-0.5">

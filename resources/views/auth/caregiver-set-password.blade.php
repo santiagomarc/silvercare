@@ -57,19 +57,19 @@
         </div>
 
         {{-- Password Requirements --}}
-        <div class="sc-card-quiet p-4 rounded-2xl">
+        <div class="sc-card-quiet p-4">
             <p class="font-semibold text-sm mb-2" style="color:var(--sc-ink)">{{ __('Password must contain:') }}</p>
             <ul class="text-sm space-y-1.5" style="color:var(--sc-body)">
                 <li class="flex items-center gap-2">
-                    <svg class="sc-i w-4 h-4" style="color:var(--sc-brand-text)" aria-hidden="true" focusable="false"><use href="#i-check-circle"/></svg>
+                    <svg class="sc-i w-3 h-3" style="color:var(--sc-muted)" aria-hidden="true" focusable="false"><use href="#i-dot"/></svg>
                     <span>{{ __('At least 8 characters') }}</span>
                 </li>
                 <li class="flex items-center gap-2">
-                    <svg class="sc-i w-4 h-4" style="color:var(--sc-brand-text)" aria-hidden="true" focusable="false"><use href="#i-check-circle"/></svg>
+                    <svg class="sc-i w-3 h-3" style="color:var(--sc-muted)" aria-hidden="true" focusable="false"><use href="#i-dot"/></svg>
                     <span>{{ __('Mix of uppercase and lowercase letters') }}</span>
                 </li>
                 <li class="flex items-center gap-2">
-                    <svg class="sc-i w-4 h-4" style="color:var(--sc-brand-text)" aria-hidden="true" focusable="false"><use href="#i-check-circle"/></svg>
+                    <svg class="sc-i w-3 h-3" style="color:var(--sc-muted)" aria-hidden="true" focusable="false"><use href="#i-dot"/></svg>
                     <span>{{ __('At least one number') }}</span>
                 </li>
             </ul>

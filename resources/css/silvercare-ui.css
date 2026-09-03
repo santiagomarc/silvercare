@@ -848,6 +848,39 @@ html.high-contrast .sc-cta-panel { box-shadow: none !important; }
     outline-offset: 2px;
 }
 
+/* ── Choice cards ────────────────────────────────────────────────
+   A radio in a card. The whole card carries the selected state, because a
+   filled 22px dot is not enough signal for someone choosing which product
+   they are about to live in.
+
+   `:has()` is the selector doing the work; where it is unsupported the
+   radio still fills, so the control degrades to plain but usable. */
+.sc-choice {
+    display: flex; align-items: flex-start; gap: .9rem;
+    padding: 1.15rem 1.25rem;
+    border-radius: 1.25rem;
+    background: var(--sc-surface-2);
+    border: 1px solid var(--sc-line);
+    cursor: pointer;
+    transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.sc-choice:hover { border-color: var(--sc-brand-line); background: var(--sc-surface-3); }
+.sc-choice input[type="radio"],
+.sc-choice input[type="checkbox"] {
+    flex: none; width: 1.4rem; height: 1.4rem; margin-top: .2rem;
+    accent-color: var(--sc-brand); cursor: pointer;
+}
+.sc-choice:has(input:checked) {
+    background: var(--sc-brand-tint);
+    border-color: var(--sc-brand);
+    box-shadow: inset 0 0 0 1px var(--sc-brand);
+}
+/* The radio itself is small; put the focus ring on the whole card. */
+.sc-choice:has(input:focus-visible) {
+    outline: 3px solid var(--sc-ring);
+    outline-offset: 3px;
+}
+
 /* Grouped fields. Use a real <fieldset> + <legend> for related inputs. */
 .sc-fieldset {
     padding: 1.5rem;

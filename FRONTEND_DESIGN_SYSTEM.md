@@ -348,6 +348,7 @@ those in by hand.
 | `sc-steps` + `sc-step-dot` + `sc-step-label` | multi-step form progress |
 | `sc-input-muted` | a field switched off by a "none of these" checkbox |
 | `sc-btn-danger` | destructive action |
+| `sc-choice` | a radio/checkbox in a card; the whole card shows the choice |
 
 ### Auth pages
 

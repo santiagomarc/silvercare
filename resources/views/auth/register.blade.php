@@ -207,25 +207,25 @@
                     @enderror
                 </div>
 
-                {{-- Secondary details: Phone and Username --}}
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-                    {{-- Phone Number (optional) --}}
-                    <div class="sc-field">
-                        <label for="phone_number" class="sc-label">Phone number <span class="sc-label-opt">(optional)</span></label>
-                        <input id="phone_number" type="tel" name="phone_number" value="{{ old('phone_number') }}"
-                               autocomplete="tel"
-                               class="sc-input @error('phone_number') sc-input-error @enderror"
-                               @error('phone_number') aria-invalid="true" aria-describedby="phone_number-error" @enderror
-                               placeholder="+1 (555) 000-0000">
-                        <p id="phone_number-error" class="sc-error hidden" role="alert"></p>
-                        @error('phone_number')
-                            <p class="sc-error" role="alert">
-                                <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg>
-                                <span>{{ $message }}</span>
-                            </p>
-                        @enderror
-                    </div>
+                {{-- Contact: Phone number (optional) --}}
+                <div class="sc-field">
+                    <label for="phone_number" class="sc-label">Phone number <span class="sc-label-opt">(optional)</span></label>
+                    <input id="phone_number" type="tel" name="phone_number" value="{{ old('phone_number') }}"
+                           autocomplete="tel"
+                           class="sc-input @error('phone_number') sc-input-error @enderror"
+                           @error('phone_number') aria-invalid="true" aria-describedby="phone_number-error" @enderror
+                           placeholder="+1 (555) 000-0000">
+                    <p id="phone_number-error" class="sc-error hidden" role="alert"></p>
+                    @error('phone_number')
+                        <p class="sc-error" role="alert">
+                            <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg>
+                            <span>{{ $message }}</span>
+                        </p>
+                    @enderror
+                </div>
 
+                {{-- Secondary details: Username and Age --}}
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
                     {{-- Username (optional) --}}
                     <div class="sc-field">
                         <label for="username" class="sc-label">Username <span class="sc-label-opt">(optional)</span></label>
@@ -236,6 +236,22 @@
                                placeholder="johndoe123">
                         <p id="username-error" class="sc-error hidden" role="alert"></p>
                         @error('username')
+                            <p class="sc-error" role="alert">
+                                <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg>
+                                <span>{{ $message }}</span>
+                            </p>
+                        @enderror
+                    </div>
+
+                    {{-- Age (optional) --}}
+                    <div class="sc-field">
+                        <label for="age" class="sc-label">Age <span class="sc-label-opt">(optional)</span></label>
+                        <input id="age" type="number" name="age" value="{{ old('age') }}" min="1" max="150"
+                               class="sc-input @error('age') sc-input-error @enderror"
+                               @error('age') aria-invalid="true" aria-describedby="age-error" @enderror
+                               placeholder="65">
+                        <p id="age-error" class="sc-error hidden" role="alert"></p>
+                        @error('age')
                             <p class="sc-error" role="alert">
                                 <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg>
                                 <span>{{ $message }}</span>
@@ -297,7 +313,7 @@
                     </div>
                 </div>
 
-                <button type="submit" id="submit-btn" disabled class="sc-btn sc-btn-primary w-full opacity-50 cursor-not-allowed mt-2">
+                <button type="submit" id="submit-btn" disabled class="sc-btn sc-btn-primary w-full cursor-not-allowed mt-2">
                     Create account
                     <svg class="sc-i sc-arrow w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-arrow-right"/></svg>
                 </button>
@@ -363,6 +379,7 @@
         email: { required: true, regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, msg: 'Please enter a valid email address.', checkUnique: true },
         phone_number: { required: false },
         username: { required: false, checkUnique: true },
+        age: { required: false, min: 1, max: 150, msg: 'Please enter an age between 1 and 150.' },
         password: { required: true, minLength: 8, msg: 'Password must be at least 8 characters.' },
         password_confirmation: { required: true, match: 'password', msg: 'Passwords do not match.' }
     };
@@ -382,6 +399,8 @@
         if (rule.required && !value) return rule.msg || 'This field is required.';
         if (!value && !rule.required) return ''; // Optional and empty is valid
         
+        if (rule.min !== undefined && (isNaN(Number(value)) || Number(value) < rule.min)) return rule.msg;
+        if (rule.max !== undefined && (isNaN(Number(value)) || Number(value) > rule.max)) return rule.msg;
         if (rule.regex && !rule.regex.test(value)) return rule.msg;
         if (rule.minLength && value.length < rule.minLength) return rule.msg;
         if (rule.match) {
@@ -422,10 +441,10 @@
         // Disable button if any base validation fails, uniqueness fails, or if a check is active
         if (isValid && checkingUnique === 0) {
             btn.disabled = false;
-            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            btn.classList.remove('cursor-not-allowed');
         } else {
             btn.disabled = true;
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            btn.classList.add('cursor-not-allowed');
         }
     }
 
