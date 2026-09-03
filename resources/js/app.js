@@ -30,6 +30,7 @@ import highContrastToggle, { initHighContrast } from './utils/high-contrast.js';
 import displayControls    from './components/display-controls.js';
 import dualView           from './components/dual-view.js';
 import { initScrollReveal } from './utils/scroll-reveal.js';
+import { initDaylight }     from './utils/daylight.js';
 
 // ── Theme bootstrap (5H: Dark Mode Toggle) ──────────────────────
 const preferredDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
@@ -141,3 +142,6 @@ Alpine.start();
 
 // Reveal-on-scroll for any page using the shared `.sc-reveal` class.
 initScrollReveal();
+
+// Time-of-day ambience on the auth pages.
+initDaylight();

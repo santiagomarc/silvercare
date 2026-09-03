@@ -231,6 +231,28 @@ html.dark .sc-page nav {
 
 .sc-btn-sm { min-height: 2.75rem; padding: .6rem 1.2rem; font-size: .95rem; }
 
+/* Disabled buttons get their own flat, desaturated surface — NOT the brand
+   colour at reduced opacity, which just reads as a second brand colour
+   (navy at 50% on warm paper looks lavender). Use this instead of
+   `opacity-50`; it keeps the label readable, which a washed-out button
+   does not. */
+.sc-btn:disabled,
+.sc-btn[aria-disabled="true"] {
+    background: var(--sc-surface-3) !important;
+    color: var(--sc-muted) !important;
+    border: 1px solid var(--sc-line) !important;
+    box-shadow: none !important;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* On a narrow phone the generous side padding pushed longer labels
+   ("Continue with Google") onto a second line. Trim the padding, never
+   the label. */
+@media (max-width: 420px) {
+    .sc-btn { padding-inline: 1rem; font-size: 1rem; }
+}
+
 /* Every icon-only control keeps a 48px hit area regardless of glyph size. */
 .sc-icon-btn {
     display: inline-flex; align-items: center; justify-content: center;
@@ -287,8 +309,8 @@ html.dark .sc-plate { box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
 }
 .sc-ambient::after {
     background:
-        radial-gradient(58% 46% at 78% 4%,  var(--sc-glow-a), transparent 72%),
-        radial-gradient(48% 40% at 8% 14%, var(--sc-glow-b), transparent 72%);
+        radial-gradient(58% 46% at var(--sc-glow-ax, 78%) 4%,  var(--sc-glow-a), transparent 72%),
+        radial-gradient(48% 40% at var(--sc-glow-bx, 8%) 14%, var(--sc-glow-b), transparent 72%);
 }
 
 /* ── Section rhythm ──────────────────────────────────────────── */
@@ -634,10 +656,16 @@ html.high-contrast .sc-cta-panel { box-shadow: none !important; }
    ══════════════════════════════════════════════════════════════════ */
 
 /* ── Forms ───────────────────────────────────────────────────────
+   Note the `.sc-page` prefix on every control below. @tailwindcss/forms
+   injects `[type='email'] { background-color: #fff }` into the base layer,
+   which loads after this file — at equal specificity it wins, and inputs
+   come out white in dark mode. The prefix wins the cascade back without
+   reaching for !important.
+
    A visible label above every field. Never a placeholder as the label:
    it disappears the moment someone types, which is exactly when an
    older adult looks up to check what they were filling in. */
-.sc-field { display: block; margin-bottom: 1.5rem; }
+.sc-field { display: block; margin-bottom: 1.25rem; }
 
 .sc-label {
     display: block;
@@ -657,9 +685,9 @@ html.high-contrast .sc-cta-panel { box-shadow: none !important; }
     color: var(--sc-muted);
 }
 
-.sc-input,
-.sc-select,
-.sc-textarea {
+.sc-page .sc-input,
+.sc-page .sc-select,
+.sc-page .sc-textarea {
     display: block;
     width: 100%;
     min-height: 3.25rem;                 /* 58px — comfortable for shaky hands */
@@ -674,8 +702,8 @@ html.high-contrast .sc-cta-panel { box-shadow: none !important; }
     box-shadow: var(--sc-sh-sm);
     transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
 }
-.sc-textarea { min-height: 7rem; resize: vertical; }
-.sc-select {
+.sc-page .sc-textarea { min-height: 7rem; resize: vertical; }
+.sc-page .sc-select {
     appearance: none;
     padding-right: 3rem;
     background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235C6675' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
@@ -683,38 +711,38 @@ html.high-contrast .sc-cta-panel { box-shadow: none !important; }
     background-position: right 1rem center;
     background-size: 1.25rem;
 }
-.sc-input::placeholder,
-.sc-textarea::placeholder { color: var(--sc-muted); opacity: 1; }
+.sc-page .sc-input::placeholder,
+.sc-page .sc-textarea::placeholder { color: var(--sc-muted); opacity: 1; }
 
-.sc-input:hover,
-.sc-select:hover,
-.sc-textarea:hover { border-color: var(--sc-brand-line); }
+.sc-page .sc-input:hover,
+.sc-page .sc-select:hover,
+.sc-page .sc-textarea:hover { border-color: var(--sc-brand-line); }
 
-.sc-input:focus,
-.sc-select:focus,
-.sc-textarea:focus {
+.sc-page .sc-input:focus,
+.sc-page .sc-select:focus,
+.sc-page .sc-textarea:focus {
     outline: none;                        /* replaced by the ring below */
     border-color: var(--sc-brand);
     box-shadow: 0 0 0 3px var(--sc-brand-tint);
 }
 /* Keyboard users still get the standard ring on top of the field style. */
-.sc-input:focus-visible,
-.sc-select:focus-visible,
-.sc-textarea:focus-visible {
+.sc-page .sc-input:focus-visible,
+.sc-page .sc-select:focus-visible,
+.sc-page .sc-textarea:focus-visible {
     outline: 3px solid var(--sc-ring);
     outline-offset: 2px;
 }
 
-.sc-input:disabled,
-.sc-select:disabled,
-.sc-textarea:disabled {
+.sc-page .sc-input:disabled,
+.sc-page .sc-select:disabled,
+.sc-page .sc-textarea:disabled {
     background: var(--sc-surface-3);
     color: var(--sc-muted);
     cursor: not-allowed;
     box-shadow: none;
 }
 /* Read-only is not disabled: the value still matters, it just cannot change. */
-.sc-input[readonly] {
+.sc-page .sc-input[readonly] {
     background: var(--sc-surface-2);
     border-style: dashed;
     box-shadow: none;
@@ -722,13 +750,13 @@ html.high-contrast .sc-cta-panel { box-shadow: none !important; }
 
 /* Error state carries a colour, a border AND an icon+message underneath —
    never colour alone. */
-.sc-input-error,
-.sc-select-error,
-.sc-textarea-error {
+.sc-page .sc-input-error,
+.sc-page .sc-select-error,
+.sc-page .sc-textarea-error {
     border-color: var(--sc-alert);
     background: var(--sc-alert-tint);
 }
-.sc-input-error:focus { box-shadow: 0 0 0 3px var(--sc-alert-tint); }
+.sc-page .sc-input-error:focus { box-shadow: 0 0 0 3px var(--sc-alert-tint); }
 
 .sc-help {
     display: block;
@@ -761,20 +789,44 @@ html.high-contrast .sc-cta-panel { box-shadow: none !important; }
 /* Checkbox / radio: 24px box, generous label hit area. */
 .sc-check {
     display: flex;
-    align-items: flex-start;
-    gap: .75rem;
+    align-items: center;
+    gap: .65rem;
     min-height: 2.75rem;
     padding: .4rem 0;
     cursor: pointer;
 }
-.sc-check input[type="checkbox"],
-.sc-check input[type="radio"] {
+.sc-page .sc-check input[type="radio"] {
     flex: none;
-    width: 1.4rem;
-    height: 1.4rem;
-    margin-top: .15rem;
+    width: 1.35rem;
+    height: 1.35rem;
     accent-color: var(--sc-brand);
     cursor: pointer;
+}
+
+.sc-page .sc-check input[type="checkbox"] {
+    flex: none;
+    appearance: none;
+    -webkit-appearance: none;
+    width: 1.45rem;
+    height: 1.45rem;
+    border: 2px solid var(--sc-line-strong);
+    border-radius: .45rem;
+    background: var(--sc-surface);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 1rem;
+    cursor: pointer;
+    transition: background-color .16s ease, border-color .16s ease;
+}
+.sc-page .sc-check input[type="checkbox"]:hover { border-color: var(--sc-brand); }
+.sc-page .sc-check input[type="checkbox"]:checked {
+    background-color: var(--sc-brand);
+    border-color: var(--sc-brand);
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+}
+.sc-page .sc-check input[type="checkbox"]:focus-visible {
+    outline: 3px solid var(--sc-ring);
+    outline-offset: 2px;
 }
 
 /* Grouped fields. Use a real <fieldset> + <legend> for related inputs. */
@@ -940,4 +992,109 @@ html.high-contrast .sc-cta-panel { box-shadow: none !important; }
     line-height: 1.1;
     color: var(--sc-ink);
     margin-top: .3rem;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   AUTH PAGES
+   ──────────────────────────────────────────────────────────────────
+   One centred column. A split layout would put a decorative half
+   beside the only thing on the page that matters, and on a phone that
+   half becomes dead scroll above the form.
+
+   The page's signature is the light: SilverCare organises a day into
+   morning, afternoon and evening, so the ambient wash behind the card
+   follows the reader's actual clock. It is the one true thing we can
+   say to someone who has not signed in yet — no invented testimonial,
+   no borrowed statistic. Only the glow moves; every text/background
+   pair stays fixed, so contrast is identical at every hour.
+   ══════════════════════════════════════════════════════════════════ */
+
+.sc-auth {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2.25rem 1rem 2rem;
+}
+/* `margin-block: auto` rather than `justify-content: center`. Centring a
+   flex column clips the top of anything taller than the viewport, and the
+   clipped part cannot be scrolled to — which on a short laptop screen
+   would hide the sign-in form's own heading. Auto margins centre when
+   there is room and get out of the way when there isn't. */
+.sc-auth-inner { width: 100%; max-width: 26.5rem; margin-block: auto; }
+
+/* "Welcome back." is a greeting, not a landing headline — it does not need
+   the full display scale, and shrinking it keeps the form above the fold. */
+.sc-auth-title { font-size: clamp(1.85rem, 1.55rem + 1.1vw, 2.35rem); line-height: 1.12; }
+
+/* Time of day. Only the two ambient glows change. */
+[data-daylight="morning"]   { --sc-glow-a: rgba(245, 158, 11, .22); --sc-glow-b: rgba(52, 81, 209, .10);
+                              --sc-glow-ax: 84%; --sc-glow-bx: 6%; }
+[data-daylight="afternoon"] { --sc-glow-a: rgba(52, 81, 209, .17);  --sc-glow-b: rgba(4, 120, 87, .11);
+                              --sc-glow-ax: 52%; --sc-glow-bx: 4%; }
+[data-daylight="evening"]   { --sc-glow-a: rgba(52, 81, 209, .24);  --sc-glow-b: rgba(109, 63, 168, .14);
+                              --sc-glow-ax: 16%; --sc-glow-bx: 92%; }
+
+html.dark [data-daylight="morning"]   { --sc-glow-a: rgba(245, 158, 11, .16); --sc-glow-b: rgba(52, 81, 209, .20); }
+html.dark [data-daylight="afternoon"] { --sc-glow-a: rgba(52, 81, 209, .28);  --sc-glow-b: rgba(16, 185, 129, .12); }
+html.dark [data-daylight="evening"]   { --sc-glow-a: rgba(52, 81, 209, .30);  --sc-glow-b: rgba(109, 63, 168, .18); }
+
+/* The card carries the whole page, so it gets the deepest shadow in the
+   system plus a lit top edge — the difference between a panel that sits
+   on the page and one that floats above it. */
+.sc-auth-card {
+    position: relative;
+    padding: 1.25rem;
+    border-radius: 1.75rem;
+    background: var(--sc-surface);
+    border: 1px solid var(--sc-line);
+    box-shadow: var(--sc-sh-lg), inset 0 1px 0 rgba(255, 255, 255, .7);
+}
+html.dark .sc-auth-card { box-shadow: var(--sc-sh-lg), inset 0 1px 0 rgba(255, 255, 255, .06); }
+@media (min-width: 480px) { .sc-auth-card { padding: 2rem; } }
+
+.sc-auth-card::before {
+    content: '';
+    position: absolute;
+    inset-inline: 3rem;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--sc-brand-line), transparent);
+}
+
+/* "or" rule between the OAuth button and the email form. */
+.sc-or {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-block: 1.1rem;
+    font-size: .95rem;
+    font-weight: 500;
+    color: var(--sc-muted);
+}
+.sc-or::before,
+.sc-or::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--sc-line);
+}
+
+/* Reader controls, parked out of the reading order's way. */
+.sc-auth-tools { position: absolute; top: 1.1rem; right: 1.1rem; z-index: 40; }
+
+/* Factual reassurance under the card. Two things we actually do — not a
+   testimonial, not a logo wall. */
+.sc-auth-facts {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .55rem;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--sc-line);
+    font-size: .92rem;
+    color: var(--sc-muted);
+    text-align: center;
 }

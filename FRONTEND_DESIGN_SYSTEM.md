@@ -50,7 +50,8 @@ Do not tell me it's finished until that prints "All checks passed".
 
 | Redesigning | REFERENCE_PAGE |
 | --- | --- |
-| A form (sign up, add medication, edit profile) | `resources/views/auth/login.blade.php` |
+| A sign-in / sign-up / auth page | `resources/views/auth/login.blade.php` |
+| A form (add medication, edit profile) | `resources/views/auth/login.blade.php` |
 | A page that uses a layout | `resources/views/auth/forgot-password.blade.php` |
 | A marketing or landing page | `resources/views/welcome.blade.php` |
 
@@ -66,7 +67,17 @@ Open the page and look for these four things. They're what agents get wrong:
 2. **Phone width.** Resize to 375px. Nothing should scroll sideways.
 3. **The form still works.** Actually submit it. Agents break JavaScript while
    restyling.
-4. **Nothing went missing.** Count the fields and links against the old version.
+4. **Nothing went missing.** Count the fields and links against the old
+   version. This is the one the checker cannot help with — it does not know
+   what *should* be on the page. Run:
+
+   ```bash
+   git show HEAD:path/to/page.blade.php | grep -oE 'name="[a-z_]+"' | sort -u
+   grep -oE 'name="[a-z_]+"' path/to/page.blade.php | sort -u
+   ```
+
+   and diff the two lists. A dropped field usually still submits fine — it
+   just silently saves null forever.
 
 ---
 
@@ -241,6 +252,15 @@ Use these instead of building your own. Full list is in
 link. Two loud buttons means the user has to make a decision you didn't ask
 them to make.
 
+**Disabled buttons:** use the real `disabled` attribute. Do **not** add
+`opacity-50` — the brand navy at half opacity reads as lavender, i.e. as a
+different brand colour, and the label goes unreadable. `.sc-btn:disabled`
+already has its own flat treatment.
+
+Better still, think twice before disabling a submit button at all. A button
+that does nothing and doesn't say why is a dead end. Prefer leaving it
+enabled and showing errors on submit.
+
 ### Cards
 
 ```blade
@@ -299,6 +319,24 @@ Rules:
 | `sc-num` | **any** number, time or dose — stops columns jittering |
 | `sc-textlink` | a link inside a sentence |
 | `sc-reveal` | fades in on scroll |
+
+### Auth pages
+
+`sc-auth` (the centred column) + `sc-auth-card` (the floating form card) +
+`sc-or` (the "or" rule) + `sc-auth-facts` (the quiet line under the form).
+
+The sign-in page's signature is **the light**. SilverCare organises a day into
+morning, afternoon and evening, so the ambient wash behind the card follows
+the reader's clock: warm and from the east in the morning, cool and from the
+west at night, with a greeting to match. `utils/daylight.js` sets it.
+
+Reuse it on any auth page by putting `data-daylight="afternoon"` on the
+`sc-ambient` wrapper and including the hidden greeting chip. It has to run in
+the browser — the server's clock is not the reader's.
+
+Note what it is *not*: an invented testimonial or a borrowed statistic. The
+time of day is the one true thing we can say to someone who hasn't signed in
+yet. Hold new pages to that standard.
 
 ---
 
@@ -409,6 +447,11 @@ Then look at it yourself at 375px wide and in dark mode.
   beats a component class. That's on purpose. But it means you must *not* size
   a component with utilities if its own CSS sizes it responsively — the
   utility wins and the component's media query never fires.
+- **`@tailwindcss/forms` overrides `sc-input`.** The plugin injects
+  `[type='email'] { background-color: #fff }` into Tailwind's base layer,
+  which loads after our stylesheet — so inputs came out white in dark mode.
+  Every form-control rule in `silvercare-ui.css` is therefore written as
+  `.sc-page .sc-input`, not `.sc-input`. Keep that prefix if you add more.
 - **`divide-y` uses Tailwind's grey** and ignores our colours. Use `sc-divide`.
 - **`.sc-display` sets its own colour.** Don't put it on text inside a filled
   button or it'll be navy-on-navy and invisible.

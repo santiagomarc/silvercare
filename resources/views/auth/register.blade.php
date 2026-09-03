@@ -1,419 +1,523 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Sign Up - SilverCare</title>
-    
-    <!-- Favicon -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#FAF9F6" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0B1220" media="(prefers-color-scheme: dark)">
+    <title>Create an account — SilverCare</title>
+
     <link rel="icon" type="image/png" href="{{ asset('assets/icons/silvercare.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('assets/icons/silvercare.png') }}">
-    
+
+    @include('partials.sc-theme-boot')
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700;800&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
+    @include('partials.sc-fonts')
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-
-    <style>
-        body { font-family: 'Montserrat', sans-serif; }
-        .fade-in-section {
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
-        }
-        .fade-in-section.is-visible {
-            opacity: 1;
-            transform: none;
-        }
-    </style>
 </head>
-<body class="antialiased bg-[#DEDEDE] relative">
+<body class="sc-page antialiased">
 
-    <!-- Background Image -->
-    <div class="fixed inset-0 bg-[url('https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?q=80&w=2048&auto=format&fit=crop')] bg-cover bg-center opacity-30"></div>
-    <div class="fixed inset-0 bg-gradient-to-br from-[#DEDEDE]/80 via-[#DEDEDE]/60 to-blue-100/40"></div>
+<a class="sc-skip" href="#main-content">Skip to main content</a>
 
-    <div class="min-h-screen w-full flex items-center justify-center px-4 py-12 relative z-10">
-        
-        <div class="w-full max-w-4xl bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] p-8 md:p-12">
-            
-            <!-- Header -->
-            <div class="relative text-center mb-8 pt-10">
-                <a href="{{ route('welcome') }}" class="absolute right-0 top-0 inline-flex items-center gap-2 text-gray-600 hover:text-[#000080] transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                    </svg>
-                    <span class="font-semibold">Back to Home</span>
-                </a>
-                <h1 class="text-4xl md:text-5xl font-[900] text-gray-900 tracking-tight mb-2">Create Account</h1>
-                <p class="text-gray-600 font-medium">Join SilverCare today</p>
+@include('partials.sc-icons')
+
+{{-- `data-daylight` is rewritten in the browser by utils/daylight.js —
+     the server's clock is not the reader's. --}}
+<div class="sc-auth sc-ambient relative" data-daylight="afternoon">
+
+    {{-- Reader controls stay reachable before sign-in: someone who set
+         larger text on the landing page must not lose it at the door. --}}
+    <div class="sc-auth-tools" x-data="displayControls()" @keydown.escape.window="open = false">
+        <button type="button" class="sc-icon-btn"
+                aria-expanded="false"
+                :aria-expanded="open ? 'true' : 'false'"
+                aria-controls="sc-display-menu"
+                aria-haspopup="true"
+                @click="open = !open">
+            <svg class="sc-i w-6 h-6" aria-hidden="true" focusable="false"><use href="#i-accessibility"/></svg>
+            <span class="sr-only">Display and accessibility options</span>
+        </button>
+
+        <div id="sc-display-menu" x-show="open" x-cloak
+             @click.outside="open = false"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 -translate-y-1"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             class="absolute right-0 mt-3 w-[19rem] p-5 space-y-5 sc-card sc-card-pop z-50"
+             role="group" aria-label="Display and accessibility settings">
+
+            <div>
+                <p class="flex items-center gap-2 font-semibold mb-2.5" style="color:var(--sc-ink)">
+                    <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-type"/></svg>
+                    Text size
+                </p>
+                <div class="grid grid-cols-3 gap-2" role="group" aria-label="Text size">
+                    <template x-for="opt in scales" :key="opt.value">
+                        <button type="button" @click="setScale(opt.value)"
+                                :aria-pressed="scale === opt.value ? 'true' : 'false'"
+                                :aria-label="opt.aria"
+                                class="sc-size-btn" :class="scale === opt.value && 'sc-size-btn-on'">
+                            <span :style="`font-size:${opt.preview}`" x-text="opt.label"></span>
+                            <span class="text-sm leading-none" x-text="opt.name"></span>
+                        </button>
+                    </template>
+                </div>
             </div>
 
-            <form method="POST" action="{{ route('register') }}" class="space-y-6">
-                @csrf
+            <div class="flex items-center justify-between gap-4">
+                <span class="flex items-center gap-2 font-medium" id="sc-dark-label" style="color:var(--sc-ink)">
+                    <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-moon"/></svg>
+                    Dark mode
+                </span>
+                <button type="button" role="switch" class="sc-switch"
+                        aria-labelledby="sc-dark-label" aria-checked="false"
+                        :aria-checked="dark ? 'true' : 'false'" @click="toggleDark()"></button>
+            </div>
 
-                <!-- Show all errors at top (Removed for inline validation) -->
-
-                <!-- Google Sign-In -->
-                <div class="fade-in-section transition-delay-200">
-                    <a href="{{ route('auth.google.redirect') }}" class="w-full inline-flex items-center justify-center gap-3 border-2 border-gray-200 hover:border-[#000080] bg-white py-3 rounded-xl font-bold text-gray-800 transition-all duration-200">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
-                            <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.2-1.4 3.4-5.5 3.4-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 2.9 14.6 2 12 2 6.5 2 2 6.5 2 12s4.5 10 10 10c5.8 0 9.7-4.1 9.7-9.9 0-.7-.1-1.3-.2-1.9H12z"/>
-                        </svg>
-                        Continue with Google
-                    </a>
-                </div>
-
-                <div class="flex items-center gap-3 fade-in-section transition-delay-300">
-                    <div class="h-px flex-1 bg-gray-200"></div>
-                    <span class="text-xs font-semibold tracking-wider text-gray-500">OR SIGN UP WITH EMAIL</span>
-                    <div class="h-px flex-1 bg-gray-200"></div>
-                </div>
-
-                <!-- Two Column Layout for Fields -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 fade-in-section transition-delay-400">
-                    <div class="space-y-5">
-                        <div>
-                            <label for="user_type" class="block text-sm font-bold text-gray-700 mb-2">I am signing up as</label>
-                            <select id="user_type" name="user_type" required
-                                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium">
-                                <option value="">Select role</option>
-                                <option value="elderly" {{ old('user_type') == 'elderly' ? 'selected' : '' }}>Elderly / Patient</option>
-                                <option value="caregiver" {{ old('user_type') == 'caregiver' ? 'selected' : '' }}>Caregiver</option>
-                            </select>
-                            <p id="user_type-error" class="text-[13px] text-red-600 font-medium mt-1 hidden"></p>
-                            @error('user_type')
-                                <p class="text-[13px] text-red-600 font-medium mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div>
-                            <label for="name" class="block text-sm font-bold text-gray-700 mb-2">Full Name</label>
-                            <input id="name" type="text" name="name" value="{{ old('name') }}" required autofocus
-                                   class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium"
-                                   placeholder="John Doe">
-                            <p id="name-error" class="text-[13px] text-red-600 font-medium mt-1 hidden"></p>
-                            @error('name')
-                                <p class="text-[13px] text-red-600 font-medium mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div>
-                            <label for="email" class="block text-sm font-bold text-gray-700 mb-2">Email Address</label>
-                            <input id="email" type="email" name="email" value="{{ old('email') }}" required
-                                   class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium"
-                                   placeholder="you@example.com">
-                            <p id="email-error" class="text-[13px] text-red-600 font-medium mt-1 hidden"></p>
-                            @error('email')
-                                <p class="text-[13px] text-red-600 font-medium mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div>
-                            <label for="phone_number" class="block text-sm font-bold text-gray-700 mb-2">Phone Number (optional)</label>
-                            <input id="phone_number" type="tel" name="phone_number" value="{{ old('phone_number') }}"
-                                   class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium"
-                                   placeholder="+1234567890">
-                            <p id="phone_number-error" class="text-[13px] text-red-600 font-medium mt-1 hidden"></p>
-                            @error('phone_number')
-                                <p class="text-[13px] text-red-600 font-medium mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="space-y-5">
-                        <div>
-                            <label for="username" class="block text-sm font-bold text-gray-700 mb-2">Username (optional)</label>
-                            <input id="username" type="text" name="username" value="{{ old('username') }}"
-                                   class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium"
-                                   placeholder="johndoe123">
-                            <p id="username-error" class="text-[13px] text-red-600 font-medium mt-1 hidden"></p>
-                            @error('username')
-                                <p class="text-[13px] text-red-600 font-medium mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div>
-                            <label for="password" class="block text-sm font-bold text-gray-700 mb-2">Password</label>
-                            <div class="relative">
-                                <input id="password" type="password" name="password" required
-                                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium pr-12"
-                                    placeholder="Enter password">
-                                <button type="button"
-                                        onclick="togglePassword('password', this)"
-                                        class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 transition-colors duration-200">
-                                    <!-- Eye Open Icon (default) -->
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="eye-icon h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                    </svg>
-                                </button>
-                            </div>
-                            <p id="password-error" class="text-[13px] text-red-600 font-medium mt-1 hidden"></p>
-                            @error('password')
-                                <p class="text-[13px] text-red-600 font-medium mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div>
-                            <label for="password_confirmation" class="block text-sm font-bold text-gray-700 mb-2">Confirm Password</label>
-                            <div class="relative">
-                                <input id="password_confirmation" type="password" name="password_confirmation" required
-                                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium pr-12"
-                                    placeholder="Confirm password">
-                                <button type="button"
-                                        onclick="togglePassword('password_confirmation', this)"
-                                        class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 transition-colors duration-200">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="eye-icon h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                    </svg>
-                                </button>
-                            </div>
-                            <p id="password_confirmation-error" class="text-[13px] text-red-600 font-medium mt-1 hidden"></p>
-                            @error('password_confirmation')
-                                <p class="text-[13px] text-red-600 font-medium mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        {{--<div>
-                            <label for="age" class="block text-sm font-bold text-gray-700 mb-2">Age (optional)</label>
-                            <input id="age" type="number" name="age" value="{{ old('age') }}" min="1" max="150"
-                                   class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium"
-                                   placeholder="65">
-                        </div>--}}
-                    </div>
-                </div>
-
-                <!-- Register Button (Centered) -->
-                <div class="pt-6 flex justify-center fade-in-section transition-delay-500">
-                    <button type="submit" id="submit-btn" disabled class="group relative w-full max-w-md opacity-50 cursor-not-allowed">
-                        <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[82px] opacity-50 blur transition duration-200 group-hover:opacity-75"></div>
-                        <div class="relative w-full py-4 bg-[#000080] text-white font-[800] text-xl rounded-[82px] shadow-[0_8px_20px_rgba(0,0,128,0.3)] transition-all duration-300 transform group-hover:-translate-y-1 group-active:scale-95">
-                            CREATE ACCOUNT
-                        </div>
-                    </button>
-                </div>
-
-                <!-- Login Link (Centered) -->
-                <div class="text-center pt-4 fade-in-section transition-delay-600">
-                    <p class="text-gray-600">
-                        Already have an account? 
-                        <a href="{{ route('login') }}" class="font-bold text-[#000080] hover:text-blue-900 transition-colors">
-                            Sign In
-                        </a>
-                    </p>
-                </div>
-            </form>
-
+            <div class="flex items-center justify-between gap-4">
+                <span class="flex items-center gap-2 font-medium" id="sc-contrast-label" style="color:var(--sc-ink)">
+                    <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-contrast"/></svg>
+                    High contrast
+                </span>
+                <button type="button" role="switch" class="sc-switch"
+                        aria-labelledby="sc-contrast-label" aria-checked="false"
+                        :aria-checked="contrast ? 'true' : 'false'" @click="toggleContrast()"></button>
+            </div>
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const observerOptions = {root: null, rootMargin: '0px', threshold: 0.1};
-            const observer = new IntersectionObserver((entries, observer) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const delays = {
-                            'transition-delay-100': 0, 'transition-delay-200': 100, 'transition-delay-300': 200,
-                            'transition-delay-400': 250, 'transition-delay-500': 300, 'transition-delay-600': 350
-                        };
-                        let delay = 0;
-                        for (const [className, ms] of Object.entries(delays)) {
-                            if (entry.target.classList.contains(className)) { delay = ms; break; }
-                        }
-                        setTimeout(() => entry.target.classList.add('is-visible'), delay);
-                        observer.unobserve(entry.target);
-                    }
-                });
-            }, observerOptions);
-            document.querySelectorAll('.fade-in-section').forEach((section) => { observer.observe(section); });
-        });
+    <div class="sc-auth-inner max-w-xl">
 
-        function togglePassword(fieldId, btn) {
-            const input = document.getElementById(fieldId);
-            const isHidden = input.type === 'password';
+        {{-- ── Greeting ──────────────────────────────────────────── --}}
+        <div class="text-center mb-7">
+            <a href="{{ route('welcome') }}" class="sc-brand justify-center sc-reveal">
+                <span class="sc-brand-mark"><img src="{{ asset('assets/icons/silvercare.png') }}" alt=""></span>
+                <span class="sc-brand-word">SilverCare</span>
+                <span class="sr-only">SilverCare home</span>
+            </a>
 
-            // Toggle input type
-            input.type = isHidden ? 'text' : 'password';
+            {{-- Hidden until the browser knows the hour; a greeting that
+                 guessed wrong would be worse than none. --}}
+            <div class="mt-6 sc-reveal" style="--sc-d:80ms">
+                <p class="sc-chip" data-daylight-chip hidden>
+                    <svg class="sc-i w-4 h-4" aria-hidden="true" focusable="false"><use href="#i-sun"/></svg>
+                    <span data-daylight-label></span>
+                </p>
+            </div>
 
-            // Swap icon
-            btn.innerHTML = isHidden ? `
-                <!-- Eye Slash (password visible) -->
-                <svg xmlns="http://www.w3.org/2000/svg" class="eye-icon h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 4.411m0 0L21 21" />
+            <h1 class="sc-auth-title mt-4 sc-reveal" style="--sc-d:140ms">Create your account.</h1>
+            <p class="mt-2.5 sc-reveal" style="--sc-d:200ms;color:var(--sc-body)">
+                Join SilverCare to coordinate care, track health, and stay connected.
+            </p>
+        </div>
+
+        {{-- ── Form ──────────────────────────────────────────────── --}}
+        <main id="main-content" class="sc-auth-card sc-reveal" style="--sc-d:260ms">
+
+            @if (session('status'))
+                <p class="flex items-start gap-2.5 p-4 mb-6 rounded-2xl"
+                   style="background:var(--sc-ok-tint);border:1px solid var(--sc-ok-line);color:var(--sc-ok)">
+                    <svg class="sc-i w-5 h-5 mt-0.5" aria-hidden="true" focusable="false"><use href="#i-check-circle"/></svg>
+                    <span class="font-medium">{{ session('status') }}</span>
+                </p>
+            @endif
+
+            {{-- More than one field failed: summarise at the top, link each
+                 item to its field, and keep the inline messages too. --}}
+            @if ($errors->any() && $errors->count() > 1)
+                <div class="sc-error-summary mb-6" role="alert" tabindex="-1" x-init="$el.focus()">
+                    <p class="font-semibold">Please check {{ $errors->count() }} things before continuing:</p>
+                    <ul class="mt-2 space-y-1 list-disc list-inside">
+                        @foreach ($errors->keys() as $field)
+                            <li><a href="#{{ $field }}">{{ $errors->first($field) }}</a></li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <a href="{{ route('auth.google.redirect') }}"
+               id="googleSignInBtn"
+               onclick="handleGoogleSignIn(event)"
+               class="sc-btn sc-btn-ghost w-full">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.2-1.4 3.4-5.5 3.4-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 2.9 14.6 2 12 2 6.5 2 2 6.5 2 12s4.5 10 10 10c5.8 0 9.7-4.1 9.7-9.9 0-.7-.1-1.3-.2-1.9H12z"/>
                 </svg>
-            ` : `
-                <!-- Eye Open (password hidden) -->
-                <svg xmlns="http://www.w3.org/2000/svg" class="eye-icon h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-            `;
+                <span id="googleSignInLabel">Continue with Google</span>
+            </a>
+
+            <p class="sc-or" aria-hidden="true">or</p>
+
+            <form method="POST" action="{{ route('register') }}" novalidate>
+                @csrf
+
+                {{-- Role selection --}}
+                <div class="sc-field">
+                    <label for="user_type" class="sc-label sc-label-req">I am signing up as</label>
+                    <select id="user_type" name="user_type" required
+                            class="sc-select @error('user_type') sc-select-error @enderror"
+                            @error('user_type') aria-invalid="true" aria-describedby="user_type-error" @enderror>
+                        <option value="">Select role</option>
+                        <option value="elderly" {{ old('user_type') == 'elderly' ? 'selected' : '' }}>Elderly / Patient</option>
+                        <option value="caregiver" {{ old('user_type') == 'caregiver' ? 'selected' : '' }}>Caregiver</option>
+                    </select>
+                    <p id="user_type-error" class="sc-error hidden" role="alert"></p>
+                    @error('user_type')
+                        <p class="sc-error" role="alert">
+                            <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg>
+                            <span>{{ $message }}</span>
+                        </p>
+                    @enderror
+                </div>
+
+                {{-- Full Name --}}
+                <div class="sc-field">
+                    <label for="name" class="sc-label sc-label-req">Full name</label>
+                    <input id="name" type="text" name="name" value="{{ old('name') }}" required autofocus
+                           autocomplete="name"
+                           class="sc-input @error('name') sc-input-error @enderror"
+                           @error('name') aria-invalid="true" aria-describedby="name-error" @enderror
+                           placeholder="John Doe">
+                    <p id="name-error" class="sc-error hidden" role="alert"></p>
+                    @error('name')
+                        <p class="sc-error" role="alert">
+                            <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg>
+                            <span>{{ $message }}</span>
+                        </p>
+                    @enderror
+                </div>
+
+                {{-- Email Address --}}
+                <div class="sc-field">
+                    <label for="email" class="sc-label sc-label-req">Email address</label>
+                    <input id="email" type="email" name="email" value="{{ old('email') }}" required
+                           autocomplete="email" inputmode="email"
+                           class="sc-input @error('email') sc-input-error @enderror"
+                           @error('email') aria-invalid="true" aria-describedby="email-error" @enderror
+                           placeholder="you@example.com">
+                    <p id="email-error" class="sc-error hidden" role="alert"></p>
+                    @error('email')
+                        <p class="sc-error" role="alert">
+                            <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg>
+                            <span>{{ $message }}</span>
+                        </p>
+                    @enderror
+                </div>
+
+                {{-- Secondary details: Phone and Username --}}
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+                    {{-- Phone Number (optional) --}}
+                    <div class="sc-field">
+                        <label for="phone_number" class="sc-label">Phone number <span class="sc-label-opt">(optional)</span></label>
+                        <input id="phone_number" type="tel" name="phone_number" value="{{ old('phone_number') }}"
+                               autocomplete="tel"
+                               class="sc-input @error('phone_number') sc-input-error @enderror"
+                               @error('phone_number') aria-invalid="true" aria-describedby="phone_number-error" @enderror
+                               placeholder="+1 (555) 000-0000">
+                        <p id="phone_number-error" class="sc-error hidden" role="alert"></p>
+                        @error('phone_number')
+                            <p class="sc-error" role="alert">
+                                <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg>
+                                <span>{{ $message }}</span>
+                            </p>
+                        @enderror
+                    </div>
+
+                    {{-- Username (optional) --}}
+                    <div class="sc-field">
+                        <label for="username" class="sc-label">Username <span class="sc-label-opt">(optional)</span></label>
+                        <input id="username" type="text" name="username" value="{{ old('username') }}"
+                               autocomplete="username"
+                               class="sc-input @error('username') sc-input-error @enderror"
+                               @error('username') aria-invalid="true" aria-describedby="username-error" @enderror
+                               placeholder="johndoe123">
+                        <p id="username-error" class="sc-error hidden" role="alert"></p>
+                        @error('username')
+                            <p class="sc-error" role="alert">
+                                <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg>
+                                <span>{{ $message }}</span>
+                            </p>
+                        @enderror
+                    </div>
+                </div>
+
+                {{-- Credentials: Password and Confirm Password --}}
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+                    {{-- Password --}}
+                    <div class="sc-field">
+                        <label for="password" class="sc-label sc-label-req">Password</label>
+                        <div class="relative">
+                            <input id="password" type="password" name="password" required
+                                   autocomplete="new-password"
+                                   class="sc-input pr-16 @error('password') sc-input-error @enderror"
+                                   @error('password') aria-invalid="true" aria-describedby="password-error" @enderror
+                                   placeholder="At least 8 characters">
+                            <button type="button"
+                                    onclick="togglePassword('password', this)"
+                                    aria-label="Show password"
+                                    class="sc-icon-btn absolute right-1 top-1/2 -translate-y-1/2">
+                                <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-eye"/></svg>
+                            </button>
+                        </div>
+                        <p id="password-error" class="sc-error hidden" role="alert"></p>
+                        @error('password')
+                            <p class="sc-error" role="alert">
+                                <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg>
+                                <span>{{ $message }}</span>
+                            </p>
+                        @enderror
+                    </div>
+
+                    {{-- Confirm Password --}}
+                    <div class="sc-field">
+                        <label for="password_confirmation" class="sc-label sc-label-req">Confirm password</label>
+                        <div class="relative">
+                            <input id="password_confirmation" type="password" name="password_confirmation" required
+                                   autocomplete="new-password"
+                                   class="sc-input pr-16 @error('password_confirmation') sc-input-error @enderror"
+                                   @error('password_confirmation') aria-invalid="true" aria-describedby="password_confirmation-error" @enderror
+                                   placeholder="Repeat password">
+                            <button type="button"
+                                    onclick="togglePassword('password_confirmation', this)"
+                                    aria-label="Show password"
+                                    class="sc-icon-btn absolute right-1 top-1/2 -translate-y-1/2">
+                                <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-eye"/></svg>
+                            </button>
+                        </div>
+                        <p id="password_confirmation-error" class="sc-error hidden" role="alert"></p>
+                        @error('password_confirmation')
+                            <p class="sc-error" role="alert">
+                                <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg>
+                                <span>{{ $message }}</span>
+                            </p>
+                        @enderror
+                    </div>
+                </div>
+
+                <button type="submit" id="submit-btn" disabled class="sc-btn sc-btn-primary w-full opacity-50 cursor-not-allowed mt-2">
+                    Create account
+                    <svg class="sc-i sc-arrow w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-arrow-right"/></svg>
+                </button>
+            </form>
+        </main>
+
+        <p class="text-center mt-6 sc-reveal" style="--sc-d:320ms;color:var(--sc-body)">
+            Already have an account?
+            <a href="{{ route('login') }}" class="sc-textlink">Sign in</a>
+        </p>
+
+        <ul class="sc-auth-facts sc-reveal" style="--sc-d:380ms">
+            <li>
+                <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-lock"/></svg>
+                Encrypted health records
+            </li>
+            <li>
+                <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-shield"/></svg>
+                Your data is never sold
+            </li>
+        </ul>
+    </div>
+</div>
+
+<script>
+    // Google OAuth: show a loading state and block the double-click.
+    function handleGoogleSignIn(e) {
+        const btn   = document.getElementById('googleSignInBtn');
+        const label = document.getElementById('googleSignInLabel');
+        if (btn.dataset.loading) { e.preventDefault(); return; }
+        btn.dataset.loading = '1';
+        btn.setAttribute('aria-disabled', 'true');
+        btn.classList.add('opacity-70', 'cursor-not-allowed');
+        label.textContent = 'Redirecting…';
+    }
+
+    @if (session('swal_error'))
+    // OAuth failure flashed by ProviderController.
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof window.scToast === 'function') {
+            window.scToast({{ Js::from(session('swal_error')) }}, 'error');
+        }
+    });
+    @endif
+
+    function togglePassword(fieldId, btn) {
+        const input = document.getElementById(fieldId);
+        const isHidden = input.type === 'password';
+
+        // Toggle input type
+        input.type = isHidden ? 'text' : 'password';
+
+        // Update accessible label and icon sprite
+        btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+        btn.innerHTML = isHidden
+            ? '<svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-eye-off"/></svg>'
+            : '<svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-eye"/></svg>';
+    }
+
+    const fields = {
+        user_type: { required: true, msg: 'Please select your role.' },
+        name: { required: true, msg: 'Full name is required.' },
+        email: { required: true, regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, msg: 'Please enter a valid email address.', checkUnique: true },
+        phone_number: { required: false },
+        username: { required: false, checkUnique: true },
+        password: { required: true, minLength: 8, msg: 'Password must be at least 8 characters.' },
+        password_confirmation: { required: true, match: 'password', msg: 'Passwords do not match.' }
+    };
+
+    const state = {};
+    Object.keys(fields).forEach(id => {
+        state[id] = { dirty: false, blurred: false, error: '', loading: false, uniqueError: '' };
+    });
+
+    // Track global async checking state to disable button
+    let checkingUnique = 0;
+
+    function validateField(id, value) {
+        const rule = fields[id];
+        if (!rule) return '';
+        
+        if (rule.required && !value) return rule.msg || 'This field is required.';
+        if (!value && !rule.required) return ''; // Optional and empty is valid
+        
+        if (rule.regex && !rule.regex.test(value)) return rule.msg;
+        if (rule.minLength && value.length < rule.minLength) return rule.msg;
+        if (rule.match) {
+            const matchVal = document.getElementById(rule.match).value;
+            if (value !== matchVal) return rule.msg;
+        }
+        return '';
+    }
+
+    function updateUI(id) {
+        const errEl = document.getElementById(id + '-error');
+        if (!errEl) return;
+
+        // Exception: password and password_confirmation validate on input (no blur needed)
+        const shouldShow = (state[id].blurred && state[id].dirty) || ((id === 'password' || id === 'password_confirmation') && state[id].dirty);
+        
+        const currentErr = state[id].error || state[id].uniqueError;
+        
+        if (shouldShow && currentErr) {
+            errEl.innerHTML = `<svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg><span>${currentErr}</span>`;
+            errEl.classList.remove('hidden');
+        } else {
+            errEl.classList.add('hidden');
+            errEl.textContent = '';
+        }
+    }
+
+    function checkFormValidity() {
+        let isValid = true;
+        for (const id of Object.keys(fields)) {
+            const el = document.getElementById(id);
+            const val = (id.startsWith('password')) ? el.value : el.value.trim();
+            const err = validateField(id, val);
+            if (err || state[id].uniqueError) isValid = false;
         }
 
-        const fields = {
-            user_type: { required: true, msg: 'Please select your role.' },
-            name: { required: true, msg: 'Full name is required.' },
-            email: { required: true, regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, msg: 'Please enter a valid email address.', checkUnique: true },
-            phone_number: { required: false },
-            username: { required: false, checkUnique: true },
-            password: { required: true, minLength: 8, msg: 'Password must be at least 8 characters.' },
-            password_confirmation: { required: true, match: 'password', msg: 'Passwords do not match.' }
-        };
-
-        const state = {};
-        Object.keys(fields).forEach(id => {
-            state[id] = { dirty: false, blurred: false, error: '', loading: false, uniqueError: '' };
-        });
-
-        // Track global async checking state to disable button
-        let checkingUnique = 0;
-
-        function validateField(id, value) {
-            const rule = fields[id];
-            if (!rule) return '';
-            
-            if (rule.required && !value) return rule.msg || 'This field is required.';
-            if (!value && !rule.required) return ''; // Optional and empty is valid
-            
-            if (rule.regex && !rule.regex.test(value)) return rule.msg;
-            if (rule.minLength && value.length < rule.minLength) return rule.msg;
-            if (rule.match) {
-                const matchVal = document.getElementById(rule.match).value;
-                if (value !== matchVal) return rule.msg;
-            }
-            return '';
+        const btn = document.getElementById('submit-btn');
+        // Disable button if any base validation fails, uniqueness fails, or if a check is active
+        if (isValid && checkingUnique === 0) {
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
         }
+    }
 
-        function updateUI(id) {
-            const errEl = document.getElementById(id + '-error');
-            if (!errEl) return;
+    async function checkUniqueness(id, value) {
+        if (!value) return;
+        
+        // Only check if basic validation passes
+        if (state[id].error) return;
 
-            // Exception: password and password_confirmation validate on input (no blur needed)
-            const shouldShow = (state[id].blurred && state[id].dirty) || ((id === 'password' || id === 'password_confirmation') && state[id].dirty);
+        checkingUnique++;
+        checkFormValidity();
+        
+        try {
+            const formData = new FormData();
+            formData.append('_token', document.querySelector('input[name="_token"]').value);
+            formData.append('check_unique', id);
+            formData.append(id, value);
             
-            const currentErr = state[id].error || state[id].uniqueError;
+            const response = await fetch("{{ route('register') }}", {
+                method: 'POST',
+                headers: { 'Accept': 'application/json' },
+                body: formData
+            });
             
-            if (shouldShow && currentErr) {
-                errEl.textContent = currentErr;
-                errEl.classList.remove('hidden');
-            } else {
-                errEl.classList.add('hidden');
-            }
-        }
-
-        function checkFormValidity() {
-            let isValid = true;
-            for (const id of Object.keys(fields)) {
-                const el = document.getElementById(id);
-                const val = (id.startsWith('password')) ? el.value : el.value.trim();
-                const err = validateField(id, val);
-                if (err || state[id].uniqueError) isValid = false;
-            }
-
-            const btn = document.getElementById('submit-btn');
-            // Disable button if any base validation fails, uniqueness fails, or if a check is active
-            if (isValid && checkingUnique === 0) {
-                btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
-            } else {
-                btn.disabled = true;
-                btn.classList.add('opacity-50', 'cursor-not-allowed');
-            }
-        }
-
-        async function checkUniqueness(id, value) {
-            if (!value) return;
-            
-            // Only check if basic validation passes
-            if (state[id].error) return;
-
-            checkingUnique++;
-            checkFormValidity();
-            
-            try {
-                const formData = new FormData();
-                formData.append('_token', document.querySelector('input[name="_token"]').value);
-                formData.append('check_unique', id);
-                formData.append(id, value);
-                
-                const response = await fetch("{{ route('register') }}", {
-                    method: 'POST',
-                    headers: { 'Accept': 'application/json' },
-                    body: formData
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.taken) {
-                        state[id].uniqueError = id === 'username' 
-                            ? 'This username is already taken.' 
-                            : 'An account with this email already exists.';
-                    } else {
-                        state[id].uniqueError = '';
-                    }
+            if (response.ok) {
+                const data = await response.json();
+                if (data.taken) {
+                    state[id].uniqueError = id === 'username' 
+                        ? 'This username is already taken.' 
+                        : 'An account with this email already exists.';
+                } else {
+                    state[id].uniqueError = '';
                 }
-            } catch (err) {
-                console.error('Validation check failed', err);
-            } finally {
-                checkingUnique--;
+            }
+        } catch (err) {
+            console.error('Validation check failed', err);
+        } finally {
+            checkingUnique--;
+            updateUI(id);
+            checkFormValidity();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        Object.keys(fields).forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+
+            const evaluate = () => {
+                const val = (id.startsWith('password')) ? el.value : el.value.trim();
+                state[id].error = validateField(id, val);
                 updateUI(id);
                 checkFormValidity();
-            }
-        }
+            };
 
-        document.addEventListener('DOMContentLoaded', function() {
-            Object.keys(fields).forEach(id => {
-                const el = document.getElementById(id);
-                if (!el) return;
-
-                const evaluate = () => {
-                    const val = (id.startsWith('password')) ? el.value : el.value.trim();
-                    state[id].error = validateField(id, val);
-                    updateUI(id);
-                    checkFormValidity();
-                };
-
-                el.addEventListener('input', () => {
-                    state[id].dirty = true;
-                    // Clear unique error immediately on input changes
-                    if (state[id].uniqueError) {
-                        state[id].uniqueError = '';
-                    }
-                    evaluate();
-                    
-                    // Cross-field validation for password changing
-                    if (id === 'password' && state['password_confirmation'].dirty) {
-                        const confEl = document.getElementById('password_confirmation');
-                        state['password_confirmation'].error = validateField('password_confirmation', confEl.value);
-                        updateUI('password_confirmation');
-                    }
-                });
-
-                el.addEventListener('blur', () => {
-                    state[id].blurred = true;
-                    evaluate();
-                    
-                    // Trigger uniqueness validation if applicable and no basic errors
-                    if (fields[id].checkUnique && state[id].dirty && !state[id].error) {
-                        const val = el.value.trim();
-                        checkUniqueness(id, val);
-                    }
-                });
+            el.addEventListener('input', () => {
+                state[id].dirty = true;
+                // Clear unique error immediately on input changes
+                if (state[id].uniqueError) {
+                    state[id].uniqueError = '';
+                }
+                evaluate();
                 
-                el.addEventListener('change', () => {
-                    state[id].dirty = true;
-                    evaluate();
-                });
+                // Cross-field validation for password changing
+                if (id === 'password' && state['password_confirmation'].dirty) {
+                    const confEl = document.getElementById('password_confirmation');
+                    state['password_confirmation'].error = validateField('password_confirmation', confEl.value);
+                    updateUI('password_confirmation');
+                }
             });
 
-            // Initial button state check
-            checkFormValidity();
+            el.addEventListener('blur', () => {
+                state[id].blurred = true;
+                evaluate();
+                
+                // Trigger uniqueness validation if applicable and no basic errors
+                if (fields[id].checkUnique && state[id].dirty && !state[id].error) {
+                    const val = el.value.trim();
+                    checkUniqueness(id, val);
+                }
+            });
+            
+            el.addEventListener('change', () => {
+                state[id].dirty = true;
+                evaluate();
+            });
         });
-    </script>
+
+        // Initial button state check
+        checkFormValidity();
+    });
+</script>
+
 </body>
 </html>
-                
