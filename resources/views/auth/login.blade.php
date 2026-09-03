@@ -1,252 +1,269 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Sign In - SilverCare</title>
-    
-    <!-- Favicon -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#FAF9F6" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0B1220" media="(prefers-color-scheme: dark)">
+    <title>Sign in — SilverCare</title>
+
     <link rel="icon" type="image/png" href="{{ asset('assets/icons/silvercare.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('assets/icons/silvercare.png') }}">
-    
+
+    @include('partials.sc-theme-boot')
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700;800&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
+    @include('partials.sc-fonts')
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-
-    <style>
-        body { font-family: 'Montserrat', sans-serif; }
-        .fade-in-section {
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
-            will-change: opacity, visibility;
-        }
-        .fade-in-section.is-visible {
-            opacity: 1;
-            transform: none;
-        }
-    </style>
 </head>
-<body class="antialiased bg-[#DEDEDE] overflow-hidden">
+<body class="sc-page antialiased">
 
-    <div class="min-h-screen w-full flex relative">
-        
-        <!-- Left Side: Login Form -->
-        <div class="w-full lg:w-5/12 h-screen flex flex-col justify-center items-center px-6 relative z-10">
-            
-            <div class="w-full max-w-md">
-                
-                <!-- Back Button -->
-                <div class="flex justify-end mb-4 fade-in-section transition-delay-100">
-                    <a href="{{ route('welcome') }}" class="inline-flex items-center gap-2 text-gray-600 hover:text-[#000080] transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                        </svg>
-                        <span class="font-semibold">Back to Home</span>
-                    </a>
+<a class="sc-skip" href="#main-content">Skip to main content</a>
+
+@include('partials.sc-icons')
+
+<div class="min-h-screen lg:grid lg:grid-cols-12">
+
+    {{-- ── Form ──────────────────────────────────────────────────── --}}
+    <div class="sc-ambient lg:col-span-6 xl:col-span-5 flex flex-col justify-center px-5 sm:px-10 py-10">
+        <div class="w-full max-w-md mx-auto">
+
+            <div class="flex items-center justify-between gap-4 mb-10">
+                <a href="{{ route('welcome') }}" class="sc-brand">
+                    <span class="sc-brand-mark"><img src="{{ asset('assets/icons/silvercare.png') }}" alt=""></span>
+                    <span class="sc-brand-word">SilverCare</span>
+                    <span class="sr-only">SilverCare home</span>
+                </a>
+
+                {{-- Same reader controls as the landing page: someone who set
+                     larger text before signing up must not lose it at the door. --}}
+                <div class="relative" x-data="displayControls()" @keydown.escape.window="open = false">
+                    <button type="button" class="sc-icon-btn"
+                            aria-expanded="false"
+                            :aria-expanded="open ? 'true' : 'false'"
+                            aria-controls="sc-display-menu"
+                            aria-haspopup="true"
+                            @click="open = !open">
+                        <svg class="sc-i w-6 h-6" aria-hidden="true" focusable="false"><use href="#i-accessibility"/></svg>
+                        <span class="sr-only">Display and accessibility options</span>
+                    </button>
+
+                    <div id="sc-display-menu" x-show="open" x-cloak
+                         @click.outside="open = false"
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 -translate-y-1"
+                         x-transition:enter-end="opacity-100 translate-y-0"
+                         class="absolute right-0 mt-3 w-[19rem] p-5 space-y-5 sc-card sc-card-pop z-50"
+                         role="group" aria-label="Display and accessibility settings">
+
+                        <div>
+                            <p class="flex items-center gap-2 font-semibold mb-2.5" style="color:var(--sc-ink)">
+                                <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-type"/></svg>
+                                Text size
+                            </p>
+                            <div class="grid grid-cols-3 gap-2" role="group" aria-label="Text size">
+                                <template x-for="opt in scales" :key="opt.value">
+                                    <button type="button" @click="setScale(opt.value)"
+                                            :aria-pressed="scale === opt.value ? 'true' : 'false'"
+                                            :aria-label="opt.aria"
+                                            class="sc-size-btn" :class="scale === opt.value && 'sc-size-btn-on'">
+                                        <span :style="`font-size:${opt.preview}`" x-text="opt.label"></span>
+                                        <span class="text-sm leading-none" x-text="opt.name"></span>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-4">
+                            <span class="flex items-center gap-2 font-medium" id="sc-dark-label" style="color:var(--sc-ink)">
+                                <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-moon"/></svg>
+                                Dark mode
+                            </span>
+                            <button type="button" role="switch" class="sc-switch"
+                                    aria-labelledby="sc-dark-label" aria-checked="false"
+                                    :aria-checked="dark ? 'true' : 'false'" @click="toggleDark()"></button>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-4">
+                            <span class="flex items-center gap-2 font-medium" id="sc-contrast-label" style="color:var(--sc-ink)">
+                                <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-contrast"/></svg>
+                                High contrast
+                            </span>
+                            <button type="button" role="switch" class="sc-switch"
+                                    aria-labelledby="sc-contrast-label" aria-checked="false"
+                                    :aria-checked="contrast ? 'true' : 'false'" @click="toggleContrast()"></button>
+                        </div>
+                    </div>
                 </div>
+            </div>
 
-                <!-- Title -->
-                <div class="mb-8 fade-in-section transition-delay-200 mt-[-16px]">
-                    <h1 class="text-4xl font-[900] text-gray-900 tracking-tight mb-2">Sign In</h1>
-                    <p class="text-gray-600 font-medium">Welcome back to SilverCare</p>
-                </div>
+            <main id="main-content">
+                <h1 class="sc-h2">Welcome back.</h1>
+                <p class="mt-3" style="color:var(--sc-body)">Sign in to pick up where you left off.</p>
 
-                <!-- Session Status -->
                 @if (session('status'))
-                    <div class="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded fade-in-section transition-delay-300">
-                        <p class="text-green-700 font-semibold">{{ session('status') }}</p>
+                    <p class="mt-7 flex items-start gap-2.5 p-4 rounded-2xl"
+                       style="background:var(--sc-ok-tint);border:1px solid var(--sc-ok-line);color:var(--sc-ok)">
+                        <svg class="sc-i w-5 h-5 mt-0.5" aria-hidden="true" focusable="false"><use href="#i-check-circle"/></svg>
+                        <span class="font-medium">{{ session('status') }}</span>
+                    </p>
+                @endif
+
+                {{-- More than one thing wrong: summarise at the top and link each
+                     item to its field, keeping the inline messages as well. --}}
+                @if ($errors->any() && $errors->count() > 1)
+                    <div class="sc-error-summary mt-7" role="alert" tabindex="-1" x-init="$el.focus()">
+                        <p class="font-semibold">Please check {{ $errors->count() }} things before continuing:</p>
+                        <ul class="mt-2 space-y-1 list-disc list-inside">
+                            @foreach ($errors->keys() as $field)
+                                <li><a href="#{{ $field }}">{{ $errors->first($field) }}</a></li>
+                            @endforeach
+                        </ul>
                     </div>
                 @endif
 
-                <!-- Login Form -->
-                <form method="POST" action="{{ route('login') }}" class="space-y-3">
+                <a href="{{ route('auth.google.redirect') }}"
+                   id="googleSignInBtn"
+                   onclick="handleGoogleSignIn(event)"
+                   class="sc-btn sc-btn-ghost w-full mt-8">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.2-1.4 3.4-5.5 3.4-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 2.9 14.6 2 12 2 6.5 2 2 6.5 2 12s4.5 10 10 10c5.8 0 9.7-4.1 9.7-9.9 0-.7-.1-1.3-.2-1.9H12z"/>
+                    </svg>
+                    <span id="googleSignInLabel">Continue with Google</span>
+                </a>
+
+                <div class="flex items-center gap-4 my-7" aria-hidden="true">
+                    <span class="h-px flex-1" style="background:var(--sc-line)"></span>
+                    <span class="text-sm font-medium" style="color:var(--sc-muted)">or</span>
+                    <span class="h-px flex-1" style="background:var(--sc-line)"></span>
+                </div>
+
+                <form method="POST" action="{{ route('login') }}" novalidate>
                     @csrf
 
-                    <!-- Google Sign-In -->
-                    <div class="fade-in-section transition-delay-300">
-                        <a
-                            href="{{ route('auth.google.redirect') }}"
-                            id="googleSignInBtn"
-                            onclick="handleGoogleSignIn(event)"
-                            class="w-full inline-flex items-center justify-center gap-3 border-2 border-gray-200 hover:border-[#000080] bg-white py-3 rounded-xl font-bold text-gray-800 transition-all duration-200"
-                        >
-                            <svg class="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
-                                <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.2-1.4 3.4-5.5 3.4-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 2.9 14.6 2 12 2 6.5 2 2 6.5 2 12s4.5 10 10 10c5.8 0 9.7-4.1 9.7-9.9 0-.7-.1-1.3-.2-1.9H12z"/>
-                            </svg>
-                            <span id="googleSignInLabel">Continue with Google</span>
-                        </a>
-                    </div>
-
-                    <div class="flex items-center gap-3 fade-in-section transition-delay-300">
-                        <div class="h-px flex-1 bg-gray-200"></div>
-                        <span class="text-xs font-semibold tracking-wider text-gray-500">OR SIGN IN WITH EMAIL</span>
-                        <div class="h-px flex-1 bg-gray-200"></div>
-                    </div>
-
-                    <!-- Email -->
-                    <div class="fade-in-section transition-delay-300">
-                        <label for="email" class="block text-sm font-bold text-gray-700 mb-2">Email Address</label>
-                        <input id="email" type="email" name="email" value="{{ old('email') }}" required autofocus autocomplete="email"
-                               class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium"
-                               placeholder="you@example.com">
+                    <div class="sc-field">
+                        <label for="email" class="sc-label sc-label-req">Email address</label>
+                        <input id="email" name="email" type="email"
+                               value="{{ old('email') }}"
+                               required autofocus autocomplete="email"
+                               inputmode="email"
+                               class="sc-input @error('email') sc-input-error @enderror"
+                               @error('email') aria-invalid="true" aria-describedby="email-error" @enderror>
                         @error('email')
-                            <p class="mt-2 text-sm text-red-600 font-semibold">{{ $message }}</p>
+                            <p id="email-error" class="sc-error" role="alert">
+                                <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg>
+                                <span>{{ $message }}</span>
+                            </p>
                         @enderror
                     </div>
 
-                    <!-- Password -->
-                    <div class="fade-in-section transition-delay-400">
-                        <label for="password" class="block text-sm font-bold text-gray-700 mb-2">Password</label>
+                    <div class="sc-field" x-data="{ show: false }">
+                        <label for="password" class="sc-label sc-label-req">Password</label>
                         <div class="relative">
-                            <input id="password" type="password" name="password" required autocomplete="current-password"
-                                class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#000080] focus:ring-2 focus:ring-[#000080]/20 transition-all duration-200 font-medium pr-12"
-                                placeholder="Enter your password">
+                            <input id="password" name="password"
+                                   :type="show ? 'text' : 'password'" type="password"
+                                   required autocomplete="current-password"
+                                   class="sc-input pr-16 @error('password') sc-input-error @enderror"
+                                   @error('password') aria-invalid="true" aria-describedby="password-error" @enderror>
+                            {{-- A password manager cannot help someone who cannot see
+                                 what they typed; the toggle is not optional here. --}}
                             <button type="button"
-                                    onclick="togglePassword('password', this)"
-                                    class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 transition-colors duration-200">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="eye-icon h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    @click="show = !show"
+                                    :aria-pressed="show ? 'true' : 'false'"
+                                    aria-pressed="false"
+                                    class="sc-icon-btn absolute right-1 top-1/2 -translate-y-1/2">
+                                <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false">
+                                    <use :href="show ? '#i-eye-off' : '#i-eye'"/>
                                 </svg>
+                                <span class="sr-only" x-text="show ? 'Hide password' : 'Show password'">Show password</span>
                             </button>
                         </div>
                         @error('password')
-                            <p class="mt-2 text-sm text-red-600 font-semibold">{{ $message }}</p>
+                            <p id="password-error" class="sc-error" role="alert">
+                                <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg>
+                                <span>{{ $message }}</span>
+                            </p>
                         @enderror
                     </div>
 
-                    <!-- Remember Me & Forgot Password -->
-                    <div class="flex items-center justify-between fade-in-section transition-delay-500">
-                        <label class="flex items-center">
-                            <input type="checkbox" name="remember" class="w-4 h-4 rounded border-gray-300 text-[#000080] focus:ring-[#000080]">
-                            <span class="ml-2 text-sm text-gray-700 font-medium">Remember me</span>
+                    <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+                        <label class="sc-check">
+                            <input type="checkbox" name="remember">
+                            <span style="color:var(--sc-body)">Keep me signed in</span>
                         </label>
 
                         @if (Route::has('password.request'))
-                            <a href="{{ route('password.request') }}" class="text-sm font-bold text-[#000080] hover:text-blue-900 transition-colors">
-                                Forgot password?
-                            </a>
+                            <a href="{{ route('password.request') }}" class="sc-textlink">Forgot password?</a>
                         @endif
                     </div>
 
-                    <!-- Sign In Button -->
-                    <div class="fade-in-section transition-delay-600">
-                        <button type="submit" class="group relative w-full">
-                            <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[82px] opacity-50 blur transition duration-200 group-hover:opacity-75"></div>
-                            <div class="relative w-full py-4 bg-[#000080] text-white font-[800] text-xl rounded-[82px] shadow-[0_8px_20px_rgba(0,0,128,0.3)] transition-all duration-300 transform group-hover:-translate-y-1 group-active:scale-95">
-                                SIGN IN
-                            </div>
-                        </button>
-                    </div>
-
-                    <!-- Register Link -->
-                    <div class="text-center pt-4 fade-in-section transition-delay-700">
-                        <p class="text-gray-600">
-                            Don't have an account? 
-                            <a href="{{ route('register') }}" class="font-bold text-[#000080] hover:text-blue-900 transition-colors">
-                                Sign Up
-                            </a>
-                        </p>
-                    </div>
+                    <button type="submit" class="sc-btn sc-btn-primary w-full">
+                        Sign in
+                        <svg class="sc-i sc-arrow w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-arrow-right"/></svg>
+                    </button>
                 </form>
 
-            </div>
-        </div>
-
-        <!-- Right Side: Hero Image -->
-        <div class="hidden lg:block lg:w-7/12 relative overflow-hidden bg-gray-900">
-            <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?q=80&w=2048&auto=format&fit=crop')] bg-cover bg-center opacity-60 transition-transform duration-[10s] ease-linear hover:scale-110"></div>
-            <div class="absolute inset-0 bg-gradient-to-r from-[#DEDEDE] via-[#DEDEDE]/20 to-transparent"></div>
-            
-            <div class="absolute bottom-24 left-16 max-w-lg fade-in-section transition-delay-700 z-20">
-                <div class="bg-black/60 backdrop-blur-md border-l-4 border-[#000080] p-8 rounded-r-2xl shadow-2xl transform transition hover:translate-x-2 duration-300">
-                    <h3 class="text-3xl font-bold text-white mb-3 drop-shadow-lg">Track. Monitor. Care.</h3>
-                    <p class="text-gray-100 text-lg font-medium leading-relaxed drop-shadow-md">
-                        "Managing elderly care has never been easier. Sign in to continue your journey."
-                    </p>
-                </div>
-            </div>
+                <p class="text-center mt-8" style="color:var(--sc-body)">
+                    New to SilverCare?
+                    <a href="{{ route('register') }}" class="sc-textlink">Create an account</a>
+                </p>
+            </main>
         </div>
     </div>
 
-    <script>
-        // ── Google OAuth UX: loading state + SweetAlert2 error toast ──────────
-        function handleGoogleSignIn(e) {
-            const btn   = document.getElementById('googleSignInBtn');
-            const label = document.getElementById('googleSignInLabel');
-            if (btn.dataset.loading) { e.preventDefault(); return; } // prevent double-click
-            btn.dataset.loading = '1';
-            btn.classList.add('opacity-70', 'cursor-not-allowed');
-            label.textContent = 'Redirecting…';
+    {{-- ── Reassurance panel ─────────────────────────────────────────
+         Replaces the stock photograph: no external image request, no
+         models, and it says something true about the product. --}}
+    <aside class="hidden lg:flex lg:col-span-6 xl:col-span-7 items-center justify-center p-14 sc-cta-panel" style="border-radius:0">
+        <div class="relative max-w-lg" style="z-index:1">
+            <svg class="sc-i w-11 h-11 mb-7" style="color:rgba(255,255,255,.35)" aria-hidden="true" focusable="false"><use href="#i-quote"/></svg>
+
+            <p class="sc-quote leading-[1.35]" style="font-size:clamp(1.6rem,1.2rem+1vw,2.2rem);color:#FFFFFF">
+                SilverCare gave my dad his independence back. And for the first time in
+                three years, I sleep through the night knowing he is safe.
+            </p>
+
+            <p class="mt-8 font-semibold" style="color:rgba(255,255,255,.9)">Sarah Pendelton</p>
+            <p class="text-sm" style="color:rgba(255,255,255,.7)">Daughter and primary caregiver · Chicago, Illinois</p>
+
+            <ul class="flex flex-wrap gap-x-7 gap-y-3 mt-12" style="color:rgba(255,255,255,.78)">
+                <li class="flex items-center gap-2.5">
+                    <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-lock"/></svg>
+                    Encrypted health records
+                </li>
+                <li class="flex items-center gap-2.5">
+                    <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-shield"/></svg>
+                    Your data is never sold
+                </li>
+            </ul>
+        </div>
+    </aside>
+</div>
+
+<script>
+    // Google OAuth: show a loading state and block the double-click.
+    function handleGoogleSignIn(e) {
+        const btn   = document.getElementById('googleSignInBtn');
+        const label = document.getElementById('googleSignInLabel');
+        if (btn.dataset.loading) { e.preventDefault(); return; }
+        btn.dataset.loading = '1';
+        btn.setAttribute('aria-disabled', 'true');
+        btn.classList.add('opacity-70', 'cursor-not-allowed');
+        label.textContent = 'Redirecting…';
+    }
+
+    @if (session('swal_error'))
+    // OAuth failure flashed by ProviderController.
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof window.scToast === 'function') {
+            window.scToast({{ Js::from(session('swal_error')) }}, 'error');
         }
+    });
+    @endif
+</script>
 
-        // Flash swal_error from ProviderController (OAuth failure) as a premium toast.
-        @if(session('swal_error'))
-        document.addEventListener('DOMContentLoaded', function () {
-            if (typeof window.scToast === 'function') {
-                window.scToast({{ Js::from(session('swal_error')) }}, 'error');
-            }
-        });
-        @endif
-
-        // ── Intersection observer for fade-in sections ────────────────────────
-        document.addEventListener('DOMContentLoaded', function() {
-            const observerOptions = {
-                root: null,
-                rootMargin: '0px',
-                threshold: 0.1
-            };
-
-            const observer = new IntersectionObserver((entries, observer) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        if (entry.target.classList.contains('transition-delay-100')) {
-                            setTimeout(() => entry.target.classList.add('is-visible'), 100);
-                        } else if (entry.target.classList.contains('transition-delay-200')) {
-                            setTimeout(() => entry.target.classList.add('is-visible'), 300);
-                        } else if (entry.target.classList.contains('transition-delay-300')) {
-                            setTimeout(() => entry.target.classList.add('is-visible'), 500);
-                        } else if (entry.target.classList.contains('transition-delay-400')) {
-                            setTimeout(() => entry.target.classList.add('is-visible'), 600);
-                        } else if (entry.target.classList.contains('transition-delay-500')) {
-                            setTimeout(() => entry.target.classList.add('is-visible'), 700);
-                        } else if (entry.target.classList.contains('transition-delay-600')) {
-                            setTimeout(() => entry.target.classList.add('is-visible'), 800);
-                        } else if (entry.target.classList.contains('transition-delay-700')) {
-                            setTimeout(() => entry.target.classList.add('is-visible'), 900);
-                        } else {
-                            entry.target.classList.add('is-visible');
-                        }
-                        observer.unobserve(entry.target);
-                    }
-                });
-            }, observerOptions);
-
-            document.querySelectorAll('.fade-in-section').forEach((section) => {
-                observer.observe(section);
-            });
-        });
-
-        function togglePassword(fieldId, btn) {
-            const input = document.getElementById(fieldId);
-            const isHidden = input.type === 'password';
-
-            input.type = isHidden ? 'text' : 'password';
-
-            btn.innerHTML = isHidden ? `
-                <svg xmlns="http://www.w3.org/2000/svg" class="eye-icon h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 4.411m0 0L21 21" />
-                </svg>
-            ` : `
-                <svg xmlns="http://www.w3.org/2000/svg" class="eye-icon h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-            `;
-        }
-    </script>
 </body>
 </html>

@@ -1,3 +1,7 @@
+/* Shared SilverCare UI layer — tokens + component classes.
+   Imported first so Tailwind utilities always win over it. */
+@import './silvercare-ui.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

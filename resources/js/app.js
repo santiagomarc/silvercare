@@ -27,6 +27,9 @@ import { installDialogHelpers } from './utils/dialogs.js';
 import pushToggle, { syncExistingSubscription } from './utils/push-notifications.js';
 import { initRealtime } from './utils/realtime.js';
 import highContrastToggle, { initHighContrast } from './utils/high-contrast.js';
+import displayControls    from './components/display-controls.js';
+import dualView           from './components/dual-view.js';
+import { initScrollReveal } from './utils/scroll-reveal.js';
 
 // ── Theme bootstrap (5H: Dark Mode Toggle) ──────────────────────
 const preferredDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
@@ -89,6 +92,8 @@ Alpine.data('pushToggle',         ()                    => pushToggle());
 Alpine.data('highContrastToggle', ()                    => highContrastToggle());
 Alpine.data('dailyCheckin',       (opts)                => dailyCheckin(opts));
 Alpine.data('thresholdEditor',    (opts)                => thresholdEditor(opts));
+Alpine.data('displayControls',    ()                    => displayControls());
+Alpine.data('dualView',           ()                    => dualView());
 
 window.Alpine = Alpine;
 
@@ -133,3 +138,6 @@ Alpine.store('patientModal', {
 });
 
 Alpine.start();
+
+// Reveal-on-scroll for any page using the shared `.sc-reveal` class.
+initScrollReveal();
