@@ -1,3 +1,20 @@
+{{-- Shared text input.
+
+     The error state is worked out here, from the field's own name, rather than
+     being passed in. `@error(...)` does not compile inside a Blade *component*
+     tag — it is passed through as a literal string and ends up as a class name,
+     which silently paints every field red. Doing it here removes that trap.
+
+         <x-text-input id="email" name="email" type="email" required />
+
+     Styling lives in resources/css/silvercare-ui.css (.sc-input). --}}
 @props(['disabled' => false])
 
-<input @disabled($disabled) {{ $attributes->merge(['class' => 'w-full px-4 py-3 rounded-xl border-2 border-gray-200 text-gray-900 font-medium text-base placeholder:text-gray-400 focus:border-navy-500 focus:ring-2 focus:ring-navy-100 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors duration-200']) }}>
+@php
+    $field    = $attributes->get('name');
+    $hasError = $field && $errors->has($field);
+@endphp
+
+<input @disabled($disabled)
+       @if ($hasError) aria-invalid="true" aria-describedby="{{ $field }}-error" @endif
+       {{ $attributes->merge(['class' => 'sc-input' . ($hasError ? ' sc-input-error' : '')]) }}>

@@ -224,4 +224,10 @@ Route::middleware(['auth', 'prevent.back'])->group(function () {
     Route::delete('/api/push/subscribe', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->name('push.unsubscribe');
 });
 
+if (app()->environment('local')) {
+    Route::get('/auth/select-role-preview', function () {
+        return view('auth.select-role');
+    })->name('auth.select-role.preview');
+}
+
 require __DIR__.'/auth.php';

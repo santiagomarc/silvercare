@@ -49,6 +49,9 @@
     </body>
     @else
     <body class="font-sans text-gray-900 antialiased" style="font-family: 'Montserrat', sans-serif;">
+        {{-- Shared components reference sprite icons even before this page is
+             converted, so the sprite ships either way. --}}
+        @include('partials.sc-icons')
         <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-[#DEDEDE]">
             <div>
                 <a href="/" class="flex flex-col items-center gap-2">

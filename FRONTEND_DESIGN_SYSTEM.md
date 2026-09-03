@@ -12,6 +12,10 @@ Three pages are already done. Copy them:
 - `resources/views/auth/login.blade.php` — a form page (standalone)
 - `resources/views/auth/forgot-password.blade.php` — the shortest possible
   example of the layout route: one word (`sc`) plus design-system classes
+- `resources/views/auth/profile-completion.blade.php` — a multi-step form whose
+  JavaScript was left working untouched; copy this when a page has real script
+- `resources/views/auth/reset-password.blade.php` — built entirely from the
+  shared components, which is the shortest correct form you can write
 
 ---
 
@@ -302,6 +306,28 @@ Rules:
 - Use the right `type` and `autocomplete` so phones show the right keyboard
   and password managers work.
 
+### Shared Blade components — prefer these over raw HTML
+
+These are already converted, so a form built from them is correct by default.
+They also handle their own error state.
+
+```blade
+<div class="sc-field">
+    <x-input-label for="email" :value="__('Email address')" required />
+    <x-text-input id="email" name="email" type="email" required autocomplete="email" />
+    <x-input-error field="email" />
+</div>
+
+<x-primary-button class="w-full">Save changes</x-primary-button>
+<x-secondary-button>Cancel</x-secondary-button>
+<x-danger-button>Delete account</x-danger-button>
+<x-auth-session-status :status="session('status')" />
+```
+
+`<x-text-input>` reads its own `name`, checks the error bag, and adds
+`sc-input-error`, `aria-invalid` and `aria-describedby` for you. Don't pass
+those in by hand.
+
 ### Everything else
 
 | Class | For |
@@ -319,6 +345,9 @@ Rules:
 | `sc-num` | **any** number, time or dose — stops columns jittering |
 | `sc-textlink` | a link inside a sentence |
 | `sc-reveal` | fades in on scroll |
+| `sc-steps` + `sc-step-dot` + `sc-step-label` | multi-step form progress |
+| `sc-input-muted` | a field switched off by a "none of these" checkbox |
+| `sc-btn-danger` | destructive action |
 
 ### Auth pages
 
@@ -443,6 +472,19 @@ Then look at it yourself at 375px wide and in dark mode.
 
 ## 10. Traps that have already bitten us
 
+- **`@error(...)` does not work inside a Blade *component* tag.** This is
+  silent and it looks like a design bug:
+
+  ```blade
+  {{-- WRONG — "sc-input-error" becomes a literal class on every field --}}
+  <x-text-input class="@error('email') sc-input-error @enderror" />
+
+  {{-- RIGHT — the component works it out from the field's own name --}}
+  <x-text-input id="email" name="email" />
+  <x-input-error field="email" />
+  ```
+
+  `@error` compiles fine inside a normal `<input>`; only component tags break.
 - **`silvercare-ui.css` loads before Tailwind**, so a Tailwind class always
   beats a component class. That's on purpose. But it means you must *not* size
   a component with utilities if its own CSS sizes it responsively — the

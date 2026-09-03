@@ -1,31 +1,33 @@
-<x-guest-layout>
-    <div class="mb-4 text-sm text-gray-600">
-        {{ __('Thanks for signing up! Before getting started, could you verify your email address by clicking on the link we just emailed to you? If you didn\'t receive the email, we will gladly send you another.') }}
-    </div>
+{{-- Converted to the SilverCare design system. See FRONTEND_DESIGN_SYSTEM.md §3. --}}
+<x-guest-layout sc>
+    <span class="sc-plate sc-plate-sm mb-5">
+        <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-bell"/></svg>
+    </span>
+
+    <h1 class="sc-h3">{{ __('Check your email') }}</h1>
+
+    <p class="mt-3" style="color:var(--sc-body)">
+        {{ __('We sent you a link to confirm your email address. Click it and you are in. If it has not arrived in a few minutes, we can send another.') }}
+    </p>
 
     @if (session('status') == 'verification-link-sent')
-        <div class="mb-4 font-medium text-sm text-green-600">
-            {{ __('A new verification link has been sent to the email address you provided during registration.') }}
-        </div>
+        <p class="mt-6 flex items-start gap-2.5 p-4 rounded-2xl"
+           style="background:var(--sc-ok-tint);border:1px solid var(--sc-ok-line);color:var(--sc-ok)"
+           role="status">
+            <svg class="sc-i w-5 h-5 mt-0.5" aria-hidden="true" focusable="false"><use href="#i-check-circle"/></svg>
+            <span class="font-medium">{{ __('A new link is on its way to your inbox.') }}</span>
+        </p>
     @endif
 
-    <div class="mt-4 flex items-center justify-between">
-        <form method="POST" action="{{ route('verification.send') }}">
-            @csrf
+    <form method="POST" action="{{ route('verification.send') }}" class="mt-8">
+        @csrf
+        <x-primary-button class="w-full">
+            {{ __('Send the link again') }}
+        </x-primary-button>
+    </form>
 
-            <div>
-                <x-primary-button>
-                    {{ __('Resend Verification Email') }}
-                </x-primary-button>
-            </div>
-        </form>
-
-        <form method="POST" action="{{ route('logout') }}">
-            @csrf
-
-            <button type="submit" class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                {{ __('Log Out') }}
-            </button>
-        </form>
-    </div>
+    <form method="POST" action="{{ route('logout') }}" class="mt-6 text-center">
+        @csrf
+        <button type="submit" class="sc-textlink">{{ __('Sign out') }}</button>
+    </form>
 </x-guest-layout>

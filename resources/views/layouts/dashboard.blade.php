@@ -72,9 +72,10 @@
 
     <a href="#main-content" class="{{ $sc ? 'sc-skip' : 'skip-nav' }}">Skip to main content</a>
 
-    @if ($sc)
-        @include('partials.sc-icons')
-    @endif
+    {{-- Unconditional: the shared components (x-input-error and friends)
+         reference sprite icons, so the sprite must exist even on pages that
+         have not been converted yet. It renders nothing on its own. --}}
+    @include('partials.sc-icons')
 
     {{ $slot }}
 
