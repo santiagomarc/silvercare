@@ -7,12 +7,14 @@
 import Alpine from 'alpinejs';
 import { sendJsonRequest } from '../utils/offline-queue.js';
 
+// Colours are tokens, not hex: the face has to stay readable in dark and
+// high-contrast mode too. They are defined in resources/css/silvercare-ui.css.
 const MOODS = [
-    { value: 1, label: 'Very Sad', color: '#EF4444' },
-    { value: 2, label: 'Sad', color: '#F97316' },
-    { value: 3, label: 'Neutral', color: '#6B7280' },
-    { value: 4, label: 'Happy', color: '#65A30D' },
-    { value: 5, label: 'Very Happy', color: '#16A34A' },
+    { value: 1, label: 'Very Sad', color: 'var(--sc-mood-1)' },
+    { value: 2, label: 'Sad', color: 'var(--sc-mood-2)' },
+    { value: 3, label: 'Neutral', color: 'var(--sc-mood-3)' },
+    { value: 4, label: 'Happy', color: 'var(--sc-mood-4)' },
+    { value: 5, label: 'Very Happy', color: 'var(--sc-mood-5)' },
 ];
 
 const DEFAULT_MOOD = 3;

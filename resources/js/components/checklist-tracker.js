@@ -32,13 +32,13 @@ export default function checklistTracker(completedCount = 0, totalCount = 0) {
                 if (item.dataset.completed === 'true') return;
 
                 item.dataset.completed = 'true';
-                item.classList.add('bg-green-50/50', 'border-green-200', 'opacity-75');
-                item.classList.remove('bg-white', 'border-gray-100', 'hover:border-green-200', 'hover:bg-green-50/30');
+                item.classList.add('sc-task-done');
+                item.classList.remove('sc-task-todo');
 
                 const btn = item.querySelector('.checkbox-btn');
                 if (btn) {
-                    btn.classList.remove('bg-white', 'border-gray-300', 'hover:border-green-400');
-                    btn.classList.add('bg-green-500', 'border-green-500');
+                    btn.classList.remove('sc-check-off');
+                    btn.classList.add('sc-check-on');
                 }
 
                 const checkIcon = item.querySelector('.check-icon');
@@ -49,7 +49,7 @@ export default function checklistTracker(completedCount = 0, totalCount = 0) {
 
                 const taskText = item.querySelector('.task-text');
                 if (taskText) {
-                    taskText.classList.add('line-through', 'text-gray-400');
+                    taskText.classList.add('line-through', 'sc-task-text-done');
                 }
 
                 this.completed = Math.min(this.total, this.completed + 1);
@@ -89,7 +89,7 @@ export default function checklistTracker(completedCount = 0, totalCount = 0) {
                     reverseButtons: true,
                     customClass: {
                         popup: 'rounded-2xl border border-slate-200 shadow-2xl',
-                        title: 'text-2xl font-extrabold text-slate-800'
+                        title: 'sc-dialog-title'
                     }
                 });
 
@@ -113,32 +113,32 @@ export default function checklistTracker(completedCount = 0, totalCount = 0) {
 
                     if (nextCompleted) {
                         item.dataset.completed = 'true';
-                        item.classList.add('bg-green-50/50', 'border-green-200', 'opacity-75');
-                        item.classList.remove('bg-white', 'border-gray-100', 'hover:border-green-200', 'hover:bg-green-50/30');
-                        btn.classList.remove('bg-white', 'border-gray-300', 'hover:border-green-400');
-                        btn.classList.add('bg-green-500', 'border-green-500');
+                        item.classList.add('sc-task-done');
+                        item.classList.remove('sc-task-todo');
+                        btn.classList.remove('sc-check-off');
+                        btn.classList.add('sc-check-on');
                         const checkIcon = btn.querySelector('.check-icon');
                         if (checkIcon) {
                             checkIcon.classList.remove('opacity-0', 'scale-0');
                             checkIcon.classList.add('opacity-100', 'scale-100');
                         }
                         const taskText = item.querySelector('.task-text');
-                        if (taskText) taskText.classList.add('line-through', 'text-gray-400');
+                        if (taskText) taskText.classList.add('line-through', 'sc-task-text-done');
                         this.completed++;
                         createConfetti(btn);
                     } else {
                         item.dataset.completed = 'false';
-                        item.classList.remove('bg-green-50/50', 'border-green-200', 'opacity-75');
-                        item.classList.add('bg-white', 'border-gray-100');
-                        btn.classList.remove('bg-green-500', 'border-green-500');
-                        btn.classList.add('bg-white', 'border-gray-300', 'hover:border-green-400');
+                        item.classList.remove('sc-task-done');
+                        item.classList.add('sc-task-todo');
+                        btn.classList.remove('sc-check-on');
+                        btn.classList.add('sc-check-off');
                         const checkIcon = btn.querySelector('.check-icon');
                         if (checkIcon) {
                             checkIcon.classList.remove('opacity-100', 'scale-100');
                             checkIcon.classList.add('opacity-0', 'scale-0');
                         }
                         const taskText = item.querySelector('.task-text');
-                        if (taskText) taskText.classList.remove('line-through', 'text-gray-400');
+                        if (taskText) taskText.classList.remove('line-through', 'sc-task-text-done');
                         this.completed--;
                     }
 
@@ -154,33 +154,33 @@ export default function checklistTracker(completedCount = 0, totalCount = 0) {
 
                 if (data.is_completed) {
                     item.dataset.completed = 'true';
-                    item.classList.add('bg-green-50/50', 'border-green-200', 'opacity-75');
-                    item.classList.remove('bg-white', 'border-gray-100', 'hover:border-green-200', 'hover:bg-green-50/30');
-                    btn.classList.remove('bg-white', 'border-gray-300', 'hover:border-green-400');
-                    btn.classList.add('bg-green-500', 'border-green-500');
+                    item.classList.add('sc-task-done');
+                    item.classList.remove('sc-task-todo');
+                    btn.classList.remove('sc-check-off');
+                    btn.classList.add('sc-check-on');
                     const checkIcon = btn.querySelector('.check-icon');
                     if (checkIcon) {
                         checkIcon.classList.remove('opacity-0', 'scale-0');
                         checkIcon.classList.add('opacity-100', 'scale-100');
                     }
                     const taskText = item.querySelector('.task-text');
-                    if (taskText) taskText.classList.add('line-through', 'text-gray-400');
+                    if (taskText) taskText.classList.add('line-through', 'sc-task-text-done');
                     this.completed++;
                     createConfetti(btn);
                     Alpine.store('toast')?.success('Task completed!');
                 } else {
                     item.dataset.completed = 'false';
-                    item.classList.remove('bg-green-50/50', 'border-green-200', 'opacity-75');
-                    item.classList.add('bg-white', 'border-gray-100');
-                    btn.classList.remove('bg-green-500', 'border-green-500');
-                    btn.classList.add('bg-white', 'border-gray-300', 'hover:border-green-400');
+                    item.classList.remove('sc-task-done');
+                    item.classList.add('sc-task-todo');
+                    btn.classList.remove('sc-check-on');
+                    btn.classList.add('sc-check-off');
                     const checkIcon = btn.querySelector('.check-icon');
                     if (checkIcon) {
                         checkIcon.classList.remove('opacity-100', 'scale-100');
                         checkIcon.classList.add('opacity-0', 'scale-0');
                     }
                     const taskText = item.querySelector('.task-text');
-                    if (taskText) taskText.classList.remove('line-through', 'text-gray-400');
+                    if (taskText) taskText.classList.remove('line-through', 'sc-task-text-done');
                     this.completed--;
                     Alpine.store('toast')?.info('Task marked incomplete');
                 }

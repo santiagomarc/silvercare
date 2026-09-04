@@ -25,9 +25,12 @@ class ElderlyHeroAction extends Component
     public string $actionType;   // 'medication' | 'vital' | 'task' | 'mood' | 'done'
     public string $headline;
     public string $subtext;
-    public string $gradient;     // Tailwind gradient classes
-    public string $gradientStyle;
+    /** Sprite icon name, rendered as <use href="#i-…"/> so Alpine can swap it. */
     public string $icon;
+
+    /** 'brand' | 'ok' | 'alert' — a tone, never a colour. */
+    public string $tone;
+
     public string $tag;
     public int    $overallProgress;
     public int    $initialTotal;
@@ -57,20 +60,18 @@ class ElderlyHeroAction extends Component
 
         $current = $this->steps[0] ?? [
             'type' => 'done',
-            'title' => 'All caught up! Great job! 🎉',
+            'title' => 'All caught up. Nice work.',
             'subtitle' => "You've completed all your tasks, medications, and vitals for today.",
-            'gradient' => 'from-emerald-600 to-green-700',
-            'gradient_style' => 'linear-gradient(135deg, #059669 0%, #15803d 100%)',
-            'icon' => '🎉',
+            'tone' => 'ok',
+            'icon' => 'check-circle',
             'tag' => 'Done',
         ];
 
         $this->actionType = (string) ($current['type'] ?? 'done');
-        $this->headline = (string) ($current['title'] ?? 'All caught up! Great job! 🎉');
+        $this->headline = (string) ($current['title'] ?? 'All caught up. Nice work.');
         $this->subtext = (string) ($current['subtitle'] ?? "You've completed all your tasks, medications, and vitals for today.");
-        $this->gradient = (string) ($current['gradient'] ?? 'from-emerald-600 to-green-700');
-        $this->gradientStyle = (string) ($current['gradient_style'] ?? 'linear-gradient(135deg, #059669 0%, #15803d 100%)');
-        $this->icon = (string) ($current['icon'] ?? '🎉');
+        $this->tone = (string) ($current['tone'] ?? 'ok');
+        $this->icon = (string) ($current['icon'] ?? 'check-circle');
         $this->tag = (string) ($current['tag'] ?? 'Done');
     }
 

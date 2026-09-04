@@ -326,18 +326,18 @@
                 </div>
 
                 <nav class="space-y-1" aria-label="Account">
-                    <a href="{{ route('profile.edit') }}" class="sc-drawer-link">
+                    <a href="{{ route('profile.edit') }}" class="sc-menu-link">
                         <x-lucide-user-round class="sc-i w-5 h-5" aria-hidden="true" />
                         Manage Profile
                     </a>
 
-                    <a href="{{ $messagesUrl }}" class="sc-drawer-link">
+                    <a href="{{ $messagesUrl }}" class="sc-menu-link">
                         <x-lucide-message-square class="sc-i w-5 h-5" aria-hidden="true" />
                         Messages
                     </a>
 
                     @if(!$isCaregiver)
-                        <a href="{{ route('elderly.notifications.index') }}" class="sc-drawer-link">
+                        <a href="{{ route('elderly.notifications.index') }}" class="sc-menu-link">
                             <x-lucide-bell class="sc-i w-5 h-5" aria-hidden="true" />
                             Notifications
                             @if($unreadNotifications > 0)
@@ -347,7 +347,7 @@
                     @endif
 
                     @if($isCaregiver && $showBack)
-                        <a href="{{ $actualBackUrl }}" class="sc-drawer-link">
+                        <a href="{{ $actualBackUrl }}" class="sc-menu-link">
                             <x-lucide-arrow-left class="sc-i w-5 h-5" aria-hidden="true" />
                             {{ $backLabel }}
                         </a>

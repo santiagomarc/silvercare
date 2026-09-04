@@ -51,12 +51,11 @@ export default function heroAction({ progress = 0, steps = [], initialTotal = nu
             return this.steps.length > 0 ? this.steps[0] : {
                 id: 'done',
                 type: 'done',
-                title: 'All caught up! Great job! 🎉',
+                title: 'All caught up. Nice work.',
                 subtitle: "You've completed all your tasks, medications, and vitals for today.",
                 tag: 'Done',
-                icon: '🎉',
-                gradient: 'from-emerald-600 to-green-700',
-                gradient_style: 'linear-gradient(135deg, #059669 0%, #15803d 100%)',
+                tone: 'ok',
+                icon: 'check-circle',
             };
         },
 
@@ -89,11 +88,11 @@ export default function heroAction({ progress = 0, steps = [], initialTotal = nu
         },
 
         get currentIcon() {
-            return this.current.icon || '✅';
+            return this.current.icon || 'check-circle';
         },
 
-        get currentGradientStyle() {
-            return this.current.gradient_style || 'linear-gradient(135deg, #059669 0%, #15803d 100%)';
+        get currentTone() {
+            return this.current.tone || 'brand';
         },
 
         get currentTypeLabel() {

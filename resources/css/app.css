@@ -250,12 +250,7 @@
         transform: scale(1.15); /* Increased scale of active icon */
     }
 
-    /* Medication dose states */
-    .dose-taken      { @apply bg-green-50 border-green-300 opacity-75; }
-    .dose-taken-late { @apply bg-orange-50 border-orange-300 opacity-75; }
-    .dose-missed     { @apply bg-red-50 border-red-300; }
-    .dose-active     { @apply bg-amber-50 border-amber-300; }
-    .dose-upcoming   { @apply bg-white border-gray-200; }
+    /* Medication dose states now live in silvercare-ui.css, on tokens. */
 
     /* Toast notification container */
     .toast-container {

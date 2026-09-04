@@ -606,6 +606,9 @@ footer .sc-link { display: inline-block; padding-block: .3rem; }
 }
 .sc-nav-link:hover { color: var(--sc-ink); }
 .sc-nav-link:hover::after { transform: scaleX(1); }
+/* The page you are on keeps the rule drawn. */
+.sc-nav-link-on { color: var(--sc-ink); font-weight: 600; }
+.sc-nav-link-on::after { transform: scaleX(1); }
 
 /* ── Header ──────────────────────────────────────────────────── */
 .sc-header {
@@ -639,8 +642,12 @@ footer .sc-link { display: inline-block; padding-block: .3rem; }
 }
 .sc-switch[aria-checked="true"]::after { transform: translateX(1.35rem); }
 
-/* Text-size picker: a preview glyph over the size's name, so the control
-   says what it does instead of showing three identical letters. */
+/* Icon-over-label picker. Born as the text-size control — a preview glyph
+   over the size's name, so it says what it does instead of showing three
+   identical letters — and the same shape serves the mood scale. `.sc-pick`
+   is the name to use for new work; `.sc-size-btn` stays for the pages
+   already built on it. */
+.sc-pick,
 .sc-size-btn {
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .4rem;
     min-height: 4.25rem; padding: .6rem .35rem;
@@ -650,19 +657,23 @@ footer .sc-link { display: inline-block; padding-block: .3rem; }
     box-shadow: var(--sc-sh-sm);
     transition: background-color .18s ease, color .18s ease, border-color .18s ease;
 }
+.sc-pick:hover,
 .sc-size-btn:hover { background: var(--sc-surface-3); }
 /* The glyph takes the display face from here, not from `.sc-display`, which
    would set its own colour and go navy-on-navy once the button is selected. */
+.sc-pick > span:first-child,
 .sc-size-btn > span:first-child {
     font-family: 'Prompt', 'Valley Sans', sans-serif;
     font-weight: 700;
     line-height: 1;
 }
+.sc-pick-on,
 .sc-size-btn-on {
     background: var(--sc-brand);
     color: var(--sc-brand-on);
     border-color: transparent;
 }
+.sc-pick-on:hover { background: var(--sc-brand); }
 
 /* Popovers sit over live content and need their own opaque ground. */
 .sc-card-pop { box-shadow: var(--sc-sh-lg); }
@@ -1105,6 +1116,11 @@ html.high-contrast .sc-cta-panel { box-shadow: none !important; }
     border: 1px solid var(--sc-line);
     box-shadow: var(--sc-sh-lg);
 }
+/* The generic <x-modal> container. Its slot always brings its own padded
+   content — that is the shape every call site already has — so this variant
+   drops the dialog's own padding instead of doubling it. */
+.sc-dialog-flush { padding: 0; }
+
 .sc-dialog-title {
     font-family: 'Prompt', 'Valley Sans', sans-serif;
     font-weight: 600;
@@ -1250,6 +1266,137 @@ html.high-contrast {
     margin-top: .3rem;
 }
 
+/* ── Medication dose row ─────────────────────────────────────────
+   One class per state. medication-tracker.js swaps them at runtime and
+   MedicationPresenter emits the same names server-side, so a dose looks
+   identical whether the page rendered it or the browser updated it.
+
+   The state is never carried by the tint alone: each row also has its own
+   icon and its own word ("Taken", "Missed", "Take Now"). */
+.sc-dose {
+    border-radius: 1.25rem;
+    border: 1px solid var(--sc-line);
+    background: var(--sc-surface);
+    padding: 1rem;
+    transition: background-color .3s ease, border-color .3s ease;
+}
+.dose-taken,
+.dose-taken-late { background: var(--sc-ok-tint);    border-color: var(--sc-ok-line); }
+.dose-taken-late { background: var(--sc-warn-tint);  border-color: var(--sc-warn-line); }
+.dose-missed     { background: var(--sc-alert-tint); border-color: var(--sc-alert-line); }
+.dose-active     { background: var(--sc-brand-tint); border-color: var(--sc-brand); box-shadow: inset 0 0 0 1px var(--sc-brand); }
+.dose-upcoming   { background: var(--sc-surface);    border-color: var(--sc-line); }
+.dose-pending-sync { background: var(--sc-warn-tint);  border-color: var(--sc-warn-line); }
+.dose-conflict     { background: var(--sc-alert-tint); border-color: var(--sc-alert-line); }
+
+/* ── Checklist row ───────────────────────────────────────────────
+   Two states and nothing else: `sc-task-todo` and `sc-task-done`.
+   checklist-tracker.js swaps one for the other, which is why they are a
+   pair of single classes rather than a handful of utilities — the script
+   only has to know two names. */
+.sc-task {
+    display: flex; align-items: flex-start; gap: .75rem;
+    padding: .85rem;
+    border-radius: 1rem;
+    border: 1px solid var(--sc-line);
+    background: var(--sc-surface);
+    transition: background-color .3s ease, border-color .3s ease;
+}
+.sc-task-todo:hover { border-color: var(--sc-ok-line); background: var(--sc-ok-tint); }
+.sc-task-done { background: var(--sc-ok-tint); border-color: var(--sc-ok-line); }
+/* Struck through AND greyed AND the box is ticked — three signals, so the
+   state survives a colour-blind reader and a sunlit screen. */
+.sc-task-text-done { color: var(--sc-muted); }
+
+/* The tick box. 30px of paint, 44px of target. */
+.sc-check-btn {
+    position: relative;
+    flex: none;
+    width: 1.7rem; height: 1.7rem; margin-top: .15rem;
+    border-radius: .55rem;
+    border: 2px solid var(--sc-line-strong);
+    background: var(--sc-surface);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: background-color .3s ease, border-color .3s ease, transform .2s ease;
+}
+.sc-check-btn::before { content: ''; position: absolute; inset: -.55rem; }
+.sc-check-btn:active { transform: scale(.95); }
+.sc-check-off:hover { border-color: var(--sc-ok); }
+/* The tick takes the surface colour, not white: in dark mode --sc-ok is a
+   pale green and a white tick on it disappears. */
+.sc-check-on { background: var(--sc-ok); border-color: var(--sc-ok); color: var(--sc-surface); }
+
+/* ── Mood scale ──────────────────────────────────────────────────
+   Five steps, read from resources/js/components/mood-tracker.js as
+   `var(--sc-mood-N)` so the face follows the theme. The scale is never the
+   only signal: each step has its own face and its own word.
+
+   Note what these are NOT used for: the mood *buttons* carry selection in
+   the brand colour like every other choice in the app. Painting the button
+   you pressed red for "Very Sad" reads as the app grading your day. */
+:root {
+    --sc-mood-1: #BE123C;
+    --sc-mood-2: #B45309;
+    --sc-mood-3: #5C6675;
+    --sc-mood-4: #15803D;
+    --sc-mood-5: #047857;
+}
+html.dark {
+    --sc-mood-1: #FDA4AF;
+    --sc-mood-2: #FCD34D;
+    --sc-mood-3: #9BA9BF;
+    --sc-mood-4: #86EFAC;
+    --sc-mood-5: #6EE7B7;
+}
+html.high-contrast {
+    --sc-mood-1: #FCA5A5;
+    --sc-mood-2: #FDE047;
+    --sc-mood-3: #E5E7EB;
+    --sc-mood-4: #86EFAC;
+    --sc-mood-5: #4ADE80;
+}
+
+/* ── The Garden of Wellness plant ────────────────────────────────
+   The one illustration in the app. It has to stay a plant — navy leaves
+   would be nonsense — so its palette lives here as tokens rather than as
+   hex codes in the Blade, and it follows the theme like everything else.
+   Every path carries a class; nothing in the markup names a colour. */
+:root {
+    --sc-plant-leaf:  #059669;
+    --sc-plant-soil:  #B45309;
+    --sc-plant-edge:  #92400E;
+    --sc-plant-bloom: #F472B6;
+    --sc-plant-bloom-edge: #DB2777;
+    --sc-plant-sun:   #F59E0B;
+    --sc-plant-seed:  #9CA3AF;
+}
+html.dark {
+    --sc-plant-leaf:  #34D399;
+    --sc-plant-soil:  #C2762A;
+    --sc-plant-edge:  #8A5416;
+    --sc-plant-bloom: #F9A8D4;
+    --sc-plant-bloom-edge: #EC5FA8;
+    --sc-plant-sun:   #FCD34D;
+    --sc-plant-seed:  #7C8AA1;
+}
+html.high-contrast {
+    --sc-plant-leaf:  #4ADE80;
+    --sc-plant-soil:  #FDE047;
+    --sc-plant-edge:  #FFFFFF;
+    --sc-plant-bloom: #FCA5A5;
+    --sc-plant-bloom-edge: #FFFFFF;
+    --sc-plant-sun:   #FDE047;
+    --sc-plant-seed:  #E5E7EB;
+}
+.sc-plant-soil  { fill: var(--sc-plant-soil);  stroke: var(--sc-plant-edge); }
+.sc-plant-stem  { fill: none; stroke: var(--sc-plant-leaf); stroke-linecap: round; }
+.sc-plant-bloom { fill: var(--sc-plant-bloom); stroke: var(--sc-plant-bloom-edge); }
+.sc-plant-sun   { fill: var(--sc-plant-sun);   stroke: none; }
+.sc-plant-bud   { fill: var(--sc-plant-sun);   stroke: var(--sc-plant-edge); }
+.sc-plant-seed  { fill: var(--sc-plant-seed);  stroke: var(--sc-plant-seed); }
+.sc-plant-dry   { fill: none; stroke: var(--sc-plant-seed); stroke-linecap: round; }
+
 /* ══════════════════════════════════════════════════════════════════
    THE APP BAR
    ──────────────────────────────────────────────────────────────────
@@ -1392,18 +1539,28 @@ html.high-contrast {
     padding: 1rem 1rem 1rem 1.25rem;
     border-bottom: 1px solid var(--sc-line);
 }
-.sc-drawer-link {
+/* One row of a menu — the drawer, or a dropdown panel. Same shape either way. */
+.sc-menu-link {
     display: flex; align-items: center; gap: .8rem;
     width: 100%;
     min-height: 3.25rem;
     padding: .7rem .85rem;
     border-radius: 1rem;
     font-weight: 600;
+    text-align: start;
     color: var(--sc-ink);
-    transition: background-color .18s ease;
+    transition: background-color .18s ease, color .18s ease;
 }
-.sc-drawer-link:hover { background: var(--sc-surface-3); }
-.sc-drawer-link .sc-i { color: var(--sc-muted); }
+.sc-menu-link:hover { background: var(--sc-surface-3); }
+.sc-menu-link .sc-i { color: var(--sc-muted); }
+/* The row you are already on. Tint plus weight, never colour alone. */
+.sc-menu-link-on {
+    background: var(--sc-brand-tint);
+    color: var(--sc-brand-text);
+    box-shadow: inset 3px 0 0 var(--sc-brand);
+}
+.sc-menu-link-on:hover { background: var(--sc-brand-tint); }
+.sc-menu-link-on .sc-i { color: inherit; }
 
 /* ══════════════════════════════════════════════════════════════════
    AUTH PAGES

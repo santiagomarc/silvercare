@@ -5,6 +5,12 @@ namespace App\Presenters;
 use App\Models\MedicationLog;
 use App\Services\DoseAdministrationService;
 
+/**
+ * Turns a dose and its log into the words, the icon name and the tone a view
+ * needs. It hands back `icon` (a sprite id), `doseClass` (the same
+ * `dose-*` class medication-tracker.js swaps at runtime, so the server and
+ * the browser agree) and `tone` — never a colour, and never an emoji.
+ */
 class MedicationPresenter
 {
     /**
@@ -26,9 +32,9 @@ class MedicationPresenter
             $wasLate = $takenAt && $takenAt->gt($windowEnd);
             return [
                 'status' => $wasLate ? 'Taken Late' : 'Taken',
-                'icon' => '✓',
-                'bg' => $wasLate ? 'bg-orange-50 border-orange-300' : 'bg-green-50 border-green-300',
-                'iconBg' => $wasLate ? 'bg-orange-200' : 'bg-green-200',
+                'icon' => 'check',
+                'doseClass' => $wasLate ? 'dose-taken-late' : 'dose-taken',
+                'tone' => $wasLate ? 'warn' : 'ok',
                 'canTake' => false,
                 'canUndo' => $canUndo,
                 'isTaken' => true,
@@ -44,9 +50,9 @@ class MedicationPresenter
 
             return [
                 'status' => $isExpired ? 'Missed' : 'Late — take now',
-                'icon' => '!',
-                'bg' => 'bg-red-50 border-red-300',
-                'iconBg' => 'bg-red-200',
+                'icon' => 'alert',
+                'doseClass' => 'dose-missed',
+                'tone' => 'alert',
                 'canTake' => $canTake,
                 'canUndo' => false,
                 'canSkip' => $isExpired,
@@ -58,10 +64,10 @@ class MedicationPresenter
         
         if ($isWithinWindow) {
             return [
-                'status' => 'Take Now', 
-                'icon' => '💊', 
-                'bg' => 'bg-blue-50 border-blue-300 ring-2 ring-blue-400 ring-offset-2', 
-                'iconBg' => 'bg-blue-200 animate-pulse', 
+                'status' => 'Take Now',
+                'icon' => 'pill',
+                'doseClass' => 'dose-active',
+                'tone' => 'brand',
                 'canTake' => true, 
                 'canUndo' => false,
                 'isTaken' => false,
@@ -70,10 +76,10 @@ class MedicationPresenter
         }
         
         return [
-            'status' => 'Upcoming', 
-            'icon' => '⏳', 
-            'bg' => 'bg-gray-50 border-gray-200 opacity-75', 
-            'iconBg' => 'bg-gray-200', 
+            'status' => 'Upcoming',
+            'icon' => 'clock',
+            'doseClass' => 'dose-upcoming',
+            'tone' => '',
             'canTake' => false, 
             'canUndo' => false,
             'isTaken' => false,
@@ -94,13 +100,13 @@ class MedicationPresenter
         $lowerSrc = strtolower($instructions);
 
         if (str_contains($lowerSrc, 'food') || str_contains($lowerSrc, 'eat') || str_contains($lowerSrc, 'meal')) {
-            $tags[] = ['text' => 'Take with food', 'color' => 'bg-amber-100 text-amber-800'];
+            $tags[] = ['text' => 'Take with food', 'tone' => 'warn'];
         } elseif (str_contains($lowerSrc, 'empty stomach') || str_contains($lowerSrc, 'fasting') || str_contains($lowerSrc, 'before meal')) {
-            $tags[] = ['text' => 'Empty stomach', 'color' => 'bg-purple-100 text-purple-800'];
+            $tags[] = ['text' => 'Empty stomach', 'tone' => 'brand'];
         }
         
         if (str_contains($lowerSrc, 'water') || str_contains($lowerSrc, 'drink') || str_contains($lowerSrc, 'fluid')) {
-            $tags[] = ['text' => 'Drink water', 'color' => 'bg-cyan-100 text-cyan-800'];
+            $tags[] = ['text' => 'Drink water', 'tone' => 'brand'];
         }
 
         return collect($tags)->unique('text')->values()->all();

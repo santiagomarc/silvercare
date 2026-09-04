@@ -1,133 +1,143 @@
 {{-- ============================================================
-     ElderlyHeroAction — Unified hero + queue action surface.
-     Shows current priority action, step meta, and coming-up preview.
+     ElderlyHeroAction — the one thing to do next.
+
+     Arthur's screen answers "what do I do now?", so this card holds a
+     single action and a single loud button. Urgency is carried by the
+     tone the queue assigns (brand / ok / alert) *and* by the tag word
+     beside it — never by colour alone.
+
+     The icon name arrives from Alpine at runtime, so it is drawn from
+     the sprite with a bound <use href>; the package component would
+     need the name at compile time.
      ============================================================ --}}
 
-<div class="hero-action mb-4"
+<div class="sc-card sc-card-crest p-6 mb-4"
      role="status"
      aria-label="Next action: {{ $headline }}"
      x-data="heroAction({
          progress: {{ $overallProgress }},
          steps: @js($steps),
          initialTotal: {{ $initialTotal }}
-     })"
-     style="background-image: {{ $gradientStyle }};"
-     :style="'background-image:' + currentGradientStyle">
+     })">
 
-    {{-- Decorative glass lighting --}}
-    <div class="absolute inset-0 bg-gradient-to-br from-white/18 via-transparent to-black/25"></div>
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_14%_18%,rgba(255,255,255,0.35)_0%,rgba(255,255,255,0)_42%)]"></div>
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_85%_74%,rgba(191,219,254,0.28)_0%,rgba(191,219,254,0)_40%)]"></div>
-    <div class="absolute top-0 right-0 -mt-10 -mr-8 h-40 w-40 rounded-full bg-white/18 blur-3xl"></div>
-    <div class="absolute bottom-0 left-0 -mb-10 -ml-8 h-28 w-28 rounded-full bg-black/20 blur-2xl"></div>
-
-    <div class="relative z-10 flex items-start justify-between gap-3 mb-4">
-        <div>
-            <h3 class="text-white text-sm font-black uppercase tracking-wider">Today's Priority Action</h3>
-        </div>
+    <div class="flex items-start justify-between gap-3 mb-4">
+        <p class="sc-eyebrow">Today's priority action</p>
         <template x-if="initialTotal > 0">
-            <span class="hero-glass-chip px-3 py-1 text-xs font-bold text-white shadow-sm">
-                Step <span x-text="currentStepNumber"></span> of <span x-text="initialTotal"></span>
+            <span class="sc-badge sc-num">
+                Step&nbsp;<span x-text="currentStepNumber"></span> of <span x-text="initialTotal"></span>
             </span>
         </template>
     </div>
 
-    <div class="relative z-10 flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-        {{-- Left: Icon + Text + badge --}}
+    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        {{-- Left: what it is --}}
         <div class="flex items-start gap-4 min-w-0">
-            <div class="text-3xl md:text-4xl flex-shrink-0" aria-hidden="true" x-text="currentIcon">{{ $icon }}</div>
-            <div>
-                <div class="flex items-center gap-2 mb-1 flex-wrap">
-                    <span class="hero-glass-chip px-2.5 py-1 text-xs font-black uppercase tracking-wide text-white" x-text="currentTag || currentTypeLabel">{{ $tag ?: $actionType }}</span>
-                </div>
+            <span class="sc-plate {{ $tone === 'alert' ? 'sc-plate-alert' : ($tone === 'ok' ? 'sc-plate-ok' : '') }}"
+                  :class="currentTone === 'alert' ? 'sc-plate-alert' : (currentTone === 'ok' ? 'sc-plate-ok' : '')">
+                <svg class="sc-i w-6 h-6" aria-hidden="true" focusable="false">
+                    <use href="#i-{{ $icon }}" :href="'#i-' + currentIcon"/>
+                </svg>
+            </span>
 
-                <h2 class="text-xl md:text-2xl font-extrabold text-white leading-tight"
-                    x-text="currentTitle">
-                    {{ $headline }}
-                </h2>
-                <p class="text-white/92 text-sm mt-0.5 max-w-xl" x-text="currentSubtitle">{{ $subtext }}</p>
+            <div class="min-w-0">
+                <span class="sc-badge {{ $tone === 'alert' ? 'sc-badge-alert' : ($tone === 'ok' ? 'sc-badge-ok' : 'sc-badge-brand') }}"
+                      :class="currentTone === 'alert' ? 'sc-badge-alert' : (currentTone === 'ok' ? 'sc-badge-ok' : 'sc-badge-brand')"
+                      x-text="currentTag || currentTypeLabel">{{ $tag ?: $actionType }}</span>
+
+                <h2 class="sc-h3 mt-2" x-text="currentTitle">{{ $headline }}</h2>
+                <p class="mt-1 max-w-xl" style="color:var(--sc-body)" x-text="currentSubtitle">{{ $subtext }}</p>
             </div>
         </div>
 
-        {{-- Right: Action Buttons --}}
-        <div class="flex items-center gap-2 self-start md:self-center flex-shrink-0">
+        {{-- Right: the one action --}}
+        <div class="flex flex-wrap items-center gap-2 self-start md:self-center flex-shrink-0">
             <button
+                type="button"
                 x-show="isMedication && !busy"
                 @click="completeMedication()"
-                class="hero-action-cta text-green-700 flex items-center gap-2"
+                class="sc-btn sc-btn-primary sc-btn-sm"
                 aria-label="Mark medication as taken"
             >
-                <x-lucide-check class="w-5 h-5" aria-hidden="true" />
+                <x-lucide-check class="sc-i w-5 h-5" aria-hidden="true" />
                 I Took It
             </button>
 
             <button
+                type="button"
                 x-show="isTask && !busy"
                 @click="completeTask()"
-                class="hero-action-cta text-[#000080] flex items-center gap-2"
+                class="sc-btn sc-btn-primary sc-btn-sm"
                 aria-label="Mark task as complete"
             >
-                <x-lucide-check class="w-5 h-5" aria-hidden="true" />
+                <x-lucide-check class="sc-i w-5 h-5" aria-hidden="true" />
                 Mark Complete
             </button>
 
             <a
                 x-show="isVital && currentRoute"
                 :href="currentRoute"
-                class="hero-action-cta text-teal-700 flex items-center gap-2"
+                class="sc-btn sc-btn-primary sc-btn-sm"
             >Record Now</a>
 
             <button
+                type="button"
                 x-show="isMood"
                 @click="openMood()"
-                class="hero-action-cta text-purple-700 flex items-center gap-2"
+                class="sc-btn sc-btn-primary sc-btn-sm"
             >Open Mood Tracker</button>
 
             <a
                 x-show="isDone"
                 href="{{ route('elderly.wellness.index') }}"
-                class="hero-action-cta text-emerald-700 flex items-center gap-2"
+                class="sc-btn sc-btn-primary sc-btn-sm"
             >Wellness Center</a>
 
             <button
+                type="button"
                 x-show="canDefer"
                 @click="laterCurrent()"
                 :disabled="busy"
-                class="hero-action-ghost"
+                class="sc-btn sc-btn-ghost sc-btn-sm"
             >Later</button>
 
             <button
+                type="button"
                 x-show="busy"
                 disabled
-                class="hero-action-ghost opacity-85"
+                class="sc-btn sc-btn-ghost sc-btn-sm"
             >Saving...</button>
         </div>
     </div>
 
-    {{-- Progress mini-bar (real-time) --}}
-    <div class="relative z-10 mt-4">
+    {{-- Progress. The number is always beside the bar. --}}
+    <div class="mt-5">
         <div class="flex justify-between items-center mb-1.5">
-            <span class="text-white/90 text-xs font-bold">Daily Progress</span>
-            <span class="text-white font-extrabold text-sm" x-text="currentProgress + '%'">{{ $overallProgress }}%</span>
+            <span class="font-semibold" style="color:var(--sc-body)">Daily Progress</span>
+            <span class="font-semibold sc-num" style="color:var(--sc-ink)" x-text="currentProgress + '%'">{{ $overallProgress }}%</span>
         </div>
-        <div class="progress-track bg-white/30">
-            <div class="progress-fill bg-gradient-to-r from-white via-sky-100 to-cyan-100 transition-all duration-700 ease-out"
-                 :style="'width:' + currentProgress + '%'"></div>
+        <div class="sc-progress"
+             role="progressbar"
+             aria-valuemin="0"
+             aria-valuemax="100"
+             aria-valuenow="{{ $overallProgress }}"
+             :aria-valuenow="currentProgress"
+             aria-label="Progress through today's actions">
+            <div class="sc-progress-fill" :style="'width:' + currentProgress + '%'" @style(['width: ' . $overallProgress . '%'])></div>
         </div>
     </div>
 
-    <div class="relative z-10 mt-3 hidden md:block" x-show="nextPreview.length > 0">
-        <p class="text-xs font-bold uppercase tracking-wider text-white/90 mb-2">Coming Up</p>
-        <div class="space-y-2">
+    <div class="mt-5 hidden md:block" x-show="nextPreview.length > 0">
+        <p class="sc-eyebrow mb-2">Coming up</p>
+        <ul class="space-y-2">
             <template x-for="(item, i) in nextPreview" :key="item.id">
-                <div class="hero-glass-row px-3 py-2 flex items-center justify-between">
-                    <p class="text-sm font-semibold text-white truncate">
-                        <span class="text-white/85 mr-1">Step <span x-text="currentStepNumber + i + 1"></span>:</span>
-                        <span x-text="item.title"></span>
+                <li class="sc-card-quiet px-4 py-2.5 flex items-center justify-between gap-3">
+                    <p class="min-w-0 truncate" style="color:var(--sc-body)">
+                        <span class="sc-num" style="color:var(--sc-muted)">Step <span x-text="currentStepNumber + i + 1"></span>:</span>
+                        <span class="font-semibold" style="color:var(--sc-ink)" x-text="item.title"></span>
                     </p>
-                    <span class="text-xs font-bold text-white/85 uppercase tracking-wide" x-text="item.tag"></span>
-                </div>
+                    <span class="sc-badge flex-none" x-text="item.tag"></span>
+                </li>
             </template>
-        </div>
+        </ul>
     </div>
 </div>

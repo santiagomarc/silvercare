@@ -4,21 +4,20 @@
     $dose = \App\Presenters\MedicationPresenter::getDoseStatus($time, $log);
     $status = $dose['status'];
     $icon = $dose['icon'];
-    $bgClass = $dose['bg'];
-    $iconBgClass = $dose['iconBg'];
+    $doseClass = $dose['doseClass'];
     $canTake = $dose['canTake'];
     $canUndo = $dose['canUndo'];
     $isTaken = $dose['isTaken'];
 @endphp
 
-<div class="flex items-center justify-between p-3 rounded-xl border {{ $bgClass }} transition-all duration-300">
+<div class="sc-dose {{ $doseClass }} flex items-center justify-between">
     <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-full flex items-center justify-center text-lg {{ $iconBgClass }}">
-            {{ $icon }}
-        </div>
+        <span class="sc-plate sc-plate-sm" aria-hidden="true">
+            <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-{{ $icon }}"/></svg>
+        </span>
         <div>
-            <p class="font-bold text-gray-900">{{ \Carbon\Carbon::parse($time)->format('g:i A') }}</p>
-            <p class="text-xs font-medium text-gray-600">{{ $status }}</p>
+            <p class="font-semibold sc-num" style="color:var(--sc-ink)">{{ \Carbon\Carbon::parse($time)->format('g:i A') }}</p>
+            <p style="color:var(--sc-muted)">{{ $status }}</p>
         </div>
     </div>
     
@@ -27,7 +26,7 @@
             <form action="{{ route('elderly.medications.undo', $medication) }}" method="POST">
                 @csrf
                 <input type="hidden" name="time" value="{{ $time }}">
-                <button type="submit" class="px-4 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors min-h-touch min-w-touch">
+                <button type="submit" class="sc-btn sc-btn-ghost sc-btn-sm">
                     Undo
                 </button>
             </form>
@@ -37,9 +36,9 @@
             <form action="{{ route('elderly.medications.take', $medication) }}" method="POST">
                 @csrf
                 <input type="hidden" name="time" value="{{ $time }}">
-                <button type="submit" 
+                <button type="submit"
                     @disabled(!$canTake)
-                    class="px-5 py-2.5 text-sm font-bold text-white rounded-xl transition-colors min-h-touch {{ $canTake ? 'bg-blue-600 hover:bg-blue-700 shadow-md' : 'bg-gray-400 cursor-not-allowed' }}">
+                    class="sc-btn sc-btn-primary sc-btn-sm">
                     Take
                 </button>
             </form>

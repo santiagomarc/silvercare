@@ -80,7 +80,7 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
                     reverseButtons: true, // Puts the primary action on the right
                     customClass: {
                         popup: 'rounded-2xl border border-slate-200 shadow-2xl',
-                        title: 'text-2xl font-extrabold text-slate-800'
+                        title: 'sc-dialog-title'
                     }
                 });
 
@@ -241,29 +241,33 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
             const statusSpan = entry.querySelector('[data-status-label]');
             const title = entry.querySelector('[data-med-name]');
 
+            // Distinct icon and wording, not just a colour — dose status must be
+            // readable without relying on colour alone (WCAG 1.4.1). `icon` is a
+            // sprite id from partials/sc-icons.blade.php and `css` a badge tone,
+            // so this matches what MedicationPresenter renders server-side.
             const statusMap = {
-                'taken':        { icon: '✓', text: 'Taken',           css: 'text-green-700'  },
-                'taken-late':   { icon: '✓', text: 'Taken Late',      css: 'text-orange-600' },
-                'missed':       { icon: '!', text: 'Missed',          css: 'text-red-600'    },
-                'active':       { icon: '●', text: 'Take Now',        css: 'text-amber-600'  },
-                'upcoming':     { icon: '○', text: 'Upcoming',        css: 'text-gray-400'   },
-                // Distinct icon and wording, not just a colour — dose status
-                // must be readable without relying on colour alone (WCAG 1.4.1).
-                'pending-sync': { icon: '⏳', text: 'Waiting to sync', css: 'text-amber-700'  },
-                'conflict':     { icon: '⚠', text: 'Needs review',    css: 'text-rose-700'   },
+                'taken':        { icon: 'check', text: 'Taken',           css: 'sc-badge-ok'    },
+                'taken-late':   { icon: 'check', text: 'Taken Late',      css: 'sc-badge-warn'  },
+                'missed':       { icon: 'alert', text: 'Missed',          css: 'sc-badge-alert' },
+                'active':       { icon: 'pill',  text: 'Take Now',        css: 'sc-badge-brand' },
+                'upcoming':     { icon: 'clock', text: 'Upcoming',        css: ''               },
+                'pending-sync': { icon: 'undo',  text: 'Waiting to sync', css: 'sc-badge-warn'  },
+                'conflict':     { icon: 'alert', text: 'Needs review',    css: 'sc-badge-alert' },
             };
 
             const s = statusMap[status] || statusMap.upcoming;
-            if (iconDiv) iconDiv.textContent = s.icon;
+            if (iconDiv) {
+                iconDiv.innerHTML = `<svg class="sc-i w-6 h-6" aria-hidden="true" focusable="false"><use href="#i-${s.icon}"/></svg>`;
+            }
             if (statusSpan) {
-                statusSpan.className = `badge text-xs font-bold ${s.css}`;
+                statusSpan.className = `sc-badge ${s.css}`;
                 statusSpan.textContent = s.text;
             }
             if (title) {
                 if (status === 'taken' || status === 'taken-late') {
-                    title.classList.add('line-through', 'opacity-75');
+                    title.classList.add('line-through', 'sc-task-text-done');
                 } else {
-                    title.classList.remove('line-through', 'opacity-75');
+                    title.classList.remove('line-through', 'sc-task-text-done');
                 }
             }
         },

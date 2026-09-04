@@ -1,1 +1,3 @@
-<a {{ $attributes->merge(['class' => 'block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:bg-slate-800']) }}>{{ $slot }}</a>
+{{-- One row inside <x-dropdown>. Same shape as a drawer row: full width,
+     44px+ tall, and named by its own text. --}}
+<a {{ $attributes->merge(['class' => 'sc-menu-link']) }}>{{ $slot }}</a>
