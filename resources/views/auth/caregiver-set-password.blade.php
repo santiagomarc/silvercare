@@ -14,7 +14,7 @@
         </p>
     </div>
 
-    <form method="POST" action="{{ route('caregiver.password.store', $user->id) }}" class="mt-8 space-y-6">
+    <form method="POST" action="{{ $submitUrl ?? route('caregiver.password.store', $user->id) }}" class="mt-8 space-y-6">
         @csrf
 
         <div class="sc-field">

@@ -32,6 +32,11 @@ class CaregiverSetPasswordController extends Controller
         return view('auth.caregiver-set-password', [
             'user' => $user,
             'email' => $user->email,
+            'submitUrl' => URL::temporarySignedRoute(
+                'caregiver.password.store',
+                now()->addDays(7),
+                ['userId' => $user->id]
+            ),
         ]);
     }
 
@@ -46,6 +51,11 @@ class CaregiverSetPasswordController extends Controller
         }
 
         $user = User::findOrFail($userId);
+
+        // Verify this is a caregiver
+        if ($user->profile?->user_type !== 'caregiver') {
+            abort(403, 'Invalid invitation link.');
+        }
 
         // Validate password
         $validated = $request->validate([
