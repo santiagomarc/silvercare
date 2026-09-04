@@ -10,13 +10,19 @@
  *   npm i -D playwright && npx playwright install chromium   (once)
  *   node scripts/check-ui.mjs http://127.0.0.1:8000/login
  *
+ * Signed-in pages need a session, or every check silently runs against the
+ * login page the app redirected to. Sign in first with:
+ *
+ *   node scripts/check-ui.mjs http://127.0.0.1:8000/dashboard --login=me@example.com:secret
+ *   SC_UI_LOGIN=me@example.com:secret node scripts/check-ui.mjs <url>
+ *
  * Exit code 0 = clean, 1 = something to fix.
  */
 import { chromium } from 'playwright';
 
 const url = process.argv[2];
 if (!url) {
-    console.error('usage: node scripts/check-ui.mjs <url>');
+    console.error('usage: node scripts/check-ui.mjs <url> [--login=email:password]');
     process.exit(2);
 }
 
@@ -27,10 +33,41 @@ const pass = (msg) => console.log('  ok    ' + msg);
 
 const browser = await chromium.launch();
 
+/* ── 0. Sign in, if asked ─────────────────────────────────────────
+   Every context below is built from `session`, so the cookie taken here
+   is reused by all of them. Without it a dashboard URL 302s to /login
+   and the run reports a clean bill of health for the wrong page. */
+const credentials = (process.argv.slice(3).find((a) => a.startsWith('--login=')) || '')
+    .replace('--login=', '') || process.env.SC_UI_LOGIN || '';
+let session;
+if (credentials) {
+    const separator = credentials.indexOf(':');
+    const email = credentials.slice(0, separator);
+    const password = credentials.slice(separator + 1);
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await ctx.newPage();
+    await page.goto(new URL('/login', url).href, { waitUntil: 'networkidle' });
+    await page.fill('#email', email);
+    await page.fill('#password', password);
+    await page.locator('form[method="POST"] button[type="submit"]').first().click();
+    await page.waitForLoadState('networkidle');
+    if (new URL(page.url()).pathname === '/login') {
+        console.error('  login failed — check the email and password');
+        await browser.close();
+        process.exit(2);
+    }
+    session = await ctx.storageState();
+    await ctx.close();
+    console.log(`\nSigned in as ${email}`);
+}
+
+/* Every check opens its own context; they all inherit the session. */
+const openContext = (options = {}) => browser.newContext({ storageState: session, ...options });
+
 /* ── 1. Horizontal overflow ──────────────────────────────────────── */
 console.log('\nHorizontal overflow');
 for (const width of WIDTHS) {
-    const ctx = await browser.newContext({ viewport: { width, height: 900 } });
+    const ctx = await openContext({ viewport: { width, height: 900 } });
     const page = await ctx.newPage();
     await page.goto(url, { waitUntil: 'networkidle' });
     await page.waitForTimeout(400);
@@ -100,7 +137,7 @@ const contrastProbe = () => {
 
 console.log('\nColour contrast');
 for (const theme of ['light', 'dark', 'high-contrast']) {
-    const ctx = await browser.newContext({
+    const ctx = await openContext({
         viewport: { width: 1440, height: 950 },
         colorScheme: theme === 'dark' ? 'dark' : 'light',
     });
@@ -121,7 +158,7 @@ for (const theme of ['light', 'dark', 'high-contrast']) {
 /* ── 3. Structure, targets, keyboard ─────────────────────────────── */
 console.log('\nStructure and interaction');
 {
-    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const ctx = await openContext({ viewport: { width: 390, height: 844 } });
     const page = await ctx.newPage();
     const jsErrors = [];
     page.on('pageerror', (e) => jsErrors.push(e.message));
@@ -191,7 +228,7 @@ console.log('\nStructure and interaction');
 /* ── 4. Reduced motion must not hide content ─────────────────────── */
 console.log('\nReduced motion');
 {
-    const ctx = await browser.newContext({ viewport: { width: 1440, height: 950 }, reducedMotion: 'reduce' });
+    const ctx = await openContext({ viewport: { width: 1440, height: 950 }, reducedMotion: 'reduce' });
     const page = await ctx.newPage();
     await page.goto(url, { waitUntil: 'networkidle' });
     await page.waitForTimeout(600);

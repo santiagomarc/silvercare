@@ -16,6 +16,7 @@ schedule and the ownership map.
 | All 9 auth views | done |
 | 7 shared form components | done |
 | `layouts/guest.blade.php` | done, legacy branch **deleted** |
+| `components/dashboard-nav.blade.php` (the app bar) | done — Phase 0, see §3 |
 | Signed-in app | **~12,700 lines across 49 files — this plan** |
 
 `layouts/dashboard.blade.php` still carries two bodies: the new design, and a
@@ -44,6 +45,11 @@ REDESIGN_PLAN.md
 Two agents defining `.sc-card` differently is how the whole system falls apart.
 It cannot happen if only one agent touches the file.
 
+**What the shared chrome now guarantees you** (see §3, Phase 0): a converted
+view gets its `<h1>`, its subtitle, the reader controls, the account menu and
+the mobile drawer from `<x-dashboard-nav>`. Do not rebuild any of them, and do
+not add a second `<h1>`.
+
 ### If Gemini needs something that does not exist yet
 
 Do **not** invent a class, and do **not** add CSS to a Blade file. Instead:
@@ -63,13 +69,36 @@ Do **not** invent a class, and do **not** add CSS to a Blade file. Instead:
 
 ## 3. Phases
 
-### Phase 0 — the gate (Claude, alone)
+### Phase 0 — the gate (Claude, alone) — **DONE**
 
-`components/dashboard-nav.blade.php` — 281 lines, **used by all 25 dashboard
-views**. Every file in this plan depends on it and on nothing else shared.
+`components/dashboard-nav.blade.php` — **used by all 25 dashboard views**.
+Every file in this plan depends on it and on nothing else shared.
 
-**Nobody starts Phase 1 until this is merged.** After it, the two agents are
-fully independent.
+It is now the **app bar**, and it emits two blocks, not one:
+
+```
+<header class="sc-appbar">   sticky: brand, SOS, notifications, messages,
+                             Display menu, profile, log out, drawer trigger
+<div class="sc-appbar-head"> the title band — the page's one <h1>
+```
+
+**Three things every view must now honour** (this is the whole reason Phase 0
+came first):
+
+1. **The bar owns the `<h1>`.** It renders the `title` prop as the page's only
+   `<h1>`. A view must not declare one of its own — its section headings start
+   at `<h2>`. Six views still carry a second `<h1>` and fail
+   `check-ui.mjs` on "exactly one h1" until they are converted:
+   `elderly/wellness/index`, `wellness/word`, `wellness/breathing`,
+   `wellness/memory`, `caregiver/checklists/index`,
+   `caregiver/medications/index`. Demote them when you convert them.
+2. **The page title is no longer inside the bar**, so a view that also prints
+   its own title block under the nav now says it twice. Delete the view's copy
+   and let the `title`/`subtitle` props carry it.
+3. **Nothing else changed** — every prop, route, link, button and the SOS
+   script are exactly as they were.
+
+Phase 1 is open.
 
 ### Phase 1 — parallel
 
@@ -148,6 +177,13 @@ Suggested order — cheapest first, so the pattern is proven before the big ones
 
 ---
 
+## 4b. Known blockers
+
+- **`caregiver/analytics` returns a 500** before any of this work started:
+  `CaregiverAnalyticsController.php:84` compacts `$sourceAttribution`, which is
+  never assigned. It is a controller bug, not a view bug. Phase 3 cannot check
+  that page until someone fixes it.
+
 ## 5. Do not convert these
 
 | File | Why |
@@ -169,9 +205,11 @@ php artisan view:cache && php artisan view:clear
 # 2. nothing else broke
 php artisan test
 
-# 3. the UI holds up
+# 3. the UI holds up — signed-in pages need --login, or the checker
+#    silently grades the login page it was redirected to
 php artisan serve
-node scripts/check-ui.mjs http://127.0.0.1:8000/<the-page-url>
+node scripts/check-ui.mjs http://127.0.0.1:8000/<the-page-url> \
+    --login=you@example.com:your-password
 
 # 4. you looked at it: 375px wide, and in dark mode
 ```

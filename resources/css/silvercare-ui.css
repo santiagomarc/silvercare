@@ -61,6 +61,11 @@
     --sc-alert:         #BE123C;
     --sc-alert-tint:    #FFF1F2;
     --sc-alert-line:    #FECDD3;
+    /* `--sc-alert` is tuned to be read as TEXT on the page ground, so in dark
+       mode it is a pale pink. A *filled* destructive button needs a mid-tone
+       of its own, or its white label lands at 1.9:1. */
+    --sc-alert-fill:    #BE123C;
+    --sc-alert-on:      #FFFFFF;
 
     --sc-ring:          #000080;
 
@@ -118,6 +123,8 @@ html.dark {
     --sc-alert:         #FDA4AF;
     --sc-alert-tint:    rgba(190, 18, 60, .18);
     --sc-alert-line:    rgba(253, 164, 175, .30);
+    --sc-alert-fill:    #E11D48;   /* 4.7:1 against white — the pale text tone is not */
+    --sc-alert-on:      #FFFFFF;
 
     --sc-ring:          #A5B4FC;
 
@@ -239,8 +246,8 @@ html.dark .sc-page nav {
 .sc-btn-ghost:active { transform: translateY(0) scale(.985); }
 
 .sc-btn-danger {
-    background: var(--sc-alert);
-    color: #FFFFFF;
+    background: var(--sc-alert-fill);
+    color: var(--sc-alert-on);
     box-shadow: var(--sc-sh), inset 0 1px 0 rgba(255,255,255,.16);
 }
 .sc-btn-danger:hover  { filter: brightness(.92); transform: translateY(-2px); }
@@ -702,6 +709,12 @@ html.high-contrast .sc-cta-panel {
 /* app.css recolours every <a> to #7DD3FC in this mode, which landed
    pale blue on the white CTA button. Give both buttons the dark
    treatment the rest of high-contrast mode uses. */
+html.high-contrast .sc-btn-danger {
+    background: #0A0A0A !important;
+    color: #FCA5A5 !important;
+    border: 2px solid #FFFFFF !important;
+    box-shadow: none !important;
+}
 html.high-contrast .sc-cta-panel .sc-btn {
     background: #0A0A0A !important;
     color: #7DD3FC !important;
@@ -1236,6 +1249,161 @@ html.high-contrast {
     color: var(--sc-ink);
     margin-top: .3rem;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   THE APP BAR
+   ──────────────────────────────────────────────────────────────────
+   The signed-in header: the brand, the reader controls, and the few
+   actions that belong to every page. Deliberately quieter than the
+   marketing header — on a signed-in screen the page is the point and
+   the chrome is not.
+
+   It is a <header>, not a <nav>. app.css paints every <nav> a slate
+   slab in dark mode with !important, and silvercare-ui.css cancels
+   that with another !important; a bar that draws its own surface has
+   to sit outside both.
+
+   The page title is NOT in the bar. It sits in `.sc-appbar-head`
+   underneath, where it is the page's one <h1>, readable on a phone,
+   instead of being hidden below the md breakpoint the way the old bar
+   hid it. Only the bar is sticky, so the title scrolls away with the
+   content it names.
+   ══════════════════════════════════════════════════════════════════ */
+
+.sc-appbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--sc-canvas);
+    border-bottom: 1px solid var(--sc-line);
+}
+/* Opaque, and deliberately not blurred. `backdrop-filter` makes an element a
+   containing block for `position: fixed` descendants, which would have pinned
+   the drawer and the SOS confirmation to this 81px bar instead of the
+   viewport. A solid bar is also the calmer read with content sliding under. */
+
+/* At 320-390px the wordmark, the SOS button and the drawer trigger do not fit
+   on one row together. SOS wins: the mark still carries the brand, the title
+   band underneath still says where you are, and the link keeps its name from
+   the sr-only text beside the word. */
+@media (max-width: 419px) {
+    .sc-appbar .sc-brand-word { display: none; }
+    .sc-sos-glyph { display: none; }
+}
+
+/* Hairline between the brand and the actions. */
+.sc-appbar-rule {
+    width: 1px; height: 1.75rem; flex: none;
+    background: var(--sc-line-strong);
+}
+
+/* The title band. Sits on the canvas under the bar, not inside it. */
+.sc-appbar-head { padding-block: 1.5rem 1.15rem; }
+.sc-appbar-sub  { margin-top: .35rem; color: var(--sc-muted); }
+
+/* Below this width the actions fold into the drawer rather than
+   wrapping the bar onto a second line. `rem` is no help inside a media
+   query — there it resolves against the browser's initial 16px, not our
+   18px root — so the raised-text case is handled by the explicit class
+   the Display menu writes on <html>. */
+.sc-appbar-desktop { display: none !important; }
+.sc-appbar-toggle  { display: inline-flex; }
+@media (min-width: 1024px) {
+    html:not(.sc-text-scaled) .sc-appbar-desktop { display: flex !important; }
+    html:not(.sc-text-scaled) .sc-appbar-toggle  { display: none; }
+    html:not(.sc-text-scaled) .sc-appbar-drawer  { display: none !important; }
+}
+
+/* Profile: a face and a name, not a mystery avatar. */
+.sc-appbar-profile {
+    display: inline-flex; align-items: center; gap: .65rem;
+    padding: .35rem .7rem .35rem .35rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    transition: background-color .18s ease, border-color .18s ease;
+}
+.sc-appbar-profile:hover { background: var(--sc-surface-3); border-color: var(--sc-line); }
+.sc-appbar-name {
+    font-weight: 600; line-height: 1.25; color: var(--sc-ink);
+    max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sc-appbar-role { font-size: .88rem; line-height: 1.25; color: var(--sc-muted); }
+
+/* The photo, or the first letter of the name. Not tinted by role: the
+   colour would be the only thing carrying that meaning, and the word
+   underneath already says it. */
+.sc-avatar {
+    display: inline-flex; align-items: center; justify-content: center; flex: none;
+    width: 2.5rem; height: 2.5rem; border-radius: 999px; overflow: hidden;
+    font-family: 'Prompt', 'Valley Sans', sans-serif;
+    font-weight: 700; font-size: 1.05rem; line-height: 1;
+    background: var(--sc-brand-tint); color: var(--sc-brand-text);
+    border: 1px solid var(--sc-brand-line);
+}
+.sc-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.sc-avatar-lg { width: 3rem; height: 3rem; font-size: 1.2rem; }
+
+/* Unread count on an icon button. Never the only signal — the count is
+   in the button's accessible name too, so it is not lost to a screen
+   reader or to anyone who cannot pick red out of the corner. */
+.sc-count {
+    position: absolute; top: .05rem; right: .05rem;
+    min-width: 1.4rem; height: 1.4rem; padding: 0 .3rem;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 999px;
+    font-family: 'Prompt', 'Valley Sans', sans-serif;
+    font-weight: 700; font-size: .8rem; line-height: 1;
+    font-variant-numeric: tabular-nums;
+    background: var(--sc-alert); color: var(--sc-surface);
+    border: 2px solid var(--sc-canvas);
+}
+
+/* The SOS confirmation. Anchored under the button on a wide screen; on a
+   handset the button sits far enough right that a right-anchored panel would
+   hang off the left edge, so there it spans the bar's own gutters. */
+.sc-sos-pop {
+    position: absolute; top: 100%; right: 0; margin-top: .75rem;
+    width: min(17rem, calc(100vw - 2.5rem));
+}
+@media (max-width: 480px) {
+    .sc-sos-pop { position: fixed; top: 5rem; right: 1rem; left: 1rem; width: auto; margin-top: 0; }
+}
+
+/* The Display menu's panel. Capped so it cannot push a 320px handset
+   sideways; `w-` utilities would have to be arbitrary values to say the
+   same thing. */
+.sc-display-menu { width: min(19rem, calc(100vw - 2.5rem)); }
+
+/* ── Drawer ──────────────────────────────────────────────────────
+   The bar's actions on a narrow screen, or whenever the reader has
+   turned the text up. Same links, same order, one per row at full
+   tap size. */
+.sc-drawer {
+    position: fixed; inset-block: 0; right: 0; z-index: 70;
+    width: min(20rem, 88vw);
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+    background: var(--sc-surface);
+    border-left: 1px solid var(--sc-line);
+    box-shadow: var(--sc-sh-lg);
+}
+.sc-drawer-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    padding: 1rem 1rem 1rem 1.25rem;
+    border-bottom: 1px solid var(--sc-line);
+}
+.sc-drawer-link {
+    display: flex; align-items: center; gap: .8rem;
+    width: 100%;
+    min-height: 3.25rem;
+    padding: .7rem .85rem;
+    border-radius: 1rem;
+    font-weight: 600;
+    color: var(--sc-ink);
+    transition: background-color .18s ease;
+}
+.sc-drawer-link:hover { background: var(--sc-surface-3); }
+.sc-drawer-link .sc-i { color: var(--sc-muted); }
 
 /* ══════════════════════════════════════════════════════════════════
    AUTH PAGES

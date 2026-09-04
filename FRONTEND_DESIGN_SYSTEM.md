@@ -207,6 +207,7 @@ Use them and all three just work. Write a raw colour and dark mode breaks.
 | `--sc-brand-tint` / `--sc-brand-line` | pale navy plate + its border |
 | `--sc-ok` / `--sc-warn` / `--sc-alert` | good / due soon / problem |
 | `--sc-ok-tint`, `--sc-ok-line` (same for warn, alert) | tinted backgrounds |
+| `--sc-alert-fill` / `--sc-alert-on` | a *filled* destructive button and its label |
 
 **Colour is never the only signal.** Green means good *and* has a tick icon
 *and* says "Normal". Someone colour-blind, or reading in sunlight, gets the
@@ -255,6 +256,11 @@ Use these instead of building your own. Full list is in
 **One primary button per screen.** Everything else is a ghost button or a
 link. Two loud buttons means the user has to make a decision you didn't ask
 them to make.
+
+**Destructive buttons** use `sc-btn-danger`, which fills from `--sc-alert-fill`,
+not `--sc-alert`. `--sc-alert` is tuned to be read as *text* on the page ground,
+so in dark mode it is a pale pink — a white label on it measures 1.9:1. Never
+fill a button with a semantic text token.
 
 **Disabled buttons:** use the real `disabled` attribute. Do **not** add
 `opacity-50` — the brand navy at half opacity reads as lavender, i.e. as a
@@ -349,6 +355,33 @@ those in by hand.
 | `sc-input-muted` | a field switched off by a "none of these" checkbox |
 | `sc-btn-danger` | destructive action |
 | `sc-choice` | a radio/checkbox in a card; the whole card shows the choice |
+| `sc-appbar` | the signed-in header bar (see below) |
+| `sc-appbar-head` | the title band under it, which holds the page's `<h1>` |
+| `sc-avatar` (+ `-lg`) | the round profile photo, or the first letter of a name |
+| `sc-count` | the unread number on an icon button |
+| `sc-drawer` + `sc-drawer-head` + `sc-drawer-link` | the slide-in menu |
+| `sc-display-menu` | the panel the Display button opens |
+
+### The app bar
+
+Every signed-in page gets its header from `<x-dashboard-nav>`. Do not build
+another one, and note what it already does for you:
+
+- **It renders the page's `<h1>`** from its `title` prop, in the band under the
+  bar. Your page starts at `<h2>`. Two `<h1>`s is the single most common way a
+  converted dashboard view fails `check-ui.mjs`.
+- **It carries the Display menu**, at every width — including on a phone, which
+  is exactly where someone needs to turn the text up.
+- **It folds into a drawer** below 1024px *and* whenever `sc-text-scaled` is on.
+  Use `sc-appbar-desktop` / `sc-appbar-toggle` if you ever add an item to it;
+  a media query alone cannot see the raised-text case.
+- **It is a `<header>`, not a `<nav>`.** `app.css` paints every `<nav>` a slate
+  slab in dark mode with `!important`. Anything that draws its own surface has
+  to stay out of that selector.
+- **It does not blur its backdrop.** `backdrop-filter` makes an element a
+  containing block for `position: fixed` descendants, which pins a drawer or a
+  popover inside the 81px bar instead of the viewport. A solid bar is also the
+  calmer read.
 
 ### Auth pages
 
@@ -477,6 +510,11 @@ npm i -D playwright && npx playwright install chromium
 # then, for each page you changed
 php artisan serve
 node scripts/check-ui.mjs http://127.0.0.1:8000/your-page
+
+# a signed-in page needs a session, or the checker grades the login page
+# it was redirected to and reports a clean bill of health for the wrong page
+node scripts/check-ui.mjs http://127.0.0.1:8000/dashboard \
+    --login=you@example.com:your-password
 ```
 
 It checks: sideways scroll at 7 widths, colour contrast in all three themes,
@@ -514,7 +552,7 @@ the page twice.
 
 | Component | Lines | Appears on |
 | --- | --- | --- |
-| `components/dashboard-nav.blade.php` | 281 | **25 views** |
+| `components/dashboard-nav.blade.php` | 281 | **25 views** — **done**, see "The app bar" in §5 |
 | `components/elderly-tab-bar.blade.php` | 88 | senior pages |
 | `components/modal.blade.php` + `logout-confirm-modal` | 184 | everywhere |
 | `components/flash-messages.blade.php` | 54 | everywhere |

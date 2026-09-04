@@ -1,14 +1,24 @@
 {{--
-    Dashboard Navigation Component
-    
-    Shared nav bar for elderly and caregiver dashboard pages.
-    Handles logo, page title, notifications (elderly only), profile link, and utilities.
+    The app bar — shared chrome for every signed-in page.
+
+    Two blocks come out of this component:
+
+      1. <header class="sc-appbar">  the sticky bar: brand, reader controls,
+         and the handful of actions that belong to every page.
+      2. <div class="sc-appbar-head">  the title band underneath, which holds
+         the page's one <h1>. It is NOT sticky — it scrolls away with the
+         content it names.
+
+    Because the bar owns the <h1>, a page that uses this component must not
+    declare one of its own; its section headings start at <h2>.
+    See REDESIGN_PLAN.md §2.
 
     Props:
-        - title: string — Page title displayed in the nav
-        - subtitle: string|null — Optional subtitle
-        - role: 'elderly'|'caregiver' — Controls color scheme and feature visibility
-        - unreadNotifications: int — Badge count for notification bell (elderly only)
+        - title: string — the page's heading
+        - subtitle: string|null — one line under it
+        - role: 'elderly'|'caregiver' — decides which actions appear
+        - unreadNotifications: int — count on the bell (elderly only)
+        - showBack, backUrl, backLabel — caregiver sub-pages
 --}}
 
 @props([
@@ -23,259 +33,347 @@
 
 @php
     $isCaregiver = $role === 'caregiver';
-    $profileBgColor = $isCaregiver
-        ? 'bg-purple-100 text-purple-700 group-hover:bg-purple-600'
-        : 'bg-blue-100 text-[#000080] group-hover:bg-[#000080]';
-    $profileNameHover = $isCaregiver ? 'group-hover:text-purple-600' : 'group-hover:text-[#000080]';
     $roleLabel = $isCaregiver ? 'Caregiver' : 'Patient';
     $actualBackUrl = $backUrl ?? route('caregiver.dashboard');
+    $homeUrl = $isCaregiver ? route('caregiver.dashboard') : route('dashboard');
+    $messagesUrl = $isCaregiver ? route('caregiver.messages.index') : route('elderly.messages.index');
+
+    // A caregiver sub-page already spends its bar on "Back"; the account
+    // actions stay in the drawer there, exactly as they did before.
+    $showAccountActions = ! ($isCaregiver && $showBack);
+
+    $navUser = Auth::user();
+    $navPhoto = $navUser->profile?->profile_photo;
+    $navInitial = mb_substr($navUser->name, 0, 1);
+    $bellLabel = $unreadNotifications > 0
+        ? 'Notifications, ' . $unreadNotifications . ' unread'
+        : 'Notifications';
 @endphp
 
-<nav x-data="{ mobileMenuOpen: false }" class="sticky top-0 z-50 border-b border-white/60 bg-white/70 backdrop-blur-xl shadow-[0_18px_40px_-32px_rgba(15,23,42,0.42)] dark:border-slate-800/80 dark:bg-slate-900/80 dark:shadow-[0_18px_40px_-32px_rgba(2,6,23,0.7)]">
-    <div class="max-w-[1600px] mx-auto px-6 lg:px-12 h-16 flex justify-between items-center">
+<header class="sc-appbar" x-data="{ mobileMenuOpen: false }">
+    <div class="max-w-[1600px] mx-auto px-6 lg:px-12">
+        <div class="flex items-center justify-between gap-4 min-h-[4.5rem]">
 
-        {{-- Left Side: Logo + Title --}}
-        <div class="flex items-center gap-6">
-            <div class="flex items-center gap-3">
-                <img src="{{ asset('assets/icons/silvercare.png') }}" alt="SilverCare" class="w-9 h-9 object-contain">
-                <h1 class="text-xl font-[900] tracking-tight text-gray-900 hidden sm:block dark:text-slate-100">SILVER<span class="text-[#000080] dark:text-sky-300">CARE</span></h1>
-            </div>
-            <div class="h-6 w-[1px] bg-gray-200 hidden md:block dark:bg-slate-700"></div>
-            <div class="hidden md:block">
-                <h2 class="text-lg font-[800] text-gray-900 dark:text-slate-100">{{ $title }}</h2>
-                @if(!empty($subtitle))
-                    <p class="text-xs text-gray-500 font-medium -mt-0.5 dark:text-slate-400">{{ $subtitle }}</p>
-                @endif
-            </div>
-        </div>
-
-	{{-- Right Side: Actions --}}
-        <div class="flex items-center gap-4">
-
-            {{-- Notifications Bell (Elderly Only) --}}
-            @if(!$isCaregiver)
-                <a href="{{ route('elderly.notifications.index') }}" aria-label="Notifications" class="hidden sm:flex relative rounded-xl border border-transparent p-2 transition-all group hover:border-white/70 hover:bg-white/60 dark:hover:border-slate-700 dark:hover:bg-slate-800/70" title="Notifications">
-                    <svg class="w-6 h-6 text-gray-600 group-hover:text-[#000080] transition-colors dark:text-slate-300 dark:group-hover:text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-                    </svg>
-                    @if($unreadNotifications > 0)
-                        <span class="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                            {{ $unreadNotifications > 9 ? '9+' : $unreadNotifications }}
-                        </span>
-                    @endif
-                </a>
-            @endif
-
-            {{-- Messages (both roles) --}}
-            <a
-                href="{{ $isCaregiver ? route('caregiver.messages.index') : route('elderly.messages.index') }}"
-                aria-label="Messages"
-                class="hidden sm:flex relative rounded-xl border border-transparent p-2 transition-all group hover:border-white/70 hover:bg-white/60 dark:hover:border-slate-700 dark:hover:bg-slate-800/70"
-                title="Messages"
-            >
-                <svg class="w-6 h-6 text-gray-600 group-hover:text-[#000080] transition-colors dark:text-slate-300 dark:group-hover:text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h8m-8 4h5m-7 6l-3-3H3a2 2 0 01-2-2V7a2 2 0 012-2h18a2 2 0 012 2v8a2 2 0 01-2 2h-8l-5 5z"/>
-                </svg>
+            {{-- Brand --}}
+            <a href="{{ $homeUrl }}" class="sc-brand">
+                <span class="sc-brand-mark">
+                    <img src="{{ asset('assets/icons/silvercare.png') }}" alt="">
+                </span>
+                <span class="sc-brand-word">SilverCare</span>
+                <span class="sr-only">SilverCare home</span>
             </a>
 
-            {{-- Dark mode toggle --}}
-            <button
-                type="button"
-                x-data="{ dark: document.documentElement.classList.contains('dark') }"
-                @click="dark = window.toggleSilverCareTheme ? window.toggleSilverCareTheme() : dark"
-                class="hidden sm:flex rounded-xl border border-transparent p-2 transition-all hover:border-white/70 hover:bg-white/60 dark:hover:border-slate-700 dark:hover:bg-slate-800/70"
-                :title="dark ? 'Switch to light mode' : 'Switch to dark mode'"
-                :aria-label="dark ? 'Switch to light mode' : 'Switch to dark mode'"
-            >
-                <svg x-show="!dark" class="w-6 h-6 text-gray-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646a9 9 0 1011.708 11.708z"/>
-                </svg>
-                <svg x-show="dark" x-cloak class="w-6 h-6 text-amber-500 dark:text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364 6.364l-1.414-1.414M7.05 7.05 5.636 5.636m12.728 0L16.95 7.05M7.05 16.95l-1.414 1.414M12 8a4 4 0 100 8 4 4 0 000-8z"/>
-                </svg>
-            </button>
+            {{-- Actions --}}
+            <div class="flex items-center gap-2">
 
-            {{-- Back to Dashboard (Caregiver sub-pages only) --}}
-            @if($isCaregiver && $showBack)
-                <a href="{{ $actualBackUrl }}" class="hidden sm:inline-flex items-center gap-2 bg-[#000080] hover:bg-blue-900 text-white text-sm font-bold px-5 py-2.5 rounded-full transition-all shadow-sm hover:shadow-md">
-                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                    </svg>
-                    {{ $backLabel }}
-                </a>
-            @endif
-            {{-- Header SOS (elderly only when linked) --}}
-            @if(!$isCaregiver)
-                @php $linkedCg = Auth::user()->profile?->caregiver; @endphp
-                @if($linkedCg)
-                    <div x-data="{
-                            confirming: false,
-                            sending: false,
-                            async sendSos() {
-                                if (this.sending) return;
-                                this.sending = true;
-                                try {
-                                    const resp = await fetch('{{ route('elderly.sos') }}', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            'Accept': 'application/json',
-                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                                        },
-                                    });
-                                    const data = await resp.json();
-                                    if (data.success) {
-                                        Alpine.store('toast')?.success('SOS sent to your caregiver!');
-                                        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-                                    } else {
-                                        Alpine.store('toast')?.error(data.message || 'Failed to send SOS');
+                {{-- SOS. The one loud control in the bar, and the only place
+                     in the app where that is the right answer. --}}
+                @if(!$isCaregiver)
+                    @php $linkedCg = Auth::user()->profile?->caregiver; @endphp
+                    @if($linkedCg)
+                        <div x-data="{
+                                confirming: false,
+                                sending: false,
+                                async sendSos() {
+                                    if (this.sending) return;
+                                    this.sending = true;
+                                    try {
+                                        const resp = await fetch('{{ route('elderly.sos') }}', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'Accept': 'application/json',
+                                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                            },
+                                        });
+                                        const data = await resp.json();
+                                        if (data.success) {
+                                            Alpine.store('toast')?.success('SOS sent to your caregiver!');
+                                            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                                        } else {
+                                            Alpine.store('toast')?.error(data.message || 'Failed to send SOS');
+                                        }
+                                    } catch (e) {
+                                        Alpine.store('toast')?.error('Failed to send SOS. Try calling your caregiver.');
+                                    } finally {
+                                        this.sending = false;
+                                        this.confirming = false;
                                     }
-                                } catch (e) {
-                                    Alpine.store('toast')?.error('Failed to send SOS. Try calling your caregiver.');
-                                } finally {
-                                    this.sending = false;
-                                    this.confirming = false;
                                 }
-                            }
-                        }"
-                        class="relative">
-                        <button x-show="!confirming"
-                                @click="confirming = true"
-                                class="rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-1.5 text-xs font-bold text-red-700 transition-colors">
-                            SOS
-                        </button>
-                        <div x-show="confirming" 
-                             @keydown.escape.window="confirming = false"
-                             role="dialog"
-                             aria-modal="true"
-                             x-cloak 
-                             class="absolute right-0 top-full mt-2 w-48 rounded-xl border border-red-200 bg-white p-3 shadow-lg z-50">
-                            <p class="text-xs font-semibold text-gray-600 mb-2">Send emergency alert now?</p>
-                            <div class="flex items-center gap-2">
-                                <button @click="sendSos()" :disabled="sending" class="rounded-lg bg-red-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-60">
-                                    <span x-show="!sending">Yes, send</span>
-                                    <span x-show="sending">Sending...</span>
-                                </button>
-                                <button @click="confirming = false" class="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-bold text-gray-600">Cancel</button>
+                            }"
+                            class="relative">
+                            <button type="button"
+                                    x-show="!confirming"
+                                    @click="confirming = true"
+                                    class="sc-btn sc-btn-danger sc-btn-sm">
+                                <x-lucide-siren class="sc-i sc-sos-glyph w-5 h-5" aria-hidden="true" />
+                                SOS
+                            </button>
+                            <div x-show="confirming"
+                                 @keydown.escape.window="confirming = false"
+                                 role="dialog"
+                                 aria-modal="true"
+                                 aria-label="Send an emergency alert"
+                                 x-cloak
+                                 class="sc-sos-pop p-4 sc-card sc-card-pop z-50">
+                                <p class="font-medium mb-3" style="color:var(--sc-ink)">Send emergency alert now?</p>
+                                <div class="flex items-center gap-2">
+                                    <button type="button" @click="sendSos()" :disabled="sending" class="sc-btn sc-btn-danger sc-btn-sm">
+                                        <span x-show="!sending">Yes, send</span>
+                                        <span x-show="sending" x-cloak>Sending…</span>
+                                    </button>
+                                    <button type="button" @click="confirming = false" class="sc-btn sc-btn-ghost sc-btn-sm">Cancel</button>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    @endif
                 @endif
-            @endif
 
+                {{-- Notifications and Messages fold into the drawer on a
+                     narrow screen, or when the reader has turned the text up.
+                     The Display menu does not: it is how someone turns the
+                     text up in the first place, and a phone is exactly where
+                     they need it. --}}
+                @if(!$isCaregiver)
+                        <a href="{{ route('elderly.notifications.index') }}"
+                           class="sc-appbar-desktop sc-icon-btn relative"
+                           title="Notifications"
+                           aria-label="{{ $bellLabel }}">
+                            <x-lucide-bell class="sc-i w-6 h-6" aria-hidden="true" />
+                            @if($unreadNotifications > 0)
+                                <span class="sc-count sc-num" aria-hidden="true">{{ $unreadNotifications > 9 ? '9+' : $unreadNotifications }}</span>
+                            @endif
+                        </a>
+                @endif
 
-            @if(!($isCaregiver && $showBack))
-            {{-- Profile Link --}}
-            <a href="{{ route('profile.edit') }}" class="hidden sm:flex cursor-pointer items-center gap-2 rounded-xl border border-transparent px-2 py-1.5 transition-all group hover:border-white/70 hover:bg-white/60" title="Manage Profile">
-                <div class="relative">
-                    <div class="w-9 h-9 rounded-full {{ $profileBgColor }} font-[900] text-base group-hover:text-white transition-colors overflow-hidden flex items-center justify-center">
-                        @if(Auth::user()->profile && Auth::user()->profile->profile_photo)
-                            <img src="{{ Storage::url(Auth::user()->profile->profile_photo) }}" alt="{{ Auth::user()->name }}" class="w-full h-full object-cover">
-                        @else
-                            {{ substr(Auth::user()->name, 0, 1) }}
-                        @endif
+                {{-- Messages --}}
+                <a href="{{ $messagesUrl }}" class="sc-appbar-desktop sc-icon-btn" title="Messages" aria-label="Messages">
+                    <x-lucide-message-square class="sc-i w-6 h-6" aria-hidden="true" />
+                </a>
+
+                {{-- Display and accessibility controls. One labelled menu
+                     rather than three loose icon buttons: the bar stays quiet
+                     and the controls stay findable, which matters most for the
+                     readers who actually need them. --}}
+                <div class="relative" x-data="displayControls()" @keydown.escape.window="open = false">
+                    <button type="button"
+                            class="sc-icon-btn"
+                            aria-expanded="false"
+                            :aria-expanded="open ? 'true' : 'false'"
+                            aria-controls="sc-appbar-display"
+                            aria-haspopup="true"
+                            aria-label="Display and accessibility options"
+                            title="Display options"
+                            @click="open = !open">
+                        <x-lucide-accessibility class="sc-i w-6 h-6" aria-hidden="true" />
+                    </button>
+
+                    <div id="sc-appbar-display"
+                         x-show="open" x-cloak
+                         @click.outside="open = false"
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 -translate-y-1"
+                         x-transition:enter-end="opacity-100 translate-y-0"
+                         class="absolute right-0 mt-3 p-5 space-y-5 sc-card sc-card-pop sc-display-menu z-50"
+                         role="group" aria-label="Display and accessibility settings">
+
+                        <div>
+                            <p class="flex items-center gap-2 font-semibold mb-2.5" style="color:var(--sc-ink)">
+                                <x-lucide-type class="sc-i w-5 h-5" aria-hidden="true" />
+                                Text size
+                            </p>
+                            <div class="grid grid-cols-3 gap-2" role="group" aria-label="Text size">
+                                <template x-for="opt in scales" :key="opt.value">
+                                    <button type="button"
+                                            @click="setScale(opt.value)"
+                                            :aria-pressed="scale === opt.value ? 'true' : 'false'"
+                                            :aria-label="opt.aria"
+                                            class="sc-size-btn"
+                                            :class="scale === opt.value && 'sc-size-btn-on'">
+                                        <span :style="`font-size:${opt.preview}`" x-text="opt.label"></span>
+                                        <span class="text-sm leading-none" x-text="opt.name"></span>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-4">
+                            <span class="flex items-center gap-2 font-medium" id="sc-appbar-dark-label" style="color:var(--sc-ink)">
+                                <x-lucide-moon class="sc-i w-5 h-5" aria-hidden="true" />
+                                Dark mode
+                            </span>
+                            <button type="button" role="switch"
+                                    class="sc-switch"
+                                    aria-labelledby="sc-appbar-dark-label"
+                                    aria-checked="false"
+                                    :aria-checked="dark ? 'true' : 'false'"
+                                    @click="toggleDark()"></button>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-4">
+                            <span class="flex items-center gap-2 font-medium" id="sc-appbar-contrast-label" style="color:var(--sc-ink)">
+                                <x-lucide-contrast class="sc-i w-5 h-5" aria-hidden="true" />
+                                High contrast
+                            </span>
+                            <button type="button" role="switch"
+                                    class="sc-switch"
+                                    aria-labelledby="sc-appbar-contrast-label"
+                                    aria-checked="false"
+                                    :aria-checked="contrast ? 'true' : 'false'"
+                                    @click="toggleContrast()"></button>
+                        </div>
+
+                        <p class="text-sm" style="color:var(--sc-muted)">
+                            Your choice is remembered on this device.
+                        </p>
                     </div>
                 </div>
-                <div class="hidden sm:block">
-                    <p class="text-sm font-bold text-gray-900 leading-tight {{ $profileNameHover }} transition-colors">{{ Auth::user()->name }}</p>
-                    <p class="text-xs text-gray-500 font-medium">{{ $roleLabel }}</p>
-                </div>
-            </a>
-            @endif
 
+                {{-- Back to Dashboard (caregiver sub-pages) --}}
+                @if($isCaregiver && $showBack)
+                    <span class="sc-appbar-desktop sc-appbar-rule" aria-hidden="true"></span>
+                    <a href="{{ $actualBackUrl }}" class="sc-appbar-desktop sc-btn sc-btn-ghost sc-btn-sm">
+                        <x-lucide-arrow-left class="sc-i w-5 h-5" aria-hidden="true" />
+                        {{ $backLabel }}
+                    </a>
+                @endif
 
-            @if(!($isCaregiver && $showBack))
-            <form method="POST" action="{{ route('logout') }}" class="hidden sm:block">
-                @csrf
-                <button type="submit" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700 transition-all hover:bg-rose-100">
-                    Log Out
+                @if($showAccountActions)
+                    <span class="sc-appbar-desktop sc-appbar-rule" aria-hidden="true"></span>
+
+                    {{-- Profile --}}
+                    <a href="{{ route('profile.edit') }}" class="sc-appbar-desktop sc-appbar-profile" title="Manage Profile">
+                        <span class="sc-avatar">
+                            @if($navPhoto)
+                                <img src="{{ Storage::url($navPhoto) }}" alt="">
+                            @else
+                                {{ $navInitial }}
+                            @endif
+                        </span>
+                        <span class="block">
+                            <span class="sc-appbar-name block">{{ $navUser->name }}</span>
+                            <span class="sc-appbar-role block">{{ $roleLabel }}</span>
+                        </span>
+                        <span class="sr-only">Manage your profile</span>
+                    </a>
+
+                    {{-- Log out --}}
+                    <form method="POST" action="{{ route('logout') }}" class="sc-appbar-desktop">
+                        @csrf
+                        <button type="submit" class="sc-btn sc-btn-ghost sc-btn-sm">Log Out</button>
+                    </form>
+                @endif
+
+                {{-- Drawer trigger --}}
+                <button type="button"
+                        class="sc-appbar-toggle sc-icon-btn"
+                        @click="mobileMenuOpen = true"
+                        aria-expanded="false"
+                        :aria-expanded="mobileMenuOpen ? 'true' : 'false'"
+                        aria-controls="sc-appbar-menu"
+                        aria-label="Open menu">
+                    <x-lucide-menu class="sc-i w-6 h-6" aria-hidden="true" />
                 </button>
-            </form>
-            @endif
-            
-            {{-- Mobile Menu Button --}}
-            <button type="button" @click="mobileMenuOpen = true" aria-label="Open mobile menu" :aria-expanded="mobileMenuOpen.toString()" class="sm:hidden p-2 text-gray-600 hover:text-gray-900 focus:outline-none dark:text-slate-300 dark:hover:text-slate-100">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-            </button>
 
+            </div>
         </div>
     </div>
-    
-    {{-- Mobile Drawer Panel --}}
-    <div x-show="mobileMenuOpen" 
-         class="fixed inset-0 z-[60] sm:hidden" 
-         aria-modal="true" 
+
+    {{-- Drawer --}}
+    <div id="sc-appbar-menu"
+         class="sc-appbar-drawer"
+         x-show="mobileMenuOpen"
+         x-cloak
          role="dialog"
-         x-cloak>
-        <!-- Backdrop -->
-        <div x-show="mobileMenuOpen" 
-             x-transition.opacity 
-             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm dark:bg-slate-950/70"
+         aria-modal="true"
+         aria-label="Menu">
+
+        <div class="sc-scrim"
+             x-show="mobileMenuOpen"
+             x-transition.opacity
              @click="mobileMenuOpen = false"></div>
 
-        <!-- Drawer -->
-        <div x-show="mobileMenuOpen" 
+        <div class="sc-drawer"
+             x-show="mobileMenuOpen"
              x-transition:enter="transition ease-out duration-300"
              x-transition:enter-start="translate-x-full"
              x-transition:enter-end="translate-x-0"
              x-transition:leave="transition ease-in duration-200"
              x-transition:leave-start="translate-x-0"
              x-transition:leave-end="translate-x-full"
-                 class="fixed right-0 top-0 bottom-0 w-64 bg-white shadow-xl overflow-y-auto dark:bg-slate-900 dark:shadow-[0_24px_60px_-32px_rgba(2,6,23,0.75)]"
              @click.away="mobileMenuOpen = false">
-             
-                 <div class="p-4 border-b border-gray-100 flex justify-between items-center dark:border-slate-800">
-                     <h2 class="font-bold text-lg text-navy-800 dark:text-slate-100">Menu</h2>
-                     <button @click="mobileMenuOpen = false" aria-label="Close menu" class="p-2 text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-100">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-             </div>
-             
-             <div class="p-4 space-y-4">
-                <div class="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100 dark:border-slate-800">
-                    <div class="w-10 h-10 rounded-full {{ $profileBgColor }} font-[900] flex items-center justify-center overflow-hidden">
-                        @if(Auth::user()->profile && Auth::user()->profile->profile_photo)
-                            <img src="{{ Storage::url(Auth::user()->profile->profile_photo) }}" alt="Profile" class="w-full h-full object-cover">
-                        @else
-                            {{ substr(Auth::user()->name, 0, 1) }}
-                        @endif
-                    </div>
-                    <div>
-                        <p class="font-bold text-gray-900 dark:text-slate-100">{{ Auth::user()->name }}</p>
-                        <p class="text-xs text-gray-500 dark:text-slate-400">{{ $roleLabel }}</p>
-                    </div>
-                </div>
-             
-                <a href="{{ route('profile.edit') }}" class="block font-bold text-gray-800 hover:text-navy-600 dark:text-slate-200 dark:hover:text-sky-300">Manage Profile</a>
-                <a href="{{ $isCaregiver ? route('caregiver.messages.index') : route('elderly.messages.index') }}" class="block font-bold text-gray-800 hover:text-navy-600 dark:text-slate-200 dark:hover:text-sky-300">Messages</a>
-                @if(!$isCaregiver)
-                    <a href="{{ route('elderly.notifications.index') }}" class="block font-bold text-gray-800 hover:text-navy-600 dark:text-slate-200 dark:hover:text-sky-300">
-                        Notifications
-                        @if($unreadNotifications > 0)
-                            <span class="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{{ $unreadNotifications }}</span>
-                        @endif
-                    </a>
-                @endif
-                
 
-                {{-- Mobile Back to Dashboard --}}
-                @if($isCaregiver && $showBack)
-                    <a href="{{ $actualBackUrl }}" class="flex items-center gap-2 font-bold text-[#000080] dark:text-sky-300">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                        </svg>
-                        {{ $backLabel }}
+            <div class="sc-drawer-head">
+                <p class="sc-dialog-title">Menu</p>
+                <button type="button" @click="mobileMenuOpen = false" class="sc-icon-btn" aria-label="Close menu">
+                    <x-lucide-x class="sc-i w-6 h-6" aria-hidden="true" />
+                </button>
+            </div>
+
+            <div class="p-4">
+                <div class="flex items-center gap-3 px-1 pb-4 mb-2" style="border-bottom:1px solid var(--sc-line)">
+                    <span class="sc-avatar sc-avatar-lg">
+                        @if($navPhoto)
+                            <img src="{{ Storage::url($navPhoto) }}" alt="">
+                        @else
+                            {{ $navInitial }}
+                        @endif
+                    </span>
+                    <span class="block">
+                        <span class="block font-semibold" style="color:var(--sc-ink)">{{ $navUser->name }}</span>
+                        <span class="sc-appbar-role block">{{ $roleLabel }}</span>
+                    </span>
+                </div>
+
+                <nav class="space-y-1" aria-label="Account">
+                    <a href="{{ route('profile.edit') }}" class="sc-drawer-link">
+                        <x-lucide-user-round class="sc-i w-5 h-5" aria-hidden="true" />
+                        Manage Profile
                     </a>
-                @endif
-                <div class="pt-4 mt-4 border-t border-gray-100 dark:border-slate-800">
+
+                    <a href="{{ $messagesUrl }}" class="sc-drawer-link">
+                        <x-lucide-message-square class="sc-i w-5 h-5" aria-hidden="true" />
+                        Messages
+                    </a>
+
+                    @if(!$isCaregiver)
+                        <a href="{{ route('elderly.notifications.index') }}" class="sc-drawer-link">
+                            <x-lucide-bell class="sc-i w-5 h-5" aria-hidden="true" />
+                            Notifications
+                            @if($unreadNotifications > 0)
+                                <span class="sc-badge sc-badge-alert sc-num ml-auto">{{ $unreadNotifications }} new</span>
+                            @endif
+                        </a>
+                    @endif
+
+                    @if($isCaregiver && $showBack)
+                        <a href="{{ $actualBackUrl }}" class="sc-drawer-link">
+                            <x-lucide-arrow-left class="sc-i w-5 h-5" aria-hidden="true" />
+                            {{ $backLabel }}
+                        </a>
+                    @endif
+                </nav>
+
+                <div class="pt-4 mt-3" style="border-top:1px solid var(--sc-line)">
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button type="submit" class="w-full text-left font-bold text-rose-600 hover:text-rose-800 dark:text-rose-300 dark:hover:text-rose-200">
+                        <button type="submit" class="sc-btn sc-btn-ghost sc-btn-sm w-full">
+                            <x-lucide-log-out class="sc-i w-5 h-5" aria-hidden="true" />
                             Log Out
                         </button>
                     </form>
                 </div>
-             </div>
+            </div>
         </div>
     </div>
-</nav>
+</header>
+
+{{-- The title band. Not sticky: it belongs to the page, not the chrome. --}}
+<div class="sc-appbar-head">
+    <div class="max-w-[1600px] mx-auto px-6 lg:px-12">
+        <h1 class="sc-page-title">{{ $title }}</h1>
+        @if(!empty($subtitle))
+            <p class="sc-appbar-sub">{{ $subtitle }}</p>
+        @endif
+    </div>
+</div>
