@@ -302,7 +302,17 @@ html.dark .sc-plate { box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
 .sc-plate-alert { background: var(--sc-alert-tint); color: var(--sc-alert); border-color: var(--sc-alert-line); }
 .sc-plate-sm    { width: 2.5rem; height: 2.5rem; border-radius: .8rem; }
 
-.sc-i { flex: none; }
+/* ── Icons ───────────────────────────────────────────────────────
+   Two sources, one look. `blade-lucide-icons` is already a dependency and
+   carries the full Lucide set, so new work uses it:
+
+       <x-lucide-pill class="sc-i w-5 h-5" aria-hidden="true" />
+
+   partials/sc-icons.blade.php stays for the pages already built on it.
+   Both are Lucide geometry; the package ships stroke-width 2 and the sprite
+   1.75, so `.sc-i` normalises them to a single weight. Put `sc-i` on every
+   icon from either source. */
+.sc-i { flex: none; stroke-width: 1.75; }
 
 .sc-divide > * + * { border-top: 1px solid var(--sc-line); }
 
@@ -392,6 +402,101 @@ html.sc-anim .sc-reveal.is-in { opacity: 1; transform: none; will-change: auto; 
 .sc-tab[aria-selected="true"] {
     background: var(--sc-brand); color: var(--sc-brand-on);
     box-shadow: var(--sc-sh-sm), inset 0 1px 0 rgba(255,255,255,.18);
+}
+
+/* ── Flash messages ──────────────────────────────────────────────
+   The result of something the reader just did. Tinted by outcome, with an
+   icon as well as the colour, and readable at a glance from across a room. */
+.sc-flash {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: .85rem;
+    padding: 1.1rem 3.25rem 1.1rem 1.25rem;
+    border-radius: 1.25rem;
+    border: 1px solid var(--sc-line);
+    background: var(--sc-surface);
+    box-shadow: var(--sc-sh);
+    font-weight: 500;
+}
+.sc-flash-ok    { background: var(--sc-ok-tint);    border-color: var(--sc-ok-line);    color: var(--sc-ok); }
+.sc-flash-warn  { background: var(--sc-warn-tint);  border-color: var(--sc-warn-line);  color: var(--sc-warn); }
+.sc-flash-alert { background: var(--sc-alert-tint); border-color: var(--sc-alert-line); color: var(--sc-alert); }
+.sc-flash-close {
+    position: absolute;
+    top: 50%;
+    right: .6rem;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    border-radius: 999px;
+    color: inherit;
+    opacity: .7;
+    cursor: pointer;
+    transition: opacity .18s ease, background-color .18s ease;
+}
+.sc-flash-close:hover { opacity: 1; background: rgba(0, 0, 0, .06); }
+html.dark .sc-flash-close:hover { background: rgba(255, 255, 255, .1); }
+
+/* ── Senior tab bar ──────────────────────────────────────────────
+   The dashboard's top-level switcher. Deliberately larger than the
+   marketing `.sc-tablist`: this is the control an 78-year-old uses every
+   morning, so the targets are 56px tall and the labels stay visible
+   beside the icons rather than becoming icon-only on small screens. */
+.sc-tabbar {
+    position: relative;
+    isolate: isolate;
+    display: flex;
+    gap: .5rem;
+    padding: .5rem;
+    border-radius: 2rem;
+    background: var(--sc-surface-2);
+    border: 1px solid var(--sc-line);
+    box-shadow: var(--sc-sh-sm);
+}
+/* The pill that slides under the active tab. Position comes from Alpine. */
+.sc-tabbar-pill {
+    position: absolute;
+    z-index: 0;
+    border-radius: 1.6rem;
+    background: var(--sc-brand);
+    box-shadow: var(--sc-sh);
+    pointer-events: none;
+    transition: left .3s cubic-bezier(.25,1,.5,1), top .3s cubic-bezier(.25,1,.5,1),
+                width .3s cubic-bezier(.25,1,.5,1), height .3s cubic-bezier(.25,1,.5,1),
+                opacity .2s ease, transform .3s cubic-bezier(.25,1,.5,1);
+}
+.sc-tabbar-btn {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    min-height: 3.5rem;
+    padding: .75rem 1rem;
+    border-radius: 1.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .6rem;
+    font-family: 'Prompt', 'Valley Sans', sans-serif;
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--sc-body);
+    cursor: pointer;
+    transition: color .28s ease;
+}
+.sc-tabbar-btn:hover { color: var(--sc-ink); }
+.sc-tabbar-btn[aria-selected="true"] { color: var(--sc-brand-on); }
+.sc-tabbar-btn .sc-i { transition: transform .35s cubic-bezier(.22,1,.36,1); }
+.sc-tabbar-btn[aria-selected="true"] .sc-i { transform: scale(1.1); }
+/* The label is the point. Never drop it — an icon alone is a guess. */
+@media (max-width: 380px) {
+    .sc-tabbar-btn { padding-inline: .5rem; font-size: .95rem; gap: .4rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .sc-tabbar-pill, .sc-tabbar-btn .sc-i { transition: none; }
 }
 
 /* ── Numbered steps with a connecting rail ───────────────────── */
@@ -1048,6 +1153,54 @@ html.high-contrast .sc-cta-panel { box-shadow: none !important; }
     transition: width .45s cubic-bezier(.16, 1, .3, 1);
 }
 .sc-progress-fill-ok { background: var(--sc-ok); }
+
+/* ── Charts ──────────────────────────────────────────────────────
+   Read these from JS with getComputedStyle so a chart follows the theme
+   instead of freezing one palette:
+
+       const css  = getComputedStyle(document.documentElement);
+       const line = css.getPropertyValue('--sc-chart-1').trim();
+
+   Series order is fixed on purpose. Blood pressure is always series 1,
+   pulse always series 2, and so on across every screen — a caregiver
+   should not have to re-read the legend on each page.
+
+   Never encode meaning in colour alone: pair a series with its label, and
+   mark out-of-range points with a shape as well as a hue. */
+:root {
+    --sc-chart-1: #3451D1;   /* primary series — brand navy, lifted to stay legible */
+    --sc-chart-2: #0E7490;   /* teal */
+    --sc-chart-3: #B45309;   /* amber */
+    --sc-chart-4: #6D28D9;   /* violet */
+    --sc-chart-5: #047857;   /* green */
+    --sc-chart-grid: rgba(15, 23, 42, .08);
+    --sc-chart-axis: #5C6675;
+    --sc-chart-band: rgba(4, 120, 87, .08);   /* the healthy range behind a series */
+}
+html.dark {
+    --sc-chart-1: #8AA0FF;
+    --sc-chart-2: #4CC7E0;
+    --sc-chart-3: #FCD34D;
+    --sc-chart-4: #C4B5FD;
+    --sc-chart-5: #6EE7B7;
+    --sc-chart-grid: rgba(148, 163, 184, .14);
+    --sc-chart-axis: #9BA9BF;
+    --sc-chart-band: rgba(110, 231, 183, .10);
+}
+html.high-contrast {
+    --sc-chart-1: #7DD3FC;
+    --sc-chart-2: #FDE047;
+    --sc-chart-3: #FCA5A5;
+    --sc-chart-4: #D8B4FE;
+    --sc-chart-5: #4ADE80;
+    --sc-chart-grid: #FFFFFF;
+    --sc-chart-axis: #FFFFFF;
+    --sc-chart-band: transparent;
+}
+
+/* A chart needs a reserved box or the page jumps when the data lands. */
+.sc-chart { position: relative; width: 100%; height: 18rem; }
+.sc-chart-sm { height: 12rem; }
 
 /* ── Page furniture for signed-in screens ────────────────────────
    Every app page opens with the same block: what this page is, and the

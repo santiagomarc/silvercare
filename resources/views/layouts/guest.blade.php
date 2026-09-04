@@ -1,36 +1,33 @@
-{{-- Pass `sc` to opt a page into the SilverCare design system:
-         <x-guest-layout sc>
-     See FRONTEND_DESIGN_SYSTEM.md. --}}
-@props(['sc' => false])
+{{-- Guest layout — every page that uses it is on the SilverCare design system,
+     so there is no longer an opt-in flag or a legacy branch here.
+
+     The `sc` prop is still accepted (and ignored) purely so an old
+     `<x-guest-layout sc>` call site keeps working; drop it from call sites
+     when convenient. See FRONTEND_DESIGN_SYSTEM.md. --}}
+@props(['sc' => true])
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @class(['scroll-smooth' => $sc])>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth">
     <head>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        <meta name="theme-color" content="#FAF9F6" media="(prefers-color-scheme: light)">
+        <meta name="theme-color" content="#0B1220" media="(prefers-color-scheme: dark)">
 
-        <title>{{ config('app.name', 'SilverCare') }}</title>
+        <title>{{ $title ?? config('app.name', 'SilverCare') }}</title>
 
-        <!-- Favicon -->
         <link rel="icon" type="image/png" href="{{ asset('assets/icons/silvercare.png') }}">
         <link rel="apple-touch-icon" href="{{ asset('assets/icons/silvercare.png') }}">
 
         @include('partials.sc-theme-boot')
 
-        <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        @if ($sc)
-            <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700;800&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
-            @include('partials.sc-fonts')
-        @else
-            <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-        @endif
+        <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700;800&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
+        @include('partials.sc-fonts')
 
-        <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    @if ($sc)
     <body class="sc-page antialiased">
         @include('partials.sc-icons')
         <a class="sc-skip" href="#main-content">Skip to main content</a>
@@ -47,25 +44,4 @@
             </main>
         </div>
     </body>
-    @else
-    <body class="font-sans text-gray-900 antialiased" style="font-family: 'Montserrat', sans-serif;">
-        {{-- Shared components reference sprite icons even before this page is
-             converted, so the sprite ships either way. --}}
-        @include('partials.sc-icons')
-        <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-[#DEDEDE]">
-            <div>
-                <a href="/" class="flex flex-col items-center gap-2">
-                    <img src="{{ asset('assets/icons/silvercare.png') }}" alt="SilverCare" class="w-20 h-20 object-contain">
-                    <h1 class="text-2xl font-black tracking-tight text-gray-900">
-                        SILVER<span class="text-[#000080]">CARE</span>
-                    </h1>
-                </a>
-            </div>
-
-            <div class="w-full sm:max-w-md mt-6 px-6 py-4 bg-white shadow-md overflow-hidden sm:rounded-lg">
-                {{ $slot }}
-            </div>
-        </div>
-    </body>
-    @endif
 </html>

@@ -375,6 +375,25 @@ yet. Hold new pages to that standard.
 Never emoji. They look different on every phone, ignore our colours, and
 screen readers read them out loud in the middle of a sentence.
 
+**Use the `blade-lucide-icons` package for new work.** It is already a
+dependency and carries the full Lucide set, so you never have to hand-add a
+glyph:
+
+```blade
+<x-lucide-pill class="sc-i w-5 h-5" aria-hidden="true" />
+
+{{-- when the name is dynamic --}}
+<x-dynamic-component :component="'lucide-' . $icon" class="sc-i w-6 h-6" aria-hidden="true" />
+```
+
+**Always put `sc-i` on it.** The package ships stroke-width 2 and the sprite
+1.75; `.sc-i` normalises both to one weight, so the two sources are visually
+identical. Without it your icon will look heavier than everything around it.
+
+`partials/sc-icons.blade.php` (the `<use href="#i-name"/>` sprite) is the older
+of the two and stays for the pages already built on it — the landing page and
+the auth screens. Don't add new symbols to it; reach for the package instead.
+
 ```blade
 <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false">
     <use href="#i-pill"/>
@@ -468,8 +487,114 @@ and network errors, and whether reduced motion hides your content.
 **It must print "All checks passed" before you call a page finished.**
 
 Then look at it yourself at 375px wide and in dark mode.
+Then run the test suite as well:
+
+```bash
+php artisan test
+```
+
+Renaming a heading is enough to break a feature test that asserts on copy —
+this has already happened once. If a test fails on wording you changed
+deliberately, fix the test to assert on structure (`id="profileForm"`,
+`name="age"`) rather than the words.
+
+Then look at the page yourself at 375px wide and in dark mode.
 
 ---
+
+## 9b. Converting the dashboards
+
+The auth pages are done. The signed-in app is the rest of the work — about
+12,700 lines across 56 files. Read this before starting on it.
+
+### Do the shared chrome first
+
+These sit on every dashboard page. Converting a page before them means doing
+the page twice.
+
+| Component | Lines | Appears on |
+| --- | --- | --- |
+| `components/dashboard-nav.blade.php` | 281 | **25 views** |
+| `components/elderly-tab-bar.blade.php` | 88 | senior pages |
+| `components/modal.blade.php` + `logout-confirm-modal` | 184 | everywhere |
+| `components/flash-messages.blade.php` | 54 | everywhere |
+| `components/vital-card.blade.php` | 101 | both dashboards |
+| `components/medication-dose-button.blade.php` | 47 | both dashboards |
+| `components/dropdown` + `nav-link` + `responsive-nav-link` | 57 | nav |
+
+Then the two dashboards and their cards, then the long tail (vitals, wellness,
+medications, checklists, messages, notifications, calendar, profile).
+
+### The layout is a migration scaffold
+
+`layouts/dashboard.blade.php` currently holds **two** bodies: the new one, and
+the legacy Montserrat/grey one for pages not yet converted. That is deliberate
+and temporary — it is what lets you convert one page at a time.
+
+**It is not the finished state.** When the last dashboard view passes `sc`,
+delete the legacy branch. Check whether that moment has arrived:
+
+```bash
+grep -rho "<x-dashboard-layout[^>]*>" resources/views | sort | uniq -c
+```
+
+When the bare `<x-dashboard-layout>` count reaches 0, strip the `@if/@else`,
+drop the `sc` prop and remove the Montserrat `<link>`.
+`layouts/guest.blade.php` has already been through this and is a clean example
+of the end state.
+
+### Three files that must NOT be converted
+
+- **`caregiver/analytics_pdf.blade.php` (454 lines).** Rendered by dompdf
+  (`Pdf::loadView`), which supports neither CSS custom properties, flexbox,
+  grid, nor `:has()`. Applying the design system here breaks PDF generation
+  silently — you find out when a weekly health report goes out looking like
+  plain text. Style it with inline CSS and table layout.
+- **`resources/views/emails/*` (3 files).** Email clients strip `<style>` and
+  ignore custom properties. Inline styles and tables only.
+- **`layouts/app.blade.php` and `layouts/navigation.blade.php` (195 lines).**
+  Dead code — no view uses `x-app-layout`, and `navigation` is only included by
+  `app`. Delete them rather than redesigning them.
+
+### Charts
+
+`chart.js` is already a dependency. Read the palette from CSS so a chart
+follows the theme instead of freezing one set of colours:
+
+```js
+const css = getComputedStyle(document.documentElement);
+const c1  = css.getPropertyValue('--sc-chart-1').trim();
+```
+
+Tokens: `--sc-chart-1` … `--sc-chart-5`, plus `--sc-chart-grid`,
+`--sc-chart-axis`, `--sc-chart-band` (the healthy range behind a series). All
+three themes are defined.
+
+Rules:
+
+- **Series order is fixed across the whole app.** Blood pressure is always
+  series 1, pulse always series 2. A caregiver should never have to re-read the
+  legend on a different screen.
+- Wrap every canvas in `<div class="sc-chart">` so the page does not jump when
+  data arrives.
+- **Never let colour be the only signal.** An out-of-range reading needs a
+  shape or a label too, not just a red dot.
+- A chart is not an accessible data source on its own. Put the same numbers in
+  text nearby, or in a `sc-table` underneath.
+- Axis labels get units. Use `sc-num` on any number in surrounding HTML.
+
+### Dashboard information design
+
+The visual language is settled — do not go looking for a new one, that is how
+the app drifts apart. What *is* open per screen is what to show:
+
+- **Arthur's screens answer "what do I do now?"** One task at a time, finished
+  things tucked away, nothing that requires comparing two numbers.
+- **Sarah's screens answer "is he alright?"** Trend over snapshot, exceptions
+  surfaced first, and enough clinical detail to take to a doctor.
+
+Same components, different density. A senior screen with six stat tiles on it
+has misunderstood the brief.
 
 ## 10. Traps that have already bitten us
 

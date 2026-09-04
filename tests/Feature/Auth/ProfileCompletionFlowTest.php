@@ -40,7 +40,10 @@ class ProfileCompletionFlowTest extends TestCase
         $response = $this->actingAs($user)->get(route('profile.completion'));
 
         $response->assertOk();
-        $response->assertSee('Complete Your Profile');
+        // Assert on the wizard's structure, not its wording — the heading copy
+        // is design surface and will change again.
+        $response->assertSee('id="profileForm"', false);
+        $response->assertSee('name="age"', false);
     }
 
     public function test_incomplete_profile_submission_resets_skip_and_keeps_completion_false(): void

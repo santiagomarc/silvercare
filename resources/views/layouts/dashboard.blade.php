@@ -1,11 +1,23 @@
-{{-- Pass `sc` to opt a page into the SilverCare design system:
+{{-- MIGRATION SCAFFOLD — this file has two bodies, and that is temporary.
+
+     Pass `sc` to put a page on the SilverCare design system:
 
          <x-dashboard-layout sc>
 
-     That swaps the body onto the token layer (`sc-page`) and the new
-     typefaces. Pages without the flag render exactly as before, so the
-     redesign can move one page at a time.
-     See FRONTEND_DESIGN_SYSTEM.md. --}}
+     Pages that do not pass it fall through to the legacy Montserrat/grey
+     body below, so the 25 dashboard views can be converted one at a time
+     without breaking the ones not done yet.
+
+     WHEN THE LAST DASHBOARD VIEW IS CONVERTED, DELETE THE LEGACY BRANCH.
+     Check whether that moment has arrived with:
+
+         grep -rho "<x-dashboard-layout[^>]*>" resources/views | sort | uniq -c
+
+     When the count for the bare `<x-dashboard-layout>` reaches 0, remove the
+     @if/@else, drop the `sc` prop, and delete the Montserrat <link> — the way
+     layouts/guest.blade.php was cleaned up once all its pages were done.
+
+     See FRONTEND_DESIGN_SYSTEM.md §3. --}}
 @props(['title' => null, 'bodyClass' => null, 'sc' => false])
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @class(['scroll-smooth' => $sc])>
