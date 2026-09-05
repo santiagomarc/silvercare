@@ -11,7 +11,7 @@
      need the name at compile time.
      ============================================================ --}}
 
-<div class="sc-card sc-card-crest sc-card-glow p-5 sm:p-6 mb-4"
+<div class="sc-card sc-card-crest sc-card-glow p-5 sm:p-6"
      role="status"
      aria-label="Next action: {{ $headline }}"
      x-data="heroAction({

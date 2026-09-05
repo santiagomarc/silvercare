@@ -99,7 +99,7 @@
          the orbs were what made the screen read as candy.
          ══════════════════════════════════════════════════════════ --}}
     <main id="main-content"
-          class="sc-ambient relative max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 pb-12"
+          class="sc-ambient sc-stack relative max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 pt-5 pb-12"
           x-data="dashboardTabs('today')">
 
         <x-flash-messages />
@@ -121,7 +121,7 @@
                 endpoint: @js(route('elderly.checkin')),
             })"
             id="daily-checkin-banner"
-            class="sc-card-quiet mt-4 p-4 sm:p-5"
+            class="sc-card-quiet p-4 sm:p-5"
         >
             <div class="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-4">
                 <div class="flex items-center gap-4">
@@ -192,7 +192,7 @@
             $showProfileNudge = $dashboardProfile && !($completion['is_complete'] ?? false);
         @endphp
         @if($showProfileNudge)
-            <div class="sc-card-quiet mt-4 px-5 py-3.5"
+            <div class="sc-card-quiet px-5 py-3.5"
                  x-data="{ dismissed: false }"
                  x-show="!dismissed"
                  x-transition>

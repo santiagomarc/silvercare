@@ -15,7 +15,7 @@
 @endphp
 
 <div
-    class="sc-tabbar mb-6"
+    class="sc-tabbar"
     role="tablist"
     aria-label="Dashboard sections"
     x-data="{

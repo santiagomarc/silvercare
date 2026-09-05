@@ -216,6 +216,21 @@ html.dark .sc-page nav {
 
 /* A hairline of brand light along the top edge — the only "shine" on
    the page, used to mark the three primary feature cards. */
+/* ── Vertical rhythm ─────────────────────────────────────────────
+   The gap between stacked cards belongs to the PARENT, not to the cards.
+
+   Ad-hoc `mt-4` on one card and `mb-4` on the next produced a zero gap
+   wherever a card with only a bottom margin followed one with only a top
+   margin — the dashboard's check-in and priority cards sat skin to skin
+   for exactly that reason, while other pairs were double-spaced. One
+   owner, one gap, and a card added later cannot get it wrong.
+
+   `> * + *` rather than flex `gap` so it works on a plain block container
+   whose children include conditionals and Alpine-hidden elements. */
+.sc-stack     > * + * { margin-top: 1.25rem; }
+.sc-stack-lg  > * + * { margin-top: 2rem; }
+.sc-stack-sm  > * + * { margin-top: .75rem; }
+
 /* A lit surface, for the one card on a screen that carries the next action.
 
    The gradient is TONAL first — surface-2 to surface, which is warm paper in

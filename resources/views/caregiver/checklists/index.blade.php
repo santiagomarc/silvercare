@@ -1,4 +1,4 @@
-<x-dashboard-layout>
+<x-dashboard-layout sc>
     <x-slot:title>Daily Checklists - SilverCare</x-slot:title>
 
     <x-dashboard-nav
@@ -8,228 +8,257 @@
         :show-back="true"
     />
 
-    <!-- MAIN CONTENT -->
-    <main class="max-w-[1600px] mx-auto px-6 lg:px-12 py-6">
-        
-        @if(session('success'))
-            <div class="mb-6 bg-green-50 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded-lg shadow-sm flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                {{ session('success') }}
-            </div>
-        @endif
-
-        @if(($elderlyPatients ?? collect())->count() > 1)
-            <div class="mb-6 rounded-2xl border border-blue-100 bg-blue-50/80 p-4 shadow-sm">
-                <form method="GET" action="{{ route('caregiver.checklists.index') }}" class="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <label for="elderly" class="text-sm font-bold text-blue-900">Managing tasks for</label>
-                    <select
-                        id="elderly"
-                        name="elderly"
-                        onchange="this.form.submit()"
-                        class="rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800"
-                    >
-                        @foreach(($elderlyPatients ?? collect()) as $patient)
-                            <option value="{{ $patient->id }}" @selected($selectedElderly && $selectedElderly->id === $patient->id)>
-                                {{ $patient->user?->name ?? ('Patient #' . $patient->id) }}
-                            </option>
-                        @endforeach
-                    </select>
-                </form>
-            </div>
-        @endif
-
-        <!-- HEADER WITH ADD BUTTON -->
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <div>
-                <h1 class="text-2xl font-[900] text-gray-900">Checklists</h1>
-                <p class="text-gray-500 font-medium text-sm">Managing {{ $selectedElderly->user?->name ?? 'selected patient' }}</p>
-            </div>
-            <a href="{{ route('caregiver.checklists.create', ['elderly' => $selectedElderly->id]) }}" class="group flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-3 rounded-2xl font-[700] shadow-lg shadow-green-200 hover:-translate-y-0.5 transition-all">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                Add Task
-            </a>
-        </div>
-
-        <!-- Progress Bar Card -->
-        @php
-            $total = $checklists->count();
-            $completed = $checklists->where('is_completed', true)->count();
-            $progress = $total > 0 ? round(($completed / $total) * 100) : 0;
+    <main id="main-content" class="sc-app-main">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-12 py-6 space-y-6">
             
-            $categoryIcons = [
-                'Health' => '❤️',
-                'Exercise' => '🏃',
-                'Nutrition' => '🍎',
-                'Social' => '👥',
-                'Hygiene' => '🧼',
-                'Mental' => '🧠',
-                'Medication' => '💊',
-                'Other' => '📋',
-            ];
-        @endphp
-        <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-[24px] p-6 mb-6 shadow-lg shadow-green-200/50">
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div class="text-white">
-                    <h3 class="font-[800] text-lg">Overall Progress</h3>
-                    <p class="text-green-100 text-sm font-medium">{{ $completed }} of {{ $total }} tasks completed</p>
+            <x-flash-messages />
+
+            @if(($elderlyPatients ?? collect())->count() > 1)
+                <div class="sc-card p-4">
+                    <form method="GET" action="{{ route('caregiver.checklists.index') }}" class="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <label for="elderly" class="text-sm font-bold text-[var(--sc-ink)]">{{ __('Managing tasks for') }}</label>
+                        <select
+                            id="elderly"
+                            name="elderly"
+                            onchange="this.form.submit()"
+                            class="rounded-xl border border-[var(--sc-line-strong)] bg-[var(--sc-surface)] px-3 py-2 text-sm font-semibold text-[var(--sc-ink)] focus:border-[var(--sc-brand)] focus:ring-1 focus:ring-[var(--sc-brand)]"
+                        >
+                            @foreach(($elderlyPatients ?? collect()) as $patient)
+                                <option value="{{ $patient->id }}" @selected($selectedElderly && $selectedElderly->id === $patient->id)>
+                                    {{ $patient->user?->name ?? ('Patient #' . $patient->id) }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </form>
                 </div>
-                <div class="flex items-center gap-4">
-                    <div class="flex-1 md:w-48 bg-white/20 rounded-full h-4 overflow-hidden">
-                        <div class="bg-white h-full rounded-full transition-all duration-500" style="width: {{ $progress }}%"></div>
+            @endif
+
+            {{-- Header with Add Button --}}
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-bold text-[var(--sc-ink)]">{{ __('Checklists') }}</h1>
+                    <p class="text-sm text-[var(--sc-muted)] font-medium mt-0.5">{{ __('Managing') }} {{ $selectedElderly->user?->name ?? __('selected patient') }}</p>
+                </div>
+                <a href="{{ route('caregiver.checklists.create', ['elderly' => $selectedElderly->id]) }}" class="sc-btn sc-btn-primary inline-flex items-center gap-2">
+                    <x-lucide-plus class="sc-i w-4 h-4" aria-hidden="true" />
+                    <span>{{ __('Add Task') }}</span>
+                </a>
+            </div>
+
+            {{-- Progress Bar Card --}}
+            @php
+                $total = $checklists->count();
+                $completed = $checklists->where('is_completed', true)->count();
+                $progress = $total > 0 ? round(($completed / $total) * 100) : 0;
+            @endphp
+            <div class="sc-card p-5 sm:p-6">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h2 class="text-base sm:text-lg font-bold text-[var(--sc-ink)]">{{ __('Overall Progress') }}</h2>
+                        <p class="text-sm text-[var(--sc-muted)] font-medium sc-num mt-0.5">{{ $completed }} {{ __('of') }} {{ $total }} {{ __('tasks completed') }}</p>
                     </div>
-                    <span class="text-white font-[900] text-xl">{{ $progress }}%</span>
+                    <div class="flex items-center gap-3">
+                        <div class="flex-1 sm:w-48 bg-[var(--sc-surface-3)] rounded-full h-3 overflow-hidden border border-[var(--sc-line)]">
+                            <div class="bg-[var(--sc-brand)] h-full rounded-full transition-all duration-500" style="width: {{ $progress }}%"></div>
+                        </div>
+                        <span class="sc-num font-bold text-lg text-[var(--sc-ink)]">{{ $progress }}%</span>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Checklist Items -->
-        <div class="bg-white rounded-[24px] shadow-md border border-gray-100 overflow-hidden">
-            <ul class="divide-y divide-gray-100">
-                @forelse($checklists as $checklist)
-                    <li class="group hover:bg-gray-50 transition-colors duration-200">
-                        <div class="px-6 py-5 flex items-center">
-                            <!-- Toggle Checkbox -->
-                            <div class="flex-shrink-0 mr-4" x-data="{
-                                completed: {{ $checklist->is_completed ? 'true' : 'false' }},
-                                processing: false,
-                                async toggle() {
-                                    if(this.processing) return;
-                                    this.processing = true;
-                                    const prev = this.completed;
-                                    this.completed = !this.completed;
-                                    
-                                    try {
-                                        const res = await window.fetch('{{ route('caregiver.checklists.toggle', $checklist) }}', {
-                                            method: 'POST',
-                                            headers: {
-                                                'Content-Type': 'application/json',
-                                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                                                'Accept': 'application/json'
-                                            },
-                                            body: JSON.stringify({ elderly_id: {{ $selectedElderly->id }} })
-                                        });
-                                        const data = await res.json();
-                                        if(!res.ok) throw new Error(data.message || 'Failed');
-                                        this.completed = Boolean(data.is_completed);
-                                    } catch(e) {
-                                        this.completed = prev;
-                                        window.Alpine.store('toast')?.error('Failed to update task.');
-                                    } finally {
-                                        this.processing = false;
+            {{-- Checklist Items --}}
+            <div class="sc-card overflow-hidden">
+                <ul class="divide-y divide-[var(--sc-line)]">
+                    @forelse($checklists as $checklist)
+                        <li class="hover:bg-[var(--sc-surface-2)] transition-colors duration-150">
+                            <div class="p-4 sm:p-5 flex items-center gap-3 sm:gap-4">
+                                {{-- Toggle Checkbox --}}
+                                <div class="flex-shrink-0" x-data="{
+                                    completed: {{ $checklist->is_completed ? 'true' : 'false' }},
+                                    processing: false,
+                                    async toggle() {
+                                        if(this.processing) return;
+                                        this.processing = true;
+                                        const prev = this.completed;
+                                        this.completed = !this.completed;
+                                        
+                                        try {
+                                            const res = await window.fetch('{{ route('caregiver.checklists.toggle', $checklist) }}', {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json',
+                                                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                                    'Accept': 'application/json'
+                                                },
+                                                body: JSON.stringify({ elderly_id: {{ $selectedElderly->id }} })
+                                            });
+                                            const data = await res.json();
+                                            if(!res.ok) throw new Error(data.message || 'Failed');
+                                            this.completed = Boolean(data.is_completed);
+                                        } catch(e) {
+                                            this.completed = prev;
+                                            if (typeof window.scToast === 'function') {
+                                                window.scToast('Failed to update task.', 'error', { elderly: false });
+                                            } else if (window.Alpine && window.Alpine.store('toast')) {
+                                                window.Alpine.store('toast').error('Failed to update task.');
+                                            }
+                                        } finally {
+                                            this.processing = false;
+                                        }
                                     }
-                                }
-                            }">
-                                <button type="button" @click="toggle()" :disabled="processing" :class="completed ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-gray-300 hover:border-green-500'" class="w-8 h-8 border-2 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 shadow-sm disabled:opacity-50">
-                                    <svg x-show="completed" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-cloak><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                                </button>
-                            </div>
-
-                            <!-- Category Icon -->
-                            <div class="flex-shrink-0 mr-4 w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center">
-                                <span class="text-2xl">{{ $categoryIcons[$checklist->category] ?? '📋' }}</span>
-                            </div>
-
-                            <!-- Task Details -->
-                            <div class="flex-grow min-w-0 {{ $checklist->is_completed ? 'opacity-60' : '' }}">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <h4 class="text-base font-[700] text-gray-900" :class="completed ? 'line-through' : ''">{{ $checklist->task }}</h4>
-                                    @if($checklist->priority == 'high')
-                                        <span class="px-2.5 py-0.5 bg-red-100 text-red-700 text-[10px] font-[800] rounded-full uppercase">High</span>
-                                    @elseif($checklist->priority == 'low')
-                                        <span class="px-2.5 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-[800] rounded-full uppercase">Low</span>
-                                    @endif
-                                    
-                                    @if($checklist->is_recurring)
-                                        <span class="text-xs text-blue-500 font-medium inline-flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
-                                            <x-lucide-refresh-cw class="w-3.5 h-3.5" aria-hidden="true" />
-                                            {{ ucfirst($checklist->frequency ?? 'Recurring') }}
-                                        </span>
-                                    @endif
-                                </div>
-                                <div class="flex items-center gap-3 text-xs text-gray-500 font-medium">
-                                    <span class="bg-gray-100 px-2.5 py-1 rounded-lg font-[700]">{{ $checklist->category }}</span>
-                                    @if($checklist->due_date)
-                                        <span class="flex items-center gap-1">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                                            {{ $checklist->due_date->format('M d') }}
-                                        </span>
-                                    @endif
-                                    @if($checklist->due_time)
-                                        <span class="flex items-center gap-1">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                            {{ \Carbon\Carbon::parse($checklist->due_time)->format('g:i A') }}
-                                        </span>
-                                    @endif
-                                </div>
-                            </div>
-
-                            <!-- Status Badge -->
-                            @if(!$checklist->is_completed && $checklist->due_date)
-                                @php
-                                    $isOverdue = $checklist->due_date->isPast() && !$checklist->due_date->isToday();
-                                    $isToday = $checklist->due_date->isToday();
-                                @endphp
-                                <div class="flex-shrink-0 ml-4">
-                                    @if($isOverdue)
-                                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-[700] bg-red-100 text-red-700">
-                                            ⚠️ Overdue
-                                        </span>
-                                    @elseif($isToday)
-                                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-[700] bg-amber-100 text-amber-700">
-                                            📅 Due Today
-                                        </span>
-                                    @endif
-                                </div>
-                            @endif
-
-                            @if($checklist->is_completed)
-                                <div class="flex-shrink-0 ml-4">
-                                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-[700] bg-green-100 text-green-700">
-                                        ✓ Done
-                                    </span>
-                                </div>
-                            @endif
-
-                            <!-- Actions -->
-                            <div class="flex-shrink-0 ml-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                <a href="{{ route('caregiver.checklists.edit', ['checklist' => $checklist, 'elderly' => $selectedElderly->id]) }}" class="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                                </a>
-                                <form
-                                    action="{{ route('caregiver.checklists.destroy', $checklist) }}"
-                                    method="POST"
-                                    class="inline"
-                                    data-confirm="Are you sure you want to delete this task?"
-                                    data-confirm-title="Delete checklist task?"
-                                    data-confirm-icon="warning"
-                                    data-confirm-confirm-text="Delete task"
-                                    data-confirm-cancel-text="Keep task"
-                                    data-confirm-elderly="false"
-                                >
-                                    @csrf
-                                    @method('DELETE')
-                                    <input type="hidden" name="elderly_id" value="{{ $selectedElderly->id }}">
-                                    <button type="submit" class="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                }">
+                                    <button
+                                        type="button"
+                                        @click="toggle()"
+                                        :disabled="processing"
+                                        :class="completed ? 'sc-check-on' : 'sc-check-off'"
+                                        class="sc-check-btn"
+                                        role="checkbox"
+                                        :aria-checked="completed.toString()"
+                                        aria-label="{{ __('Toggle task') }}: {{ $checklist->task }}"
+                                    >
+                                        <x-lucide-check class="sc-i w-4 h-4" aria-hidden="true" x-show="completed" x-cloak />
                                     </button>
-                                </form>
+                                </div>
+
+                                {{-- Category Icon Plate --}}
+                                <div class="sc-plate sc-plate-sm flex-shrink-0">
+                                    @switch($checklist->category)
+                                        @case('Health')
+                                            <x-lucide-heart-pulse class="sc-i w-4 h-4 text-[var(--sc-brand)]" aria-hidden="true" />
+                                            @break
+                                        @case('Exercise')
+                                            <x-lucide-activity class="sc-i w-4 h-4 text-[var(--sc-brand)]" aria-hidden="true" />
+                                            @break
+                                        @case('Nutrition')
+                                            <x-lucide-apple class="sc-i w-4 h-4 text-[var(--sc-brand)]" aria-hidden="true" />
+                                            @break
+                                        @case('Social')
+                                            <x-lucide-users class="sc-i w-4 h-4 text-[var(--sc-brand)]" aria-hidden="true" />
+                                            @break
+                                        @case('Hygiene')
+                                            <x-lucide-sparkles class="sc-i w-4 h-4 text-[var(--sc-brand)]" aria-hidden="true" />
+                                            @break
+                                        @case('Mental')
+                                            <x-lucide-brain class="sc-i w-4 h-4 text-[var(--sc-brand)]" aria-hidden="true" />
+                                            @break
+                                        @case('Medication')
+                                            <x-lucide-pill class="sc-i w-4 h-4 text-[var(--sc-brand)]" aria-hidden="true" />
+                                            @break
+                                        @default
+                                            <x-lucide-clipboard-list class="sc-i w-4 h-4 text-[var(--sc-brand)]" aria-hidden="true" />
+                                    @endswitch
+                                </div>
+
+                                {{-- Task Details --}}
+                                <div class="flex-grow min-w-0" :class="completed ? 'opacity-70' : ''">
+                                    <div class="flex flex-wrap items-center gap-2 mb-1">
+                                        <h3 class="text-base font-bold text-[var(--sc-ink)] leading-snug" :class="completed ? 'line-through text-[var(--sc-muted)]' : ''">{{ $checklist->task }}</h3>
+                                        @if($checklist->priority == 'high')
+                                            <span class="sc-mark sc-mark-alert text-xs"><i></i>{{ __('High') }}</span>
+                                        @elseif($checklist->priority == 'low')
+                                            <span class="sc-mark sc-mark-subtle text-xs"><i></i>{{ __('Low') }}</span>
+                                        @endif
+                                        
+                                        @if($checklist->is_recurring)
+                                            <span class="sc-mark sc-mark-brand text-xs">
+                                                <i></i>{{ ucfirst($checklist->frequency ?? 'Recurring') }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                    <div class="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-[var(--sc-muted)] font-medium">
+                                        <span class="px-2 py-0.5 rounded-md bg-[var(--sc-surface-3)] text-[var(--sc-muted)] border border-[var(--sc-line)] font-semibold">{{ $checklist->category }}</span>
+                                        @if($checklist->due_date)
+                                            <span class="flex items-center gap-1 sc-num">
+                                                <x-lucide-calendar class="sc-i w-3.5 h-3.5" aria-hidden="true" />
+                                                <span>{{ $checklist->due_date->format('M d') }}</span>
+                                            </span>
+                                        @endif
+                                        @if($checklist->due_time)
+                                            <span class="flex items-center gap-1 sc-num">
+                                                <x-lucide-clock class="sc-i w-3.5 h-3.5" aria-hidden="true" />
+                                                <span>{{ \Carbon\Carbon::parse($checklist->due_time)->format('g:i A') }}</span>
+                                            </span>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                {{-- Status Badge --}}
+                                @if(!$checklist->is_completed && $checklist->due_date)
+                                    @php
+                                        $isOverdue = $checklist->due_date->isPast() && !$checklist->due_date->isToday();
+                                        $isToday = $checklist->due_date->isToday();
+                                    @endphp
+                                    <div class="flex-shrink-0 hidden sm:block">
+                                        @if($isOverdue)
+                                            <span class="sc-mark sc-mark-alert text-xs">
+                                                <i></i>{{ __('Overdue') }}
+                                            </span>
+                                        @elseif($isToday)
+                                            <span class="sc-mark sc-mark-warn text-xs">
+                                                <i></i>{{ __('Due Today') }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                @endif
+
+                                @if($checklist->is_completed)
+                                    <div class="flex-shrink-0 hidden sm:block">
+                                        <span class="sc-mark sc-mark-ok text-xs">
+                                            <i></i>{{ __('Done') }}
+                                        </span>
+                                    </div>
+                                @endif
+
+                                {{-- Actions --}}
+                                <div class="flex-shrink-0 flex items-center gap-1">
+                                    <a href="{{ route('caregiver.checklists.edit', ['checklist' => $checklist, 'elderly' => $selectedElderly->id]) }}"
+                                       class="sc-btn sc-btn-ghost !p-2 min-h-touch min-w-touch inline-flex items-center justify-center text-[var(--sc-ink)]"
+                                       aria-label="{{ __('Edit task') }}: {{ $checklist->task }}">
+                                        <x-lucide-pencil class="sc-i w-4 h-4 text-[var(--sc-ink)]" aria-hidden="true" />
+                                    </a>
+                                    <form
+                                        action="{{ route('caregiver.checklists.destroy', $checklist) }}"
+                                        method="POST"
+                                        class="inline"
+                                        data-confirm="Are you sure you want to delete this task?"
+                                        data-confirm-title="Delete checklist task?"
+                                        data-confirm-icon="warning"
+                                        data-confirm-confirm-text="Delete task"
+                                        data-confirm-cancel-text="Keep task"
+                                        data-confirm-elderly="false"
+                                    >
+                                        @csrf
+                                        @method('DELETE')
+                                        <input type="hidden" name="elderly_id" value="{{ $selectedElderly->id }}">
+                                        <button
+                                            type="submit"
+                                            class="sc-btn sc-btn-ghost !p-2 min-h-touch min-w-touch inline-flex items-center justify-center text-[var(--sc-alert)] hover:bg-[var(--sc-alert-tint)]"
+                                            aria-label="{{ __('Delete task') }}: {{ $checklist->task }}"
+                                        >
+                                            <x-lucide-trash-2 class="sc-i w-4 h-4 text-[var(--sc-alert)]" aria-hidden="true" />
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
-                        </div>
-                    </li>
-                @empty
-                    <li class="py-16 text-center">
-                        <div class="w-20 h-20 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <svg class="w-10 h-10 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
-                        </div>
-                        <h3 class="text-xl font-[800] text-gray-900 mb-2">No Tasks Yet</h3>
-                        <p class="text-gray-500 font-medium mb-6">Get started by adding a daily task for your patient.</p>
-                        <a href="{{ route('caregiver.checklists.create', ['elderly' => $selectedElderly->id]) }}" class="inline-flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-2xl font-[700] shadow-lg shadow-green-200 hover:-translate-y-0.5 transition-all">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                            Add Task
-                        </a>
-                    </li>
-                @endforelse
-            </ul>
+                        </li>
+                    @empty
+                        <li class="py-12">
+                            <div class="sc-empty">
+                                <div class="sc-plate mb-3">
+                                    <x-lucide-clipboard-list class="sc-i w-6 h-6 text-[var(--sc-muted)]" aria-hidden="true" />
+                                </div>
+                                <h3 class="sc-h3">{{ __('No Tasks Yet') }}</h3>
+                                <p style="color:var(--sc-muted)">{{ __('Get started by adding a daily task for your patient.') }}</p>
+                                <a href="{{ route('caregiver.checklists.create', ['elderly' => $selectedElderly->id]) }}" class="sc-btn sc-btn-primary mt-4 inline-flex items-center gap-2">
+                                    <x-lucide-plus class="sc-i w-4 h-4" aria-hidden="true" />
+                                    <span>{{ __('Add Task') }}</span>
+                                </a>
+                            </div>
+                        </li>
+                    @endforelse
+                </ul>
+            </div>
         </div>
     </main>
 
