@@ -1,4 +1,4 @@
-<x-dashboard-layout>
+<x-dashboard-layout sc>
     <x-slot:title>My Medications - SilverCare</x-slot:title>
 
     <x-dashboard-nav
@@ -8,62 +8,75 @@
         :unread-notifications="$unreadNotifications"
     />
 
-    <main id="main-content" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main id="main-content" class="sc-app-main">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-12 space-y-6">
 
-        {{-- Back Navigation --}}
-        <div class="mb-6 flex justify-end">
-            <a href="{{ route('dashboard') }}" class="back-nav-pill">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                Back to Home
-            </a>
-        </div>
-        
-        @php
-            $today = now();
-        @endphp
+            {{-- Back Navigation --}}
+            <div class="flex justify-between items-center">
+                <a href="{{ route('dashboard') }}" class="sc-btn sc-btn-ghost sc-btn-sm">
+                    <x-lucide-arrow-left class="sc-i w-4 h-4" aria-hidden="true" />
+                    <span>Back to Dashboard</span>
+                </a>
 
-        @forelse($medications as $medication)
-            @php
-                $isToday = $medication->isScheduledForDate($today);
-                $scheduleType = $medication->primaryScheduleType();
-                $weeklyDays = $medication->weeklyDays();
-                $specificDates = $medication->specificScheduleDates();
-                $displayTimes = $medication->scheduleTimesForDate($today);
-                if (empty($displayTimes)) {
-                    $displayTimes = $medication->times_of_day ?? [];
-                }
-            @endphp
-            <div class="mb-6 bg-white rounded-2xl shadow-lg overflow-hidden {{ $isToday ? 'ring-2 ring-blue-500' : '' }}">
-                @if($isToday)
-                    <div class="bg-blue-500 text-white text-center py-1 text-sm font-bold">
-                        <span class="inline-flex items-center gap-1.5">
-                            <x-lucide-calendar-days class="w-4 h-4" aria-hidden="true" />
-                            Scheduled for Today
-                        </span>
-                    </div>
+                @if($medications->count() > 0)
+                    <span class="sc-badge sc-num text-xs sm:text-sm">
+                        {{ $medications->where('is_active', true)->count() }} active
+                    </span>
                 @endif
-                <div class="p-6">
-                    <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <h2 class="text-2xl font-[900] text-gray-900">{{ $medication->name }}</h2>
-                            <p class="text-lg text-blue-600 font-bold">{{ $medication->dosage }} {{ $medication->dosage_unit }}</p>
+            </div>
+
+            @php
+                $today = now();
+            @endphp
+
+            @forelse($medications as $medication)
+                @php
+                    $isToday = $medication->isScheduledForDate($today);
+                    $scheduleType = $medication->primaryScheduleType();
+                    $weeklyDays = $medication->weeklyDays();
+                    $specificDates = $medication->specificScheduleDates();
+                    $displayTimes = $medication->scheduleTimesForDate($today);
+                    if (empty($displayTimes)) {
+                        $displayTimes = $medication->times_of_day ?? [];
+                    }
+                @endphp
+                <section class="sc-card sc-lift p-6 md:p-8 space-y-5" aria-labelledby="medication-{{ $medication->id }}-heading">
+                    <!-- Header -->
+                    <div class="flex flex-wrap justify-between items-start gap-3 pb-4" style="border-bottom: 1px solid var(--sc-line)">
+                        <div class="flex items-start gap-3">
+                            <div class="sc-plate sc-plate-sm flex-none" aria-hidden="true">
+                                <x-lucide-pill class="sc-i w-5 h-5" aria-hidden="true" />
+                            </div>
+                            <div>
+                                <h2 id="medication-{{ $medication->id }}-heading" class="sc-h3 text-xl" style="color:var(--sc-title)">
+                                    {{ $medication->name }}
+                                </h2>
+                                <p class="sc-num font-semibold text-base mt-0.5" style="color:var(--sc-body)">
+                                    {{ $medication->dosage }} {{ $medication->dosage_unit }}
+                                </p>
+                            </div>
                         </div>
-                        <div class="text-right">
-                            @if($medication->is_active)
-                                <span class="px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full font-medium">Active</span>
-                            @else
-                                <span class="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full font-medium">Inactive</span>
+                        <div class="flex flex-wrap items-center gap-2">
+                            @if($isToday)
+                                <span class="sc-badge sc-badge-brand sc-num text-xs inline-flex items-center gap-1.5 font-semibold">
+                                    <x-lucide-calendar class="sc-i w-3.5 h-3.5" aria-hidden="true" />
+                                    <span>Scheduled for Today</span>
+                                </span>
                             @endif
+                            <span class="sc-mark {{ $medication->is_active ? 'sc-mark-ok' : '' }}">
+                                <i></i>{{ $medication->is_active ? 'Active' : 'Inactive' }}
+                            </span>
                         </div>
                     </div>
 
                     <!-- Schedule Days -->
                     @if($scheduleType === 'weekly')
-                        <div class="mb-4">
-                            <p class="text-sm text-gray-500 mb-2 font-medium">Schedule</p>
-                            <div class="flex flex-wrap gap-2">
+                        <div class="space-y-1.5">
+                            <p class="sc-eyebrow text-xs">Schedule</p>
+                            <div class="flex flex-wrap gap-1.5">
                                 @foreach(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as $day)
-                                    <span class="px-3 py-1 text-sm rounded-full {{ in_array($day, $weeklyDays, true) ? 'bg-blue-500 text-white font-bold' : 'bg-gray-100 text-gray-400' }}">
+                                    @php $isActiveDay = in_array($day, $weeklyDays, true); @endphp
+                                    <span class="sc-badge sc-num text-xs {{ $isActiveDay ? 'sc-badge-brand font-bold' : '' }}">
                                         {{ substr($day, 0, 3) }}
                                     </span>
                                 @endforeach
@@ -72,20 +85,20 @@
                     @endif
 
                     @if($scheduleType === 'daily')
-                        <div class="mb-4">
-                            <p class="text-sm text-gray-500 mb-2 font-medium">Schedule</p>
-                            <span class="inline-flex items-center px-3 py-1 text-sm rounded-full bg-blue-100 text-blue-700 font-bold">
+                        <div class="space-y-1.5">
+                            <p class="sc-eyebrow text-xs">Schedule</p>
+                            <span class="sc-badge sc-badge-brand text-xs font-semibold">
                                 Every day
                             </span>
                         </div>
                     @endif
 
                     @if($scheduleType === 'specific_date')
-                        <div class="mb-4">
-                            <p class="text-sm text-gray-500 mb-2 font-medium">Scheduled Dates</p>
-                            <div class="flex flex-wrap gap-2">
+                        <div class="space-y-1.5">
+                            <p class="sc-eyebrow text-xs">Scheduled Dates</p>
+                            <div class="flex flex-wrap gap-1.5">
                                 @foreach($specificDates as $specificDate)
-                                    <span class="px-3 py-1 text-sm rounded-full bg-indigo-100 text-indigo-700 font-bold">
+                                    <span class="sc-badge sc-badge-brand sc-num text-xs">
                                         {{ \Carbon\Carbon::parse($specificDate)->format('M j, Y') }}
                                     </span>
                                 @endforeach
@@ -95,14 +108,14 @@
 
                     <!-- Times -->
                     @if(!empty($displayTimes))
-                        <div class="mb-4">
-                            <p class="text-sm text-gray-500 mb-2 font-medium">Times to Take</p>
-                            <div class="flex flex-wrap gap-3">
+                        <div class="space-y-1.5">
+                            <p class="sc-eyebrow text-xs">Times to Take</p>
+                            <div class="flex flex-wrap gap-2">
                                 @foreach($displayTimes as $time)
-                                    <div class="flex items-center bg-amber-50 text-amber-700 px-4 py-2 rounded-xl border border-amber-200">
-                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                        <span class="font-bold text-lg">{{ \Carbon\Carbon::parse($time)->format('g:i A') }}</span>
-                                    </div>
+                                    <span class="sc-badge sc-num text-sm py-1.5 px-3 inline-flex items-center gap-1.5 font-semibold">
+                                        <x-lucide-clock class="sc-i w-4 h-4" aria-hidden="true" />
+                                        {{ \Carbon\Carbon::parse($time)->format('g:i A') }}
+                                    </span>
                                 @endforeach
                             </div>
                         </div>
@@ -110,33 +123,44 @@
 
                     <!-- Instructions -->
                     @if($medication->instructions)
-                        <div class="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                            <p class="text-sm text-gray-500 font-medium mb-1 inline-flex items-center gap-1.5">
-                                <x-lucide-notebook-pen class="w-4 h-4 text-slate-400" aria-hidden="true" />
-                                Instructions
+                        <div class="sc-card-quiet p-4 text-sm" style="color:var(--sc-body)">
+                            <p class="sc-eyebrow text-xs mb-1 inline-flex items-center gap-1">
+                                <x-lucide-notebook-pen class="sc-i w-3.5 h-3.5" aria-hidden="true" />
+                                <span>Instructions</span>
                             </p>
-                            <p class="text-gray-700">{{ $medication->instructions }}</p>
+                            <p class="sc-quote text-base">{{ $medication->instructions }}</p>
                         </div>
                     @endif
 
-                    <!-- Stock Warning -->
+                    <!-- Stock Warning & Refill -->
                     @if($medication->track_inventory && $medication->current_stock <= ($medication->low_stock_threshold ?? 5))
-                        <div class="mt-4 p-4 bg-red-50 rounded-2xl border border-red-200 flex flex-col sm:flex-row items-center justify-between gap-4"
+                        <div class="sc-card-quiet p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                             style="border-color: var(--sc-alert-line)"
                              x-data="{ 
                                 loading: false,
                                 requested: false,
                                 async requestRefill() {
                                     this.loading = true;
                                     try {
-                                        const res = await sendJsonRequest('{{ route('elderly.medications.refill', $medication) }}', 'POST');
-                                        if (res.success) {
+                                        const token = document.querySelector('meta[name=\'csrf-token\']')?.content;
+                                        const res = typeof sendJsonRequest === 'function'
+                                            ? await sendJsonRequest('{{ route('elderly.medications.refill', $medication) }}', 'POST')
+                                            : await fetch('{{ route('elderly.medications.refill', $medication) }}', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': token }
+                                            }).then(r => r.json());
+                                        if (res && (res.success || res.ok)) {
                                             this.requested = true;
-                                            window.Swal.fire({
-                                                title: 'Refill Requested!',
-                                                text: 'Your caregiver has been notified.',
-                                                icon: 'success',
-                                                confirmButtonColor: '#3085d6'
-                                            });
+                                            if (window.scAlert) {
+                                                window.scAlert({ title: 'Refill Requested!', text: 'Your caregiver has been notified.', icon: 'success' });
+                                            } else if (window.Swal) {
+                                                window.Swal.fire({
+                                                    title: 'Refill Requested!',
+                                                    text: 'Your caregiver has been notified.',
+                                                    icon: 'success',
+                                                    confirmButtonColor: '#3085d6'
+                                                });
+                                            }
                                         }
                                     } catch (e) {
                                         console.error(e);
@@ -145,51 +169,57 @@
                                     }
                                 }
                              }">
-                            <div class="flex items-center">
-                                <x-lucide-triangle-alert class="w-8 h-8 mr-3 text-red-600" aria-hidden="true" />
+                            <div class="flex items-center gap-3">
+                                <div class="sc-plate sc-plate-sm flex-none" style="color:var(--sc-alert)" aria-hidden="true">
+                                    <x-lucide-triangle-alert class="sc-i w-5 h-5" aria-hidden="true" />
+                                </div>
                                 <div>
-                                    <p class="text-red-700 font-[800]">Low Stock Alert</p>
-                                    <p class="text-red-600 text-sm font-medium">Only {{ $medication->current_stock }} {{ $medication->dosage_unit }} left.</p>
+                                    <p class="font-bold text-sm" style="color:var(--sc-alert)">Low Stock Alert</p>
+                                    <p class="text-xs sm:text-sm sc-num mt-0.5" style="color:var(--sc-body)">
+                                        Only {{ $medication->current_stock }} {{ $medication->dosage_unit }} remaining.
+                                    </p>
                                 </div>
                             </div>
-                            <button @click="requestRefill()" 
+                            <button type="button"
+                                    @click="requestRefill()" 
                                     :disabled="loading || requested"
-                                    class="w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2"
-                                    :class="requested ? 'bg-green-100 text-green-700 border border-green-200 cursor-default' : 'bg-red-600 hover:bg-red-700 text-white shadow-red-200 shadow-lg active:scale-95'">
+                                    class="sc-btn sc-btn-sm w-full sm:w-auto"
+                                    :class="requested ? 'sc-btn-ghost cursor-default' : 'sc-btn-danger'">
                                 <template x-if="loading">
-                                    <svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                    <svg class="animate-spin h-4 w-4 text-current" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
                                 </template>
                                 <template x-if="!loading">
-                                    <span class="flex items-center gap-2">
-                                        <x-lucide-package-plus x-show="!requested" class="w-5 h-5" aria-hidden="true" />
-                                        <x-lucide-check x-show="requested" class="w-5 h-5" aria-hidden="true" />
+                                    <span class="flex items-center gap-1.5">
+                                        <x-lucide-package-plus x-show="!requested" class="sc-i w-4 h-4" aria-hidden="true" />
+                                        <x-lucide-check x-show="requested" class="sc-i w-4 h-4" aria-hidden="true" />
                                         <span x-text="requested ? 'Refill Requested' : 'Request Refill'"></span>
                                     </span>
                                 </template>
                             </button>
                         </div>
                     @endif
+                </section>
+            @empty
+                <div class="sc-empty py-12">
+                    <span class="sc-plate sc-plate-lg mb-3" aria-hidden="true">
+                        <x-lucide-pill class="sc-i w-8 h-8" aria-hidden="true" />
+                    </span>
+                    <h2 class="sc-h3 text-lg font-bold" style="color:var(--sc-ink)">No medications yet</h2>
+                    <p class="max-w-md mx-auto text-sm" style="color:var(--sc-body)">
+                        Your caregiver will add your medications here when needed. Nothing to worry about.
+                    </p>
+                    <div class="mt-4">
+                        <a href="{{ route('dashboard') }}" class="sc-btn sc-btn-primary">
+                            <x-lucide-arrow-left class="sc-i w-4 h-4" aria-hidden="true" />
+                            <span>Back to Dashboard</span>
+                        </a>
+                    </div>
                 </div>
-            </div>
-        @empty
-            <div class="empty-state">
-                <div class="empty-state-icon">
-                    <svg class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-                    </svg>
-                </div>
-                <h3>No medications yet</h3>
-                <p class="inline-flex items-center gap-2 text-gray-600">
-                    <span>Your caregiver will add your medications here when needed. Nothing to worry about.</span>
-                    <x-lucide-heart class="w-5 h-5 text-emerald-600" aria-hidden="true" />
-                </p>
-                <a href="{{ route('dashboard') }}" class="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-navy-500 text-white font-bold rounded-xl hover:bg-navy-600 transition-colors min-h-touch shadow-glow-brand">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                    Back to Dashboard
-                </a>
-            </div>
-        @endforelse
+            @endforelse
 
+        </div>
     </main>
-
 </x-dashboard-layout>
