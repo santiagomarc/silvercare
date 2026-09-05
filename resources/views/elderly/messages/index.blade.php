@@ -1,4 +1,4 @@
-<x-dashboard-layout>
+<x-dashboard-layout sc>
     <x-slot:title>Care Messages - SilverCare</x-slot:title>
 
     <x-dashboard-nav
@@ -8,151 +8,155 @@
         subtitle="Secure messages from your caregiver"
     />
 
-    <main class="max-w-[800px] mx-auto px-4 sm:px-6 lg:px-12 py-6 space-y-5">
-        <x-flash-messages />
+    <main id="main-content" class="sc-app-main">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-12 py-6 space-y-6">
+            <x-flash-messages />
 
-        {{-- Back Navigation --}}
-        <div class="mb-6 flex justify-end">
-            <a href="{{ route('dashboard') }}" class="back-nav-pill">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                Back to Home
-            </a>
-        </div>
-
-        @if(!$caregiver)
-            {{-- No Caregiver Linked — Premium Empty State --}}
-            <section class="empty-state rounded-3xl border border-amber-100 bg-gradient-to-br from-amber-50/80 to-orange-50/60 py-12">
-                <div class="empty-state-icon !bg-gradient-to-br !from-amber-100 !to-orange-100">
-                    <svg class="w-10 h-10 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    </svg>
-                </div>
-                <h3 class="!text-amber-900">No caregiver linked yet</h3>
-                <p class="!text-amber-700">Link a caregiver first to start in‑app messaging. It only takes a minute!</p>
-                <a href="{{ route('dashboard') }}#link-caregiver-card" class="mt-6 inline-flex items-center gap-2 rounded-xl bg-amber-500 px-6 py-3 text-base font-bold text-white hover:bg-amber-600 transition-colors min-h-touch shadow-lg shadow-amber-200">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
-                    Link Caregiver
+            {{-- Back Navigation --}}
+            <div class="flex justify-end">
+                <a href="{{ route('dashboard') }}" class="sc-btn sc-btn-ghost inline-flex items-center gap-1.5 text-sm">
+                    <x-lucide-arrow-left class="sc-i w-4 h-4" aria-hidden="true" />
+                    <span>{{ __('Back to Home') }}</span>
                 </a>
-            </section>
-        @else
-            {{-- Chat Container --}}
-            <section class="chat-container" x-data="chatApp()" x-init="scrollToBottom()">
+            </div>
 
-                {{-- Chat Header --}}
-                <div class="chat-header">
-                    <div class="w-11 h-11 rounded-full bg-navy-100 flex items-center justify-center text-navy-600 font-black text-lg flex-shrink-0">
-                        {{ strtoupper(substr($caregiver->user?->name ?? 'C', 0, 1)) }}
+            @if(!$caregiver)
+                {{-- No Caregiver Linked Empty State --}}
+                <div class="sc-empty">
+                    <div class="sc-plate mb-2">
+                        <x-lucide-users class="sc-i w-6 h-6" aria-hidden="true" />
                     </div>
-                    <div class="flex-1 min-w-0">
-                        <h3 class="text-lg font-extrabold text-slate-900 truncate">{{ $caregiver->user?->name ?? 'Your Caregiver' }}</h3>
-                        <p class="text-xs font-semibold text-slate-400">Secure SilverCare messaging</p>
-                    </div>
-                    <div class="flex items-center gap-1.5">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                        <span class="text-xs font-bold text-emerald-600">Active</span>
-                    </div>
+                    <h2 class="sc-h3">{{ __('No caregiver linked yet') }}</h2>
+                    <p style="color:var(--sc-muted)">{{ __('Link a caregiver first to start in-app messaging. It only takes a minute!') }}</p>
+                    <a href="{{ route('dashboard') }}#link-caregiver-card" class="sc-btn sc-btn-primary mt-3 inline-flex items-center gap-2">
+                        <x-lucide-user-plus class="sc-i w-4 h-4" aria-hidden="true" />
+                        <span>{{ __('Link Caregiver') }}</span>
+                    </a>
                 </div>
+            @else
+                {{-- Chat Container --}}
+                <section class="sc-card p-5 sm:p-7" aria-labelledby="convo-heading" x-data="chatApp()" x-init="scrollToBottom()">
 
-                {{-- Scrollable Message Area --}}
-                <div class="chat-scroll-area" id="chatScrollArea" x-ref="chatArea">
-                    @forelse($messages as $message)
-                        @php
-                            $isMine = $message->sender_profile_id === Auth::user()->profile?->id;
-                            $messageDate = $message->created_at->format('Y-m-d');
-                            $prevDate = isset($prevMessageDate) ? $prevMessageDate : null;
-                            $showDate = $messageDate !== $prevDate;
-                            $prevMessageDate = $messageDate;
-                        @endphp
-
-                        {{-- Date Separator --}}
-                        @if($showDate)
-                            <div class="chat-date-separator">
-                                <span>
-                                    @if($message->created_at->isToday())
-                                        Today
-                                    @elseif($message->created_at->isYesterday())
-                                        Yesterday
-                                    @else
-                                        {{ $message->created_at->format('M j, Y') }}
-                                    @endif
-                                </span>
+                    {{-- Chat Header --}}
+                    <div class="mb-5 pb-4 flex items-center justify-between gap-3 border-b border-[var(--sc-border)]">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-11 h-11 rounded-full bg-[var(--sc-surface-quiet)] border border-[var(--sc-border)] flex items-center justify-center text-[var(--sc-ink)] font-bold text-base flex-shrink-0">
+                                {{ strtoupper(substr($caregiver->user?->name ?? 'C', 0, 1)) }}
                             </div>
-                        @endif
-
-                        {{-- Message Bubble --}}
-                        <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} mb-2">
-                            <div class="chat-bubble {{ $isMine ? 'chat-bubble-outgoing' : 'chat-bubble-incoming' }}">
-                                <p class="whitespace-pre-wrap">{{ $message->message }}</p>
-                                <p class="mt-1.5 text-xs {{ $isMine ? 'text-navy-200' : 'text-slate-400' }} font-semibold">
-                                    {{ $message->created_at->format('g:i A') }}
+                            <div class="min-w-0">
+                                <h2 id="convo-heading" class="text-lg font-bold text-[var(--sc-ink)] truncate">{{ $caregiver->user?->name ?? 'Your Caregiver' }}</h2>
+                                <p class="text-xs font-semibold text-[var(--sc-ink-muted)] flex items-center gap-1.5">
+                                    <x-lucide-lock class="sc-i w-3.5 h-3.5" aria-hidden="true" />
+                                    <span>{{ __('Secure SilverCare messaging') }}</span>
                                 </p>
                             </div>
                         </div>
-                    @empty
-                        {{-- Empty Chat State --}}
-                        <div class="flex flex-col items-center justify-center h-full text-center py-12">
-                            <div class="empty-state-icon mb-4">
-                                <svg class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-                                </svg>
-                            </div>
-                            <h3 class="text-lg font-extrabold text-slate-700 mb-1">Start a conversation</h3>
-                            <p class="text-base text-slate-500 font-medium max-w-xs inline-flex items-center justify-center gap-2">
-                                <span>Send a message to your caregiver - they'd love to hear from you!</span>
-                                <x-lucide-message-circle class="w-5 h-5 text-navy-500" aria-hidden="true" />
-                            </p>
+                        <div class="flex items-center gap-1.5 flex-shrink-0">
+                            <span class="sc-mark sc-mark-ok"><i></i>{{ __('Active') }}</span>
                         </div>
-                    @endforelse
-                </div>
-
-                {{-- Sticky Input Bar --}}
-                <div class="chat-input-bar">
-                    <div class="flex-1 relative">
-                        <label for="chat-message-input" class="sr-only">Type a message</label>
-                        <textarea
-                            id="chat-message-input"
-                            x-ref="messageInput"
-                            x-model="messageText"
-                            @keydown.enter.prevent="if (!$event.shiftKey) sendMessage()"
-                            @input="autoGrow($event)"
-                            maxlength="1200"
-                            rows="1"
-                            class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-base font-semibold text-slate-800 resize-none
-                                   focus:border-navy-400 focus:bg-white focus:ring-2 focus:ring-navy-100 transition-all
-                                   placeholder:text-slate-400"
-                            placeholder="Type a message..."
-                            style="max-height: 120px; overflow-y: auto;"
-                        ></textarea>
-                        {{-- Character Counter --}}
-                        <span class="absolute bottom-1.5 right-3 text-xs text-slate-300 font-semibold pointer-events-none"
-                              x-show="messageText.length > 100"
-                              x-text="messageText.length + '/1200'"
-                              x-transition></span>
                     </div>
-                    {{-- Circular Send Button --}}
-                    <button
-                        type="button"
-                        class="chat-send-btn"
-                        @click="sendMessage()"
-                        :disabled="sending || messageText.trim().length === 0"
-                        aria-label="Send message"
-                    >
-                        <template x-if="!sending">
-                            <svg class="w-5 h-5 -rotate-45" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
-                            </svg>
-                        </template>
-                        <template x-if="sending">
-                            <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                            </svg>
-                        </template>
-                    </button>
-                </div>
 
-            </section>
-        @endif
+                    {{-- Scrollable Message Area --}}
+                    <div class="sc-card-quiet p-4 sm:p-6 h-[450px] overflow-y-auto space-y-3" id="chatScrollArea" x-ref="chatArea">
+                        @forelse($messages as $message)
+                            @php
+                                $isMine = $message->sender_profile_id === Auth::user()->profile?->id;
+                                $messageDate = $message->created_at->format('Y-m-d');
+                                $prevDate = isset($prevMessageDate) ? $prevMessageDate : null;
+                                $showDate = $messageDate !== $prevDate;
+                                $prevMessageDate = $messageDate;
+                            @endphp
+
+                            {{-- Date Separator --}}
+                            @if($showDate)
+                                <div class="flex items-center justify-center my-4">
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold bg-[var(--sc-surface)] border border-[var(--sc-border)] text-[var(--sc-ink-muted)] shadow-xs sc-num">
+                                        @if($message->created_at->isToday())
+                                            {{ __('Today') }}
+                                        @elseif($message->created_at->isYesterday())
+                                            {{ __('Yesterday') }}
+                                        @else
+                                            {{ $message->created_at->format('M j, Y') }}
+                                        @endif
+                                    </span>
+                                </div>
+                            @endif
+
+                            {{-- Message Bubble --}}
+                            @php
+                                $displayMessage = trim(preg_replace('/[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]/u', '', $message->message));
+                            @endphp
+                            <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} mb-2">
+                                <div class="max-w-[85%] sm:max-w-[75%]">
+                                    <div class="px-4 py-3 shadow-xs {{ $isMine ? 'rounded-2xl rounded-br-sm' : 'rounded-2xl rounded-bl-sm border' }}"
+                                         style="{{ $isMine ? 'background:var(--sc-brand); color:var(--sc-brand-on);' : 'background:var(--sc-surface); color:var(--sc-ink); border-color:var(--sc-border);' }}">
+                                        <p class="text-base font-normal leading-relaxed whitespace-pre-wrap break-words">{{ $displayMessage }}</p>
+                                        <p class="mt-1.5 text-xs font-semibold sc-num {{ $isMine ? 'text-right' : '' }}"
+                                           style="{{ $isMine ? 'color:var(--sc-brand-tint); opacity:0.85;' : 'color:var(--sc-ink-muted);' }}">
+                                            {{ $message->created_at->format('g:i A') }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        @empty
+                            {{-- Empty Chat State --}}
+                            <div class="h-full flex flex-col items-center justify-center text-center p-8">
+                                <div class="sc-plate mb-3">
+                                    <x-lucide-message-circle class="sc-i w-6 h-6" aria-hidden="true" />
+                                </div>
+                                <h3 class="text-lg font-bold text-[var(--sc-ink)] mb-1">{{ __('Start a conversation') }}</h3>
+                                <p class="text-sm text-[var(--sc-ink-muted)] max-w-sm">
+                                    {{ __("Send a message to your caregiver — they'd love to hear from you!") }}
+                                </p>
+                            </div>
+                        @endforelse
+                    </div>
+
+                    {{-- Sticky Input Bar --}}
+                    <div class="flex items-end gap-3 mt-4 pt-4 border-t border-[var(--sc-border)]">
+                        <div class="flex-1 relative">
+                            <label for="chat-message-input" class="sr-only">{{ __('Type a message') }}</label>
+                            <textarea
+                                id="chat-message-input"
+                                x-ref="messageInput"
+                                x-model="messageText"
+                                @keydown.enter.prevent="if (!$event.shiftKey) sendMessage()"
+                                @input="autoGrow($event)"
+                                maxlength="1200"
+                                rows="1"
+                                class="sc-textarea !rounded-2xl !py-3 !px-4 text-base resize-none"
+                                placeholder="{{ __('Type a message…') }}"
+                                style="max-height: 120px; overflow-y: auto;"
+                            ></textarea>
+                            {{-- Character Counter --}}
+                            <span class="absolute bottom-2 right-3 text-xs text-[var(--sc-ink-muted)] font-semibold pointer-events-none sc-num"
+                                  x-show="messageText.length > 100"
+                                  x-text="messageText.length + '/1200'"
+                                  x-transition></span>
+                        </div>
+                        {{-- Send Button --}}
+                        <button
+                            type="button"
+                            class="sc-btn sc-btn-primary !p-3 !rounded-2xl flex-shrink-0 disabled:opacity-40"
+                            @click="sendMessage()"
+                            :disabled="sending || messageText.trim().length === 0"
+                            aria-label="{{ __('Send message') }}"
+                        >
+                            <template x-if="!sending">
+                                <x-lucide-send class="sc-i w-5 h-5" aria-hidden="true" />
+                            </template>
+                            <template x-if="sending">
+                                <svg class="sc-i w-5 h-5 animate-spin" aria-hidden="true" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                </svg>
+                            </template>
+                        </button>
+                    </div>
+
+                </section>
+            @endif
+        </div>
     </main>
 
     @push('scripts')
@@ -189,11 +193,13 @@
                     const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
                     const bubbleWrapper = document.createElement('div');
-                    bubbleWrapper.className = 'flex justify-end mb-2 animate-fade-in';
+                    bubbleWrapper.className = 'flex justify-end mb-2';
                     bubbleWrapper.innerHTML = `
-                        <div class="chat-bubble chat-bubble-outgoing">
-                            <p class="whitespace-pre-wrap">${this.escapeHtml(text)}</p>
-                            <p class="mt-1.5 text-xs text-navy-200 font-semibold">${timeStr}</p>
+                        <div class="max-w-[85%] sm:max-w-[75%]">
+                            <div class="px-4 py-3 rounded-2xl rounded-br-sm shadow-xs" style="background:var(--sc-brand); color:var(--sc-brand-on);">
+                                <p class="text-base font-normal leading-relaxed whitespace-pre-wrap break-words">${this.escapeHtml(text)}</p>
+                                <p class="mt-1.5 text-xs font-semibold sc-num text-right" style="color:var(--sc-brand-tint); opacity:0.85;">${timeStr}</p>
+                            </div>
                         </div>
                     `;
                     area.appendChild(bubbleWrapper);
