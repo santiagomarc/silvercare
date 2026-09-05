@@ -1,12 +1,10 @@
 @php
-    // M2 — caregiver-facing threshold editor. Previously this route returned
-    // raw JSON, so there was no way to configure per-patient thresholds through
-    // the interface at all.
+    // M2 — caregiver-facing threshold editor.
     $metricLabels = [
-        'blood_pressure' => ['name' => 'Blood Pressure', 'unit' => 'mmHg', 'icon' => '🩺'],
-        'sugar_level'    => ['name' => 'Blood Sugar',    'unit' => 'mg/dL', 'icon' => '🩸'],
-        'temperature'    => ['name' => 'Temperature',    'unit' => '°C',   'icon' => '🌡️'],
-        'heart_rate'     => ['name' => 'Heart Rate',     'unit' => 'BPM',  'icon' => '💓'],
+        'blood_pressure' => ['name' => 'Blood Pressure', 'unit' => 'mmHg'],
+        'sugar_level'    => ['name' => 'Blood Sugar',    'unit' => 'mg/dL'],
+        'temperature'    => ['name' => 'Temperature',    'unit' => '°C'],
+        'heart_rate'     => ['name' => 'Heart Rate',     'unit' => 'BPM'],
     ];
 
     $fieldLabels = [
@@ -25,96 +23,123 @@
     ];
 @endphp
 
-<x-dashboard-layout>
+<x-dashboard-layout sc>
     <x-slot:title>Alert Thresholds - SilverCare</x-slot:title>
 
-    <x-dashboard-nav title="Alert Thresholds" role="caregiver" />
+    <x-dashboard-nav
+        title="Alert Thresholds"
+        subtitle="Per-patient clinical guidance and alert boundaries"
+        role="caregiver"
+        :show-back="true"
+        :back-url="route('caregiver.dashboard')"
+        back-label="Back to Dashboard"
+    />
 
-    <main class="max-w-4xl mx-auto px-6 lg:px-12 py-6">
-        <div class="mb-6">
-            <a href="{{ route('caregiver.dashboard') }}"
-               class="text-sm font-bold text-blue-700 dark:text-blue-400 hover:underline">← Back to dashboard</a>
+    <main id="main-content" class="sc-app-main">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-12 space-y-6">
 
-            <h1 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white mt-3">
-                Alert thresholds for {{ $patient->user?->name ?? 'your patient' }}
-            </h1>
-            <p class="text-sm font-medium text-slate-600 dark:text-slate-300 mt-1 max-w-2xl">
-                SilverCare raises an alert when a reading crosses one of these values. The defaults are
-                general clinical guidance — adjust them only on the advice of your patient's doctor,
-                whose targets may differ from the general population.
-            </p>
-        </div>
+            <div class="mb-6">
+                <div class="mb-3">
+                    <a href="{{ route('caregiver.dashboard') }}"
+                       class="sc-btn sc-btn-ghost sc-btn-sm">
+                        <x-lucide-arrow-left class="sc-i w-4 h-4" aria-hidden="true" />
+                        <span>Back to Dashboard</span>
+                    </a>
+                </div>
 
-        <div class="space-y-5">
-            @foreach($metrics as $metricType => $config)
-                @php $meta = $metricLabels[$metricType] ?? ['name' => $metricType, 'unit' => '', 'icon' => '•']; @endphp
+                <h2 class="sc-h3">
+                    Alert thresholds for {{ $patient->user?->name ?? 'your patient' }}
+                </h2>
+                <p class="text-sm mt-1 max-w-2xl" style="color:var(--sc-body)">
+                    SilverCare raises an alert when a reading crosses one of these values. The defaults are
+                    general clinical guidance — adjust them only on the advice of your patient's doctor,
+                    whose targets may differ from the general population.
+                </p>
+            </div>
 
-                <section
-                    x-data="thresholdEditor({
-                        metricType: @js($metricType),
-                        thresholds: @js($config['thresholds']),
-                        defaults: @js($config['default_thresholds']),
-                        isCustom: {{ $config['is_custom'] ? 'true' : 'false' }},
-                        endpoint: @js(route('caregiver.patients.thresholds.update', $patient)),
-                    })"
-                    class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 p-5 shadow-sm"
-                >
-                    <div class="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100 dark:border-slate-700">
-                        <div class="flex items-center gap-3">
-                            <span class="text-xl" aria-hidden="true">{{ $meta['icon'] }}</span>
-                            <div>
-                                <h2 class="text-base font-extrabold text-slate-900 dark:text-white">{{ $meta['name'] }}</h2>
-                                <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">Measured in {{ $meta['unit'] }}</p>
+            <div class="space-y-6">
+                @foreach($metrics as $metricType => $config)
+                    @php $meta = $metricLabels[$metricType] ?? ['name' => \Illuminate\Support\Str::headline($metricType), 'unit' => '']; @endphp
+
+                    <section
+                        x-data="thresholdEditor({
+                            metricType: @js($metricType),
+                            thresholds: @js($config['thresholds']),
+                            defaults: @js($config['default_thresholds']),
+                            isCustom: {{ $config['is_custom'] ? 'true' : 'false' }},
+                            endpoint: @js(route('caregiver.patients.thresholds.update', $patient)),
+                        })"
+                        class="sc-card p-5 sm:p-6 md:p-8"
+                        aria-labelledby="{{ $metricType }}-heading"
+                    >
+                        <div class="flex flex-wrap items-center justify-between gap-3 mb-6 pb-4" style="border-bottom: 1px solid var(--sc-line)">
+                            <div class="flex items-center gap-3">
+                                <div class="sc-plate sc-plate-sm">
+                                    @if($metricType === 'blood_pressure')
+                                        <x-lucide-activity class="sc-i w-5 h-5" aria-hidden="true" />
+                                    @elseif($metricType === 'sugar_level')
+                                        <x-lucide-droplet class="sc-i w-5 h-5" aria-hidden="true" />
+                                    @elseif($metricType === 'temperature')
+                                        <x-lucide-thermometer class="sc-i w-5 h-5" aria-hidden="true" />
+                                    @elseif($metricType === 'heart_rate')
+                                        <x-lucide-heart-pulse class="sc-i w-5 h-5" aria-hidden="true" />
+                                    @else
+                                        <x-lucide-activity class="sc-i w-5 h-5" aria-hidden="true" />
+                                    @endif
+                                </div>
+                                <div>
+                                    <h3 id="{{ $metricType }}-heading" class="sc-h3 text-base">{{ $meta['name'] }}</h3>
+                                    <p class="text-xs sc-num" style="color:var(--sc-muted)">Measured in {{ $meta['unit'] }}</p>
+                                </div>
                             </div>
+
+                            <span class="sc-badge"
+                                  x-bind:class="isCustom ? 'sc-badge-brand' : ''"
+                                  x-text="isCustom ? 'Custom' : 'Clinical default'"></span>
                         </div>
 
-                        <span class="text-xs font-black px-2.5 py-1 rounded-md"
-                              x-bind:class="isCustom
-                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200'
-                                : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'"
-                              x-text="isCustom ? 'Custom' : 'Clinical default'"></span>
-                    </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            @foreach($config['thresholds'] as $field => $value)
+                                <div class="sc-field !mb-0">
+                                    <label for="{{ $metricType }}_{{ $field }}"
+                                           class="sc-label text-sm font-semibold">
+                                        {{ $fieldLabels[$field] ?? \Illuminate\Support\Str::headline($field) }}
+                                    </label>
+                                    <input
+                                        id="{{ $metricType }}_{{ $field }}"
+                                        type="number"
+                                        step="0.1"
+                                        inputmode="decimal"
+                                        x-model.number="thresholds[@js($field)]"
+                                        class="sc-input sc-num"
+                                    >
+                                    <p class="sc-help sc-num">
+                                        Default: {{ $config['default_thresholds'][$field] ?? '—' }}
+                                    </p>
+                                </div>
+                            @endforeach
+                        </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        @foreach($config['thresholds'] as $field => $value)
-                            <div>
-                                <label for="{{ $metricType }}_{{ $field }}"
-                                       class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                                    {{ $fieldLabels[$field] ?? \Illuminate\Support\Str::headline($field) }}
-                                </label>
-                                <input
-                                    id="{{ $metricType }}_{{ $field }}"
-                                    type="number"
-                                    step="0.1"
-                                    inputmode="decimal"
-                                    x-model.number="thresholds[@js($field)]"
-                                    class="w-full min-h-[44px] rounded-xl border-2 border-slate-300 dark:border-slate-600 dark:bg-slate-900 dark:text-white px-3 py-2 text-sm font-semibold focus:border-blue-500 focus:ring-blue-500"
-                                >
-                                <p class="text-[11px] font-medium text-slate-400 mt-1">
-                                    Default: {{ $config['default_thresholds'][$field] ?? '—' }}
-                                </p>
-                            </div>
-                        @endforeach
-                    </div>
+                        <p x-show="message" x-cloak x-text="message"
+                           role="status"
+                           class="mt-4 sc-flash sc-num"
+                           x-bind:class="ok ? 'sc-flash-ok' : 'sc-flash-alert'"></p>
 
-                    <p x-show="message" x-cloak x-text="message"
-                       class="mt-4 text-sm font-bold rounded-xl px-4 py-2.5"
-                       x-bind:class="ok ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'"></p>
+                        <div class="flex flex-wrap items-center gap-3 mt-6 pt-4" style="border-top: 1px solid var(--sc-line)">
+                            <button type="button" x-on:click="save()" x-bind:disabled="busy"
+                                    class="sc-btn sc-btn-primary sc-btn-sm w-full sm:w-auto">
+                                <span x-show="!busy">Save thresholds</span>
+                                <span x-show="busy" x-cloak>Saving…</span>
+                            </button>
 
-                    <div class="flex flex-wrap items-center gap-3 mt-5">
-                        <button type="button" x-on:click="save()" x-bind:disabled="busy"
-                                class="min-h-[44px] px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-extrabold shadow disabled:opacity-60">
-                            <span x-show="!busy">Save thresholds</span>
-                            <span x-show="busy">Saving…</span>
-                        </button>
-
-                        <button type="button" x-on:click="resetToDefault()" x-bind:disabled="busy || !isCustom"
-                                class="min-h-[44px] px-5 py-2.5 rounded-xl border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40">
-                            Reset to clinical default
-                        </button>
-                    </div>
-                </section>
-            @endforeach
+                            <button type="button" x-on:click="resetToDefault()" x-bind:disabled="busy || !isCustom"
+                                    class="sc-btn sc-btn-ghost sc-btn-sm w-full sm:w-auto">
+                                Reset to clinical default
+                            </button>
+                        </div>
+                    </section>
+                @endforeach
+            </div>
         </div>
     </main>
 </x-dashboard-layout>
