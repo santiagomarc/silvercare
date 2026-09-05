@@ -11,7 +11,7 @@
      need the name at compile time.
      ============================================================ --}}
 
-<div class="sc-card sc-card-crest p-6 mb-4"
+<div class="sc-card sc-card-crest sc-card-glow p-5 sm:p-6 mb-4"
      role="status"
      aria-label="Next action: {{ $headline }}"
      x-data="heroAction({
@@ -31,22 +31,24 @@
 
     <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         {{-- Left: what it is --}}
-        <div class="flex items-start gap-4 min-w-0">
-            <span class="sc-plate {{ $tone === 'alert' ? 'sc-plate-alert' : ($tone === 'ok' ? 'sc-plate-ok' : '') }}"
-                  :class="currentTone === 'alert' ? 'sc-plate-alert' : (currentTone === 'ok' ? 'sc-plate-ok' : '')">
-                <svg class="sc-i w-6 h-6" aria-hidden="true" focusable="false">
+        {{-- The status icon lives INSIDE the chip.
+
+             It used to be a 3.25rem tinted plate floating to the left of the
+             text column, top-aligned against the chip rather than the heading,
+             so it read as a loose square that belonged to nothing. Chip and
+             icon are one fact — "this dose is overdue" — so they are one
+             object, and the heading gets the full width of the column. --}}
+        <div class="min-w-0">
+            <span class="{{ $tone === 'alert' ? 'sc-chip sc-chip-alert' : 'sc-mark sc-mark-' . ($tone === 'ok' ? 'ok' : 'brand') }}"
+                  :class="currentTone === 'alert' ? 'sc-chip sc-chip-alert' : 'sc-mark sc-mark-' + (currentTone === 'ok' ? 'ok' : 'brand')">
+                <svg class="sc-i w-4 h-4" aria-hidden="true" focusable="false">
                     <use href="#i-{{ $icon }}" :href="'#i-' + currentIcon"/>
                 </svg>
+                <span x-text="currentTag || currentTypeLabel">{{ $tag ?: $actionType }}</span>
             </span>
 
-            <div class="min-w-0">
-                <span class="{{ $tone === 'alert' ? 'sc-chip sc-chip-alert' : 'sc-mark sc-mark-' . ($tone === 'ok' ? 'ok' : 'brand') }}"
-                      :class="currentTone === 'alert' ? 'sc-chip sc-chip-alert' : 'sc-mark sc-mark-' + (currentTone === 'ok' ? 'ok' : 'brand')"
-                      x-text="currentTag || currentTypeLabel">{{ $tag ?: $actionType }}</span>
-
-                <h2 class="sc-h3 mt-2" x-text="currentTitle">{{ $headline }}</h2>
-                <p class="mt-1 max-w-xl" style="color:var(--sc-body)" x-text="currentSubtitle">{{ $subtext }}</p>
-            </div>
+            <h2 class="sc-h2 mt-3" x-text="currentTitle">{{ $headline }}</h2>
+            <p class="mt-1.5 max-w-xl" style="color:var(--sc-body)" x-text="currentSubtitle">{{ $subtext }}</p>
         </div>
 
         {{-- Right: the one action --}}

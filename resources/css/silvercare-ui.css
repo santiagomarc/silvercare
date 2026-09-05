@@ -76,6 +76,9 @@
 
     --sc-glow-a: rgba(52, 81, 209, .16);
     --sc-glow-b: rgba(4, 120, 87, .10);
+    /* Corner bloom for .sc-card-glow. Deliberately weak: it should read
+       as light falling on the card, not as a coloured card. */
+    --sc-bloom:  rgba(52, 81, 209, .10);
 
 }
 
@@ -135,6 +138,7 @@ html.dark {
 
     --sc-glow-a: rgba(52, 81, 209, .26);
     --sc-glow-b: rgba(16, 185, 129, .12);
+    --sc-bloom:  rgba(99, 134, 255, .17);
 }
 
 /* The global `html.dark nav` rule in app.css paints a slate slab behind
@@ -212,6 +216,21 @@ html.dark .sc-page nav {
 
 /* A hairline of brand light along the top edge — the only "shine" on
    the page, used to mark the three primary feature cards. */
+/* A lit surface, for the one card on a screen that carries the next action.
+
+   The gradient is TONAL first — surface-2 to surface, which is warm paper in
+   light and a lifted slate in dark — with a single weak brand bloom in the top
+   corner. That is the difference between depth and a coloured card: the hue
+   never gets strong enough to read as a fill, so the rule that colour stays at
+   icon scale still holds. */
+.sc-card-glow {
+    background:
+        radial-gradient(115% 90% at 100% 0%, var(--sc-bloom), transparent 62%),
+        linear-gradient(168deg, var(--sc-surface-2) 0%, var(--sc-surface) 58%);
+}
+/* High contrast trades every gradient for a flat, maximally legible ground. */
+html.high-contrast .sc-card-glow { background: var(--sc-surface); }
+
 .sc-card-crest { position: relative; overflow: hidden; }
 .sc-card-crest::before {
     content: ''; position: absolute; inset-inline: 1.5rem; top: 0; height: 1px;
@@ -1576,9 +1595,21 @@ html.high-contrast {
     background: var(--sc-line-strong);
 }
 
-/* The title band. Sits on the canvas under the bar, not inside it. */
-.sc-appbar-head { padding-block: 1.5rem 1.15rem; }
-.sc-appbar-sub  { margin-top: .35rem; color: var(--sc-muted); }
+/* The title band. Sits on the canvas under the bar, not inside it.
+
+   Greeting and date share one line from `sm` up. Stacked, they cost a whole
+   line of height for two short strings and pushed the first real card most of
+   the way down the screen — the band was taller than the card under it. */
+.sc-appbar-head { padding-block: 1.1rem .9rem; }
+.sc-appbar-head-row {
+    display: flex; flex-wrap: wrap; align-items: baseline;
+    justify-content: space-between; gap: .25rem 1.5rem;
+}
+.sc-appbar-sub {
+    color: var(--sc-muted);
+    font-variant-numeric: tabular-nums;
+}
+@media (max-width: 639px) { .sc-appbar-sub { margin-top: .3rem; } }
 
 /* Below this width the actions fold into the drawer rather than
    wrapping the bar onto a second line. `rem` is no help inside a media

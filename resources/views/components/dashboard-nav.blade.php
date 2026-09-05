@@ -370,7 +370,7 @@
 
 {{-- The title band. Not sticky: it belongs to the page, not the chrome. --}}
 <div class="sc-appbar-head">
-    <div class="max-w-[1600px] mx-auto px-6 lg:px-12">
+    <div class="sc-appbar-head-row max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
         <h1 class="sc-page-title">{{ $title }}</h1>
         @if(!empty($subtitle))
             <p class="sc-appbar-sub">{{ $subtitle }}</p>

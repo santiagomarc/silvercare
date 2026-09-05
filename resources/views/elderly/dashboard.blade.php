@@ -99,7 +99,7 @@
          the orbs were what made the screen read as candy.
          ══════════════════════════════════════════════════════════ --}}
     <main id="main-content"
-          class="sc-ambient relative max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 pb-16"
+          class="sc-ambient relative max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 pb-12"
           x-data="dashboardTabs('today')">
 
         <x-flash-messages />
@@ -121,7 +121,7 @@
                 endpoint: @js(route('elderly.checkin')),
             })"
             id="daily-checkin-banner"
-            class="sc-card-quiet mt-6 p-5 sm:p-6"
+            class="sc-card-quiet mt-4 p-4 sm:p-5"
         >
             <div class="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-4">
                 <div class="flex items-center gap-4">
@@ -192,7 +192,7 @@
             $showProfileNudge = $dashboardProfile && !($completion['is_complete'] ?? false);
         @endphp
         @if($showProfileNudge)
-            <div class="sc-card-quiet mt-5 px-5 py-4"
+            <div class="sc-card-quiet mt-4 px-5 py-3.5"
                  x-data="{ dismissed: false }"
                  x-show="!dismissed"
                  x-transition>
@@ -261,24 +261,11 @@
             :daily-goals-progress="$dailyGoalsProgress"
         />
 
-        {{-- M7: High contrast toggle. The CSS for this shipped with no way to
-             turn it on; this is the switch. Large target, plain wording, and
-             state shown in text as well as position. --}}
-        <div x-data="highContrastToggle()" class="mt-4 mb-2 flex justify-end">
-            <button
-                type="button"
-                x-on:click="toggle()"
-                x-bind:aria-pressed="enabled ? 'true' : 'false'"
-                class="sc-btn sc-btn-ghost sc-btn-sm"
-            >
-                <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-contrast"/></svg>
-                <span>High contrast</span>
-                {{-- State reads as a word, and the dot repeats it in colour —
-                     never colour alone. --}}
-                <span class="sc-mark" x-bind:class="enabled ? 'sc-mark-ok' : ''"><i></i><span
-                      x-text="enabled ? 'On' : 'Off'">Off</span></span>
-            </button>
-        </div>
+        {{-- The floating "High contrast" switch that used to sit here is gone.
+             The app bar's Display menu already carries the same control, beside
+             text size where a reader looks for it, and this copy sat in the
+             bottom-right corner where the chat widget covered it. Two switches
+             for one setting, one of them unreachable. --}}
 
         {{-- ╔══════════════════╗
              ║  TAB BAR         ║
