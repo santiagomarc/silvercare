@@ -1,91 +1,93 @@
-<x-dashboard-layout>
+<x-dashboard-layout sc>
     <x-slot:title>Daily Wisdom - SilverCare</x-slot:title>
-    <x-slot:bodyClass>h-screen overflow-hidden bg-[#FFF9C4]</x-slot:bodyClass>
- 
-    <div x-data="wordOfDay()" class="h-full flex flex-col">
+
+    <div x-data="wordOfDay()">
         <x-dashboard-nav
             title="Daily Wisdom"
             subtitle="Start your day with inspiring quotes"
             role="elderly"
             :unread-notifications="$unreadNotifications"
         />
- 
-        {{-- Main fills all remaining height after nav, no overflow --}}
-        <main id="main-content" class="flex-1 overflow-hidden max-w-3xl w-full mx-auto px-6 flex flex-col py-5">
- 
-            {{-- Back Navigation & Date --}}
-            <div class="flex justify-between items-center mb-4 flex-shrink-0">
-                <div class="px-5 py-2.5 bg-yellow-200 text-yellow-900 rounded-2xl text-base font-[800] shadow-sm border border-yellow-300" x-text="dateString"></div>
-                <a href="{{ route('elderly.wellness.index') }}" class="back-nav-pill !text-yellow-800 !bg-white/50 hover:!bg-white text-base">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                    Back to Wellness
-                </a>
-            </div>
- 
-            {{-- Card — flex-1 so it fills whatever space is left between header and controls --}}
-            <div class="max-w-2xl w-full mx-auto flex-1 relative min-h-0 mb-4">
-                <div x-show="show"
-                     x-transition:enter="transition ease-out duration-500"
-                     x-transition:enter-start="opacity-0 transform translate-x-20"
-                     x-transition:enter-end="opacity-100 transform translate-x-0"
-                     x-transition:leave="transition ease-in duration-300"
-                     x-transition:leave-start="opacity-100 transform translate-x-0"
-                     x-transition:leave-end="opacity-0 transform -translate-x-20"
-                     class="absolute inset-0"
-                >
-                    <div class="bg-white rounded-[48px] shadow-2xl px-10 text-center relative overflow-hidden border border-yellow-100 h-full flex flex-col justify-center gap-4">
-                        {{-- Top color bar --}}
-                        <div class="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-yellow-400 to-orange-400"></div>
-                        {{-- Decorative blobs --}}
-                        <div class="absolute -top-10 -left-10 w-36 h-36 bg-yellow-50 rounded-full mix-blend-multiply opacity-50 pointer-events-none"></div>
-                        <div class="absolute -bottom-10 -right-10 w-44 h-44 bg-orange-50 rounded-full mix-blend-multiply opacity-50 pointer-events-none"></div>
- 
-                        <div class="relative z-10 flex flex-col items-center gap-4">
-                            {{-- Quote icon --}}
-                            <div class="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-xl text-white transition hover:rotate-6 duration-300">
-                                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21L14.017 18C14.017 16.8954 14.9124 16 16.017 16H19.017C19.5693 16 20.017 15.5523 20.017 15V9C20.017 8.44772 19.5693 8 19.017 8H15.017C14.4647 8 14.017 8.44772 14.017 9V11C14.017 11.5523 13.5693 12 13.017 12H12.017V5H19.017C21.2261 5 23.017 6.79086 23.017 9V15C23.017 17.2091 21.2261 19 19.017 19H14.017V21ZM5.0166 21L5.0166 18C5.0166 16.8954 5.91203 16 7.0166 16H10.0166C10.5689 16 11.0166 15.5523 11.0166 15V9C11.0166 8.44772 10.5689 8 10.0166 8H6.0166C5.46432 8 5.0166 8.44772 5.0166 9V11C5.0166 11.5523 4.56889 12 4.0166 12H3.0166V5H10.0166C12.2257 5 14.0166 6.79086 14.0166 9V15C14.0166 17.2091 12.2257 19 10.0166 19H5.0166V21Z"/></svg>
+
+        <main id="main-content" class="sc-app-main">
+            <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+
+                {{-- Back Navigation & Date --}}
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <a href="{{ route('elderly.wellness.index') }}"
+                       class="sc-btn sc-btn-ghost sc-btn-sm">
+                        <x-lucide-arrow-left class="sc-i w-4 h-4" aria-hidden="true" />
+                        <span>Back to Wellness</span>
+                    </a>
+
+                    <div class="sc-badge sc-num text-xs sm:text-sm font-semibold" x-text="dateString"></div>
+                </div>
+
+                {{-- Quote Section --}}
+                <section class="min-h-[380px] sm:min-h-[420px] flex items-center justify-center relative" aria-labelledby="quote-heading">
+                    <h2 id="quote-heading" class="sr-only">Quote of the Day</h2>
+
+                    <div x-show="show"
+                         x-transition:enter="transition ease-out duration-300"
+                         x-transition:enter-start="opacity-0 transform scale-95"
+                         x-transition:enter-end="opacity-100 transform scale-100"
+                         x-transition:leave="transition ease-in duration-200"
+                         x-transition:leave-start="opacity-100 transform scale-100"
+                         x-transition:leave-end="opacity-0 transform scale-95"
+                         class="w-full"
+                    >
+                        <div class="sc-card sc-lift p-8 sm:p-10 md:p-12 text-center flex flex-col items-center justify-between gap-6 relative overflow-hidden">
+                            {{-- Quote plate --}}
+                            <div class="sc-plate sc-plate-lg" aria-hidden="true">
+                                <x-lucide-quote class="sc-i w-7 h-7" aria-hidden="true" />
                             </div>
- 
-                            {{-- Quote --}}
-                            <h1 class="text-3xl md:text-4xl font-[900] text-gray-900 leading-snug tracking-tight" x-text="current.quote"></h1>
- 
+
+                            {{-- Quote text: Newsreader serif for warmth and editorial reflection --}}
+                            <blockquote class="sc-quote text-2xl sm:text-3xl md:text-4xl text-center leading-relaxed tracking-tight" style="color:var(--sc-title)" x-text="current.quote"></blockquote>
+
                             {{-- Author --}}
-                            <div class="inline-block px-6 py-2 rounded-full bg-gray-50 shadow-inner">
-                                <p class="text-gray-500 font-bold italic text-lg" x-text="'- ' + current.author"></p>
-                            </div>
- 
-                            {{-- Today's Action --}}
-                            <div class="w-full bg-orange-50 rounded-2xl px-6 py-4 border border-orange-100 shadow-sm">
-                                <div class="flex items-center justify-center gap-2 text-orange-600 font-bold mb-1">
-                                    <x-lucide-zap class="w-5 h-5" aria-hidden="true" />
-                                    <span class="uppercase tracking-widest text-[11px]">Today's Action</span>
+                            <cite class="not-italic text-base sm:text-lg font-medium" style="color:var(--sc-muted)" x-text="'- ' + current.author"></cite>
+
+                            {{-- Today's Action inset --}}
+                            <div class="sc-card-quiet p-4 sm:p-5 w-full max-w-md mx-auto text-center mt-2">
+                                <div class="sc-eyebrow flex items-center justify-center gap-2 mb-1">
+                                    <x-lucide-sparkles class="sc-i w-4 h-4" aria-hidden="true" />
+                                    <span>Today's Action</span>
                                 </div>
-                                <p class="text-xl font-bold text-gray-800" x-text="current.action"></p>
+                                <p class="text-lg sm:text-xl font-bold" style="color:var(--sc-title)" x-text="current.action"></p>
                             </div>
                         </div>
                     </div>
+                </section>
+
+                {{-- Controls --}}
+                <div class="flex justify-center items-center gap-4 sm:gap-6 pt-2">
+                    <button type="button"
+                            @click="slide('prev')"
+                            aria-label="Previous quote"
+                            class="sc-btn sc-btn-ghost w-12 h-12 sm:w-14 sm:h-14 !p-0 rounded-full flex items-center justify-center">
+                        <x-lucide-chevron-left class="sc-i w-6 h-6" aria-hidden="true" />
+                    </button>
+
+                    <button type="button"
+                            @click="copy()"
+                            class="sc-btn sc-btn-primary px-6 sm:px-8 py-3.5 text-base sm:text-lg flex items-center gap-2.5">
+                        <x-lucide-copy class="sc-i w-5 h-5" aria-hidden="true" />
+                        <span>Copy Quote</span>
+                    </button>
+
+                    <button type="button"
+                            @click="slide('next')"
+                            aria-label="Next quote"
+                            class="sc-btn sc-btn-ghost w-12 h-12 sm:w-14 sm:h-14 !p-0 rounded-full flex items-center justify-center">
+                        <x-lucide-chevron-right class="sc-i w-6 h-6" aria-hidden="true" />
+                    </button>
                 </div>
+
             </div>
- 
-            {{-- Controls — always anchored at bottom, never shrinks --}}
-            <div class="flex justify-center items-center gap-8 flex-shrink-0">
-                <button @click="slide('prev')" class="w-16 h-16 bg-white rounded-2xl shadow-lg flex items-center justify-center text-gray-400 hover:text-yellow-600 hover:scale-110 transition-all active:scale-95 border border-yellow-100">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"></path></svg>
-                </button>
- 
-                <button @click="copy()" class="px-10 py-5 bg-gray-900 text-white font-[800] text-lg rounded-[24px] shadow-2xl hover:bg-black hover:-translate-y-1 transition-all flex items-center gap-3 active:scale-95">
-                    <x-lucide-copy class="w-6 h-6" aria-hidden="true" />
-                    Copy Quote
-                </button>
- 
-                <button @click="slide('next')" class="w-16 h-16 bg-white rounded-2xl shadow-lg flex items-center justify-center text-gray-400 hover:text-yellow-600 hover:scale-110 transition-all active:scale-95 border border-yellow-100">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg>
-                </button>
-            </div>
- 
         </main>
     </div>
- 
+
     @push('scripts')
     <script>
         function wordOfDay() {
