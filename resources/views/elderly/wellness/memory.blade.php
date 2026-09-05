@@ -1,6 +1,5 @@
-<x-dashboard-layout>
+<x-dashboard-layout sc>
     <x-slot:title>Memory Match - SilverCare</x-slot:title>
-    <x-slot:bodyClass>min-h-screen bg-[#F0F7FF]</x-slot:bodyClass>
 
     <div x-data="memoryGame()">
         <x-dashboard-nav
@@ -10,107 +9,112 @@
             :unread-notifications="$unreadNotifications"
         />
 
-        <main id="main-content" class="max-w-4xl mx-auto px-6 py-8">
-            
-            {{-- Back Navigation & Stats --}}
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                <a href="{{ route('elderly.wellness.index') }}" class="back-nav-pill order-last !text-blue-600 !bg-white/50 hover:!bg-white">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                    Back to Wellness
-                </a>
-                
-                <div class="bg-white px-5 py-2.5 rounded-2xl shadow-sm border border-blue-100 flex items-center gap-4">
-                    <div>
-                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Level</p>
-                        <p class="text-xl font-[900] text-blue-600 leading-none" x-text="level + 1"></p>
-                    </div>
-                    <div class="h-8 w-[1px] bg-gray-100"></div>
-                    <div>
-                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Pairs</p>
-                        <p class="text-xl font-[900] text-blue-600 leading-none" x-text="score + '/6'"></p>
-                    </div>
-                    <button @click="restartLevel()" class="ml-2 p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all active:scale-90" title="Restart Level">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.1" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                    </button>
-                </div>
-            </div>
+        <main id="main-content" class="sc-app-main">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
 
-            <div class="text-center mb-8">
-                <h1 class="text-3xl font-[900] text-gray-800 tracking-tight" x-text="levelTitles[level]"></h1>
-                <p class="text-gray-500 font-medium">Find the matching colored shapes!</p>
-            </div>
+                {{-- Back Navigation & Stats --}}
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <a href="{{ route('elderly.wellness.index') }}" class="sc-btn sc-btn-ghost sc-btn-sm order-last sm:order-first">
+                        <x-lucide-arrow-left class="sc-i w-4 h-4" aria-hidden="true" />
+                        <span>Back to Wellness</span>
+                    </a>
 
-            <!-- Game Grid -->
-            <div class="max-w-6xl mx-auto grid grid-cols-6 gap-4">
-                <template x-for="(card, index) in cards" :key="card.id">
-                    <div 
-                        @click="flipCard(index)"
-                        class="h-40 rounded-2xl shadow-lg cursor-pointer relative transition-all duration-500 transform hover:-translate-y-1 perspective-1000"
-                        :class="card.revealed || card.matched ? 'rotate-y-180' : ''"
-                    >
-                        <!-- Card Back -->
-                        <div 
-                            x-show="!card.revealed && !card.matched" 
-                            class="absolute inset-0 rounded-2xl flex items-center justify-center border-b-4 transition-colors duration-300"
-                            :class="cardBackClasses[level]"
-                        >
-                            <span class="text-4xl text-white/30 font-[900]">?</span>
+                    <div class="sc-card px-4 py-2.5 sm:px-5 sm:py-3 flex items-center gap-4">
+                        <div>
+                            <p class="sc-eyebrow text-[10px]">Level</p>
+                            <p class="text-xl font-bold sc-num text-[var(--sc-ink)] leading-none mt-0.5" x-text="level + 1"></p>
                         </div>
-
-                        <!-- Card Front -->
-                        <div 
-                            x-show="card.revealed || card.matched" 
-                            class="absolute inset-0 bg-white rounded-2xl flex items-center justify-center border-2 shadow-inner p-2"
-                            :class="'border-' + themeColors[level] + '-200'"
-                        >
-                            <div x-html="getIconHtml(card.iconName)" class="transform transition-all duration-300 scale-100 drop-shadow-sm"></div>
+                        <div class="h-7 w-[1px] bg-[var(--sc-line)]"></div>
+                        <div>
+                            <p class="sc-eyebrow text-[10px]">Pairs</p>
+                            <p class="text-xl font-bold sc-num text-[var(--sc-ink)] leading-none mt-0.5" x-text="score + '/6'"></p>
                         </div>
-                    </div>
-                </template>
-            </div>
-
-            <!-- Modals -->
-            <template x-if="showLevelModal">
-                <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" x-transition>
-                    <div class="bg-white rounded-[32px] p-8 max-w-sm w-full text-center shadow-2xl">
-                        <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-                            <x-lucide-thumbs-up class="w-10 h-10" aria-hidden="true" />
-                        </div>
-                        <h2 class="text-2xl font-[900] text-gray-800 mb-2">Good Job!</h2>
-                        <p class="text-gray-500 mb-8 font-medium">Level <span x-text="level + 1"></span> complete.</p>
-                        
-                        <button @click="nextLevel()" class="w-full py-4 bg-blue-600 text-white font-[800] rounded-2xl hover:bg-blue-700 shadow-lg transition-all hover:scale-[1.02]">
-                            Next Level
+                        <button type="button" @click="restartLevel()" class="sc-icon-btn ml-1" title="Restart Level" aria-label="Restart Level">
+                            <x-lucide-rotate-ccw class="sc-i w-4 h-4" aria-hidden="true" />
                         </button>
                     </div>
                 </div>
-            </template>
 
-            <template x-if="showGrandModal">
-                <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" x-transition>
-                    <div class="bg-white rounded-[32px] p-10 max-w-md w-full text-center shadow-2xl border-4 border-yellow-300">
-                        <div class="w-24 h-24 bg-yellow-100 text-yellow-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner animate-bounce">
-                            <x-lucide-trophy class="w-12 h-12" aria-hidden="true" />
+                {{-- Level Header --}}
+                <div class="text-center">
+                    <h2 class="sc-h2 text-[var(--sc-ink)]" x-text="levelTitles[level]"></h2>
+                    <p class="sc-lead mt-1">Find the matching shapes!</p>
+                </div>
+
+                {{-- Game Grid --}}
+                <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 sm:gap-4">
+                    <template x-for="(card, index) in cards" :key="card.id">
+                        <div
+                            @click="flipCard(index)"
+                            class="h-32 sm:h-36 md:h-40 rounded-2xl cursor-pointer relative transition-all duration-500 transform hover:-translate-y-1 perspective-1000"
+                            :class="card.revealed || card.matched ? 'rotate-y-180' : ''"
+                        >
+                            {{-- Card Back --}}
+                            <div
+                                x-show="!card.revealed && !card.matched"
+                                class="absolute inset-0 sc-card rounded-2xl flex items-center justify-center border border-[var(--sc-line-strong)] shadow-sm hover:shadow-md transition-all select-none"
+                            >
+                                <div class="w-10 h-10 rounded-full border border-[var(--sc-line)] bg-[var(--sc-surface-2)] flex items-center justify-center">
+                                    <span class="text-xl font-bold sc-num text-[var(--sc-muted)]">?</span>
+                                </div>
+                            </div>
+
+                            {{-- Card Front --}}
+                            <div
+                                x-show="card.revealed || card.matched"
+                                class="absolute inset-0 sc-card rounded-2xl flex items-center justify-center border-2 bg-[var(--sc-surface)] shadow-md p-2 select-none"
+                                :class="card.matched ? 'border-[var(--sc-ok-line)]' : 'border-[var(--sc-brand-line)]'"
+                            >
+                                <div x-html="getIconHtml(card.iconName)" class="transform transition-all duration-300 scale-100 flex items-center justify-center"></div>
+                            </div>
                         </div>
-                        
-                        <h2 class="text-3xl font-[900] text-gray-800 mb-2">Congratulations!</h2>
-                        <p class="text-gray-600 text-lg mb-8 font-medium">You have completed all 5 stages of Memory Match!</p>
-                        
-                        <div class="space-y-3">
-                            <button @click="restartGame()" class="w-full py-4 bg-blue-600 text-white font-[800] rounded-2xl hover:bg-blue-700 shadow-lg transition-all hover:scale-[1.02]">
-                                <span class="inline-flex items-center gap-2">
-                                    <x-lucide-rotate-cw class="w-5 h-5" aria-hidden="true" />
-                                    Play Again
-                                </span>
+                    </template>
+                </div>
+
+                {{-- Modals --}}
+                <template x-if="showLevelModal">
+                    <div class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0 z-50 flex items-center justify-center" x-transition>
+                        <div class="sc-scrim" @click="nextLevel()"></div>
+                        <div role="dialog" aria-modal="true" class="sc-dialog relative z-[70] max-w-sm w-full text-center p-8 flex flex-col items-center">
+                            <span class="sc-plate sc-plate-brand mb-5">
+                                <x-lucide-thumbs-up class="sc-i w-7 h-7" aria-hidden="true" />
+                            </span>
+                            <h2 class="sc-dialog-title mb-2">Good Job!</h2>
+                            <p class="text-sm leading-relaxed mb-6 text-[var(--sc-body)]">Level <span class="sc-num font-bold" x-text="level + 1"></span> complete.</p>
+
+                            <button type="button" @click="nextLevel()" class="sc-btn sc-btn-primary w-full">
+                                Next Level
                             </button>
-                            
-                            <a href="{{ route('elderly.wellness.index') }}" class="block w-full py-4 bg-white text-gray-600 font-[800] rounded-2xl hover:bg-gray-50 border-2 border-gray-200 transition-all">
-                                Back to Wellness Center
-                            </a>
                         </div>
                     </div>
-                </div>
-            </template>
+                </template>
+
+                <template x-if="showGrandModal">
+                    <div class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0 z-50 flex items-center justify-center" x-transition>
+                        <div class="sc-scrim" @click="restartGame()"></div>
+                        <div role="dialog" aria-modal="true" class="sc-dialog relative z-[70] max-w-md w-full text-center p-8 flex flex-col items-center">
+                            <span class="sc-plate sc-plate-warn mb-5">
+                                <x-lucide-trophy class="sc-i w-8 h-8" aria-hidden="true" />
+                            </span>
+
+                            <h2 class="sc-dialog-title mb-2">Congratulations!</h2>
+                            <p class="text-sm leading-relaxed mb-8 text-[var(--sc-body)]">You have completed all 5 stages of Memory Match!</p>
+
+                            <div class="space-y-3 w-full">
+                                <button type="button" @click="restartGame()" class="sc-btn sc-btn-primary w-full flex items-center justify-center gap-2">
+                                    <x-lucide-rotate-cw class="sc-i w-4 h-4" aria-hidden="true" />
+                                    <span>Play Again</span>
+                                </button>
+
+                                <a href="{{ route('elderly.wellness.index') }}" class="sc-btn sc-btn-ghost w-full">
+                                    <span>Back to Wellness Center</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+            </div>
         </main>
     </div>
 
@@ -126,13 +130,13 @@
                 showLevelModal: false,
                 showGrandModal: false,
                 levelTitles: ['Level 1: Nature', 'Level 2: Food & Drink', 'Level 3: Travel', 'Level 4: Shapes', 'Level 5: Animals'],
-                themeColors: ['green', 'orange', 'blue', 'purple', 'red'],
+                themeColors: ['brand', 'brand', 'brand', 'brand', 'brand'],
                 cardBackClasses: [
-                    'bg-gradient-to-br from-green-400 to-green-600 border-green-700',
-                    'bg-gradient-to-br from-orange-400 to-orange-600 border-orange-700',
-                    'bg-gradient-to-br from-blue-400 to-blue-600 border-blue-700',
-                    'bg-gradient-to-br from-purple-400 to-purple-600 border-purple-700',
-                    'bg-gradient-to-br from-red-400 to-red-600 border-red-700',
+                    'sc-card',
+                    'sc-card',
+                    'sc-card',
+                    'sc-card',
+                    'sc-card',
                 ],
                 iconLibrary: {
                     leaf: { color: '#16a34a', path: '<path d="M12 2C7 2 3 7 3 13s5 9 9 9 9-5 9-11-4-9-9-9z M12 18c-3 0-5-2-5-5s2-5 5-5 5 2 5 5-2 5-5 5z"/>' }, 
@@ -235,7 +239,7 @@
 
                 getIconHtml(name) {
                     const icon = this.iconLibrary[name];
-                    return `<svg class="w-14 h-14" style="color:${icon.color}" fill="currentColor" viewBox="0 0 24 24">${icon.path}</svg>`;
+                    return `<svg class="sc-i w-12 h-12 sm:w-14 sm:h-14" aria-hidden="true" style="color:${icon.color}" fill="currentColor" viewBox="0 0 24 24">${icon.path}</svg>`;
                 }
             }
         }
