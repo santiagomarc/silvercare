@@ -42,12 +42,18 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    @if ($sc)
-        <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700;800&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
-        @include('partials.sc-fonts')
-    @else
+    {{-- The SilverCare faces load on EVERY dashboard page, converted or not.
+         The app bar (x-dashboard-nav) is already on the new design system and
+         renders on all 25 views, so gating these behind `$sc` left the wordmark
+         and the page <h1> asking for Prompt on a page that never fetched it —
+         they fell through Valley Sans to the system sans and rendered as
+         Helvetica. Montserrat stays only for the legacy body below; it goes
+         when that branch does. --}}
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700;800&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
+    @include('partials.sc-fonts')
+    @unless ($sc)
         <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    @endif
+    @endunless
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

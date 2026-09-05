@@ -22,13 +22,13 @@ window.openCropModal = function openCropModal(event) {
     const statusDiv = document.getElementById('photo-status');
 
     if (!validTypes.includes(file.type)) {
-        statusDiv.innerHTML = '<span class="text-rose-500 text-sm">Please select a valid image (JPG, PNG, GIF, WebP)</span>';
+        statusDiv.innerHTML = '<span style="color:var(--sc-alert)">Please select a valid image (JPG, PNG, GIF, WebP)</span>';
         input.value = '';
         return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-        statusDiv.innerHTML = '<span class="text-rose-500 text-sm">Image must be less than 5MB</span>';
+        statusDiv.innerHTML = '<span style="color:var(--sc-alert)">Image must be less than 5MB</span>';
         input.value = '';
         return;
     }
@@ -77,7 +77,7 @@ window.applyCrop = async function applyCrop() {
     const statusDiv = document.getElementById('photo-status');
     if (uploadButton) {
         uploadButton.disabled = true;
-        uploadButton.textContent = 'Uploading...';
+        uploadButton.textContent = 'Uploading…';
     }
 
     try {
@@ -93,7 +93,7 @@ window.applyCrop = async function applyCrop() {
             if (!blob) {
                 if (uploadButton) {
                     uploadButton.disabled = false;
-                    uploadButton.textContent = '✓ Crop & Upload';
+                    uploadButton.textContent = 'Crop and upload';
                 }
                 return;
             }
@@ -117,18 +117,18 @@ window.applyCrop = async function applyCrop() {
                         modal.classList.remove('flex');
                     }
                     destroyCropper();
-                    statusDiv.innerHTML = '<span class="text-emerald-600 text-sm flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Photo updated!</span>';
+                    statusDiv.innerHTML = '<span style="color:var(--sc-ok)" class="inline-flex items-center gap-1.5"><svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-check"/></svg> Photo updated</span>';
                     setTimeout(() => window.location.reload(), 1000);
                 } else {
-                    statusDiv.innerHTML = '<span class="text-rose-500 text-sm">Failed to upload. Please try again.</span>';
+                    statusDiv.innerHTML = '<span style="color:var(--sc-alert)">Failed to upload. Please try again.</span>';
                 }
             } catch (error) {
                 console.error('Upload error:', error);
-                statusDiv.innerHTML = '<span class="text-rose-500 text-sm">An error occurred. Please try again.</span>';
+                statusDiv.innerHTML = '<span style="color:var(--sc-alert)">An error occurred. Please try again.</span>';
             } finally {
                 if (uploadButton) {
                     uploadButton.disabled = false;
-                    uploadButton.textContent = '✓ Crop & Upload';
+                    uploadButton.textContent = 'Crop and upload';
                 }
             }
         }, 'image/jpeg', 0.95);
@@ -136,7 +136,7 @@ window.applyCrop = async function applyCrop() {
         console.error('Crop error:', error);
         if (uploadButton) {
             uploadButton.disabled = false;
-            uploadButton.textContent = '✓ Crop & Upload';
+            uploadButton.textContent = 'Crop and upload';
         }
     }
 };
@@ -165,7 +165,7 @@ window.cancelCrop = function cancelCrop() {
 
 window.removeProfilePhoto = async function removeProfilePhoto() {
     const statusDiv = document.getElementById('photo-status');
-    statusDiv.innerHTML = '<span class="text-navy-500 text-sm">Removing...</span>';
+    statusDiv.innerHTML = '<span style="color:var(--sc-body)">Removing…</span>';
 
     const removeForm = document.getElementById('profile-photo-remove-form');
     if (removeForm) {
@@ -183,12 +183,12 @@ window.removeProfilePhoto = async function removeProfilePhoto() {
         });
 
         if (response.ok) {
-            statusDiv.innerHTML = '<span class="text-emerald-600 text-sm">Photo removed!</span>';
+            statusDiv.innerHTML = '<span style="color:var(--sc-ok)">Photo removed</span>';
             setTimeout(() => window.location.reload(), 1000);
         } else {
-            statusDiv.innerHTML = '<span class="text-rose-500 text-sm">Failed to remove. Please try again.</span>';
+            statusDiv.innerHTML = '<span style="color:var(--sc-alert)">Failed to remove. Please try again.</span>';
         }
     } catch (_) {
-        statusDiv.innerHTML = '<span class="text-rose-500 text-sm">An error occurred. Please try again.</span>';
+        statusDiv.innerHTML = '<span style="color:var(--sc-alert)">An error occurred. Please try again.</span>';
     }
 };

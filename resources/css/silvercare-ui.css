@@ -448,6 +448,26 @@ html.sc-anim .sc-reveal.is-in { opacity: 1; transform: none; will-change: auto; 
 .sc-flash-close:hover { opacity: 1; background: rgba(0, 0, 0, .06); }
 html.dark .sc-flash-close:hover { background: rgba(255, 255, 255, .1); }
 
+/* ── Inline note ─────────────────────────────────────────────────
+   A notice that belongs to a region of the page rather than to the
+   session: no close button, no timer. `.sc-flash` is for something that
+   just happened; this is for a state that is currently true and stays
+   true while the reader is looking at it — "you are editing", "this
+   PIN expires at 4pm". Brand tint by default because the common case
+   is informational, not a problem. */
+.sc-note {
+    display: flex;
+    align-items: flex-start;
+    gap: .85rem;
+    padding: 1.1rem 1.25rem;
+    border-radius: 1.25rem;
+    border: 1px solid var(--sc-brand-line);
+    background: var(--sc-brand-tint);
+    color: var(--sc-body);
+}
+.sc-note-title { font-weight: 600; color: var(--sc-ink); }
+.sc-note-warn { border-color: var(--sc-warn-line); background: var(--sc-warn-tint); }
+
 /* ── Senior tab bar ──────────────────────────────────────────────
    The dashboard's top-level switcher. Deliberately larger than the
    marketing `.sc-tablist`: this is the control an 78-year-old uses every
@@ -903,6 +923,17 @@ html.high-contrast .sc-cta-panel { box-shadow: none !important; }
     background: var(--sc-alert-tint);
 }
 .sc-page .sc-input-error:focus { box-shadow: 0 0 0 3px var(--sc-alert-tint); }
+
+/* A field shown, not edited. The label still reads first; the value is
+   the emphasis. Used by the profile page's view mode. */
+.sc-field-value {
+    display: block;
+    padding: .35rem 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--sc-ink);
+}
+.sc-field-value-empty { font-weight: 500; color: var(--sc-muted); }
 
 .sc-help {
     display: block;
@@ -1489,6 +1520,7 @@ html.high-contrast {
 }
 .sc-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .sc-avatar-lg { width: 3rem; height: 3rem; font-size: 1.2rem; }
+.sc-avatar-xl { width: 6rem; height: 6rem; font-size: 2.4rem; }
 
 /* Unread count on an icon button. Never the only signal — the count is
    in the button's accessible name too, so it is not lost to a screen

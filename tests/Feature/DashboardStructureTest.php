@@ -65,6 +65,8 @@ class DashboardStructureTest extends TestCase
         $response = $this->actingAs($elderlyUser)->get(route('profile.edit'));
 
         $response->assertOk();
-        $response->assertSee('Care Connection');
+        // Asserts on structure, not wording: the heading copy is design
+        // material and follows the design system's sentence case.
+        $response->assertSee('id="care-connection"', false);
     }
 }

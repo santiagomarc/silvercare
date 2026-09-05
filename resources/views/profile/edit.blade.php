@@ -1,6 +1,16 @@
-<x-dashboard-layout>
+{{-- My Profile — the record the rest of SilverCare depends on: who to call
+     in an emergency, what Arthur is allergic to, and which caregiver is
+     allowed to see any of it.
+
+     The page has two states and the state IS the interaction, so that is the
+     one loud thing here. `editMode` swaps every editable field for an input
+     and says so in a band at the top of the form; view mode is the default
+     and reads as a record, not a greyed-out form.
+
+     The app bar owns the <h1>, so sections start at <h2>. --}}
+<x-dashboard-layout sc>
     <x-slot:title>My Profile - SilverCare</x-slot:title>
- 
+
     @php
         $dashboardRoute = $profile->isCaregiver() ? 'caregiver.dashboard' : 'dashboard';
         $profileErrorFields = [
@@ -41,7 +51,6 @@
         $emergencyPhone = $profile->emergency_phone ?: ($legacyEmergency['phone'] ?? null) ?: ($caregiverProfile?->phone_number ?? '');
         $emergencyRelationship = $profile->emergency_relationship ?: ($legacyEmergency['relationship'] ?? null) ?: ($caregiverProfile?->relationship ?? '');
     @endphp
- 
     <x-dashboard-nav
         title="My Profile"
         subtitle="Your personal information"
@@ -51,7 +60,7 @@
         :back-url="$profile->isCaregiver() ? route('caregiver.dashboard') : null"
         back-label="Back to Dashboard"
     />
- 
+
     {{-- ============================================================
          FIX: caregiverConnector is registered as Alpine.data()
          instead of inline x-data so that template literals with
@@ -87,7 +96,7 @@
  
             async validatePin() {
                 if (this.pin.length !== 6) {
-                    window.scAlert({ icon: 'warning', title: 'Invalid PIN', text: 'Please enter all 6 digits.', elderly: true });
+                    window.scAlert({ icon: 'warning', title: 'That PIN did not work', text: 'Please enter all 6 digits.', elderly: true });
                     return;
                 }
                 this.loading = true;
@@ -107,7 +116,7 @@
                         this.caregiver = data;
                         this.step = 'confirm';
                     } else {
-                        window.scAlert({ icon: 'error', title: 'Invalid PIN', text: data.message || 'The PIN you entered is invalid or expired.', elderly: true });
+                        window.scAlert({ icon: 'error', title: 'That PIN did not work', text: data.message || 'The PIN you entered is invalid or expired.', elderly: true });
                     }
                 } catch (e) {
                     window.scAlert({ icon: 'error', title: 'Error', text: 'Something went wrong. Please check your connection and try again.', elderly: true });
@@ -138,10 +147,10 @@
                         const confirmed = await window.scConfirm({
                             icon: 'warning',
                             elderly: true,
-                            title: 'Switch Caregiver?',
-                            html: '<p class="text-lg text-slate-600 mt-2">You are currently connected to <strong>' + data.existing_name + '</strong>.<br>Do you want to switch to <strong>' + data.new_name + '</strong>?<br><br>Your current caregiver will lose access.</p>',
-                            confirmButtonText: 'Yes, Switch Caregiver',
-                            cancelButtonText: 'Keep Current Caregiver',
+                            title: 'Switch caregiver?',
+                            html: '<p style="color:var(--sc-body);margin-top:.5rem">You are currently connected to <strong>' + data.existing_name + '</strong>.<br>Do you want to switch to <strong>' + data.new_name + '</strong>?<br><br>Your current caregiver will lose access.</p>',
+                            confirmButtonText: 'Yes, switch caregiver',
+                            cancelButtonText: 'Keep current caregiver',
                         });
                         if (confirmed) {
                             await this.confirmLink(true);
@@ -157,7 +166,7 @@
                     await window.scAlert({
                         icon: 'success',
                         elderly: true,
-                        title: 'Connected! 🎉',
+                        title: 'Connected',
                         text: data.message || 'You have successfully linked with your caregiver.',
                         timer: 2000,
                         timerProgressBar: true,
@@ -166,7 +175,7 @@
                     });
                     window.location.reload();
                 } catch (e) {
-                    window.scAlert({ icon: 'error', elderly: true, title: 'Connection Failed', text: e.message || 'Please try again.' });
+                    window.scAlert({ icon: 'error', elderly: true, title: 'Could not connect', text: e.message || 'Please try again.' });
                 } finally {
                     this.loading = false;
                 }
@@ -183,67 +192,65 @@
     </script>
     @endpush
     @endif
- 
-    <div class="min-h-screen bg-slate-50 dark:bg-[#070e1a] py-8" x-data="{ editMode: {{ $hasProfileValidationErrors ? 'true' : 'false' }}, showLogoutConfirm: false }">
-        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
- 
-            {{-- Header Section --}}
-            <div class="mb-8 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                <div>
-                    <div class="flex items-center gap-3 mb-2">
-                        <h2 class="text-3xl font-black text-slate-900 dark:text-slate-100">My Profile</h2>
-                    </div>
-                    <p class="text-base text-slate-500 dark:text-slate-400 font-medium">View and update your personal information</p>
-                </div>
- 
-                <div class="flex items-center gap-4 mt-2 md:mt-0">
-                    {{-- Success Message --}}
-                    @if (session('status') === 'profile-updated')
-                        <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)"
-                            class="flex items-center bg-emerald-500 text-white px-6 py-3 rounded-2xl shadow-lg transition-all">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                            <span class="font-bold">Saved!</span>
-                        </div>
-                    @endif
- 
-                    {{-- Edit Button --}}
-                    <button x-show="!editMode" @click="editMode = true" type="button"
-                        class="flex items-center gap-2 bg-navy-500 text-white px-6 py-3 rounded-2xl font-bold shadow-glow-brand hover:-translate-y-0.5 transition-all min-h-touch">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                        Edit Profile
-                    </button>
-                </div>
-            </div>
- 
-            @if($hasProfileValidationErrors)
-                <div class="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-rose-800 shadow-sm" role="alert" aria-live="assertive">
-                    <div class="flex items-start gap-3">
-                        <svg class="mt-0.5 h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v4m0 4h.01M4.93 19h14.14c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.2 16c-.77 1.33.19 3 1.73 3z"></path>
-                        </svg>
-                        <div>
-                            <p class="font-extrabold">Changes could not be saved.</p>
-                            <p class="mt-1 text-sm font-semibold text-rose-700">Please fix the highlighted fields below and try again.</p>
-                        </div>
-                    </div>
+    <main id="main-content" class="sc-app-main"
+          x-data="{ editMode: {{ $hasProfileValidationErrors ? 'true' : 'false' }}, showLogoutConfirm: false }">
+        <div class="max-w-4xl mx-auto px-6 lg:px-12">
+
+            {{-- The mode is the page's one real interaction, so it is announced
+                 rather than merely shown. This lives in the DOM from the start
+                 and changes its text: a region revealed by x-show often is not
+                 announced at all. --}}
+            <p class="sr-only" role="status"
+               x-text="editMode
+                    ? 'Editing your details. Nothing is saved until you choose Save changes.'
+                    : 'Viewing your details.'"></p>
+
+            @if (session('status') === 'profile-updated')
+                <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)"
+                     x-transition:leave="transition ease-in duration-200"
+                     x-transition:leave-start="opacity-100"
+                     x-transition:leave-end="opacity-0"
+                     role="status" class="sc-flash sc-flash-ok mb-6">
+                    <x-lucide-circle-check class="sc-i w-6 h-6 mt-0.5" aria-hidden="true" />
+                    <span>Your changes are saved.</span>
                 </div>
             @endif
- 
+
+            @if($hasProfileValidationErrors)
+                <div class="sc-error-summary" role="alert" tabindex="-1" id="profile-error-summary">
+                    <p class="font-semibold">Your changes were not saved.</p>
+                    <ul class="mt-2 space-y-1">
+                        @foreach($profileErrorFields as $field)
+                            @error($field)
+                                <li><a href="#{{ $field }}">{{ $message }}</a></li>
+                            @enderror
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <form method="POST" action="{{ route('profile.update') }}"
                 x-data="{
                     validateForm(e) {
                         const phone = document.querySelector('input[name=phone_number]');
+                        const phoneError = document.getElementById('phone-format-error');
+                        const name = document.querySelector('input[name=name]');
+
+                        {{-- Clear the previous attempt first, or a corrected field stays red. --}}
+                        if (phone) phone.classList.remove('sc-input-error');
+                        if (name) name.classList.remove('sc-input-error');
+                        if (phoneError) phoneError.style.display = 'none';
+
                         if (phone && phone.value && !/^[0-9+\-\s\(\)]+$/.test(phone.value)) {
                             e.preventDefault();
-                            phone.classList.add('!border-rose-500', '!bg-rose-50');
+                            phone.classList.add('sc-input-error');
                             phone.nextElementSibling.style.display = 'block';
                             phone.scrollIntoView({ behavior: 'smooth', block: 'center' });
                             return false;
                         }
-                        const name = document.querySelector('input[name=name]');
                         if (name && name.value.trim() === '') {
                             e.preventDefault();
-                            name.classList.add('!border-rose-500', '!bg-rose-50');
+                            name.classList.add('sc-input-error');
                             name.scrollIntoView({ behavior: 'smooth', block: 'center' });
                             return false;
                         }
@@ -252,503 +259,523 @@
                 @submit="validateForm($event)">
                 @csrf
                 @method('PATCH')
- 
-                <div class="space-y-6">
- 
-                    {{-- CARD 1: Personal Details --}}
-                    <div class="bg-white dark:bg-slate-800 dark:ring-1 dark:ring-slate-700 rounded-2xl p-6 md:p-8 shadow-card mb-6">
+
+                {{-- Mode row. In view mode the page is a record and Edit is a
+                     quiet way in; in edit mode the band says what is true right
+                     now and where the way out is. --}}
+                <div class="mb-8">
+                    <div x-show="!editMode" class="flex justify-end">
+                        <button type="button" @click="editMode = true" class="sc-btn sc-btn-ghost">
+                            <x-lucide-pencil class="sc-i w-5 h-5" aria-hidden="true" />
+                            Edit details
+                        </button>
+                    </div>
+
+                    <div x-show="editMode" x-cloak class="sc-note">
+                        <x-lucide-pencil class="sc-i w-6 h-6 mt-0.5" aria-hidden="true" />
                         <div>
-                            <div class="flex items-center justify-center gap-3 mb-8 pb-4 border-b border-slate-300 dark:border-slate-700">
-                                <h3 class="font-black text-base text-slate-900 dark:text-slate-100 text-center uppercase tracking-[0.25em]">Personal Details</h3>
-                            </div>
- 
-                            {{-- Profile Photo Section --}}
-                            <div class="flex flex-col sm:flex-row items-center gap-6 mb-8 pb-8 border-b border-slate-300 dark:border-slate-700">
-                                <div class="relative group">
-                                    <div class="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-navy-500 to-navy-400 shadow-glow-brand flex items-center justify-center">
-                                        @if($profile->profile_photo)
-                                            <img id="profile-photo-preview" src="{{ Storage::url($profile->profile_photo) }}" alt="Profile Photo" class="w-full h-full object-cover">
-                                        @else
-                                            <span id="profile-photo-initial" class="text-white text-3xl font-bold">{{ strtoupper(substr($user->name ?? 'U', 0, 1)) }}</span>
-                                        @endif
-                                    </div>
- 
-                                    <template x-if="editMode">
-                                        <label for="photo-upload" class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                            </svg>
-                                        </label>
-                                    </template>
-                                </div>
- 
-                                <div class="flex flex-col gap-2">
-                                    <p class="text-base font-bold text-slate-900 dark:text-slate-100">Profile Photo</p>
- 
-                                    <template x-if="!editMode">
-                                        <p class="text-sm text-slate-500 dark:text-slate-400">{{ $profile->profile_photo ? 'Photo uploaded' : 'No photo uploaded' }}</p>
-                                    </template>
- 
-                                    <template x-if="editMode">
-                                        <div class="flex flex-col gap-2">
-                                            <input type="file" id="photo-upload" name="profile_photo" accept="image/jpeg,image/png,image/gif,image/webp" class="hidden" @change="openCropModal($event)">
- 
-                                            <div class="flex items-center gap-2">
-                                                <label for="photo-upload" class="flex items-center gap-1.5 bg-navy-500 text-white px-4 py-2 rounded-lg font-semibold text-sm shadow hover:-translate-y-0.5 transition-all cursor-pointer min-h-touch">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                                                    {{ $profile->profile_photo ? 'Change' : 'Upload' }}
-                                                </label>
- 
-                                                @if($profile->profile_photo)
-                                                <button type="button"
-                                                    @click="window.scConfirm({ icon: 'warning', elderly: true, title: 'Remove Photo?', text: 'Are you sure you want to remove your profile photo?', confirmButtonText: 'Yes, Remove It', cancelButtonText: 'Keep Photo' }).then(ok => { if(ok) removeProfilePhoto(); })"
-                                                    class="flex items-center gap-1.5 bg-rose-500 text-white px-4 py-2 rounded-lg font-semibold text-sm shadow hover:-translate-y-0.5 transition-all min-h-touch">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                                    Remove
-                                                </button>
-                                                @endif
-                                            </div>
- 
-                                            <p class="text-xs text-slate-400 dark:text-slate-500">JPG, PNG, GIF or WebP. Max 5MB. You'll be able to crop your photo before uploading.</p>
-                                            <div id="photo-status"></div>
-                                        </div>
-                                    </template>
-                                </div>
-                            </div>
- 
-                            {{-- CROP MODAL --}}
-                            <div id="profile-photo-crop-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
-                                <div class="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
-                                    <div class="flex items-center justify-between border-b border-slate-100 p-6">
-                                        <h3 class="text-xl font-bold text-slate-900">Crop Your Photo</h3>
-                                        <button type="button" onclick="cancelCrop()" class="text-slate-400 hover:text-slate-600">
-                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                                        </button>
-                                    </div>
- 
-                                    <div class="p-6">
-                                        <div class="mb-6 flex justify-center rounded-lg bg-slate-100 p-4">
-                                            <img id="crop-image" alt="Crop preview" class="max-h-96 max-w-full" style="max-width: 100%;">
-                                        </div>
- 
-                                        <p class="mb-4 text-sm text-slate-500">Click and drag to reposition. Use the handles to resize the crop area. Aim for a square crop for best profile picture results.</p>
- 
-                                        <div class="flex justify-end gap-2">
-                                            <button type="button" onclick="cancelCrop()" class="rounded-lg bg-slate-100 px-4 py-2 font-semibold text-slate-700 transition-all hover:bg-slate-200">
-                                                Cancel
-                                            </button>
-                                            <button id="crop-upload-button" type="button" onclick="applyCrop()" class="rounded-lg bg-navy-500 px-4 py-2 font-semibold text-white transition-all hover:bg-navy-600">
-                                                ✓ Crop & Upload
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
- 
-                            <div class="grid grid-cols-1 gap-y-6">
-                                {{-- Full Name --}}
-                                <div>
-                                    <label class="profile-field-label">Full Name</label>
-                                    <template x-if="!editMode">
-                                        <p class="profile-field-value">{{ $user->name ?: '—' }}</p>
-                                    </template>
-                                    <template x-if="editMode">
-                                        <div>
-                                            <input type="text" name="name" value="{{ old('name', $user->name) }}" required
-                                                class="profile-field-input @error('name') !border-rose-500 !bg-rose-50 focus:!border-rose-500 @enderror">
-                                            @error('name')
-                                                <p class="mt-2 text-sm font-bold text-rose-600">{{ $message }}</p>
-                                            @enderror
-                                        </div>
-                                    </template>
-                                </div>
- 
-                                {{-- Email --}}
-                                <div>
-                                    <label class="profile-field-label">Email</label>
-                                    <p class="profile-field-value">{{ $user->email ?: '—' }}</p>
-                                </div>
- 
-                                {{-- Phone --}}
-                                <div>
-                                    <label class="profile-field-label">Phone Number</label>
-                                    <template x-if="!editMode">
-                                        <p class="profile-field-value">{{ $profile->phone_number ?: '—' }}</p>
-                                    </template>
-                                    <template x-if="editMode">
-                                        <div>
-                                            <input type="text" name="phone_number" value="{{ old('phone_number', $profile->phone_number) }}"
-                                                class="profile-field-input @error('phone_number') !border-rose-500 !bg-rose-50 focus:!border-rose-500 @enderror">
-                                            @error('phone_number')
-                                                <p class="mt-2 text-sm font-bold text-rose-600">{{ $message }}</p>
-                                            @enderror
-                                        </div>
-                                    </template>
-                                </div>
- 
-                                @if($profile->isCaregiver())
-                                {{-- Relationship (Caregiver Only) --}}
-                                <div>
-                                    <label class="profile-field-label">Relationship to Elder</label>
-                                    <template x-if="!editMode">
-                                        <p class="profile-field-value">{{ $profile->relationship ?: '—' }}</p>
-                                    </template>
-                                    <template x-if="editMode">
-                                        <div>
-                                            <input type="text" name="relationship" value="{{ old('relationship', $profile->relationship) }}" placeholder="e.g. Daughter, Son, Professional"
-                                                class="profile-field-input @error('relationship') !border-rose-500 !bg-rose-50 focus:!border-rose-500 @enderror">
-                                            @error('relationship')
-                                                <p class="mt-2 text-sm font-bold text-rose-600">{{ $message }}</p>
-                                            @enderror
-                                        </div>
-                                    </template>
-                                </div>
-                                @endif
- 
-                                @if($profile->isElderly())
-                                {{-- Medical Conditions (Elderly Only) --}}
-                                <div>
-                                    <label class="profile-field-label !text-rose-500">Medical Conditions</label>
-                                    <template x-if="!editMode">
-                                        <p class="profile-field-value">{{ $conditionsVal ?: 'None specified' }}</p>
-                                    </template>
-                                    <template x-if="editMode">
-                                        <div class="relative">
-                                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                                <span class="text-rose-300">📋</span>
-                                            </div>
-                                            <input type="text" name="medical_conditions" value="{{ old('medical_conditions', $conditionsVal) }}" placeholder="e.g. Diabetes, Hypertension"
-                                                class="profile-field-input pl-12 !border-rose-100 !bg-rose-50/30 placeholder-rose-300 focus:!border-rose-400 @error('medical_conditions') !border-rose-500 !bg-rose-50 focus:!border-rose-500 @enderror">
-                                            @error('medical_conditions')
-                                                <p class="mt-2 text-sm font-bold text-rose-600">{{ $message }}</p>
-                                            @enderror
-                                        </div>
-                                    </template>
-                                </div>
- 
-                                {{-- Medications --}}
-                                <div>
-                                    <label class="profile-field-label !text-navy-400">Medications</label>
-                                    <template x-if="!editMode">
-                                        <div class="px-4 py-3">
-                                            @if($medsVal)
-                                                <div class="flex flex-wrap gap-2">
-                                                    @foreach(explode(', ', $medsVal) as $med)
-                                                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-navy-50 text-navy-700 border border-navy-100">
-                                                            💊 {{ trim($med) }}
-                                                        </span>
-                                                    @endforeach
-                                                </div>
-                                            @else
-                                                <p class="text-lg font-bold text-slate-400">None specified</p>
-                                            @endif
-                                        </div>
-                                    </template>
-                                    <template x-if="editMode">
-                                        <div class="relative">
-                                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                                <span class="text-navy-300">💊</span>
-                                            </div>
-                                            <input type="text" name="medications" value="{{ old('medications', $medsVal) }}" placeholder="e.g. Metformin, Aspirin"
-                                                class="profile-field-input pl-12 !border-navy-100 !bg-navy-50/30 placeholder-navy-200 focus:!border-navy-400 @error('medications') !border-rose-500 !bg-rose-50 focus:!border-rose-500 @enderror">
-                                            @error('medications')
-                                                <p class="mt-2 text-sm font-bold text-rose-600">{{ $message }}</p>
-                                            @enderror
-                                        </div>
-                                    </template>
-                                </div>
- 
-                                {{-- Allergies --}}
-                                <div>
-                                    <label class="profile-field-label !text-amber-500">Allergies</label>
-                                    <template x-if="!editMode">
-                                        <div class="px-4 py-3">
-                                            @if($allergiesVal)
-                                                <div class="flex flex-wrap gap-2">
-                                                    @foreach(explode(', ', $allergiesVal) as $allergy)
-                                                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-amber-50 text-amber-700 border border-amber-100">
-                                                            ⚠️ {{ trim($allergy) }}
-                                                        </span>
-                                                    @endforeach
-                                                </div>
-                                            @else
-                                                <p class="text-lg font-bold text-slate-400">None specified</p>
-                                            @endif
-                                        </div>
-                                    </template>
-                                    <template x-if="editMode">
-                                        <div class="relative">
-                                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                                <span class="text-amber-300">⚠️</span>
-                                            </div>
-                                            <input type="text" name="allergies" value="{{ old('allergies', $allergiesVal) }}" placeholder="e.g. Peanuts, Penicillin"
-                                                class="profile-field-input pl-12 !border-amber-100 !bg-amber-50/30 placeholder-amber-300 focus:!border-amber-400 @error('allergies') !border-rose-500 !bg-rose-50 focus:!border-rose-500 @enderror">
-                                            @error('allergies')
-                                                <p class="mt-2 text-sm font-bold text-rose-600">{{ $message }}</p>
-                                            @enderror
-                                        </div>
-                                    </template>
-                                </div>
-                                @endif
- 
-                    {{-- CARD 3: Emergency Contact (Elderly Only) --}}
-                    @if($profile->isElderly())
-                    <div class="bg-white rounded-2xl p-6 md:p-8 shadow-card mb-6">
-                        <div>
-                            <div class="flex items-center gap-3 mb-8 pb-4 border-b border-slate-100">
-                                <h3 class="font-extrabold text-xl text-slate-900">Emergency Contact</h3>
-                            </div>
- 
-                            <div class="grid grid-cols-1 gap-y-8 gap-x-6 md:grid-cols-3">
-                                {{-- Contact Name --}}
-                                <div>
-                                    <label class="profile-field-label">Contact Name</label>
-                                    <template x-if="!editMode">
-                                        <p class="profile-field-value">{{ $emergencyName ?: '—' }}</p>
-                                    </template>
-                                    <template x-if="editMode">
-                                        <div>
-                                            <input type="text" name="emergency_name" value="{{ old('emergency_name', $emergencyName) }}" placeholder="Contact Name"
-                                                class="profile-field-input @error('emergency_name') !border-rose-500 !bg-rose-50 focus:!border-rose-500 @enderror">
-                                            @error('emergency_name')
-                                                <p class="mt-2 text-sm font-bold text-rose-600">{{ $message }}</p>
-                                            @enderror
-                                        </div>
-                                    </template>
-                                </div>
- 
-                                {{-- Phone Number --}}
-                                <div>
-                                    <label class="profile-field-label">Phone Number</label>
-                                    <template x-if="!editMode">
-                                        <p class="profile-field-value">{{ $emergencyPhone ?: '—' }}</p>
-                                    </template>
-                                    <template x-if="editMode">
-                                        <div>
-                                            <input type="text" name="emergency_phone" value="{{ old('emergency_phone', $emergencyPhone) }}" placeholder="Phone Number"
-                                                class="profile-field-input @error('emergency_phone') !border-rose-500 !bg-rose-50 focus:!border-rose-500 @enderror">
-                                            @error('emergency_phone')
-                                                <p class="mt-2 text-sm font-bold text-rose-600">{{ $message }}</p>
-                                            @enderror
-                                        </div>
-                                    </template>
-                                </div>
- 
-                                {{-- Relationship --}}
-                                <div>
-                                    <label class="profile-field-label">Relationship</label>
-                                    <template x-if="!editMode">
-                                        <p class="profile-field-value">{{ $emergencyRelationship ?: '—' }}</p>
-                                    </template>
-                                    <template x-if="editMode">
-                                        <div>
-                                            <input type="text" name="emergency_relationship" value="{{ old('emergency_relationship', $emergencyRelationship) }}" placeholder="Relationship"
-                                                class="profile-field-input @error('emergency_relationship') !border-rose-500 !bg-rose-50 focus:!border-rose-500 @enderror">
-                                            @error('emergency_relationship')
-                                                <p class="mt-2 text-sm font-bold text-rose-600">{{ $message }}</p>
-                                            @enderror
-                                        </div>
-                                    </template>
-                                </div>
-                            </div>
+                            <p class="sc-note-title">You are editing your details</p>
+                            <p class="mt-1">Nothing changes until you choose Save changes at the bottom of this form.</p>
                         </div>
                     </div>
-                    @endif
- 
-                    {{-- ACTION BUTTONS (only show in edit mode) --}}
-                    <div x-show="editMode" class="flex justify-end gap-6 mb-2">
-                        <button type="button" @click="editMode = false"
-                            class="px-8 py-4 rounded-2xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all min-h-touch">
-                            Cancel
-                        </button>
- 
-                        <button type="submit"
-                            class="group relative overflow-hidden rounded-2xl bg-gradient-to-r from-navy-500 to-navy-600 py-4 px-8 text-lg font-bold text-white shadow-glow-brand transition-all hover:-translate-y-1 hover:shadow-xl active:scale-95 min-h-touch">
-                            <div class="relative z-10 flex items-center justify-center gap-2">
-                                <span>SAVE CHANGES</span>
-                                <svg class="h-5 w-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+
+                <div class="space-y-6">
+
+                    {{-- Your details --}}
+                    <section class="sc-card p-6 md:p-8" aria-labelledby="section-details">
+                        <h2 id="section-details" class="sc-h3">Your details</h2>
+
+                        <div class="mt-6 pt-6 sc-hair flex flex-col sm:flex-row sm:items-center gap-5">
+                            <span class="sc-avatar sc-avatar-xl">
+                                @if($profile->profile_photo)
+                                    <img id="profile-photo-preview" src="{{ Storage::url($profile->profile_photo) }}" alt="">
+                                @else
+                                    <span id="profile-photo-initial" aria-hidden="true">{{ strtoupper(substr($user->name ?? 'U', 0, 1)) }}</span>
+                                @endif
+                            </span>
+
+                            <div class="min-w-0">
+                                <p class="sc-label">Profile photo</p>
+
+                                <template x-if="!editMode">
+                                    <p class="sc-field-value @unless($profile->profile_photo) sc-field-value-empty @endunless">
+                                        {{ $profile->profile_photo ? 'Added' : 'No photo yet' }}
+                                    </p>
+                                </template>
+
+                                <template x-if="editMode">
+                                    <div>
+                                        <input type="file" id="photo-upload" name="profile_photo"
+                                               accept="image/jpeg,image/png,image/gif,image/webp"
+                                               class="sr-only" @change="openCropModal($event)">
+
+                                        <div class="flex flex-wrap items-center gap-3">
+                                            <label for="photo-upload" class="sc-btn sc-btn-ghost sc-btn-sm">
+                                                <x-lucide-camera class="sc-i w-5 h-5" aria-hidden="true" />
+                                                {{ $profile->profile_photo ? 'Change photo' : 'Add photo' }}
+                                            </label>
+
+                                            @if($profile->profile_photo)
+                                                <button type="button"
+                                                    @click="window.scConfirm({ icon: 'warning', elderly: true, title: 'Remove your photo?', text: 'Your initial will be shown instead.', confirmButtonText: 'Yes, remove it', cancelButtonText: 'Keep photo' }).then(ok => { if(ok) removeProfilePhoto(); })"
+                                                    class="sc-btn sc-btn-ghost sc-btn-sm">
+                                                    <x-lucide-trash-2 class="sc-i w-5 h-5" aria-hidden="true" />
+                                                    Remove photo
+                                                </button>
+                                            @endif
+                                        </div>
+
+                                        <p class="sc-help">JPG, PNG, GIF or WebP, up to 5MB. You can crop it before it is saved.</p>
+                                        <div id="photo-status" class="mt-2"></div>
+                                    </div>
+                                </template>
                             </div>
-                            <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 group-hover:translate-x-full"></div>
-                        </button>
+                        </div>
+
+                        <div class="mt-6 pt-6 sc-hair">
+                            {{-- Full name --}}
+                            <div class="sc-field">
+                                <template x-if="!editMode">
+                                    <div>
+                                        <p class="sc-label">Full name</p>
+                                        <p class="sc-field-value @unless($user->name) sc-field-value-empty @endunless">{{ $user->name ?: 'Not set' }}</p>
+                                    </div>
+                                </template>
+                                <template x-if="editMode">
+                                    <div>
+                                        <x-input-label for="name" :value="__('Full name')" required />
+                                        <x-text-input id="name" name="name" type="text" required autocomplete="name"
+                                                      value="{{ old('name', $user->name) }}" />
+                                        <x-input-error field="name" />
+                                    </div>
+                                </template>
+                            </div>
+
+                            {{-- Email is shown, never edited here. --}}
+                            <div class="sc-field">
+                                <p class="sc-label">Email address</p>
+                                <p class="sc-field-value @unless($user->email) sc-field-value-empty @endunless">{{ $user->email ?: 'Not set' }}</p>
+                            </div>
+
+                            {{-- Phone --}}
+                            <div class="sc-field">
+                                <template x-if="!editMode">
+                                    <div>
+                                        <p class="sc-label">Phone number</p>
+                                        <p class="sc-field-value @unless($profile->phone_number) sc-field-value-empty @endunless">{{ $profile->phone_number ?: 'Not set' }}</p>
+                                    </div>
+                                </template>
+                                <template x-if="editMode">
+                                    <div>
+                                        <x-input-label for="phone_number" :value="__('Phone number')" />
+                                        <x-text-input id="phone_number" name="phone_number" type="tel" autocomplete="tel"
+                                                      value="{{ old('phone_number', $profile->phone_number) }}" />
+                                        {{-- Revealed by validateForm() above; it targets the input's
+                                             next sibling, so this stays directly under the field. --}}
+                                        <p id="phone-format-error" class="sc-error" style="display:none">
+                                            <x-lucide-triangle-alert class="sc-i w-5 h-5" aria-hidden="true" />
+                                            <span>Use only numbers, spaces and + ( ) -</span>
+                                        </p>
+                                        <x-input-error field="phone_number" />
+                                    </div>
+                                </template>
+                            </div>
+
+                            @if($profile->isCaregiver())
+                            {{-- Relationship --}}
+                            <div class="sc-field">
+                                <template x-if="!editMode">
+                                    <div>
+                                        <p class="sc-label">Relationship to the person you care for</p>
+                                        <p class="sc-field-value @unless($profile->relationship) sc-field-value-empty @endunless">{{ $profile->relationship ?: 'Not set' }}</p>
+                                    </div>
+                                </template>
+                                <template x-if="editMode">
+                                    <div>
+                                        <x-input-label for="relationship" :value="__('Relationship to the person you care for')" />
+                                        <x-text-input id="relationship" name="relationship" type="text"
+                                                      value="{{ old('relationship', $profile->relationship) }}" />
+                                        <span class="sc-help">For example: daughter, son, or professional carer.</span>
+                                        <x-input-error field="relationship" />
+                                    </div>
+                                </template>
+                            </div>
+                            @endif
+                        </div>
+                    </section>
+
+                    @if($profile->isElderly())
+                    {{-- Health information. Three lists of the same shape, so
+                         they read as one set. Only allergies are tinted: they
+                         are the one entry a stranger acts on in a hurry, and
+                         the colour is backed by an icon and the word itself. --}}
+                    <section class="sc-card p-6 md:p-8" aria-labelledby="section-health">
+                        <h2 id="section-health" class="sc-h3">Health information</h2>
+                        <p class="sc-help">Shown to your caregiver and on your emergency summary.</p>
+
+                        <div class="mt-6 pt-6 sc-hair">
+                            {{-- Conditions --}}
+                            <div class="sc-field">
+                                <template x-if="!editMode">
+                                    <div>
+                                        <p class="sc-label">Medical conditions</p>
+                                        @if($conditionsVal)
+                                            <ul class="flex flex-wrap gap-2 pt-1">
+                                                @foreach(explode(',', $conditionsVal) as $condition)
+                                                    @if(trim($condition) !== '')
+                                                        <li class="sc-chip">
+                                                            <x-lucide-heart-pulse class="sc-i w-5 h-5" aria-hidden="true" />
+                                                            {{ trim($condition) }}
+                                                        </li>
+                                                    @endif
+                                                @endforeach
+                                            </ul>
+                                        @else
+                                            <p class="sc-field-value sc-field-value-empty">None recorded</p>
+                                        @endif
+                                    </div>
+                                </template>
+                                <template x-if="editMode">
+                                    <div>
+                                        <x-input-label for="medical_conditions" :value="__('Medical conditions')" />
+                                        <x-text-input id="medical_conditions" name="medical_conditions" type="text"
+                                                      value="{{ old('medical_conditions', $conditionsVal) }}" />
+                                        <span class="sc-help">Separate each one with a comma. For example: diabetes, high blood pressure.</span>
+                                        <x-input-error field="medical_conditions" />
+                                    </div>
+                                </template>
+                            </div>
+
+                            {{-- Medications --}}
+                            <div class="sc-field">
+                                <template x-if="!editMode">
+                                    <div>
+                                        <p class="sc-label">Medications</p>
+                                        @if($medsVal)
+                                            <ul class="flex flex-wrap gap-2 pt-1">
+                                                @foreach(explode(',', $medsVal) as $med)
+                                                    @if(trim($med) !== '')
+                                                        <li class="sc-chip">
+                                                            <x-lucide-pill class="sc-i w-5 h-5" aria-hidden="true" />
+                                                            {{ trim($med) }}
+                                                        </li>
+                                                    @endif
+                                                @endforeach
+                                            </ul>
+                                        @else
+                                            <p class="sc-field-value sc-field-value-empty">None recorded</p>
+                                        @endif
+                                    </div>
+                                </template>
+                                <template x-if="editMode">
+                                    <div>
+                                        <x-input-label for="medications" :value="__('Medications')" />
+                                        <x-text-input id="medications" name="medications" type="text"
+                                                      value="{{ old('medications', $medsVal) }}" />
+                                        <span class="sc-help">Separate each one with a comma. For example: metformin, aspirin.</span>
+                                        <x-input-error field="medications" />
+                                    </div>
+                                </template>
+                            </div>
+
+                            {{-- Allergies --}}
+                            <div class="sc-field">
+                                <template x-if="!editMode">
+                                    <div>
+                                        <p class="sc-label">Allergies</p>
+                                        @if($allergiesVal)
+                                            <ul class="flex flex-wrap gap-2 pt-1">
+                                                @foreach(explode(',', $allergiesVal) as $allergy)
+                                                    @if(trim($allergy) !== '')
+                                                        <li class="sc-chip sc-chip-warn">
+                                                            <x-lucide-triangle-alert class="sc-i w-5 h-5" aria-hidden="true" />
+                                                            <span class="sr-only">Allergy:</span>
+                                                            {{ trim($allergy) }}
+                                                        </li>
+                                                    @endif
+                                                @endforeach
+                                            </ul>
+                                        @else
+                                            <p class="sc-field-value sc-field-value-empty">None recorded</p>
+                                        @endif
+                                    </div>
+                                </template>
+                                <template x-if="editMode">
+                                    <div>
+                                        <x-input-label for="allergies" :value="__('Allergies')" />
+                                        <x-text-input id="allergies" name="allergies" type="text"
+                                                      value="{{ old('allergies', $allergiesVal) }}" />
+                                        <span class="sc-help">Separate each one with a comma. For example: peanuts, penicillin.</span>
+                                        <x-input-error field="allergies" />
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </section>
+
+                    {{-- Emergency contact --}}
+                    <section class="sc-card p-6 md:p-8" aria-labelledby="section-emergency">
+                        <h2 id="section-emergency" class="sc-h3">Emergency contact</h2>
+                        <p class="sc-help">The person to reach first if something goes wrong.</p>
+
+                        <div class="mt-6 pt-6 sc-hair">
+                            <template x-if="!editMode">
+                                <div>
+                                    @if($emergencyName || $emergencyPhone || $emergencyRelationship)
+                                        <div class="grid gap-x-6 md:grid-cols-3">
+                                            <div class="sc-field">
+                                                <p class="sc-label">Contact name</p>
+                                                <p class="sc-field-value @unless($emergencyName) sc-field-value-empty @endunless">{{ $emergencyName ?: 'Not set' }}</p>
+                                            </div>
+                                            <div class="sc-field">
+                                                <p class="sc-label">Phone number</p>
+                                                <p class="sc-field-value sc-num @unless($emergencyPhone) sc-field-value-empty @endunless">{{ $emergencyPhone ?: 'Not set' }}</p>
+                                            </div>
+                                            <div class="sc-field">
+                                                <p class="sc-label">Relationship</p>
+                                                <p class="sc-field-value @unless($emergencyRelationship) sc-field-value-empty @endunless">{{ $emergencyRelationship ?: 'Not set' }}</p>
+                                            </div>
+                                        </div>
+                                    @else
+                                        <div class="sc-note sc-note-warn">
+                                            <x-lucide-triangle-alert class="sc-i w-6 h-6 mt-0.5" aria-hidden="true" />
+                                            <div>
+                                                <p class="sc-note-title">No emergency contact yet</p>
+                                                <p class="mt-1">Choose Edit details to add the person we should reach first.</p>
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
+                            </template>
+
+                            <template x-if="editMode">
+                                <div class="grid gap-x-6 md:grid-cols-3">
+                                    <div class="sc-field">
+                                        <x-input-label for="emergency_name" :value="__('Contact name')" />
+                                        <x-text-input id="emergency_name" name="emergency_name" type="text" autocomplete="off"
+                                                      value="{{ old('emergency_name', $emergencyName) }}" />
+                                        <x-input-error field="emergency_name" />
+                                    </div>
+                                    <div class="sc-field">
+                                        <x-input-label for="emergency_phone" :value="__('Phone number')" />
+                                        <x-text-input id="emergency_phone" name="emergency_phone" type="tel" autocomplete="off"
+                                                      value="{{ old('emergency_phone', $emergencyPhone) }}" />
+                                        <x-input-error field="emergency_phone" />
+                                    </div>
+                                    <div class="sc-field">
+                                        <x-input-label for="emergency_relationship" :value="__('Relationship')" />
+                                        <x-text-input id="emergency_relationship" name="emergency_relationship" type="text" autocomplete="off"
+                                                      value="{{ old('emergency_relationship', $emergencyRelationship) }}" />
+                                        <x-input-error field="emergency_relationship" />
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </section>
+                    @endif
+
+                    {{-- The page's one loud button, and only while it has
+                         something to save. --}}
+                    <div x-show="editMode" x-cloak class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
+                        <x-secondary-button @click="editMode = false">Cancel</x-secondary-button>
+                        <x-primary-button>
+                            <x-lucide-check class="sc-i w-5 h-5" aria-hidden="true" />
+                            Save changes
+                        </x-primary-button>
                     </div>
- 
                 </div>
             </form>
- 
-            {{-- CARD 4: Care Connection (Elderly Only) --}}
+
+            {{-- Care connection — outside the form: linking is its own
+                 transaction and has nothing to do with saving details. --}}
             @if($profile->isElderly())
                 {{--
                     FIX: x-data now just references the registered Alpine.data component name.
                     Routes are passed as data attributes so JS can read them cleanly
                     without Blade/template-literal conflicts.
                 --}}
-                <div class="bg-white rounded-2xl p-6 md:p-8 shadow-card mb-6"
+                <section class="sc-card p-6 md:p-8 mt-10" id="care-connection" aria-labelledby="section-care-connection"
                      x-data="caregiverConnector"
                      data-validate-url="{{ route('elderly.validate-link-code') }}"
                      data-confirm-url="{{ route('elderly.confirm-link') }}">
- 
-                    <div class="flex items-center gap-3 mb-8 pb-4 border-b border-slate-100">
-                        <h3 class="font-extrabold text-xl text-slate-900">Care Connection</h3>
-                    </div>
- 
+
+                    <h2 id="section-care-connection" class="sc-h3">Care connection</h2>
+                    <p class="sc-help">The one person allowed to see your health information.</p>
+
+                    <div class="mt-6 pt-6 sc-hair">
                     @if($profile->caregiver)
-                        <div class="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
+                        <div class="sc-card-quiet p-5" x-data="{ showUnlink: false }">
                             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                                <div>
-                                    <p class="text-base font-extrabold text-slate-900">Connected to {{ $profile->caregiver->user?->name ?? $profile->caregiver->username ?? 'Your Caregiver' }}</p>
-                                    <p class="text-sm text-slate-500 mt-1">Manage unlinking here with password confirmation for account safety.</p>
-                                </div>
- 
-                                <div x-data="{ showUnlink: false }" class="w-full md:w-auto">
-                                    <button x-show="!showUnlink"
-                                            @click="showUnlink = true"
-                                            class="w-full md:w-auto rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-bold text-rose-700 hover:bg-rose-100 transition-colors min-h-touch">
-                                        Unlink Caregiver
-                                    </button>
- 
-                                    <div x-show="showUnlink" x-cloak class="rounded-xl border border-rose-200 bg-white p-3">
-                                        <p class="text-sm font-semibold text-slate-600 mb-2">Confirm unlink by entering your password.</p>
-                                        <form
-                                            method="POST"
-                                            action="{{ route('elderly.unlink-caregiver') }}"
-                                            class="space-y-2"
-                                            data-confirm="Are you sure you want to unlink your caregiver?"
-                                            data-confirm-title="Unlink Caregiver?"
-                                            data-confirm-icon="warning"
-                                            data-confirm-confirm-text="Yes, Unlink"
-                                            data-confirm-cancel-text="Keep My Caregiver"
-                                            data-confirm-elderly="true"
-                                        >
-                                            @csrf
-                                            <input type="password"
-                                                   name="password"
-                                                   required
-                                                   autocomplete="current-password"
-                                                   placeholder="Current password"
-                                                   class="w-full rounded-lg border border-slate-200 px-3 py-2 text-base focus:border-rose-400 focus:ring-2 focus:ring-rose-200 min-h-touch">
-                                            @error('password')
-                                                <p class="text-sm font-semibold text-rose-600">{{ $message }}</p>
-                                            @enderror
-                                            <div class="flex items-center gap-2">
-                                                <button type="submit" class="rounded-lg bg-rose-600 px-3 py-2 text-sm font-bold text-white hover:bg-rose-700 min-h-touch">Confirm Unlink</button>
-                                                <button type="button" @click="showUnlink = false" class="rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold text-slate-600 min-h-touch">Cancel</button>
-                                            </div>
-                                        </form>
+                                <div class="flex items-center gap-4 min-w-0">
+                                    <span class="sc-plate sc-plate-ok sc-plate-sm">
+                                        <x-lucide-circle-check class="sc-i w-6 h-6" aria-hidden="true" />
+                                    </span>
+                                    <div class="min-w-0">
+                                        <p class="sc-field-value">Connected to {{ $profile->caregiver->user?->name ?? $profile->caregiver->username ?? 'your caregiver' }}</p>
+                                        <p style="color:var(--sc-muted)">They can see your vitals, medications and checklists.</p>
                                     </div>
                                 </div>
+
+                                <button type="button" x-show="!showUnlink" @click="showUnlink = true"
+                                        class="sc-btn sc-btn-ghost sc-btn-sm w-full md:w-auto md:flex-none">
+                                    <x-lucide-unlink class="sc-i w-5 h-5" aria-hidden="true" />
+                                    Unlink caregiver
+                                </button>
+                            </div>
+
+                            <div x-show="showUnlink" x-cloak class="sc-card p-5 mt-4">
+                                <form
+                                    method="POST"
+                                    action="{{ route('elderly.unlink-caregiver') }}"
+                                    data-confirm="This removes your caregiver's access to your health information."
+                                    data-confirm-title="Unlink your caregiver?"
+                                    data-confirm-icon="warning"
+                                    data-confirm-confirm-text="Yes, unlink"
+                                    data-confirm-cancel-text="Keep my caregiver"
+                                    data-confirm-elderly="true"
+                                >
+                                    @csrf
+                                    <div class="sc-field">
+                                        <label for="unlink-password" class="sc-label sc-label-req">Your password</label>
+                                        <input type="password"
+                                               id="unlink-password"
+                                               name="password"
+                                               required
+                                               autocomplete="current-password"
+                                               class="sc-input @error('password') sc-input-error @enderror"
+                                               @error('password') aria-invalid="true" aria-describedby="password-error" @enderror>
+                                        <span class="sc-help">We ask for it so nobody else can disconnect your care.</span>
+                                        <x-input-error field="password" />
+                                    </div>
+                                    <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                                        <button type="button" @click="showUnlink = false" class="sc-btn sc-btn-ghost sc-btn-sm">Cancel</button>
+                                        <button type="submit" class="sc-btn sc-btn-danger sc-btn-sm">Unlink caregiver</button>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                     @else
-                        <div class="rounded-2xl border border-navy-200 bg-navy-50/50 p-4">
-                            <p class="text-base font-extrabold text-slate-900">Link a caregiver</p>
-                            <p class="text-sm text-slate-500 mt-1">Enter your caregiver's 6-digit PIN and confirm the profile before connecting.</p>
- 
-                            <div class="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
-                                <input type="text"
-                                       x-model="pin"
-                                       inputmode="numeric"
-                                       maxlength="6"
-                                       pattern="[0-9]{6}"
-                                       placeholder="000000"
-                                       @keyup.enter="validatePin()"
-                                       class="w-36 rounded-xl border border-navy-200 bg-white px-3 py-2 text-center text-lg font-black tracking-[0.2em] text-slate-900 focus:border-navy-500 focus:ring-2 focus:ring-navy-200 min-h-touch">
-                                <button @click="validatePin()"
-                                        :disabled="loading || pin.length !== 6"
-                                        class="rounded-xl bg-navy-500 px-4 py-2.5 text-base font-bold text-white hover:bg-navy-600 transition-colors disabled:opacity-50 min-h-touch">
-                                    <span x-show="!loading">Verify PIN</span>
-                                    <span x-show="loading">Checking...</span>
-                                </button>
-                            </div>
- 
-                            <p x-show="error" x-text="error" class="mt-2 text-sm font-semibold text-rose-600"></p>
- 
-                            <div x-show="step === 'confirm'" x-cloak class="mt-3 rounded-xl border border-navy-200 bg-white p-4">
-                                <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Confirm connection with:</p>
-                                <div class="flex items-center gap-3 mb-3">
-                                    <div class="w-11 h-11 rounded-full bg-navy-100 flex items-center justify-center text-navy-600 font-black text-lg">
-                                        <span x-text="caregiver?.caregiver_name?.[0] ?? '?'" aria-hidden="true"></span>
+                        <div class="sc-note">
+                            <x-lucide-link-2 class="sc-i w-6 h-6 mt-0.5" aria-hidden="true" />
+                            <div class="min-w-0 w-full">
+                                <p class="sc-note-title">You are not connected to a caregiver yet</p>
+                                <p class="mt-1">Ask them for the 6-digit PIN on their SilverCare profile, then type it here.</p>
+
+                                <div class="sc-field mt-4">
+                                    <label for="care-pin" class="sc-label">Caregiver's 6-digit PIN</label>
+                                    <div class="flex flex-col sm:flex-row sm:items-start gap-3">
+                                        {{-- `.sc-page .sc-input` sets width:100% and outranks a
+                                             `sm:w-44` utility, so the width lives on the wrapper. --}}
+                                        <div class="sm:w-44 sm:flex-none">
+                                        <input type="text"
+                                               id="care-pin"
+                                               x-model="pin"
+                                               inputmode="numeric"
+                                               autocomplete="one-time-code"
+                                               maxlength="6"
+                                               pattern="[0-9]{6}"
+                                               placeholder="000000"
+                                               @keyup.enter="validatePin()"
+                                               class="sc-input sc-num text-center"
+                                               style="letter-spacing:.28em; font-weight:700">
+                                        </div>
+                                        <button type="button" @click="validatePin()" class="sc-btn sc-btn-ghost sm:flex-none">
+                                            <span x-show="!loading">Check PIN</span>
+                                            <span x-show="loading" x-cloak>Checking…</span>
+                                        </button>
                                     </div>
-                                    <div>
-                                        <p class="font-extrabold text-slate-900" x-text="caregiver?.caregiver_name ?? ''"></p>
-                                        <p class="text-sm text-slate-500" x-text="caregiver?.caregiver_role ?? 'Caregiver'"></p>
-                                    </div>
+                                    <p class="sc-error" x-show="error" x-cloak>
+                                        <x-lucide-triangle-alert class="sc-i w-5 h-5" aria-hidden="true" />
+                                        <span x-text="error"></span>
+                                    </p>
                                 </div>
-                                <div class="flex gap-2">
-                                    <button type="button" @click="confirmLink()" :disabled="loading" class="flex-1 w-full rounded-xl bg-navy-500 px-4 py-2.5 text-base font-bold text-white hover:bg-navy-600 transition-colors min-h-touch disabled:opacity-50">
-                                        <span x-show="!loading">✓ Link Caregiver</span>
-                                        <span x-show="loading">Linking...</span>
-                                    </button>
-                                    <button type="button" @click="reset()" class="rounded-xl border border-slate-200 px-4 py-2.5 text-base font-bold text-slate-600 min-h-touch">Cancel</button>
+
+                                <div x-show="step === 'confirm'" x-cloak class="sc-card p-5">
+                                    <p class="sc-eyebrow">Confirm the person</p>
+                                    <div class="flex items-center gap-3 mt-3 mb-4">
+                                        <span class="sc-avatar" aria-hidden="true" x-text="caregiver?.caregiver_name?.[0] ?? '?'"></span>
+                                        <div class="min-w-0">
+                                            <p class="sc-field-value" x-text="caregiver?.caregiver_name ?? ''"></p>
+                                            <p style="color:var(--sc-muted)" x-text="caregiver?.caregiver_role ?? 'Caregiver'"></p>
+                                        </div>
+                                    </div>
+                                    <div class="flex flex-col-reverse sm:flex-row gap-2">
+                                        <button type="button" @click="reset()" class="sc-btn sc-btn-ghost sc-btn-sm">Cancel</button>
+                                        <button type="button" @click="confirmLink()" :disabled="loading" class="sc-btn sc-btn-primary sc-btn-sm">
+                                            <span x-show="!loading">Connect this caregiver</span>
+                                            <span x-show="loading" x-cloak>Connecting…</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     @endif
-                </div>
-            @endif
- 
-            {{-- CARD 4.5: Patient Linking (Caregiver Only) --}}
-            @if($profile->isCaregiver())
-                <div class="bg-white rounded-2xl p-6 md:p-8 shadow-card mb-6">
-                    <div class="flex items-center gap-3 mb-8 pb-4 border-b border-slate-100">
-                        <h3 class="font-extrabold text-xl text-slate-900">Patient Linking</h3>
                     </div>
- 
-                    <div class="rounded-2xl border border-navy-200 bg-navy-50/50 p-6">
+                </section>
+            @endif
+
+            {{-- Patient linking (caregiver) --}}
+            @if($profile->isCaregiver())
+                <section class="sc-card p-6 md:p-8 mt-10" id="patient-linking" aria-labelledby="section-patient-linking">
+                    <h2 id="section-patient-linking" class="sc-h3">Patient linking</h2>
+                    <p class="sc-help">Give this PIN to the person you care for so they can connect to you.</p>
+
+                    <div class="mt-6 pt-6 sc-hair">
                         @if(session('link_code') || $activeLinkCode)
                             @php
                                 $displayCode = session('link_code', $activeLinkCode?->code);
                                 $qrSvg = session('link_qr_svg', $activeLinkQrSvg ?? null);
                                 $shareUrl = session('link_signed_url', $activeLinkSignedUrl ?? null);
                             @endphp
-                            <div class="flex flex-col sm:flex-row gap-5 items-start">
-                                {{-- QR Code --}}
+                            <div class="flex flex-col sm:flex-row gap-6 items-start" x-data="{ copied: false }">
                                 @if($qrSvg)
-                                    <div class="flex-shrink-0 rounded-xl border-2 border-navy-200 bg-white p-3 shadow-sm">
+                                    <div class="sc-card-quiet p-3 flex-none">
                                         {!! $qrSvg !!}
-                                        <p class="text-center text-[10px] text-slate-400 font-semibold mt-1 uppercase tracking-wide">Scan with phone</p>
+                                        <p class="text-center mt-1" style="color:var(--sc-muted)">Scan with a phone</p>
                                     </div>
                                 @endif
- 
-                                {{-- PIN + Actions --}}
-                                <div class="flex flex-col gap-3" x-data="{ copied: false }">
-                                    <div class="inline-flex items-center gap-3 rounded-xl bg-white px-4 py-3 border border-navy-200 shadow-sm">
-                                        <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">PIN</span>
-                                        <span id="link-pin" class="text-2xl font-black tracking-[0.2em] text-slate-900">{{ $displayCode }}</span>
-                                    </div>
-                                    <p class="text-xs text-navy-700">Expires: {{ optional($activeLinkCode?->expires_at)->format('M d, Y h:i A') }}</p>
-                                    <div class="flex gap-2 flex-wrap">
-                                        <button
+
+                                <div class="min-w-0">
+                                    <p class="sc-label">Linking PIN</p>
+                                    <p id="link-pin" class="sc-stat-value sc-num" style="letter-spacing:.22em">{{ $displayCode }}</p>
+
+                                    @if($activeLinkCode?->expires_at)
+                                        <p class="mt-1" style="color:var(--sc-muted)">
+                                            Expires {{ $activeLinkCode->expires_at->format('j M Y, g:i a') }}
+                                        </p>
+                                    @endif
+
+                                    <div class="flex flex-wrap gap-2 mt-4">
+                                        <button type="button"
                                             @click="navigator.clipboard.writeText('{{ $displayCode }}'); copied = true; setTimeout(() => copied = false, 2000)"
-                                            class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-bold bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
-                                        >
-                                            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                                            </svg>
-                                            <span x-text="copied ? '✓ Copied!' : 'Copy PIN'"></span>
+                                            class="sc-btn sc-btn-ghost sc-btn-sm">
+                                            <x-lucide-copy class="sc-i w-5 h-5" aria-hidden="true" />
+                                            <span x-text="copied ? 'Copied' : 'Copy PIN'">Copy PIN</span>
                                         </button>
+
                                         @if($shareUrl)
-                                            <button
+                                            <button type="button"
                                                 @click="navigator.clipboard.writeText('{{ $shareUrl }}'); copied = true; setTimeout(() => copied = false, 2000)"
-                                                class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-bold bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
-                                            >
-                                                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 010 5.656l-3 3a4 4 0 11-5.656-5.656l1.5-1.5m6.656-1.5l1.5-1.5a4 4 0 115.656 5.656l-3 3a4 4 0 01-5.656 0"/>
-                                                </svg>
-                                                Copy Link
+                                                class="sc-btn sc-btn-ghost sc-btn-sm">
+                                                <x-lucide-link-2 class="sc-i w-5 h-5" aria-hidden="true" />
+                                                Copy link
                                             </button>
                                         @endif
                                     </div>
                                 </div>
                             </div>
                         @else
-                            <div>
-                                <p class="text-sm font-bold text-slate-700">No active linking PIN</p>
-                                <p class="text-xs text-slate-500 mt-1">Generate a PIN to link your patients.</p>
+                            <div class="sc-note">
+                                <x-lucide-key class="sc-i w-6 h-6 mt-0.5" aria-hidden="true" />
+                                <div>
+                                    <p class="sc-note-title">No linking PIN yet</p>
+                                    <p class="mt-1">Generate one, then read it out or send the QR code to the person you care for.</p>
+                                </div>
                             </div>
                         @endif
- 
-                        <div class="mt-5 pt-5 border-t border-navy-100" x-data="{
+
+                        <div class="mt-6 pt-6 sc-hair" x-data="{
                                 loading: false,
                                 async generate() {
                                     if(this.loading) return;
@@ -762,82 +789,91 @@
                                                 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
                                             }
                                         });
-                                        if(!res.ok) throw new Error('Failed to generate PIN');
+                                        if(!res.ok) throw new Error('The PIN could not be generated. Please try again.');
                                         window.location.reload();
                                     } catch(e) {
-                                        window.Swal?.fire({ icon: 'error', title: 'Error', text: e.message });
+                                        window.Swal?.fire({ icon: 'error', title: 'Something went wrong', text: e.message });
                                     } finally {
                                         this.loading = false;
                                     }
                                 }
                             }">
-                            <button @click="generate()" :disabled="loading" class="inline-flex items-center justify-center rounded-xl bg-navy-600 px-5 py-3 text-sm font-bold text-white hover:bg-navy-700 transition-colors disabled:opacity-50 min-h-touch w-full sm:w-auto">
-                                <span x-show="!loading">{{ $activeLinkCode ? '↻ Refresh PIN & QR Code' : 'Generate Linking PIN & QR Code' }}</span>
-                                <span x-show="loading">Generating...</span>
+                            <button type="button" @click="generate()" class="sc-btn sc-btn-ghost w-full sm:w-auto">
+                                @if($activeLinkCode)
+                                    <x-lucide-refresh-cw class="sc-i w-5 h-5" aria-hidden="true" />
+                                @else
+                                    <x-lucide-key class="sc-i w-5 h-5" aria-hidden="true" />
+                                @endif
+                                <span x-show="!loading">{{ $activeLinkCode ? 'Replace PIN and QR code' : 'Generate PIN and QR code' }}</span>
+                                <span x-show="loading" x-cloak>Generating…</span>
                             </button>
                         </div>
                     </div>
-                </div>
+                </section>
             @endif
- 
-            {{-- CARD 5: Account Session --}}
-            <div class="bg-white ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700 dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] rounded-2xl p-6 md:p-8 shadow-card mt-8 mb-6">
-                <div class="flex items-center justify-between gap-8 flex-col sm:flex-row">
-                    <div>
-                        <h3 class="font-extrabold text-xl text-slate-900 dark:text-white">Account Session</h3>
-                        <p class="text-base text-slate-500 dark:text-slate-400 font-medium">Sign out safely from your account.</p>
-                    </div>
-                    <button
-                        type="button"
-                        @click="showLogoutConfirm = true"
-                        class="inline-flex items-center gap-2 rounded-xl border border-rose-200 dark:border-slate-700 bg-rose-50 dark:bg-slate-800 px-5 py-3 text-base font-bold text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-slate-700 transition-colors min-h-touch"
-                    >
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                        </svg>
-                        Log Out
+
+            {{-- Signing out. The app bar owns this everywhere it can show it.
+                 On a caregiver sub-page it cannot: the bar spends its room on
+                 Back and folds the account actions into the drawer, so the
+                 control surfaces here instead. Both at once is the same button
+                 twice. Mirrors $showAccountActions in x-dashboard-nav. --}}
+            @if($profile->isCaregiver())
+            <div class="mt-10 pt-6 sc-hair flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <p style="color:var(--sc-muted)">Signed in as {{ $user->name }}</p>
+                <button type="button" @click="showLogoutConfirm = true" class="sc-btn sc-btn-ghost sc-btn-sm">
+                    <x-lucide-log-out class="sc-i w-5 h-5" aria-hidden="true" />
+                    Log out
+                </button>
+            </div>
+            @endif
+        </div>
+
+        {{-- Crop dialog. The cropper script toggles `hidden`/`flex` on this
+             element by id, so both classes stay exactly where they were. --}}
+        <div id="profile-photo-crop-modal" class="sc-scrim hidden items-center justify-center p-4"
+             role="dialog" aria-modal="true" aria-labelledby="crop-dialog-title">
+            <div class="sc-dialog">
+                <div class="flex items-start justify-between gap-4">
+                    <h2 id="crop-dialog-title" class="sc-dialog-title">Crop your photo</h2>
+                    <button type="button" onclick="cancelCrop()" class="sc-icon-btn">
+                        <x-lucide-x class="sc-i w-6 h-6" aria-hidden="true" />
+                        <span class="sr-only">Close and keep my current photo</span>
                     </button>
                 </div>
-            </div>
- 
-            {{-- Logout Confirmation Modal --}}
-            <div
-                x-show="showLogoutConfirm"
-                x-cloak
-                x-transition.opacity
-                class="fixed inset-0 z-[80] flex items-center justify-center px-4"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="logout-confirm-title"
-            >
-                <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" @click="showLogoutConfirm = false"></div>
- 
-                <div class="relative w-full max-w-md rounded-2xl border border-white/70 bg-white p-6 shadow-elevated">
-                    <h4 id="logout-confirm-title" class="text-xl font-black text-slate-900">Confirm logout</h4>
-                    <p class="mt-2 text-base text-slate-600 font-medium">Are you sure you want to log out now?</p>
- 
-                    <div class="mt-5 flex items-center justify-end gap-2">
-                        <button
-                            type="button"
-                            @click="showLogoutConfirm = false"
-                            class="rounded-xl border border-slate-200 px-4 py-2.5 text-base font-bold text-slate-600 hover:bg-slate-50 min-h-touch"
-                        >
-                            Cancel
-                        </button>
- 
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button
-                                type="submit"
-                                class="rounded-xl bg-rose-600 px-4 py-2.5 text-base font-bold text-white hover:bg-rose-700 min-h-touch"
-                            >
-                                Yes, log out
-                            </button>
-                        </form>
-                    </div>
+
+                <div class="sc-card-quiet mt-5 p-4 flex justify-center">
+                    <img id="crop-image" alt="" class="max-h-96 max-w-full" style="max-width: 100%;">
+                </div>
+
+                <p class="sc-help">Drag the picture to move it, and drag a corner to change how much is shown. A square works best.</p>
+
+                <div class="mt-5 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                    <button type="button" onclick="cancelCrop()" class="sc-btn sc-btn-ghost sc-btn-sm">Cancel</button>
+                    {{-- The script replaces this button's textContent while
+                         uploading, so it stays text-only. --}}
+                    <button id="crop-upload-button" type="button" onclick="applyCrop()" class="sc-btn sc-btn-primary sc-btn-sm">Crop and upload</button>
                 </div>
             </div>
         </div>
-    </div>
- 
+
+        {{-- Log out confirmation --}}
+        <div x-show="showLogoutConfirm" x-cloak x-transition.opacity
+             class="sc-scrim flex items-center justify-center p-4"
+             role="dialog" aria-modal="true" aria-labelledby="logout-confirm-title">
+            <div class="absolute inset-0" @click="showLogoutConfirm = false" aria-hidden="true"></div>
+
+            <div class="sc-dialog max-w-md">
+                <h2 id="logout-confirm-title" class="sc-dialog-title">Log out of SilverCare?</h2>
+                <p class="mt-2" style="color:var(--sc-body)">You will need your password to sign back in.</p>
+
+                <div class="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                    <button type="button" @click="showLogoutConfirm = false" class="sc-btn sc-btn-ghost sc-btn-sm">Stay signed in</button>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="sc-btn sc-btn-danger sc-btn-sm w-full">Log out</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
 </x-dashboard-layout>

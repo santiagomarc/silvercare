@@ -343,6 +343,7 @@ those in by hand.
 | `sc-plate` (+ `-sm` `-ok` `-alert`) | the rounded square behind an icon |
 | `sc-table-wrap` + `sc-table` | tables (the wrapper stops sideways scroll) |
 | `sc-empty` | "nothing here yet" — always with a button to fix that |
+| `sc-note` (+ `-warn`) + `sc-note-title` | an inline notice for a state that is *currently true* — "you are editing", "no emergency contact yet". Not `sc-flash`, which is for something that just happened and can be dismissed |
 | `sc-skeleton` | loading placeholder |
 | `sc-scrim` + `sc-dialog` | modals |
 | `sc-progress` + `sc-progress-fill` | progress bars (always show the number too) |
@@ -357,7 +358,7 @@ those in by hand.
 | `sc-choice` | a radio/checkbox in a card; the whole card shows the choice |
 | `sc-appbar` | the signed-in header bar (see below) |
 | `sc-appbar-head` | the title band under it, which holds the page's `<h1>` |
-| `sc-avatar` (+ `-lg`) | the round profile photo, or the first letter of a name |
+| `sc-avatar` (+ `-lg` `-xl`) | the round profile photo, or the first letter of a name. `-xl` is the 96px one on the profile page |
 | `sc-count` | the unread number on an icon button |
 | `sc-drawer` + `sc-drawer-head` + `sc-drawer-link` | the slide-in menu |
 | `sc-display-menu` | the panel the Display button opens |

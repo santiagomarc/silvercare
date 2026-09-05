@@ -260,7 +260,7 @@
                     {{-- Log out --}}
                     <form method="POST" action="{{ route('logout') }}" class="sc-appbar-desktop">
                         @csrf
-                        <button type="submit" class="sc-btn sc-btn-ghost sc-btn-sm">Log Out</button>
+                        <button type="submit" class="sc-btn sc-btn-ghost sc-btn-sm">Log out</button>
                     </form>
                 @endif
 
@@ -359,7 +359,7 @@
                         @csrf
                         <button type="submit" class="sc-btn sc-btn-ghost sc-btn-sm w-full">
                             <x-lucide-log-out class="sc-i w-5 h-5" aria-hidden="true" />
-                            Log Out
+                            Log out
                         </button>
                     </form>
                 </div>

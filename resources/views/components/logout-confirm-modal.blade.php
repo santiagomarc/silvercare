@@ -45,7 +45,7 @@
                 <form method="POST" action="{{ route('logout') }}" class="w-full sm:w-auto m-0">
                     @csrf
                     <button type="submit" class="sc-btn sc-btn-danger w-full">
-                        Yes, Log Out
+                        Yes, log out
                     </button>
                 </form>
             </div>

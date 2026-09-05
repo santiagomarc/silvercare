@@ -17,7 +17,9 @@ schedule and the ownership map.
 | 7 shared form components | done |
 | `layouts/guest.blade.php` | done, legacy branch **deleted** |
 | `components/dashboard-nav.blade.php` (the app bar) | done — Phase 0, see §3 |
-| Signed-in app | **~12,700 lines across 49 files — this plan** |
+| Claude's Phase 1 shared components | done |
+| `profile/edit.blade.php` | done — the first converted dashboard **view** |
+| Signed-in app | **~11,900 lines across 48 files — this plan** |
 
 `layouts/dashboard.blade.php` still carries two bodies: the new design, and a
 legacy Montserrat/grey branch for the 25 views not yet converted. That branch
@@ -100,6 +102,31 @@ came first):
 
 Phase 1 is open.
 
+### Phase 1 note — the worked example
+
+`profile/edit.blade.php` is converted and is the reference for every
+dashboard view that follows. Copy its shape:
+
+```blade
+<x-dashboard-layout sc>
+    <x-slot:title>…</x-slot:title>
+    <x-dashboard-nav title="…" subtitle="…" … />
+    <main id="main-content" class="sc-app-main">
+        <div class="max-w-4xl mx-auto px-6 lg:px-12">
+            <section class="sc-card p-6 md:p-8" aria-labelledby="section-x">
+                <h2 id="section-x" class="sc-h3">…</h2>
+```
+
+Three things it settles, so nobody re-decides them per page:
+
+- **`<main id="main-content" class="sc-app-main">` is the page body.**
+  The layout's skip link points at that id and nothing else supplies it.
+- **A section is `<section class="sc-card">` + `<h2 class="sc-h3">`.**
+  The element carries the structure, the class carries the size —
+  `sc-h2` is hero scale and is wrong inside a card.
+- **`max-w-4xl mx-auto px-6 lg:px-12`** is the column. The app bar runs to
+  1600px; a form does not.
+
 ### Phase 1 — parallel
 
 Claude takes the shared components and the heavy/risky pages. Gemini takes the
@@ -145,7 +172,7 @@ Shared layer, anything with charts, anything the whole app depends on.
 | 3 | `elderly/vitals/show.blade.php` | 817 |
 | 3 | `elderly/vitals/analytics.blade.php` | 852 |
 | 3 | `caregiver/analytics.blade.php` | 646 |
-| 1 | `profile/edit.blade.php` | 842 |
+| 1 | `profile/edit.blade.php` — **done** | 842 |
 | 4 | all deletions | — |
 
 ### Gemini — 4,800 lines
@@ -178,6 +205,15 @@ Suggested order — cheapest first, so the pattern is proven before the big ones
 ---
 
 ## 4b. Known blockers
+
+- **`php artisan test` empties `silvercare_db` — your dev database.**
+  `phpunit.xml` sets `DB_DATABASE=silvercare_testing`, but that value loses
+  to `.env` at boot: inside a test, `config('database.connections.pgsql.database')`
+  reads `silvercare_db`, so `RefreshDatabase` truncates the data you were
+  looking at. §6 tells you to run the suite, so this bites on every file.
+  Seed the accounts you check pages with *after* the test run, or fix it
+  once with a `.env.testing` containing `DB_DATABASE=silvercare_testing`
+  (Laravel prefers that file when `APP_ENV=testing`).
 
 - **`caregiver/analytics` returns a 500** before any of this work started:
   `CaregiverAnalyticsController.php:84` compacts `$sourceAttribution`, which is
