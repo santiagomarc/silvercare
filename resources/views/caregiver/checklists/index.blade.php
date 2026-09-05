@@ -36,7 +36,7 @@
             {{-- Header with Add Button --}}
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 class="text-2xl sm:text-3xl font-bold text-[var(--sc-ink)]">{{ __('Checklists') }}</h1>
+                    <h2 class="text-2xl sm:text-3xl font-bold text-[var(--sc-ink)]">{{ __('Checklists') }}</h2>
                     <p class="text-sm text-[var(--sc-muted)] font-medium mt-0.5">{{ __('Managing') }} {{ $selectedElderly->user?->name ?? __('selected patient') }}</p>
                 </div>
                 <a href="{{ route('caregiver.checklists.create', ['elderly' => $selectedElderly->id]) }}" class="sc-btn sc-btn-primary inline-flex items-center gap-2">
