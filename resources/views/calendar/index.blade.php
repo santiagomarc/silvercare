@@ -1,141 +1,151 @@
-<x-dashboard-layout>
+<x-dashboard-layout sc>
     <x-slot:title>Schedule - SilverCare</x-slot:title>
-    <x-slot:bodyClass>h-screen overflow-hidden bg-[#F3F4F6]</x-slot:bodyClass>
- 
-    <div class="h-full flex flex-col" x-data="calendarSchedulerForm()" x-init="initDateTimePicker()">
+
+    <div id="main-content" x-data="calendarSchedulerForm()" x-init="initDateTimePicker()">
         <x-dashboard-nav
             title="Schedule"
             subtitle="Manage your health appointments and reminders"
             role="elderly"
             :unread-notifications="$unreadNotifications ?? 0"
         />
- 
-        {{-- Everything below nav fills remaining height --}}
-        <div class="flex-1 overflow-hidden flex flex-col max-w-7xl w-full mx-auto px-6 py-4 min-h-0">
- 
-            {{-- Top bar: Back to Dashboard RIGHT only --}}
-            <div class="flex items-center justify-end mb-4 flex-shrink-0">
-                <a href="{{ route('dashboard') }}" class="back-nav-pill !text-gray-600 !bg-white/70 hover:!bg-white">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                    Back to Dashboard
-                </a>
-            </div>
- 
-            {{-- Main content: fills remaining height --}}
-            <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0 overflow-hidden">
- 
-                {{-- LEFT: Date card + History button --}}
-                <div class="lg:col-span-4 min-h-0 flex flex-col gap-3">
- 
-                    {{-- Date + Quick Tip card --}}
-                    <div class="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-[2rem] p-7 shadow-xl text-white relative overflow-hidden flex-1 flex flex-col justify-between group">
- 
-                        <div class="absolute top-0 right-0 w-56 h-56 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:scale-110 transition-transform duration-700"></div>
-                        <div class="absolute bottom-0 left-0 w-40 h-40 bg-purple-500/30 rounded-full -ml-8 -mb-8 blur-xl"></div>
- 
-                        <div class="relative z-10">
-                            <span class="inline-block px-4 py-1.5 bg-white/20 backdrop-blur-md rounded-full text-sm font-bold tracking-wide mb-5">TODAY</span>
-                            <h3 class="text-6xl font-extrabold mb-1">{{ now()->format('d') }}</h3>
-                            <p class="text-2xl font-medium text-indigo-100">{{ now()->format('l') }}</p>
-                            <p class="text-lg text-indigo-200 mt-0.5">{{ now()->format('F Y') }}</p>
-                        </div>
- 
-                        <div class="relative z-10 mt-4 bg-black/20 backdrop-blur-sm rounded-2xl p-5 border border-white/10">
-                            <div class="flex items-start gap-3">
-                                <div class="p-2 bg-white/20 rounded-lg flex-shrink-0">
-                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                </div>
-                                <div>
-                                    <p class="font-bold text-base mb-0.5">Quick Tip</p>
-                                    <p class="text-sm text-indigo-100 leading-relaxed">Staying organized helps reduce stress. Check your tasks daily!</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
- 
-                    {{-- History button — outside the card, below it --}}
-                    @if($pastEvents->isNotEmpty())
-                        <button
-                            @click="showHistory = true"
-                            class="w-full flex items-center justify-between px-5 py-4 bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/40 transition-all group"
-                        >
-                            <div class="flex items-center gap-3">
-                                <div class="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
-                                    <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                </div>
-                                <div class="text-left">
-                                    <p class="font-bold text-gray-800 text-sm">Past Events</p>
-                                    <p class="text-xs text-gray-400">{{ $pastEvents->count() }} {{ Str::plural('event', $pastEvents->count()) }} completed</p>
-                                </div>
-                            </div>
-                            <svg class="w-4 h-4 text-gray-400 group-hover:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
-                        </button>
-                    @endif
+
+        <main class="sc-app-main">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+                <x-flash-messages />
+
+                {{-- Top bar: Back to Dashboard --}}
+                <div class="flex justify-end">
+                    <a href="{{ route('dashboard') }}" class="sc-btn sc-btn-ghost inline-flex items-center gap-1.5 text-sm">
+                        <x-lucide-arrow-left class="sc-i w-4 h-4" aria-hidden="true" />
+                        <span>{{ __('Back to Dashboard') }}</span>
+                    </a>
                 </div>
- 
-                {{-- RIGHT: Upcoming events list or empty state --}}
-                <div class="lg:col-span-8 min-h-0 overflow-y-auto">
-                    @if($events->isEmpty())
-                        <div class="bg-white rounded-[2rem] p-10 text-center shadow-sm border border-gray-100 flex flex-col items-center justify-center h-full">
-                            <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-5">
-                                <svg class="w-9 h-9 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+
+                {{-- Main 2-column layout --}}
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+                    {{-- LEFT: Date card + History button --}}
+                    <div class="lg:col-span-4 flex flex-col gap-4">
+
+                        {{-- Date + Quick Tip card --}}
+                        <div class="sc-card p-6 sm:p-7 flex flex-col justify-between gap-6">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-[var(--sc-ink-muted)]">{{ __('TODAY') }}</span>
+                                <div class="text-5xl sm:text-6xl font-bold tracking-tight text-[var(--sc-ink)] mt-2 sc-num">{{ now()->format('d') }}</div>
+                                <p class="text-xl font-bold text-[var(--sc-ink)] mt-1">{{ now()->format('l') }}</p>
+                                <p class="text-sm font-semibold text-[var(--sc-ink-muted)] mt-0.5">{{ now()->format('F Y') }}</p>
                             </div>
-                            <h3 class="text-2xl font-bold text-gray-900 mb-2">No Upcoming Events</h3>
-                            <p class="text-gray-500 max-w-sm mx-auto mb-6">Your schedule is clear for now. Add an entry to plan ahead.</p>
-                            <button @click="openModal()" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-7 py-3.5 rounded-2xl font-bold shadow-lg shadow-blue-200 flex items-center gap-2 transform transition hover:-translate-y-1 hover:shadow-xl group">
-                                <div class="bg-white/20 p-1 rounded-lg group-hover:rotate-90 transition-transform duration-300">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+
+                            <div class="sc-card-quiet rounded-2xl p-4 sm:p-5 w-full text-left">
+                                <div class="flex items-start gap-3">
+                                    <div class="sc-plate sc-plate-sm flex-shrink-0 mt-0.5">
+                                        <x-lucide-info class="sc-i w-4 h-4 text-[var(--sc-brand)]" aria-hidden="true" />
+                                    </div>
+                                    <div>
+                                        <p class="text-xs font-bold uppercase tracking-wider text-[var(--sc-ink-muted)] mb-1">{{ __('Quick Tip') }}</p>
+                                        <p class="text-xs sm:text-sm font-medium text-[var(--sc-ink)] leading-relaxed">
+                                            {{ __('Staying organized helps reduce stress. Check your schedule and tasks daily!') }}
+                                        </p>
+                                    </div>
                                 </div>
-                                Add New Entry
-                            </button>
+                            </div>
                         </div>
-                    @else
-                        <div class="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
-                            <div class="p-7">
-                                <div class="flex items-center justify-between mb-5">
-                                    <h3 class="text-lg font-bold text-gray-900 flex items-center">
-                                        <span class="w-2 h-7 bg-blue-500 rounded-full mr-3"></span>
-                                        Upcoming List
-                                    </h3>
-                                    <button @click="openModal()" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-md shadow-blue-200 flex items-center gap-2 transition hover:-translate-y-0.5 group text-sm">
-                                        <div class="bg-white/20 p-0.5 rounded-lg group-hover:rotate-90 transition-transform duration-300">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                                        </div>
-                                        Add New Entry
+
+                        {{-- History button --}}
+                        @if($pastEvents->isNotEmpty())
+                            <button
+                                type="button"
+                                @click="showHistory = true"
+                                class="sc-card sc-lift w-full flex items-center justify-between p-4 transition-all"
+                            >
+                                <div class="flex items-center gap-3">
+                                    <div class="sc-plate sc-plate-sm flex-shrink-0">
+                                        <x-lucide-history class="sc-i w-4 h-4 text-[var(--sc-ink)]" aria-hidden="true" />
+                                    </div>
+                                    <div class="text-left">
+                                        <p class="text-sm font-bold text-[var(--sc-ink)]">{{ __('Past Events') }}</p>
+                                        <p class="text-xs font-semibold text-[var(--sc-ink-muted)] sc-num">
+                                            {{ $pastEvents->count() }} {{ Str::plural('event', $pastEvents->count()) }} {{ __('completed') }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <x-lucide-chevron-right class="sc-i w-4 h-4 text-[var(--sc-ink-muted)]" aria-hidden="true" />
+                            </button>
+                        @endif
+                    </div>
+
+                    {{-- RIGHT: Upcoming events list or empty state --}}
+                    <div class="lg:col-span-8">
+                        @if($events->isEmpty())
+                            <div class="sc-card p-10 text-center flex flex-col items-center justify-center">
+                                <div class="sc-plate mb-4">
+                                    <x-lucide-calendar class="sc-i w-6 h-6" aria-hidden="true" />
+                                </div>
+                                <h2 class="sc-h3 mb-2">{{ __('No Upcoming Events') }}</h2>
+                                <p class="text-sm text-[var(--sc-ink-muted)] max-w-sm mb-6">
+                                    {{ __('Your schedule is clear for now. Add an entry to plan ahead.') }}
+                                </p>
+                                <button
+                                    type="button"
+                                    @click="openModal()"
+                                    class="sc-btn sc-btn-primary inline-flex items-center gap-2"
+                                >
+                                    <x-lucide-plus class="sc-i w-4 h-4" aria-hidden="true" />
+                                    <span>{{ __('Add New Entry') }}</span>
+                                </button>
+                            </div>
+                        @else
+                            <div class="sc-card p-5 sm:p-7">
+                                <div class="flex items-center justify-between gap-4 mb-6 pb-4 border-b border-[var(--sc-border)]">
+                                    <h2 class="text-xl font-bold text-[var(--sc-ink)]">
+                                        {{ __('Upcoming Events') }}
+                                    </h2>
+                                    <button
+                                        type="button"
+                                        @click="openModal()"
+                                        class="sc-btn sc-btn-primary sc-btn-sm inline-flex items-center gap-1.5"
+                                    >
+                                        <x-lucide-plus class="sc-i w-4 h-4" aria-hidden="true" />
+                                        <span>{{ __('Add Entry') }}</span>
                                     </button>
                                 </div>
- 
+
                                 <div class="space-y-3">
                                     @foreach($events as $event)
-                                        <div class="group flex items-center p-5 rounded-2xl border border-gray-100 hover:border-blue-100 hover:bg-blue-50/30 transition-all duration-300">
- 
-                                            <div class="flex-shrink-0 w-14 h-14 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center mr-5 group-hover:scale-105 transition-transform">
-                                                <span class="text-xs font-bold text-gray-400 uppercase">{{ \Carbon\Carbon::parse($event->start_time)->format('M') }}</span>
-                                                <span class="text-xl font-extrabold text-gray-800">{{ \Carbon\Carbon::parse($event->start_time)->format('d') }}</span>
-                                            </div>
- 
-                                            <div class="flex-1 min-w-0">
-                                                <div class="flex items-center gap-2 mb-1">
-                                                    <span class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide
-                                                        {{ $event->type == 'Appointment' ? 'bg-red-100 text-red-600' :
-                                                          ($event->type == 'Medication' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600') }}">
-                                                        {{ $event->type }}
-                                                    </span>
-                                                    <span class="text-sm font-semibold text-gray-400 flex items-center">
-                                                        <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                                        {{ \Carbon\Carbon::parse($event->start_time)->format('h:i A') }}
-                                                    </span>
+                                        <div class="sc-card sc-lift flex items-center justify-between p-4 sm:p-5 gap-4">
+                                            <div class="flex items-center gap-4 min-w-0 flex-1">
+                                                {{-- Date badge --}}
+                                                <div class="sc-plate sc-plate-sm flex-col rounded-xl flex-shrink-0 text-center">
+                                                    <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--sc-ink-muted)] leading-none">{{ \Carbon\Carbon::parse($event->start_time)->format('M') }}</span>
+                                                    <span class="text-base font-bold text-[var(--sc-ink)] leading-none mt-1 sc-num">{{ \Carbon\Carbon::parse($event->start_time)->format('d') }}</span>
                                                 </div>
-                                                <h4 class="text-lg font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">{{ $event->title }}</h4>
-                                                @if($event->description)
-                                                    <p class="text-sm text-gray-500 truncate mt-0.5">{{ $event->description }}</p>
-                                                @endif
+
+                                                <div class="min-w-0 flex-1">
+                                                    <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                                        @if($event->type === 'Appointment')
+                                                            <span class="sc-mark sc-mark-alert"><i></i>{{ __('Appointment') }}</span>
+                                                        @elseif($event->type === 'Medication')
+                                                            <span class="sc-mark sc-mark-ok"><i></i>{{ __('Medication') }}</span>
+                                                        @else
+                                                            <span class="sc-mark sc-mark-brand"><i></i>{{ $event->type }}</span>
+                                                        @endif
+                                                        <span class="text-xs font-semibold text-[var(--sc-ink-muted)] flex items-center gap-1 sc-num">
+                                                            <x-lucide-clock class="sc-i w-3.5 h-3.5" aria-hidden="true" />
+                                                            <span>{{ \Carbon\Carbon::parse($event->start_time)->format('h:i A') }}</span>
+                                                        </span>
+                                                    </div>
+                                                    <h3 class="text-base font-bold text-[var(--sc-ink)] truncate">{{ $event->title }}</h3>
+                                                    @if($event->description)
+                                                        <p class="text-sm text-[var(--sc-ink-muted)] truncate mt-0.5">{{ $event->description }}</p>
+                                                    @endif
+                                                </div>
                                             </div>
- 
+
+                                            {{-- Delete button form --}}
                                             <form
                                                 method="POST"
                                                 action="{{ route('calendar.destroy', $event->id) }}"
-                                                class="ml-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                class="flex-shrink-0"
                                                 data-confirm="Delete this event?"
                                                 data-confirm-title="Delete calendar entry?"
                                                 data-confirm-icon="warning"
@@ -145,159 +155,213 @@
                                             >
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="p-3 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Delete">
-                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                <button
+                                                    type="submit"
+                                                    class="sc-btn sc-btn-ghost !p-2 text-[var(--sc-ink-muted)] hover:text-[var(--sc-alert)]"
+                                                    title="{{ __('Delete event') }}"
+                                                    aria-label="{{ __('Delete event') }}: {{ $event->title }}"
+                                                >
+                                                    <x-lucide-trash-2 class="sc-i w-4 h-4" aria-hidden="true" />
                                                 </button>
                                             </form>
                                         </div>
                                     @endforeach
                                 </div>
                             </div>
-                        </div>
-                    @endif
+                        @endif
+                    </div>
                 </div>
             </div>
-        </div>
- 
+        </main>
+
         {{-- Add New Entry Modal --}}
-        <div x-show="showModal" class="fixed inset-0 z-50 overflow-y-auto" style="display: none;">
-            <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity duration-300" @click="closeModal()"></div>
-            <div class="flex min-h-full items-center justify-center p-4">
-                <div class="relative w-full max-w-lg bg-white rounded-[2rem] shadow-2xl p-10 transform transition-all scale-100">
- 
-                    <div class="flex justify-between items-center mb-8">
-                        <h3 class="text-3xl font-extrabold text-gray-900">New Entry</h3>
-                        <button @click="closeModal()" class="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-colors">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
-                    </div>
- 
-                    @if($errors->has('start_time'))
-                        <div class="mb-6 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm font-semibold">
-                            {{ $errors->first('start_time') }}
-                        </div>
-                    @endif
- 
-                    <form action="{{ route('calendar.store') }}" method="POST" class="space-y-6">
-                        @csrf
- 
-                        <div class="space-y-2">
-                            <label class="text-sm font-bold text-gray-900">Title</label>
-                            <input type="text" name="title" required placeholder="What needs to be done?"
-                                class="w-full bg-gray-50 border-transparent rounded-xl px-5 py-4 text-gray-900 placeholder-gray-400 font-semibold focus:ring-4 focus:ring-blue-100 focus:bg-white transition-all"
-                                value="{{ old('title') }}">
-                        </div>
- 
-                        <div class="grid grid-cols-2 gap-5">
-                            <div class="space-y-2">
-                                <label class="text-sm font-bold text-gray-900">When?</label>
-                                <input
-                                    type="text"
-                                    name="start_time"
-                                    x-ref="startTimeInput"
-                                    required
-                                    autocomplete="off"
-                                    placeholder="Select date and time"
-                                    class="w-full bg-gray-50 border-transparent rounded-xl px-4 py-4 text-gray-900 font-semibold focus:ring-4 focus:ring-blue-100 focus:bg-white transition-all text-sm"
-                                >
-                            </div>
-                            <div class="space-y-2">
-                                <label class="text-sm font-bold text-gray-900">Type</label>
-                                <select name="type" x-ref="typeSelect" autocomplete="off">
-                                    <option value="Event">📅 Event</option>
-                                    <option value="Reminder">🔔 Reminder</option>
-                                    <option value="Appointment">🩺 Appointment</option>
-                                </select>
-                            </div>
-                        </div>
- 
-                        <div class="space-y-2">
-                            <label class="text-sm font-bold text-gray-900">Notes (Optional)</label>
-                            <textarea name="description" rows="3" placeholder="Add any details here..."
-                                class="w-full bg-gray-50 border-transparent rounded-xl px-5 py-4 text-gray-900 placeholder-gray-400 font-semibold focus:ring-4 focus:ring-blue-100 focus:bg-white transition-all resize-none">{{ old('description') }}</textarea>
-                        </div>
- 
-                        <div class="pt-4">
-                            <button type="submit" class="w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-lg font-bold py-4 rounded-xl shadow-xl shadow-blue-200 transform transition hover:-translate-y-1">
-                                Save Entry
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
- 
-        {{-- History Modal --}}
-        <div x-show="showHistory" class="fixed inset-0 z-50 flex items-center justify-center p-6" style="display: none;">
-            <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" @click="showHistory = false"></div>
- 
-            <div class="relative w-full max-w-xl bg-white rounded-[2rem] shadow-2xl overflow-hidden" style="max-height: 80vh;">
-                {{-- Header --}}
-                <div class="flex items-center justify-between px-8 pt-8 pb-5 border-b border-gray-100">
-                    <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center">
-                            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        </div>
-                        <h3 class="text-2xl font-extrabold text-gray-900">Past Events</h3>
-                    </div>
-                    <button @click="showHistory = false" class="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-colors">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        <div
+            class="sc-scrim flex items-center justify-center p-4"
+            x-cloak
+            x-show="showModal"
+            x-transition.opacity.duration.200ms
+            @click.self="closeModal()"
+        >
+            <div
+                class="sc-dialog max-w-lg w-full"
+                x-show="showModal"
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100 scale-100"
+                x-transition:leave-end="opacity-0 scale-95"
+            >
+                <div class="flex items-center justify-between pb-4 mb-6 border-b border-[var(--sc-border)]">
+                    <h3 class="text-2xl font-bold text-[var(--sc-ink)] tracking-tight">{{ __('New Entry') }}</h3>
+                    <button
+                        type="button"
+                        @click="closeModal()"
+                        class="sc-btn sc-btn-ghost !p-2"
+                        aria-label="{{ __('Close dialog') }}"
+                    >
+                        <x-lucide-x class="sc-i w-5 h-5" aria-hidden="true" />
                     </button>
                 </div>
- 
+
+                @if($errors->has('start_time'))
+                    <div class="mb-4 sc-flash-alert p-3 rounded-xl text-sm font-semibold flex items-center gap-2">
+                        <x-lucide-alert-circle class="sc-i w-4 h-4" aria-hidden="true" />
+                        <span>{{ $errors->first('start_time') }}</span>
+                    </div>
+                @endif
+
+                <form action="{{ route('calendar.store') }}" method="POST" class="space-y-5">
+                    @csrf
+
+                    <div class="sc-field">
+                        <x-input-label for="calendar-title" :value="__('Title')" required />
+                        <x-text-input id="calendar-title" name="title" type="text" required placeholder="What needs to be done?" value="{{ old('title') }}" aria-label="{{ __('Title') }}" />
+                        <x-input-error field="title" />
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="sc-field">
+                            <x-input-label for="calendar-start-time" :value="__('When?')" required />
+                            <input
+                                id="calendar-start-time"
+                                type="text"
+                                name="start_time"
+                                x-ref="startTimeInput"
+                                required
+                                autocomplete="off"
+                                placeholder="Select date and time"
+                                aria-label="{{ __('When?') }}"
+                                class="sc-input"
+                            >
+                            <x-input-error field="start_time" />
+                        </div>
+                        <div class="sc-field">
+                            <x-input-label for="calendar-type" :value="__('Type')" required />
+                            <select id="calendar-type" name="type" x-ref="typeSelect" autocomplete="off" aria-label="{{ __('Type') }}" class="sc-select">
+                                <option value="Event">{{ __('Event') }}</option>
+                                <option value="Reminder">{{ __('Reminder') }}</option>
+                                <option value="Appointment">{{ __('Appointment') }}</option>
+                            </select>
+                            <x-input-error field="type" />
+                        </div>
+                    </div>
+
+                    <div class="sc-field">
+                        <x-input-label for="calendar-description" :value="__('Notes (Optional)')" />
+                        <textarea
+                            id="calendar-description"
+                            name="description"
+                            rows="3"
+                            placeholder="Add any details here…"
+                            aria-label="{{ __('Notes (Optional)') }}"
+                            class="sc-textarea resize-none"
+                        >{{ old('description') }}</textarea>
+                        <x-input-error field="description" />
+                    </div>
+
+                    <div class="pt-2">
+                        <button type="submit" class="sc-btn sc-btn-primary w-full py-3.5 text-base justify-center">
+                            <span>{{ __('Save Entry') }}</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {{-- History Modal --}}
+        <div
+            class="sc-scrim flex items-center justify-center p-4"
+            x-cloak
+            x-show="showHistory"
+            x-transition.opacity.duration.200ms
+            @click.self="showHistory = false"
+        >
+            <div
+                class="sc-dialog max-w-xl w-full"
+                x-show="showHistory"
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100 scale-100"
+                x-transition:leave-end="opacity-0 scale-95"
+            >
+                {{-- Header --}}
+                <div class="flex items-center justify-between pb-4 mb-4 border-b border-[var(--sc-border)]">
+                    <div class="flex items-center gap-3">
+                        <div class="sc-plate sc-plate-sm flex-shrink-0">
+                            <x-lucide-history class="sc-i w-4 h-4 text-[var(--sc-ink)]" aria-hidden="true" />
+                        </div>
+                        <h3 class="text-xl font-bold text-[var(--sc-ink)]">{{ __('Past Events') }}</h3>
+                    </div>
+                    <button
+                        type="button"
+                        @click="showHistory = false"
+                        class="sc-btn sc-btn-ghost !p-2"
+                        aria-label="{{ __('Close history') }}"
+                    >
+                        <x-lucide-x class="sc-i w-5 h-5" aria-hidden="true" />
+                    </button>
+                </div>
+
                 {{-- Scrollable list grouped by month --}}
-                <div class="overflow-y-auto px-8 py-5" style="max-height: calc(80vh - 90px);">
+                <div class="overflow-y-auto max-h-[60vh] space-y-4 pr-1">
                     @php
                         $grouped = $pastEvents->groupBy(fn($e) => \Carbon\Carbon::parse($e->start_time)->format('F Y'));
                     @endphp
- 
+
                     @forelse($grouped as $monthYear => $monthEvents)
-                        {{-- Month header --}}
-                        <div class="flex items-center gap-3 mb-3 {{ !$loop->first ? 'mt-6' : '' }}">
-                            <span class="text-xs font-[900] uppercase tracking-widest text-indigo-400">{{ $monthYear }}</span>
-                            <div class="flex-1 h-px bg-gray-100"></div>
-                        </div>
- 
-                        <div class="space-y-2">
-                            @foreach($monthEvents as $event)
-                                <div class="flex items-start gap-4 p-4 rounded-2xl bg-gray-50 border border-gray-100">
- 
-                                    {{-- Date badge --}}
-                                    <div class="flex-shrink-0 w-12 h-12 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center">
-                                        <span class="text-[10px] font-bold text-gray-400 uppercase leading-none">{{ \Carbon\Carbon::parse($event->start_time)->format('M') }}</span>
-                                        <span class="text-lg font-extrabold text-gray-700 leading-none">{{ \Carbon\Carbon::parse($event->start_time)->format('d') }}</span>
-                                    </div>
- 
-                                    {{-- Info --}}
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex items-center gap-2 mb-1 flex-wrap">
-                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide
-                                                {{ $event->type == 'Appointment' ? 'bg-red-100 text-red-500' :
-                                                  ($event->type == 'Medication' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-500') }}">
-                                                {{ $event->type }}
-                                            </span>
-                                            <span class="text-xs font-semibold text-gray-400 flex items-center gap-1">
-                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                                {{ \Carbon\Carbon::parse($event->start_time)->format('h:i A') }}
-                                            </span>
+                        <div>
+                            <div class="flex items-center gap-3 mb-3">
+                                <span class="text-xs font-bold uppercase tracking-wider text-[var(--sc-ink-muted)] sc-num">{{ $monthYear }}</span>
+                                <div class="flex-1 h-px bg-[var(--sc-border)]"></div>
+                            </div>
+
+                            <div class="space-y-2.5">
+                                @foreach($monthEvents as $event)
+                                    <div class="sc-card-quiet flex items-start gap-3.5 p-3.5 rounded-xl">
+                                        {{-- Date badge --}}
+                                        <div class="sc-plate sc-plate-sm flex-col rounded-lg flex-shrink-0 text-center">
+                                            <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--sc-ink-muted)] leading-none">{{ \Carbon\Carbon::parse($event->start_time)->format('M') }}</span>
+                                            <span class="text-sm font-bold text-[var(--sc-ink)] leading-none mt-0.5 sc-num">{{ \Carbon\Carbon::parse($event->start_time)->format('d') }}</span>
                                         </div>
-                                        <p class="font-bold text-gray-700 text-base leading-tight">{{ $event->title }}</p>
-                                        @if($event->description)
-                                            <p class="text-sm text-gray-400 mt-0.5 leading-snug">{{ $event->description }}</p>
-                                        @endif
+
+                                        {{-- Info --}}
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                                @if($event->type === 'Appointment')
+                                                    <span class="sc-mark sc-mark-alert"><i></i>{{ __('Appointment') }}</span>
+                                                @elseif($event->type === 'Medication')
+                                                    <span class="sc-mark sc-mark-ok"><i></i>{{ __('Medication') }}</span>
+                                                @else
+                                                    <span class="sc-mark sc-mark-brand"><i></i>{{ $event->type }}</span>
+                                                @endif
+                                                <span class="text-xs font-semibold text-[var(--sc-ink-muted)] flex items-center gap-1 sc-num">
+                                                    <x-lucide-clock class="sc-i w-3 h-3" aria-hidden="true" />
+                                                    <span>{{ \Carbon\Carbon::parse($event->start_time)->format('h:i A') }}</span>
+                                                </span>
+                                            </div>
+                                            <p class="font-bold text-sm text-[var(--sc-ink)] leading-snug">{{ $event->title }}</p>
+                                            @if($event->description)
+                                                <p class="text-xs text-[var(--sc-ink-muted)] mt-0.5 leading-normal">{{ $event->description }}</p>
+                                            @endif
+                                        </div>
                                     </div>
-                                </div>
-                            @endforeach
+                                @endforeach
+                            </div>
                         </div>
                     @empty
-                        <div class="text-center py-10 text-gray-400 font-medium">No past events yet.</div>
+                        <div class="text-center py-8 text-sm text-[var(--sc-ink-muted)]">
+                            {{ __('No past events yet.') }}
+                        </div>
                     @endforelse
                 </div>
             </div>
         </div>
- 
     </div>
- 
+
+    @push('scripts')
     <script>
         function calendarSchedulerForm() {
             return {
@@ -305,7 +369,7 @@
                 showHistory: false,
                 startTimePicker: null,
                 typeSelect: null,
- 
+
                 initDateTimePicker() {
                     if (this.$refs.startTimeInput && typeof window.flatpickr === 'function') {
                         this.startTimePicker = window.flatpickr(this.$refs.startTimeInput, {
@@ -319,9 +383,14 @@
                             disableMobile: true,
                             minDate: 'today',  // blocks past dates in the picker UI
                             defaultDate: new Date(),
+                            onReady: function(selectedDates, dateStr, instance) {
+                                if (instance.altInput) {
+                                    instance.altInput.setAttribute('aria-label', 'When?');
+                                }
+                            }
                         });
                     }
- 
+
                     if (this.$refs.typeSelect && typeof window.TomSelect === 'function') {
                         this.typeSelect = new window.TomSelect(this.$refs.typeSelect, {
                             create: false,
@@ -331,7 +400,7 @@
                         });
                     }
                 },
- 
+
                 openModal() {
                     this.showModal = true;
                     this.$nextTick(() => {
@@ -341,7 +410,7 @@
                         }
                     });
                 },
- 
+
                 closeModal() {
                     this.showModal = false;
                     this.startTimePicker?.close();
@@ -349,4 +418,5 @@
             };
         }
     </script>
+    @endpush
 </x-dashboard-layout>
