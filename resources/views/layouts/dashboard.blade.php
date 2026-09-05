@@ -49,7 +49,10 @@
          they fell through Valley Sans to the system sans and rendered as
          Helvetica. Montserrat stays only for the legacy body below; it goes
          when that branch does. --}}
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700;800&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
+    {{-- IBM Plex Mono carries measurements only — dose, time, unit — so a
+         column of readings lines up and reads as instrument output rather
+         than prose. Two weights, nothing more. --}}
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
     @include('partials.sc-fonts')
     @unless ($sc)
         <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">

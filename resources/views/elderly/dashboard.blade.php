@@ -6,9 +6,9 @@
      All interactivity via extracted Alpine.data() components.
      ============================================================ --}}
 
-<x-dashboard-layout>
+<x-dashboard-layout sc>
     <x-slot:title>Dashboard - SilverCare</x-slot:title>
-    <x-slot:bodyClass>min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.92),_rgba(240,249,255,0.88)_22%,_rgba(224,242,254,0.76)_48%,_rgba(254,242,242,0.82)_100%)]</x-slot:bodyClass>
+    <x-slot:bodyClass>sc-page min-h-screen</x-slot:bodyClass>
 
     @push('styles')
     <style>
@@ -66,52 +66,43 @@
     </style>
     @endpush
 
-    {{-- Navigation --}}
+    {{-- The greeting IS the page heading. It used to sit under a second,
+         generic "Dashboard Overview" title in the app bar, so the screen
+         opened with two competing headings and the top one said nothing.
+         The app bar owns the only <h1>; everything below starts at <h2>. --}}
+    @php
+        $dashboardNow = now()->timezone(config('app.timezone', 'Asia/Manila'));
+        $hour = $dashboardNow->hour;
+        $greeting = 'Good evening';
+        if ($hour < 12) {
+            $greeting = 'Good morning';
+        } elseif ($hour < 17) {
+            $greeting = 'Good afternoon';
+        }
+        $firstName = explode(' ', Auth::user()->name)[0];
+    @endphp
+
     <x-dashboard-nav
-        title="Dashboard Overview"
+        :title="$greeting . ', ' . $firstName . '.'"
+        :subtitle="$dashboardNow->format('l, j F Y')"
         role="elderly"
         :unread-notifications="$unreadNotifications"
     />
 
     {{-- ══════════════════════════════════════════════════════════
          MAIN CONTENT — wrapped in dashboardTabs Alpine component
+
+         `sc-ambient` replaces the six coloured blur orbs that used to
+         float behind this page. It is the landing page's ground: a 72px
+         hairline grid under a radial mask, plus two very low-opacity
+         glows. Texture without colour — which is the whole point, since
+         the orbs were what made the screen read as candy.
          ══════════════════════════════════════════════════════════ --}}
-        <main id="main-content"
-                    class="relative max-w-[1600px] mx-auto px-6 lg:px-12 py-5"
+    <main id="main-content"
+          class="sc-ambient relative max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 pb-16"
           x-data="dashboardTabs('today')">
 
-                <div class="ambient-orb -left-24 top-20 h-80 w-80 bg-sky-300/40"></div>
-                <div class="ambient-orb right-0 top-32 h-64 w-64 bg-rose-300/30"></div>
-                <div class="ambient-orb bottom-10 left-1/3 h-56 w-56 bg-amber-300/25"></div>
-
         <x-flash-messages />
-
-        {{-- ╔══════════════════╗
-             ║  GREETING BANNER ║
-             ╚══════════════════╝ --}}
-        @php
-            $dashboardNow = now()->timezone(config('app.timezone', 'Asia/Manila'));
-            $hour = $dashboardNow->hour;
-            $greeting = 'Good evening';
-            if ($hour < 12) {
-                $greeting = 'Good morning';
-            } elseif ($hour < 17) {
-                $greeting = 'Good afternoon';
-            }
-            $firstName = explode(' ', Auth::user()->name)[0];
-        @endphp
-        <div class="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-2 relative z-10">
-            <div>
-                <h2 class="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
-                    {{ $greeting }}, <span class="text-[#000080]">{{ $firstName }}</span>
-                    <x-lucide-hand class="inline-block w-8 h-8 text-amber-500 align-[-0.2em]" aria-hidden="true" />
-                </h2>
-            </div>
-            <div class="hidden sm:block md:text-right">
-                <p class="text-xs font-bold text-[#000080]/60 uppercase tracking-widest leading-none">{{ $dashboardNow->format('l') }}</p>
-                <p class="text-lg font-extrabold text-[#000080] leading-none mt-1">{{ $dashboardNow->format('M j, Y') }}</p>
-            </div>
-        </div>
 
         {{-- ╔══════════════════════════════════╗
              ║  DAILY WELLNESS CHECK-IN CARD    ║
@@ -130,64 +121,58 @@
                 endpoint: @js(route('elderly.checkin')),
             })"
             id="daily-checkin-banner"
-            class="mb-6 rounded-3xl p-5 sm:p-6 transition-all border shadow-sm"
-            x-bind:class="checkedIn
-                ? (needsHelp ? 'bg-amber-50/80 border-amber-200 text-amber-950' : 'bg-emerald-50/80 border-emerald-200 text-emerald-950')
-                : 'bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 border-blue-200 text-blue-950'"
+            class="sc-card-quiet mt-6 p-5 sm:p-6"
         >
-            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-4">
                 <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 transition-colors"
-                         x-bind:class="checkedIn
-                            ? (needsHelp ? 'bg-amber-500 text-white' : 'bg-emerald-500 text-white')
-                            : 'bg-[#000080] text-white shadow-md'">
-                        <span x-show="!checkedIn" aria-hidden="true">👋</span>
-                        <span x-show="checkedIn &amp;&amp; !needsHelp" aria-hidden="true">✓</span>
-                        <span x-show="needsHelp" aria-hidden="true">🔔</span>
-                    </div>
+                    {{-- The plate is the only tinted thing here, and it is icon-sized.
+                         This used to be a 48px filled square holding an emoji, inside
+                         a full-width tinted band — three colour events for one fact. --}}
+                    <span class="sc-plate sc-plate-sm"
+                          x-bind:class="checkedIn ? (needsHelp ? 'sc-plate-alert' : 'sc-plate-ok') : ''">
+                        <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>
+                    </span>
                     <div>
                         {{-- Server-rendered text inside x-text: the correct wording
                              is in the HTML for screen readers and for the moment
                              before Alpine boots, then Alpine keeps it in sync. --}}
-                        <h3 class="text-lg font-black tracking-tight" x-text="heading">@if($hasCheckedInToday ?? false)Checked In For Today!@else Daily Wellness Check-in @endif</h3>
-                        <p class="text-xs sm:text-sm font-medium opacity-80 mt-0.5" x-text="subheading">@if($hasCheckedInToday ?? false)You checked in at {{ $todayCheckin?->checked_in_at?->format('g:i A') ?? 'today' }}. Your caregiver knows you're safe!@else Let your caregiver know you are doing well today with a single tap. @endif</p>
+                        <h2 class="sc-h3" x-text="heading">@if($hasCheckedInToday ?? false)Checked in for today@else Daily wellness check-in @endif</h2>
+                        <p class="text-sm mt-1" style="color: var(--sc-muted)" x-text="subheading">@if($hasCheckedInToday ?? false)You checked in at {{ $todayCheckin?->checked_in_at?->format('g:i A') ?? 'today' }}. Your caregiver knows you're safe.@else Let your caregiver know you are doing well today with a single tap. @endif</p>
                     </div>
                 </div>
 
                 <div class="flex items-center gap-3 w-full sm:w-auto">
-                    <div x-show="!checkedIn" class="flex items-center gap-3 w-full sm:w-auto"
+                    <div x-show="!checkedIn" class="flex flex-wrap items-center gap-3 w-full sm:w-auto"
                          @if($hasCheckedInToday ?? false) style="display:none" @endif>
-                        <div class="flex items-center gap-3 w-full sm:w-auto">
-                            <button
-                                type="button"
-                                x-on:click="submit('ok')"
-                                x-bind:disabled="busy"
-                                class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[#000080] hover:bg-blue-900 text-white font-extrabold text-sm shadow-md transition-transform active:scale-95 disabled:opacity-60"
-                            >
-                                <span x-show="!busy">🌟 I'm Doing OK</span>
-                                <span x-show="busy">Sending…</span>
-                            </button>
-                            <button
-                                type="button"
-                                x-on:click="submit('need_help')"
-                                x-bind:disabled="busy"
-                                class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-sm transition-transform active:scale-95 disabled:opacity-60"
-                            >
-                                <span>Need Help?</span>
-                            </button>
-                        </div>
+                        <button
+                            type="button"
+                            x-on:click="submit('ok')"
+                            x-bind:disabled="busy"
+                            class="sc-btn sc-btn-primary flex-1 sm:flex-none"
+                        >
+                            <span x-show="!busy">I'm doing OK</span>
+                            <span x-show="busy">Sending…</span>
+                        </button>
+                        <button
+                            type="button"
+                            x-on:click="submit('need_help')"
+                            x-bind:disabled="busy"
+                            class="sc-btn sc-btn-ghost flex-1 sm:flex-none"
+                        >
+                            Need help?
+                        </button>
                     </div>
 
+                    {{-- Status after check-in: a dot and a word, not a filled badge. --}}
                     <span x-show="checkedIn"
                           @if(!($hasCheckedInToday ?? false)) style="display:none" @endif
-                          class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black"
-                          x-bind:class="needsHelp ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-800'"
-                          x-text="needsHelp ? 'Caregiver notified' : '✓ All Good'">@if(($todayCheckin?->status ?? null) === 'need_help')Caregiver notified@else ✓ All Good @endif</span>
+                          class="sc-mark"
+                          x-bind:class="needsHelp ? 'sc-mark-warn' : 'sc-mark-ok'"><i></i><span
+                          x-text="needsHelp ? 'Caregiver notified' : 'All good'">@if(($todayCheckin?->status ?? null) === 'need_help')Caregiver notified@else All good @endif</span></span>
                 </div>
             </div>
 
-            <p x-show="error" x-cloak x-text="error"
-               class="mt-3 text-sm font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-2.5"></p>
+            <p x-show="error" x-cloak x-text="error" role="alert" class="sc-error mt-3"></p>
         </div>
 
         {{-- ╔══════════════════════════════╗
@@ -207,20 +192,18 @@
             $showProfileNudge = $dashboardProfile && !($completion['is_complete'] ?? false);
         @endphp
         @if($showProfileNudge)
-            <div class="mb-5 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50/70 backdrop-blur-sm px-5 py-4 shadow-sm"
+            <div class="sc-card-quiet mt-5 px-5 py-4"
                  x-data="{ dismissed: false }"
                  x-show="!dismissed"
                  x-transition>
                 <div class="flex items-center justify-between gap-4">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </div>
+                        <span class="sc-plate sc-plate-sm sc-plate-warn">
+                            <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg>
+                        </span>
                         <div>
-                            <p class="text-sm font-extrabold text-gray-900">Complete your health profile</p>
-                            <p class="text-xs text-gray-500 mt-0.5">
+                            <p class="font-semibold" style="color: var(--sc-ink)">Complete your health profile</p>
+                            <p class="text-sm mt-1 flex flex-wrap items-center gap-x-3 gap-y-1" style="color: var(--sc-muted)">
                                 Complete your profile:
                                 <span class="inline-flex items-center gap-1 font-bold {{ $personalStepComplete ? 'text-emerald-700' : 'text-gray-500' }}">
                                     @if($personalStepComplete)
@@ -251,13 +234,13 @@
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0">
                         <a href="{{ route('profile.completion') }}"
-                           class="rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-4 py-2 transition-colors shadow-sm">
-                            Complete Now →
+                           class="sc-btn sc-btn-primary sc-btn-sm">
+                            Complete now
                         </a>
                         <button @click="dismissed = true"
-                                class="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                                class="sc-icon-btn"
                                 aria-label="Dismiss">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                             </svg>
                         </button>
@@ -286,13 +269,14 @@
                 type="button"
                 x-on:click="toggle()"
                 x-bind:aria-pressed="enabled ? 'true' : 'false'"
-                class="inline-flex items-center gap-2.5 min-h-[44px] px-4 py-2.5 rounded-xl border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 transition"
+                class="sc-btn sc-btn-ghost sc-btn-sm"
             >
-                <span aria-hidden="true" class="text-lg">◐</span>
+                <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-contrast"/></svg>
                 <span>High contrast</span>
-                <span class="text-xs font-black px-2 py-0.5 rounded-md"
-                      x-bind:class="enabled ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700 dark:bg-slate-600 dark:text-slate-100'"
-                      x-text="enabled ? 'ON' : 'OFF'"></span>
+                {{-- State reads as a word, and the dot repeats it in colour —
+                     never colour alone. --}}
+                <span class="sc-mark" x-bind:class="enabled ? 'sc-mark-ok' : ''"><i></i><span
+                      x-text="enabled ? 'On' : 'Off'">Off</span></span>
             </button>
         </div>
 
@@ -319,11 +303,9 @@
                  role="tabpanel"
                  aria-labelledby="tab-today">
 
-                <div class="ambient-orb -right-6 -top-6 h-36 w-36 bg-amber-200/35"></div>
-                <div class="ambient-orb -left-8 bottom-0 h-32 w-32 bg-sky-200/25"></div>
 
                 <div class="relative z-10 space-y-5">
-                    <section class="rounded-2xl border border-white/65 bg-white/55 backdrop-blur-sm p-4">
+                    <section class="sc-card p-4 sm:p-5">
                         <div id="today-details" class="pt-1">
                             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                                 {{-- LEFT COLUMN: Mood + Medications --}}
@@ -378,23 +360,21 @@
                  role="tabpanel"
                  aria-labelledby="tab-health">
 
-                <div class="ambient-orb right-2 top-2 h-36 w-36 bg-sky-200/30"></div>
-            <div class="ambient-orb left-10 bottom-0 h-28 w-28 bg-indigo-200/25"></div>
 
             {{-- Health Vitals Header --}}
-            <div class="relative z-10 flex justify-between items-center mb-5 rounded-[1.5rem] border border-white/70 bg-white/55 px-5 py-4 backdrop-blur-md shadow-[0_18px_40px_-32px_rgba(15,23,42,0.32)]">
+            <div class="sc-card flex flex-wrap gap-4 justify-between items-center mb-5 px-5 py-4">
                 <div>
-                    <h3 class="font-extrabold text-xl text-gray-900">Health Vitals</h3>
-                    <p class="text-sm text-gray-500 font-medium">Record and track your daily vitals</p>
+                    <h2 class="sc-h3">Health vitals</h2>
+                    <p class="text-sm mt-1" style="color: var(--sc-muted)">Record and track your daily vitals</p>
                 </div>
                 <div class="flex items-center gap-2">
                     @if($googleFitConnected)
-                        <span class="badge badge-success text-xs shadow-[0_14px_24px_-20px_rgba(34,197,94,0.8)]">
+                        <span class="sc-mark sc-mark-ok">
                             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/></svg>
                             Google Fit Connected
                         </span>
                     @endif
-                    <span class="badge text-base px-4 py-2 border border-white/80 bg-white/75 text-slate-700 shadow-[0_16px_28px_-22px_rgba(15,23,42,0.35)]">
+                    <span class="sc-mark sc-num">
                         {{ $completedVitals }}/{{ $totalRequiredVitals }} recorded
                     </span>
                 </div>
@@ -431,76 +411,33 @@
                  role="tabpanel"
                  aria-labelledby="tab-activity">
 
-                <div class="ambient-orb right-0 top-0 h-40 w-40 bg-rose-200/30"></div>
-            <div class="ambient-orb left-12 bottom-0 h-32 w-32 bg-indigo-200/25"></div>
 
-            <div class="relative z-10 grid grid-cols-1 md:grid-cols-4 gap-4">
-
-                {{-- 1. WELLNESS CENTER --}}
-                     <a href="{{ route('elderly.wellness.index') }}"
-                         class="card-gradient group bg-gradient-to-br from-rose-500 to-pink-600 p-6 min-h-[140px] flex flex-col justify-between text-white shadow-[0_30px_55px_-30px_rgba(225,29,72,0.7)]">
-                    <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl" aria-hidden="true"></div>
-                    <div class="relative z-10">
-                        <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit mb-4">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-                        </div>
-                        <h3 class="text-lg font-extrabold leading-tight">Wellness Center</h3>
-                        <p class="text-pink-100 text-sm font-medium mt-0.5">Relax, stretch, play</p>
-                    </div>
-                    <div class="absolute bottom-4 right-4 h-8 w-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-rose-600 transition-all" aria-hidden="true">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
-                    </div>
-                </a>
-
-                {{-- 2. MY SCHEDULE --}}
-                     <a href="{{ route('calendar.index') }}"
-                         class="card-gradient group bg-gradient-to-br from-orange-400 to-amber-500 p-6 min-h-[140px] flex flex-col justify-between text-white shadow-[0_30px_55px_-30px_rgba(249,115,22,0.66)]">
-                    <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl" aria-hidden="true"></div>
-                    <div class="relative z-10">
-                        <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit mb-4">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                        </div>
-                        <h3 class="text-lg font-extrabold leading-tight">My Schedule</h3>
-                        <p class="text-orange-100 text-sm font-medium mt-0.5">Appointments & reminders</p>
-                    </div>
-                    <div class="absolute bottom-4 right-4 h-8 w-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-orange-600 transition-all" aria-hidden="true">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
-                    </div>
-                </a>
-
-                {{-- 3. CARE MESSAGES --}}
-                     <a href="{{ route('elderly.messages.index') }}"
-                         class="card-gradient group bg-gradient-to-br from-indigo-500 to-sky-600 p-6 min-h-[140px] flex flex-col justify-between text-white shadow-[0_30px_55px_-30px_rgba(79,70,229,0.66)]">
-                    <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl" aria-hidden="true"></div>
-                    <div class="relative z-10">
-                        <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit mb-4">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h8m-8 4h5m-7 6l-3-3H3a2 2 0 01-2-2V7a2 2 0 012-2h18a2 2 0 012 2v8a2 2 0 01-2 2h-8l-5 5"></path></svg>
-                        </div>
-                        <h3 class="text-lg font-extrabold leading-tight">Care Messages</h3>
-                        <p class="text-indigo-100 text-sm font-medium mt-0.5">Message your caregiver</p>
-                    </div>
-                    <div class="absolute bottom-4 right-4 h-8 w-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-indigo-600 transition-all" aria-hidden="true">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
-                    </div>
-                </a>
-
-                {{-- 4. HEALTH ANALYTICS --}}
-                     <a href="{{ route('elderly.vitals.analytics') }}"
-                         class="card-gradient group bg-gradient-to-br from-indigo-500 to-purple-600 p-6 min-h-[140px] flex flex-col justify-between text-white shadow-[0_30px_55px_-30px_rgba(99,102,241,0.66)]">
-                    <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl" aria-hidden="true"></div>
-                    <div class="relative z-10">
-                        <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit mb-4">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                            </svg>
-                        </div>
-                        <h3 class="text-lg font-extrabold leading-tight">Health Analytics</h3>
-                        <p class="text-purple-100 text-sm font-medium mt-0.5">View insights & trends</p>
-                    </div>
-                    <div class="absolute bottom-4 right-4 h-8 w-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-purple-600 transition-all" aria-hidden="true">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
-                    </div>
-                </a>
+            @php
+                /* Four destinations, one shape. These were four full-bleed
+                   gradient cards — rose, orange, indigo, purple — each with a
+                   blurred white orb behind it. That is eight colour events on
+                   one row, for four links that do the same kind of thing.
+                   They are links: they get one calm card each and an icon. */
+                $activityLinks = [
+                    ['route' => 'elderly.wellness.index',  'icon' => 'sprout',   'title' => 'Wellness centre',  'desc' => 'Relax, stretch, play'],
+                    ['route' => 'calendar.index',          'icon' => 'calendar', 'title' => 'My schedule',      'desc' => 'Appointments and reminders'],
+                    ['route' => 'elderly.messages.index',  'icon' => 'chat',     'title' => 'Care messages',    'desc' => 'Message your caregiver'],
+                    ['route' => 'elderly.vitals.analytics','icon' => 'activity', 'title' => 'Health analytics', 'desc' => 'View insights and trends'],
+                ];
+            @endphp
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                @foreach ($activityLinks as $link)
+                    <a href="{{ route($link['route']) }}"
+                       class="sc-card sc-lift group p-5 flex flex-col gap-3 min-h-[9rem] no-underline">
+                        <span class="sc-plate sc-plate-sm">
+                            <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-{{ $link['icon'] }}"/></svg>
+                        </span>
+                        <span class="mt-auto">
+                            <span class="sc-h3 block">{{ $link['title'] }}</span>
+                            <span class="text-sm block mt-1" style="color: var(--sc-muted)">{{ $link['desc'] }}</span>
+                        </span>
+                    </a>
+                @endforeach
             </div>
 
             {{-- Upcoming Events --}}
@@ -553,7 +490,7 @@
                 </div>
                 
                 <button @click="$store.toast.dismiss(t.id)" class="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/90 p-1 focus:outline-none">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
         </template>
@@ -571,18 +508,16 @@
          x-transition:leave="transition ease-in duration-500"
          x-transition:leave-start="opacity-100 translate-y-0"
          x-transition:leave-end="opacity-0 translate-y-12">
-        <div class="bg-white rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.15)] border border-gray-100 p-8 max-w-sm w-full pointer-events-auto text-center relative overflow-hidden">
-            <!-- Decorative background blob -->
-            <div class="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-[#000080]/10 to-transparent -z-10"></div>
-            
-            <div class="w-16 h-16 bg-[#000080]/10 rounded-full flex items-center justify-center mx-auto mb-4 relative z-10">
-                <svg class="w-8 h-8 text-[#000080]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                </svg>
-            </div>
-            
-            <h3 class="text-xl font-[800] text-gray-900 mb-2 relative z-10 font-[Montserrat]">Account Created</h3>
-            <p class="text-gray-600 font-medium leading-relaxed relative z-10 font-[Montserrat]">
+        {{-- One card, one plate, no decorative blob. The old version pinned
+             Montserrat by name and painted itself in raw #000080, so it kept
+             the previous design alive in a modal almost nobody sees. --}}
+        <div class="sc-card sc-card-pop p-8 max-w-sm w-full pointer-events-auto text-center"
+             role="status">
+            <span class="sc-plate sc-plate-ok mx-auto mb-4">
+                <svg class="sc-i w-6 h-6" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>
+            </span>
+            <h2 class="sc-h3">Account created</h2>
+            <p class="mt-2" style="color: var(--sc-muted)">
                 Your account has been created. You can now link your caregiver.
             </p>
         </div>
@@ -599,9 +534,10 @@
             id="senior-voice-mic-btn"
             onclick="window.SilverCareVoice.start()"
             title="Speak a vital reading (e.g. 'Blood pressure 120 over 80')"
-            class="w-14 h-14 rounded-full bg-[#000080] hover:bg-blue-900 text-white shadow-2xl flex items-center justify-center text-2xl transition-all active:scale-95 border-2 border-white focus:outline-none focus:ring-4 focus:ring-blue-300"
+            aria-label="Speak a vital reading"
+            class="sc-icon-btn sc-icon-btn-float"
         >
-            🎙️
+            <svg class="sc-i w-6 h-6" aria-hidden="true" focusable="false"><use href="#i-mic"/></svg>
         </button>
     </div>
 

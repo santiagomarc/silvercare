@@ -184,7 +184,7 @@
                 @if($role === 'caregiver')
                     <x-lucide-chart-column class="h-10 w-10 drop-shadow text-white" aria-hidden="true" />
                 @else
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9 drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9 drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" focusable="false">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M11.25 3.75a8.25 8.25 0 108.25 8.25M11.25 3.75A8.25 8.25 0 0120.4 9M11.25 3.75c2.4 1.9 3.9 4.6 4.2 7.65m-8.7-2.4c.95 1.15 2.35 1.8 3.85 1.8M5.25 12.75h1.5m8.25 0h3" />
                     </svg>
                 @endif
@@ -250,25 +250,25 @@
                         style="border-color: color-mix(in srgb, var(--ai-highlight) 18%, #e2e8f0 82%);"
                         title="Switch style"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" focusable="false">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M7 12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
                         </svg>
                     </button>
                     <button @click="isExpanded = !isExpanded" class="hidden sm:block rounded-full border bg-white/85 p-3 text-slate-600 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md" style="border-color: #e2e8f0;" :title="isExpanded ? 'Shrink panel' : 'Expand panel'">
-                        <svg x-show="!isExpanded" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg x-show="!isExpanded" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" focusable="false">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                         </svg>
-                        <svg x-show="isExpanded" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display:none;">
+                        <svg x-show="isExpanded" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display:none;" aria-hidden="true" focusable="false">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
                         </svg>
                     </button>
                     <button @click="startNewSession()" class="rounded-full border bg-white/85 p-3 text-slate-600 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md" style="border-color: #e2e8f0;" aria-label="Start new session">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" focusable="false">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
                     </button>
                     <button @click="closeChat()" class="rounded-full border bg-white/85 p-3 text-slate-600 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md" style="border-color: #e2e8f0;" aria-label="Close panel">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" focusable="false">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
@@ -346,7 +346,7 @@
                     class="w-full rounded-full border-2 bg-white/95 py-4 pl-6 pr-24 text-lg font-medium text-slate-800 shadow-inner transition placeholder:text-slate-400 focus:outline-none"
                     style="border-color: color-mix(in srgb, var(--ai-highlight) 18%, #dbeafe 82%);"
                     :disabled="isLoading"
-                >
+                 aria-label="Ask SilverCare a question">
 
                 <div class="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-2">
                     <button
@@ -357,7 +357,7 @@
                         title="Voice mode (coming soon)"
                     >
                         <span x-show="input.trim() === ''" class="ai-orb-ring absolute inset-0 rounded-full border" style="border-color: color-mix(in srgb, var(--ai-accent) 40%, transparent 60%);"></span>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" focusable="false">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.3" d="M12 18.75a6.75 6.75 0 006.75-6.75m-13.5 0A6.75 6.75 0 0012 18.75m0 0V22.5m0-3.75H9m3 0h3m-3-6.75a2.25 2.25 0 01-2.25-2.25V6.75a2.25 2.25 0 114.5 0v2.25A2.25 2.25 0 0112 12z" />
                         </svg>
                     </button>
@@ -368,7 +368,7 @@
                         :style="'background: linear-gradient(130deg, var(--ai-accent), var(--ai-highlight)); box-shadow: 0 8px 18px color-mix(in srgb, var(--ai-highlight) 45%, transparent 55%);'"
                         :disabled="isLoading || input.trim() === ''"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 translate-x-[1px] rotate-90" viewBox="0 0 20 20" fill="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 translate-x-[1px] rotate-90" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false">
                             <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
                         </svg>
                     </button>

@@ -88,7 +88,7 @@
                     $categoryIcon = $categoryIcons[$checklist->category] ?? 'clipboard-list';
                 @endphp
                 <span class="sc-plate sc-plate-sm" aria-hidden="true">
-                    <x-dynamic-component :component="'lucide-' . $categoryIcon" class="sc-i w-5 h-5" />
+                    <x-dynamic-component :component="'lucide-' . $categoryIcon" class="sc-i w-5 h-5" aria-hidden="true" />
                 </span>
 
                 {{-- The task --}}
@@ -99,16 +99,14 @@
                             {{ $checklist->task }}
                         </p>
                         @if($checklist->priority === 'high')
-                            <span class="sc-badge sc-badge-alert">High</span>
+                            <span class="sc-mark sc-mark-alert"><i></i>High</span>
                         @elseif($checklist->priority === 'medium')
-                            <span class="sc-badge sc-badge-warn">Med</span>
+                            <span class="sc-mark sc-mark-warn"><i></i>Medium</span>
                         @endif
                     </div>
 
                     <div class="flex items-center gap-2 mt-1.5 flex-wrap">
-                        <span class="sc-badge">
-                            {{ $checklist->category ?? 'Other' }}
-                        </span>
+                        <span class="sc-mark"><i></i>{{ $checklist->category ?? 'Other' }}</span>
                         @if($checklist->due_time)
                             <span class="inline-flex items-center gap-1 sc-num" style="color:var(--sc-muted)">
                                 <x-lucide-clock class="sc-i w-4 h-4" aria-hidden="true" />

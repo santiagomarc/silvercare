@@ -47,7 +47,7 @@
         <div class="w-20 h-20 flex items-center justify-center" aria-hidden="true">
             {{-- Stage -1: Wilting --}}
             <template x-if="stage === -1">
-                <svg viewBox="0 0 100 100" class="w-16 h-16">
+                <svg viewBox="0 0 100 100" class="w-16 h-16" aria-hidden="true" focusable="false">
                     <path class="sc-plant-soil" d="M30 80 L35 100 L65 100 L70 80 Z" stroke-width="2"/>
                     <path class="sc-plant-stem" d="M50 80 Q48 62 54 48" stroke-width="4"/>
                     <path class="sc-plant-dry" d="M54 58 Q72 62 68 74" stroke-width="3"/>
@@ -57,7 +57,7 @@
             </template>
             {{-- Stage 0: Seed --}}
             <template x-if="stage === 0">
-                <svg viewBox="0 0 100 100" class="w-16 h-16">
+                <svg viewBox="0 0 100 100" class="w-16 h-16" aria-hidden="true" focusable="false">
                     <path class="sc-plant-seed" d="M30 80 L35 100 L65 100 L70 80 Z" stroke-width="2"/>
                     <path class="sc-plant-dry" d="M50 80 Q60 60 55 50" stroke-width="3"/>
                     <path class="sc-plant-dry" d="M55 50 Q40 55 45 65" stroke-width="2"/>
@@ -66,7 +66,7 @@
             </template>
             {{-- Stage 1: Seedling --}}
             <template x-if="stage === 1">
-                <svg viewBox="0 0 100 100" class="w-16 h-16">
+                <svg viewBox="0 0 100 100" class="w-16 h-16" aria-hidden="true" focusable="false">
                     <path class="sc-plant-soil" d="M30 80 L35 100 L65 100 L70 80 Z" stroke-width="2"/>
                     <path class="sc-plant-stem" d="M50 80 Q50 70 50 65" stroke-width="4"/>
                     <path class="sc-plant-stem" d="M50 65 Q40 60 40 50 M50 65 Q60 60 60 50" stroke-width="3"/>
@@ -74,7 +74,7 @@
             </template>
             {{-- Stage 2: Growing --}}
             <template x-if="stage === 2">
-                <svg viewBox="0 0 100 100" class="w-16 h-16">
+                <svg viewBox="0 0 100 100" class="w-16 h-16" aria-hidden="true" focusable="false">
                     <path class="sc-plant-soil" d="M30 80 L35 100 L65 100 L70 80 Z" stroke-width="2"/>
                     <path class="sc-plant-stem" d="M50 80 Q55 60 50 45" stroke-width="4"/>
                     <path class="sc-plant-stem" d="M50 65 Q30 55 40 45 M50 65 Q70 55 60 45" stroke-width="3"/>
@@ -82,7 +82,7 @@
             </template>
             {{-- Stage 3: Budding --}}
             <template x-if="stage === 3">
-                <svg viewBox="0 0 100 100" class="w-16 h-16">
+                <svg viewBox="0 0 100 100" class="w-16 h-16" aria-hidden="true" focusable="false">
                     <path class="sc-plant-soil" d="M30 80 L35 100 L65 100 L70 80 Z" stroke-width="2"/>
                     <path class="sc-plant-stem" d="M50 80 Q55 60 50 45" stroke-width="4"/>
                     <path class="sc-plant-stem" d="M50 65 Q30 55 40 45 M50 65 Q70 55 60 45" stroke-width="3"/>
@@ -91,7 +91,7 @@
             </template>
             {{-- Stage 4: Blooming --}}
             <template x-if="stage === 4">
-                <svg viewBox="0 0 100 100" class="w-16 h-16">
+                <svg viewBox="0 0 100 100" class="w-16 h-16" aria-hidden="true" focusable="false">
                     <path class="sc-plant-soil" d="M25 80 L30 100 L70 100 L75 80 Z" stroke-width="2"/>
                     <path class="sc-plant-stem" d="M50 80 Q50 60 50 40" stroke-width="4"/>
                     <path class="sc-plant-stem" d="M50 60 Q30 50 40 40 M50 60 Q70 50 60 40" stroke-width="3"/>

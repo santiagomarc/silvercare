@@ -34,16 +34,16 @@
                     <x-lucide-frown class="sc-i w-12 h-12" x-bind:style="`color: ${color}`" />
                 </template>
                 <template x-if="isSelected(2)">
-                    <x-lucide-frown class="sc-i w-11 h-11" x-bind:style="`color: ${color}`" />
+                    <x-lucide-frown class="sc-i w-11 h-11" aria-hidden="true" x-bind:style="`color: ${color}`" />
                 </template>
                 <template x-if="isSelected(3)">
-                    <x-lucide-meh class="sc-i w-11 h-11" x-bind:style="`color: ${color}`" />
+                    <x-lucide-meh class="sc-i w-11 h-11" aria-hidden="true" x-bind:style="`color: ${color}`" />
                 </template>
                 <template x-if="isSelected(4)">
-                    <x-lucide-smile class="sc-i w-11 h-11" x-bind:style="`color: ${color}`" />
+                    <x-lucide-smile class="sc-i w-11 h-11" aria-hidden="true" x-bind:style="`color: ${color}`" />
                 </template>
                 <template x-if="isSelected(5)">
-                    <x-lucide-laugh class="sc-i w-11 h-11" x-bind:style="`color: ${color}`" />
+                    <x-lucide-laugh class="sc-i w-11 h-11" aria-hidden="true" x-bind:style="`color: ${color}`" />
                 </template>
             </div>
             <p
@@ -63,7 +63,7 @@
                     <span
                         x-show="saving"
                         x-cloak
-                        class="sc-badge"
+                        class="sc-mark"
                         role="status"
                     >
                         <x-lucide-loader-circle class="sc-i w-4 h-4 animate-spin" aria-hidden="true" />
@@ -78,7 +78,7 @@
                         x-transition:leave="transition ease-in duration-150"
                         x-transition:leave-start="opacity-100"
                         x-transition:leave-end="opacity-0"
-                        class="sc-badge sc-badge-ok"
+                        class="sc-mark sc-mark-ok"
                         role="status"
                     >
                         <x-lucide-check class="sc-i w-4 h-4" aria-hidden="true" />

@@ -243,16 +243,16 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
 
             // Distinct icon and wording, not just a colour — dose status must be
             // readable without relying on colour alone (WCAG 1.4.1). `icon` is a
-            // sprite id from partials/sc-icons.blade.php and `css` a badge tone,
+            // sprite id from partials/sc-icons.blade.php and `css` a mark tone,
             // so this matches what MedicationPresenter renders server-side.
             const statusMap = {
-                'taken':        { icon: 'check', text: 'Taken',           css: 'sc-badge-ok'    },
-                'taken-late':   { icon: 'check', text: 'Taken Late',      css: 'sc-badge-warn'  },
-                'missed':       { icon: 'alert', text: 'Missed',          css: 'sc-badge-alert' },
-                'active':       { icon: 'pill',  text: 'Take Now',        css: 'sc-badge-brand' },
-                'upcoming':     { icon: 'clock', text: 'Upcoming',        css: ''               },
-                'pending-sync': { icon: 'undo',  text: 'Waiting to sync', css: 'sc-badge-warn'  },
-                'conflict':     { icon: 'alert', text: 'Needs review',    css: 'sc-badge-alert' },
+                'taken':        { icon: 'check', text: 'Taken',           css: 'sc-mark-ok'    },
+                'taken-late':   { icon: 'check', text: 'Taken late',      css: 'sc-mark-warn'  },
+                'missed':       { icon: 'alert', text: 'Missed',          css: 'sc-mark-alert' },
+                'active':       { icon: 'pill',  text: 'Take now',        css: 'sc-mark-alert' },
+                'upcoming':     { icon: 'clock', text: 'Upcoming',        css: ''              },
+                'pending-sync': { icon: 'undo',  text: 'Waiting to sync', css: 'sc-mark-warn'  },
+                'conflict':     { icon: 'alert', text: 'Needs review',    css: 'sc-mark-alert' },
             };
 
             const s = statusMap[status] || statusMap.upcoming;
@@ -260,8 +260,15 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
                 iconDiv.innerHTML = `<svg class="sc-i w-6 h-6" aria-hidden="true" focusable="false"><use href="#i-${s.icon}"/></svg>`;
             }
             if (statusSpan) {
-                statusSpan.className = `sc-badge ${s.css}`;
-                statusSpan.textContent = s.text;
+                // A dot carries the hue and the word carries the meaning. The
+                // filled badge this replaces failed contrast in dark mode
+                // (amber-on-amber at 3.32:1) and put a coloured bubble on every
+                // dose row, which is the look the redesign exists to remove.
+                statusSpan.className = `sc-mark ${s.css}`.trim();
+                statusSpan.replaceChildren(
+                    document.createElement('i'),
+                    document.createTextNode(s.text),
+                );
             }
             if (title) {
                 if (status === 'taken' || status === 'taken-late') {

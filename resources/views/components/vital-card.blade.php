@@ -56,16 +56,16 @@
             </span>
 
             <div class="flex flex-wrap justify-end items-center gap-1.5" x-show="hasRecorded" x-cloak>
-                <span class="sc-badge {{ $fromGoogleFit ? 'sc-badge-brand' : '' }}">{{ $sourceLabel }}</span>
+                <span class="sc-mark {{ $fromGoogleFit ? 'sc-mark-brand' : '' }}"><i></i>{{ $sourceLabel }}</span>
                 @if($status)
-                    <span class="sc-badge sc-badge-{{ $status['tone'] }}">{{ $status['label'] }}</span>
+                    <span class="sc-mark sc-mark-{{ $status['tone'] }}"><i></i>{{ $status['label'] }}</span>
                 @endif
             </div>
         </div>
 
         {{-- Body: the reading --}}
         <div class="mt-auto pt-2">
-            <h4 class="sc-stat-label" x-text="title"></h4>
+            <h3 class="sc-stat-label" x-text="title"></h3>
 
             <div x-show="hasRecorded" x-cloak>
                 <div class="flex items-baseline gap-2 flex-wrap">
@@ -77,7 +77,7 @@
                         <x-lucide-clock class="sc-i w-4 h-4" aria-hidden="true" />
                         <span class="sc-num" x-text="measuredAt"></span>
                     </span>
-                    <span class="sc-badge sc-badge-ok">Today</span>
+                    <span class="sc-mark sc-mark-ok"><i></i>Today</span>
                 </div>
             </div>
 

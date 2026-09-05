@@ -71,26 +71,23 @@ export default function gardenWellness(checklists, meds, vitals, meta = {}) {
             return `Great momentum: ${this.streakLabel}!`;
         },
 
-        get stageIcon() {
-            if (this.stage === -1) return '🥀';
-            if (this.stage === 0) return '🌰';
-            if (this.stage === 1) return '🌱';
-            if (this.stage === 2) return '🌿';
-            if (this.stage === 3) return '🌷';
-            return '🌸';
-        },
+        /* `stageIcon` used to return one emoji per growth stage. The component
+           now draws each stage as a real SVG (see the x-if templates in
+           elderly-garden.blade.php), nothing reads the getter any more, and an
+           emoji would render differently on every device and be read aloud
+           verbatim by a screen reader. Removed rather than left empty. */
 
         get message() {
             if (this.isWilting) {
-                return "Your plant is wilting. Let's recover it with one action at a time. 🌾";
+                return "Your plant is wilting. Let's recover it with one action at a time.";
             }
 
             const msgs = [
-                "Your plant needs water. Let's do some tasks! 💧",
-                "It's sprouting! Good start! 🌿",
-                "Look at it grow! Keep it up! 🌱",
-                "Almost there! About to bloom! 🌷",
-                "Amazing! Your garden is in full bloom! 🌸",
+                "Your plant needs water. Let's do some tasks!",
+                "It's sprouting! Good start!",
+                "Look at it grow! Keep it up!",
+                "Almost there! About to bloom!",
+                "Amazing! Your garden is in full bloom!",
             ];
             return msgs[this.stage];
         },

@@ -40,8 +40,8 @@
             </span>
 
             <div class="min-w-0">
-                <span class="sc-badge {{ $tone === 'alert' ? 'sc-badge-alert' : ($tone === 'ok' ? 'sc-badge-ok' : 'sc-badge-brand') }}"
-                      :class="currentTone === 'alert' ? 'sc-badge-alert' : (currentTone === 'ok' ? 'sc-badge-ok' : 'sc-badge-brand')"
+                <span class="{{ $tone === 'alert' ? 'sc-chip sc-chip-alert' : 'sc-mark sc-mark-' . ($tone === 'ok' ? 'ok' : 'brand') }}"
+                      :class="currentTone === 'alert' ? 'sc-chip sc-chip-alert' : 'sc-mark sc-mark-' + (currentTone === 'ok' ? 'ok' : 'brand')"
                       x-text="currentTag || currentTypeLabel">{{ $tag ?: $actionType }}</span>
 
                 <h2 class="sc-h3 mt-2" x-text="currentTitle">{{ $headline }}</h2>
@@ -135,7 +135,7 @@
                         <span class="sc-num" style="color:var(--sc-muted)">Step <span x-text="currentStepNumber + i + 1"></span>:</span>
                         <span class="font-semibold" style="color:var(--sc-ink)" x-text="item.title"></span>
                     </p>
-                    <span class="sc-badge flex-none" x-text="item.tag"></span>
+                    <span class="sc-mark flex-none" :class="item.tone ? 'sc-mark-' + item.tone : ''"><i></i><span x-text="item.tag"></span></span>
                 </li>
             </template>
         </ul>

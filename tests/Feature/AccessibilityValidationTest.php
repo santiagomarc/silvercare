@@ -34,7 +34,10 @@ class AccessibilityValidationTest extends TestCase
         // Check for accessible voice assistant button
         $response->assertSee('id="senior-voice-mic-btn"', false);
         $response->assertSee('title="Speak a vital reading', false);
-        // Check for wellness check-in section
-        $response->assertSee('Daily Wellness Check-in', false);
+        // Check for wellness check-in section. Assert the id, not the heading
+        // copy — wording is a design decision that changes, and a test that
+        // pins it fails on a rename while telling you nothing about whether
+        // the section still renders.
+        $response->assertSee('id="daily-checkin-banner"', false);
     }
 }

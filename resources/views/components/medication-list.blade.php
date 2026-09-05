@@ -58,14 +58,14 @@
 
         @forelse($groupedDoses as $timeOfDay => $doses)
             <div class="time-group">
-                <h4 class="sc-eyebrow mb-2 flex items-center gap-2">
+                <h3 class="sc-eyebrow mb-2 flex items-center gap-2">
                     @if($timeOfDay === 'Morning' || $timeOfDay === 'Afternoon')
                         <x-lucide-sun class="sc-i w-5 h-5" aria-hidden="true" />
                     @else
                         <x-lucide-moon class="sc-i w-5 h-5" aria-hidden="true" />
                     @endif
                     {{ $timeOfDay }}
-                </h4>
+                </h3>
                 <div class="space-y-3">
             @foreach($doses as $doseInfo)
                 @php
@@ -128,9 +128,9 @@
                         {{-- Content --}}
                         <div class="flex-grow min-w-0">
                             <div class="flex items-center justify-between gap-3">
-                                <h4 data-med-name class="font-semibold truncate {{ $status['isTaken'] ? 'line-through sc-task-text-done' : '' }}" style="color:var(--sc-ink)">
+                                <h3 data-med-name class="font-semibold truncate {{ $status['isTaken'] ? 'line-through sc-task-text-done' : '' }}" style="color:var(--sc-ink)">
                                     {{ $medication->name }}
-                                </h4>
+                                </h3>
                                 <div class="text-right flex-shrink-0">
                                     <span class="font-semibold sc-num block" style="color:var(--sc-body)">
                                         {{ \Carbon\Carbon::parse($time)->format('g:i A') }}
@@ -155,18 +155,13 @@
                             @if (!empty($instructionTags))
                             <div class="flex flex-wrap gap-2 mt-2">
                                 @foreach($instructionTags as $tag)
-                                    <span class="sc-badge {{ $tag['tone'] ? 'sc-badge-' . $tag['tone'] : '' }}">
-                                        <x-lucide-info class="sc-i w-4 h-4" aria-hidden="true" />
-                                        {{ $tag['text'] }}
-                                    </span>
+                                    <span class="sc-mark {{ $tag['tone'] ? 'sc-mark-' . $tag['tone'] : '' }}"><i></i>{{ $tag['text'] }}</span>
                                 @endforeach
                             </div>
                             @endif
 
                             <div class="flex items-center justify-between mt-3">
-                                <span data-status-label class="sc-badge {{ $status['tone'] ? 'sc-badge-' . $status['tone'] : '' }}">
-                                    {{ $status['status'] }}
-                                </span>
+                                <span data-status-label class="sc-mark {{ $status['tone'] ? 'sc-mark-' . $status['tone'] : '' }}"><i></i>{{ $status['status'] }}</span>
                             </div>
                         </div>
                     </div>

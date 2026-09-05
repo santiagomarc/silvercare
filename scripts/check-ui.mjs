@@ -94,15 +94,48 @@ const contrastProbe = () => {
         return { rgb: parts.slice(0, 3), alpha: parts.length > 3 ? parts[3] : 1 };
     };
     const flatten = (fg, bg, alpha) => fg.map((c, i) => c * alpha + bg[i] * (1 - alpha));
+    /* What is actually painted behind this text?
+       An ancestor-only walk gets this wrong whenever the background comes from
+       a sibling rather than a parent — the tab bar's active pill is an
+       absolutely-positioned sibling under the button, so the walk saw the
+       button's transparent background, jumped to the near-white bar, and
+       reported white-on-white at 1.04:1 for text that is really white on navy.
+
+       elementsFromPoint returns the true paint stack at a point, topmost
+       first, so slicing from the element downward gives every layer beneath
+       it including such siblings. It only works for points inside the
+       viewport, so the ancestor walk stays as the fallback. */
+    const ancestorsOf = (el) => {
+        const chain = [];
+        for (let n = el; n; n = n.parentElement) chain.push(n);
+        return chain;
+    };
     const groundOf = (el) => {
-        let node = el, acc = null;
-        while (node) {
+        let r = el.getBoundingClientRect();
+        /* elementsFromPoint only reports what is currently on screen, and most
+           of a dashboard is below the fold — without this the tall pages fall
+           back to the ancestor walk for nearly every element, which is the
+           very case this function exists to avoid. */
+        if (r.top < 0 || r.bottom > innerHeight) {
+            el.scrollIntoView({ block: 'center', behavior: 'instant' });
+            r = el.getBoundingClientRect();
+        }
+        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        let stack = null;
+        if (cx >= 0 && cy >= 0 && cx <= innerWidth && cy <= innerHeight) {
+            const hit = document.elementsFromPoint(cx, cy);
+            const start = hit.indexOf(el);
+            if (start !== -1) stack = hit.slice(start);
+        }
+        if (!stack) stack = ancestorsOf(el);
+
+        let acc = null;
+        for (const node of stack) {
             const colour = parse(getComputedStyle(node).backgroundColor);
             if (colour && colour.alpha > 0) {
                 acc = acc ? { rgb: flatten(acc.rgb, colour.rgb, acc.alpha), alpha: 1 } : colour;
                 if (acc.alpha >= 1) return acc.rgb;
             }
-            node = node.parentElement;
         }
         return acc ? acc.rgb : [255, 255, 255];
     };
@@ -110,6 +143,14 @@ const contrastProbe = () => {
         const [l1, l2] = [luminance(a), luminance(b)];
         return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
     };
+
+    /* elementsFromPoint ignores anything with `pointer-events: none`, which is
+       exactly how decorative painted layers are usually declared — the tab
+       pill among them. Force them back into hit-testing for the duration of
+       the probe, then undo it, so the paint stack above is complete. */
+    const hitAll = document.createElement('style');
+    hitAll.textContent = '*{pointer-events:auto !important}';
+    document.head.appendChild(hitAll);
 
     const problems = [];
     document.querySelectorAll('p,h1,h2,h3,h4,a,span,li,button,label,td,th,blockquote,figcaption').forEach((el) => {
@@ -132,6 +173,7 @@ const contrastProbe = () => {
             problems.push(`${measured.toFixed(2)}:1 (needs ${required}) — "${own.slice(0, 40)}"`);
         }
     });
+    hitAll.remove();
     return problems;
 };
 
