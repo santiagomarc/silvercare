@@ -1,4 +1,4 @@
-<x-dashboard-layout>
+<x-dashboard-layout sc>
     <x-slot:title>Manage Medications - SilverCare</x-slot:title>
 
     <x-dashboard-nav
@@ -9,185 +9,195 @@
     />
 
     <!-- MAIN CONTENT -->
-    <main class="max-w-[1600px] mx-auto px-6 lg:px-12 py-6">
-        
-        @if(session('success'))
-            <div class="mb-6 bg-green-50 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded-lg shadow-sm flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                {{ session('success') }}
-            </div>
-        @endif
+    <main id="main-content" class="sc-app-main">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 space-y-6">
 
-        @if(($elderlyPatients ?? collect())->count() > 1)
-            <div class="mb-6 rounded-2xl border border-blue-100 bg-blue-50/80 p-4 shadow-sm">
-                <form method="GET" action="{{ route('caregiver.medications.index') }}" class="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <label for="elderly" class="text-sm font-bold text-blue-900">Managing medications for</label>
-                    <select
-                        id="elderly"
-                        name="elderly"
-                        onchange="this.form.submit()"
-                        class="rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800"
-                    >
-                        @foreach(($elderlyPatients ?? collect()) as $patient)
-                            <option value="{{ $patient->id }}" @selected($selectedElderly && $selectedElderly->id === $patient->id)>
-                                {{ $patient->user?->name ?? ('Patient #' . $patient->id) }}
-                            </option>
-                        @endforeach
-                    </select>
-                </form>
-            </div>
-        @endif
-
-        <!-- HEADER WITH ADD BUTTON -->
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <div>
-                <h1 class="text-2xl font-[900] text-gray-900">Medications</h1>
-                <p class="text-gray-500 font-medium text-sm">Managing {{ $selectedElderly->user?->name ?? 'selected patient' }}</p>
-            </div>
-            <a href="{{ route('caregiver.medications.create', ['elderly' => $selectedElderly->id]) }}" class="group flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-5 py-3 rounded-2xl font-[700] shadow-lg shadow-blue-200 hover:-translate-y-0.5 transition-all">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                Add Medication
-            </a>
-        </div>
-
-        <!-- MEDICATIONS GRID -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            @forelse($medications as $medication)
-            <div class="bg-white rounded-[24px] shadow-md border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 group">
-                @php
-                    $scheduleType = $medication->primaryScheduleType();
-                    $weeklyDays = $medication->weeklyDays();
-                    $specificDates = $medication->specificScheduleDates();
-                    $displayTimes = $medication->scheduleTimesForDate(now());
-                    if (empty($displayTimes)) {
-                        $displayTimes = $medication->times_of_day ?? [];
-                    }
-                @endphp
-                <!-- Card Header with Gradient -->
-                <div class="relative p-5 bg-gradient-to-br from-blue-50 to-indigo-50">
-                    <div class="absolute top-0 right-0 -mt-4 -mr-4 w-20 h-20 bg-blue-100 rounded-full opacity-50"></div>
-                    <div class="relative z-10 flex justify-between items-start">
-                        <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200/50">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                        </div>
-                        <div class="flex gap-2">
-                            <a href="{{ route('caregiver.medications.edit', ['medication' => $medication->id, 'elderly' => $selectedElderly->id]) }}" class="w-9 h-9 rounded-xl bg-white shadow flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                            </a>
-                            <form
-                                action="{{ route('caregiver.medications.destroy', $medication->id) }}"
-                                method="POST"
-                                data-confirm="Are you sure you want to delete this medication?"
-                                data-confirm-title="Delete medication?"
-                                data-confirm-icon="warning"
-                                data-confirm-confirm-text="Delete medication"
-                                data-confirm-cancel-text="Keep medication"
-                                data-confirm-elderly="false"
-                            >
-                                @csrf
-                                @method('DELETE')
-                                <input type="hidden" name="elderly_id" value="{{ $selectedElderly->id }}">
-                                <button type="submit" class="w-9 h-9 rounded-xl bg-white shadow flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                    <h3 class="text-xl font-[900] text-gray-900 mt-3">{{ $medication->name }}</h3>
+            @if(session('success'))
+                <div class="sc-flash sc-flash-ok" role="status">
+                    {{ session('success') }}
                 </div>
-                
-                <!-- Card Body -->
-                <div class="p-5">
-                    <!-- Dosage -->
-                    <div class="flex items-center text-gray-700 mb-4">
-                        <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center mr-3">
-                            <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"></path></svg>
-                        </div>
-                        <span class="font-[700]">{{ $medication->dosage }} {{ $medication->dosage_unit }}</span>
-                    </div>
+            @endif
 
-                    <!-- Days of Week -->
-                    @if($scheduleType === 'weekly')
-                        <div class="mb-4">
-                            <p class="text-[10px] font-[800] uppercase tracking-wider text-gray-400 mb-2">Schedule</p>
-                            <div class="flex flex-wrap gap-1.5">
-                                @foreach(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as $index => $shortDay)
-                                    @php $fullDay = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][$index]; @endphp
-                                    <span class="px-2.5 py-1 text-[11px] font-[700] rounded-full {{ in_array($fullDay, $weeklyDays, true) ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400' }}">
-                                        {{ $shortDay }}
-                                    </span>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endif
-
-                    @if($scheduleType === 'daily')
-                        <div class="mb-4">
-                            <p class="text-[10px] font-[800] uppercase tracking-wider text-gray-400 mb-2">Schedule</p>
-                            <span class="px-2.5 py-1 text-[11px] font-[700] rounded-full bg-blue-100 text-blue-700">Every Day</span>
-                        </div>
-                    @endif
-
-                    @if($scheduleType === 'specific_date')
-                        <div class="mb-4">
-                            <p class="text-[10px] font-[800] uppercase tracking-wider text-gray-400 mb-2">Scheduled Dates</p>
-                            <div class="flex flex-wrap gap-1.5">
-                                @foreach($specificDates as $specificDate)
-                                    <span class="px-2.5 py-1 text-[11px] font-[700] rounded-full bg-indigo-100 text-indigo-700">
-                                        {{ \Carbon\Carbon::parse($specificDate)->format('M j') }}
-                                    </span>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endif
-
-                    <!-- Times of Day -->
-                    @if(!empty($displayTimes))
-                        <div class="mb-4">
-                            <p class="text-[10px] font-[800] uppercase tracking-wider text-gray-400 mb-2">Times</p>
-                            <div class="flex flex-wrap gap-2">
-                                @foreach($displayTimes as $time)
-                                    <span class="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-amber-50 to-orange-50 text-amber-700 text-xs font-[700] rounded-xl border border-amber-100">
-                                        <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                        {{ \Carbon\Carbon::parse($time)->format('g:i A') }}
-                                    </span>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endif
-
-                    <!-- Instructions -->
-                    @if($medication->instructions)
-                        <p class="text-sm text-gray-500 italic border-t border-gray-100 pt-3 mt-3">{{ Str::limit($medication->instructions, 80) }}</p>
-                    @endif
+            @if(($elderlyPatients ?? collect())->count() > 1)
+                <div class="sc-card-quiet p-4">
+                    <form method="GET" action="{{ route('caregiver.medications.index') }}" class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <label for="elderly" class="sc-label !mb-0 text-sm font-semibold">Managing medications for</label>
+                        <select
+                            id="elderly"
+                            name="elderly"
+                            onchange="this.form.submit()"
+                            class="sc-select text-sm font-semibold w-full sm:w-auto"
+                        >
+                            @foreach(($elderlyPatients ?? collect()) as $patient)
+                                <option value="{{ $patient->id }}" @selected($selectedElderly && $selectedElderly->id === $patient->id)>
+                                    {{ $patient->user?->name ?? ('Patient #' . $patient->id) }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </form>
                 </div>
+            @endif
 
-                <!-- Card Footer -->
-                <div class="bg-gray-50 px-5 py-3 border-t border-gray-100 flex justify-between items-center">
-                    <span class="text-xs font-[700] px-2.5 py-1 rounded-full {{ $medication->is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600' }}">
-                        {{ $medication->is_active ? '● Active' : '○ Inactive' }}
-                    </span>
-                    @if($medication->track_inventory)
-                        <span class="text-xs font-[700] {{ ($medication->current_stock <= ($medication->low_stock_threshold ?? 5)) ? 'text-red-500' : 'text-gray-500' }}">
-                            📦 Stock: {{ $medication->current_stock ?? 0 }}
-                        </span>
-                    @endif
+            <!-- HEADER WITH ADD BUTTON -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="sc-h3">Active Prescriptions</h2>
+                    <p class="text-sm mt-0.5" style="color:var(--sc-muted)">Managing {{ $selectedElderly->user?->name ?? 'selected patient' }}</p>
                 </div>
-            </div>
-            @empty
-            <div class="col-span-full text-center py-16">
-                <div class="w-20 h-20 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg class="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                </div>
-                <h3 class="text-xl font-[800] text-gray-900 mb-2">No Medications Yet</h3>
-                <p class="text-gray-500 font-medium mb-6">Get started by adding a medication schedule for your patient.</p>
-                <a href="{{ route('caregiver.medications.create', ['elderly' => $selectedElderly->id]) }}" class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-2xl font-[700] shadow-lg shadow-blue-200 hover:-translate-y-0.5 transition-all">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    Add Medication
+                <a href="{{ route('caregiver.medications.create', ['elderly' => $selectedElderly->id]) }}"
+                   class="sc-btn sc-btn-primary w-full sm:w-auto">
+                    <x-lucide-plus class="sc-i w-4 h-4" aria-hidden="true" />
+                    <span>Add Medication</span>
                 </a>
             </div>
-            @endforelse
+
+            <!-- MEDICATIONS GRID -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                @forelse($medications as $medication)
+                    @php
+                        $scheduleType = $medication->primaryScheduleType();
+                        $weeklyDays = $medication->weeklyDays();
+                        $specificDates = $medication->specificScheduleDates();
+                        $displayTimes = $medication->scheduleTimesForDate(now());
+                        if (empty($displayTimes)) {
+                            $displayTimes = $medication->times_of_day ?? [];
+                        }
+                    @endphp
+                    <div class="sc-card sc-lift flex flex-col justify-between overflow-hidden">
+                        <!-- Card Header -->
+                        <div class="p-5 sm:p-6" style="border-bottom: 1px solid var(--sc-line)">
+                            <div class="flex justify-between items-start gap-3">
+                                <div class="sc-plate flex-none" aria-hidden="true">
+                                    <x-lucide-pill class="sc-i w-5 h-5" aria-hidden="true" />
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <a href="{{ route('caregiver.medications.edit', ['medication' => $medication->id, 'elderly' => $selectedElderly->id]) }}"
+                                       class="sc-btn sc-btn-ghost sc-btn-sm !p-2"
+                                       aria-label="Edit {{ $medication->name }}">
+                                        <x-lucide-pencil class="sc-i w-4 h-4" aria-hidden="true" />
+                                    </a>
+                                    <form
+                                        action="{{ route('caregiver.medications.destroy', $medication->id) }}"
+                                        method="POST"
+                                        data-confirm="Are you sure you want to delete this medication?"
+                                        data-confirm-title="Delete medication?"
+                                        data-confirm-icon="warning"
+                                        data-confirm-confirm-text="Delete medication"
+                                        data-confirm-cancel-text="Keep medication"
+                                        data-confirm-elderly="false"
+                                    >
+                                        @csrf
+                                        @method('DELETE')
+                                        <input type="hidden" name="elderly_id" value="{{ $selectedElderly->id }}">
+                                        <button type="submit"
+                                                class="sc-btn sc-btn-ghost sc-btn-sm !p-2 hover:!text-[var(--sc-alert)]"
+                                                aria-label="Delete {{ $medication->name }}">
+                                            <x-lucide-trash-2 class="sc-i w-4 h-4" aria-hidden="true" />
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            <h3 class="sc-h3 text-lg mt-3" style="color:var(--sc-title)">{{ $medication->name }}</h3>
+                            <p class="sc-num font-semibold text-sm mt-0.5" style="color:var(--sc-body)">
+                                {{ $medication->dosage }} {{ $medication->dosage_unit }}
+                            </p>
+                        </div>
+
+                        <!-- Card Body -->
+                        <div class="p-5 sm:p-6 space-y-4 flex-grow">
+                            <!-- Schedule -->
+                            @if($scheduleType === 'weekly')
+                                <div class="space-y-1.5">
+                                    <p class="sc-eyebrow text-xs">Schedule</p>
+                                    <div class="flex flex-wrap gap-1">
+                                        @foreach(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as $index => $shortDay)
+                                            @php
+                                                $fullDay = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][$index];
+                                                $isActiveDay = in_array($fullDay, $weeklyDays, true);
+                                            @endphp
+                                            <span class="sc-badge sc-num text-xs {{ $isActiveDay ? 'sc-badge-brand' : '' }}">
+                                                {{ $shortDay }}
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+
+                            @if($scheduleType === 'daily')
+                                <div class="space-y-1.5">
+                                    <p class="sc-eyebrow text-xs">Schedule</p>
+                                    <span class="sc-badge sc-badge-brand text-xs">Every Day</span>
+                                </div>
+                            @endif
+
+                            @if($scheduleType === 'specific_date')
+                                <div class="space-y-1.5">
+                                    <p class="sc-eyebrow text-xs">Scheduled Dates</p>
+                                    <div class="flex flex-wrap gap-1">
+                                        @foreach($specificDates as $specificDate)
+                                            <span class="sc-badge sc-badge-brand sc-num text-xs">
+                                                {{ \Carbon\Carbon::parse($specificDate)->format('M j') }}
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+
+                            <!-- Times of Day -->
+                            @if(!empty($displayTimes))
+                                <div class="space-y-1.5">
+                                    <p class="sc-eyebrow text-xs">Times</p>
+                                    <div class="flex flex-wrap gap-1.5">
+                                        @foreach($displayTimes as $time)
+                                            <span class="sc-badge sc-num text-xs inline-flex items-center gap-1">
+                                                <x-lucide-clock class="sc-i w-3 h-3" aria-hidden="true" />
+                                                {{ \Carbon\Carbon::parse($time)->format('g:i A') }}
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+
+                            <!-- Instructions -->
+                            @if($medication->instructions)
+                                <div class="sc-card-quiet p-3 text-xs sm:text-sm" style="color:var(--sc-muted)">
+                                    <p class="sc-quote">{{ Str::limit($medication->instructions, 100) }}</p>
+                                </div>
+                            @endif
+                        </div>
+
+                        <!-- Card Footer -->
+                        <div class="sc-card-footer px-5 py-3 flex items-center justify-between gap-3 text-xs">
+                            <span class="sc-mark {{ $medication->is_active ? 'sc-mark-ok' : '' }}">
+                                <i></i>{{ $medication->is_active ? 'Active' : 'Inactive' }}
+                            </span>
+                            @if($medication->track_inventory)
+                                @php $isLow = ($medication->current_stock <= ($medication->low_stock_threshold ?? 5)); @endphp
+                                <span class="sc-num inline-flex items-center gap-1 font-semibold" style="color:var({{ $isLow ? '--sc-alert' : '--sc-muted' }})">
+                                    <x-lucide-package class="sc-i w-3.5 h-3.5" aria-hidden="true" />
+                                    <span>Stock: {{ $medication->current_stock ?? 0 }}</span>
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                @empty
+                    <div class="col-span-full sc-empty py-12">
+                        <span class="sc-plate sc-plate-lg mb-3" aria-hidden="true">
+                            <x-lucide-pill class="sc-i w-8 h-8" aria-hidden="true" />
+                        </span>
+                        <h3 class="sc-h3 text-lg font-bold" style="color:var(--sc-ink)">No Medications Yet</h3>
+                        <p class="max-w-md mx-auto text-sm" style="color:var(--sc-body)">
+                            Get started by adding a medication schedule for your patient.
+                        </p>
+                        <div class="mt-4">
+                            <a href="{{ route('caregiver.medications.create', ['elderly' => $selectedElderly->id]) }}" class="sc-btn sc-btn-primary">
+                                <x-lucide-plus class="sc-i w-4 h-4" aria-hidden="true" />
+                                <span>Add Medication</span>
+                            </a>
+                        </div>
+                    </div>
+                @endforelse
+            </div>
         </div>
     </main>
-
 </x-dashboard-layout>
