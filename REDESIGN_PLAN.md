@@ -19,6 +19,8 @@ schedule and the ownership map.
 | `components/dashboard-nav.blade.php` (the app bar) | done — Phase 0, see §3 |
 | Claude's Phase 1 shared components | done |
 | `profile/edit.blade.php` | done — the first converted dashboard **view** |
+| Gemini's 17 self-contained views | done |
+| Phase 2 — both dashboards | done |
 | Signed-in app | **~11,900 lines across 48 files — this plan** |
 
 `layouts/dashboard.blade.php` still carries two bodies: the new design, and a
@@ -132,9 +134,10 @@ Three things it settles, so nobody re-decides them per page:
 Claude takes the shared components and the heavy/risky pages. Gemini takes the
 self-contained views. See §4.
 
-### Phase 2 — the two dashboards (Claude)
+### Phase 2 — the two dashboards (Claude) — **DONE**
 
-`elderly/dashboard` and `caregiver/dashboard`, once their cards are done.
+`elderly/dashboard` and `caregiver/dashboard` are both converted. Remaining:
+the three chart pages in Phase 3, then the deletion in Phase 4.
 
 ### Phase 3 — charts (Claude)
 
@@ -167,8 +170,8 @@ Shared layer, anything with charts, anything the whole app depends on.
 | 1 | `components/elderly-garden.blade.php` | 136 |
 | 1 | `components/elderly-mood-tracker.blade.php` | 183 |
 | 1 | `components/dropdown.blade.php` + `nav-link` + `responsive-nav-link` + `dropdown-link` | 58 |
-| 2 | `elderly/dashboard.blade.php` | 619 |
-| 2 | `caregiver/dashboard.blade.php` | 801 |
+| 2 | `elderly/dashboard.blade.php` — **done** | 619 |
+| 2 | `caregiver/dashboard.blade.php` — **done** | 801 |
 | 3 | `elderly/vitals/show.blade.php` | 817 |
 | 3 | `elderly/vitals/analytics.blade.php` | 852 |
 | 3 | `caregiver/analytics.blade.php` | 646 |

@@ -1,60 +1,63 @@
-<x-dashboard-layout>
+{{-- ============================================================
+     CAREGIVER DASHBOARD
+     ============================================================
+     Sarah's screen answers "is he alright?" — so the order is:
+     exceptions first (alerts, then the risk briefing), then who we
+     are looking at and how today is going, then the detail a doctor
+     would want (vitals, mood, activity), and the management links last.
+
+     Same components as the senior dashboard, higher density. Semantic
+     colour appears at icon scale (sc-mark, sc-plate) — the only tinted
+     fills on the page are the severity chips on open alerts.
+     ============================================================ --}}
+
+<x-dashboard-layout sc>
     <x-slot:title>Caregiver Dashboard - SilverCare</x-slot:title>
+    <x-slot:bodyClass>sc-page min-h-screen</x-slot:bodyClass>
 
-    @push('styles')
-    <style>
-        /* Scrollbar hiding */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-    </style>
-    @endpush
+    @php
+        $dashboardNow = now()->timezone(config('app.timezone', 'Asia/Manila'));
+        $patientName = $elderlyUser->name ?? $elderly?->username ?? null;
+        $navSubtitle = $dashboardNow->format('l, j F Y') . ($patientName ? ' · Viewing ' . $patientName : '');
+    @endphp
 
-    {{-- Navigation --}}
+    {{-- The app bar owns the page's only <h1>; everything below starts at <h2>. --}}
     <x-dashboard-nav
-        title="Caregiver Dashboard"
+        title="Caregiver dashboard"
+        :subtitle="$navSubtitle"
         role="caregiver"
     />
 
-    {{-- Dashboard Content --}}
-    <main class="max-w-[1600px] mx-auto px-6 lg:px-12 py-5">
+    <main id="main-content"
+          class="sc-ambient sc-stack relative max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 pt-5 pb-12">
 
         <x-flash-messages />
 
         @if(!$elderly)
-            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-2xl mb-6 shadow-sm">
-                <div class="flex items-start">
-                    <div class="flex-shrink-0">
-                        <svg class="h-6 w-6 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                        </svg>
-                    </div>
-                    <div class="ml-4 flex-1">
-                        <h3 class="text-lg font-[800] text-yellow-800">No Patient Assigned Yet</h3>
-                        <p class="text-sm text-yellow-700 mt-1">Generate a linking PIN and share it with your patient. They can scan the QR code or enter the PIN on their dashboard to link instantly.</p>
-
-                        <div class="mt-4">
-                            <a href="{{ route('profile.edit') }}" class="inline-flex items-center justify-center rounded-xl bg-[#000080] px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-900 transition-colors">
-                                Go to Profile to Generate PIN
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            {{-- No patient yet. An empty screen is an invitation: say what goes
+                 here and give the one button that puts it there. --}}
+            <section class="sc-empty" aria-labelledby="no-patient-title">
+                <span class="sc-plate">
+                    <x-lucide-link class="sc-i w-6 h-6" aria-hidden="true" />
+                </span>
+                <h2 id="no-patient-title" class="sc-h3">No patient linked yet</h2>
+                <p>Generate a linking PIN and share it with your patient. They can scan the QR code or enter the PIN on their dashboard to link instantly.</p>
+                <a href="{{ route('profile.edit') }}" class="sc-btn sc-btn-primary">
+                    Go to profile to generate a PIN
+                </a>
+            </section>
 
         @else
 
         @if(($elderlyPatients ?? collect())->count() > 1)
-            <div class="mb-5 rounded-2xl border border-blue-100 bg-blue-50/80 p-4 shadow-sm">
+            <div class="sc-card-quiet px-5 py-4">
                 <form method="GET" action="{{ route('caregiver.dashboard') }}" class="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <label for="elderly" class="text-sm font-bold text-blue-900">Viewing patient</label>
+                    <label for="elderly" class="sc-label mb-0">Viewing patient</label>
                     <select
                         id="elderly"
                         name="elderly"
                         onchange="this.form.submit()"
-                        class="rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800"
+                        class="sc-select sm:max-w-xs"
                     >
                         @foreach(($elderlyPatients ?? collect()) as $patient)
                             <option value="{{ $patient->id }}" @selected(($selectedElderlyId ?? null) === $patient->id)>
@@ -62,21 +65,22 @@
                             </option>
                         @endforeach
                     </select>
-                    <span class="text-xs font-semibold text-blue-700 sm:ml-auto">{{ ($elderlyPatients ?? collect())->count() }} linked patients</span>
+                    <span class="sc-mark sc-mark-brand sm:ml-auto"><i></i><span class="sc-num">{{ ($elderlyPatients ?? collect())->count() }}</span>&nbsp;linked patients</span>
                 </form>
             </div>
         @endif
 
-
         {{-- Urgent alert notifications (H8). Push is the only channel that
              reaches a caregiver whose phone is locked and whose email is unread. --}}
-        <div x-data="pushToggle()" x-show="supported" x-cloak class="mb-6">
-            <div class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 px-5 py-4 shadow-sm">
+        <div x-data="pushToggle()" x-show="supported" x-cloak>
+            <div class="sc-card px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4">
                 <div class="flex items-start gap-3 flex-1">
-                    <span class="mt-0.5 text-xl" aria-hidden="true">🔔</span>
+                    <span class="sc-plate sc-plate-sm">
+                        <x-lucide-bell-ring class="sc-i w-5 h-5" aria-hidden="true" />
+                    </span>
                     <div>
-                        <p class="text-sm font-extrabold text-slate-900 dark:text-white">Urgent alert notifications</p>
-                        <p class="text-xs font-medium text-slate-600 dark:text-slate-300 mt-0.5">
+                        <p class="font-semibold" style="color: var(--sc-ink)">Urgent alert notifications</p>
+                        <p class="text-sm mt-0.5" style="color: var(--sc-muted)">
                             <span x-show="enabled">On for this device — critical and emergency alerts will reach you even when SilverCare is closed.</span>
                             <span x-show="canEnable">Get critical and emergency alerts on this device, even when SilverCare is closed.</span>
                             <span x-show="blocked">Blocked in your browser settings. Allow notifications for this site to turn them back on.</span>
@@ -88,11 +92,9 @@
                     type="button"
                     x-on:click="toggle()"
                     x-bind:disabled="busy"
+                    aria-pressed="false"
                     x-bind:aria-pressed="enabled ? 'true' : 'false'"
-                    class="shrink-0 min-h-[44px] px-5 py-2.5 rounded-xl text-sm font-extrabold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    x-bind:class="enabled
-                        ? 'bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600'
-                        : 'bg-blue-600 text-white hover:bg-blue-700'"
+                    class="sc-btn sc-btn-ghost shrink-0"
                 >
                     <span x-show="busy">Working…</span>
                     <span x-show="showTurnOff">Turn off</span>
@@ -102,26 +104,39 @@
         </div>
 
         @if(($activeAlerts ?? collect())->isNotEmpty())
-            <div class="mb-6 space-y-3" id="clinical-alert-center">
+            {{-- Exceptions first. The severity chip is the one tinted fill this
+                 page allows itself: it marks the single most urgent thing. --}}
+            <section id="clinical-alert-center" class="sc-stack-sm" aria-labelledby="alerts-title">
+                <h2 id="alerts-title" class="sc-h3 flex items-center gap-2">
+                    Active alerts
+                    <span class="sc-badge sc-num">{{ $activeAlerts->count() }}</span>
+                </h2>
+
                 @foreach($activeAlerts as $alert)
-                    <div class="relative overflow-hidden rounded-2xl p-5 border shadow-md transition-all {{ $alert->severity === 'emergency' ? 'bg-red-500/10 border-red-500 text-red-950 dark:text-red-100' : ($alert->severity === 'critical' ? 'bg-rose-500/10 border-rose-400 text-rose-950 dark:text-rose-100' : 'bg-amber-500/10 border-amber-400 text-amber-950 dark:text-amber-100') }}" id="alert-card-{{ $alert->id }}">
+                    @php
+                        $alertTone = in_array($alert->severity, ['emergency', 'critical']) ? 'alert' : 'warn';
+                        $alertIcon = match($alert->severity) {
+                            'emergency' => 'siren',
+                            'critical'  => 'triangle-alert',
+                            default     => 'bell',
+                        };
+                    @endphp
+                    <div class="sc-card p-5" id="alert-card-{{ $alert->id }}">
                         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                            <div class="flex items-start gap-3.5">
-                                <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-xl {{ $alert->severity === 'emergency' ? 'bg-red-600 text-white animate-pulse' : ($alert->severity === 'critical' ? 'bg-rose-600 text-white' : 'bg-amber-500 text-white') }}">
-                                    @if($alert->severity === 'emergency') 🚨 @elseif($alert->severity === 'critical') ⚠️ @else 🔔 @endif
-                                </div>
-                                <div>
+                            <div class="flex items-start gap-3.5 min-w-0">
+                                <span class="sc-plate sc-plate-sm sc-plate-{{ $alertTone }}">
+                                    <x-dynamic-component :component="'lucide-' . $alertIcon" class="sc-i w-5 h-5" aria-hidden="true" />
+                                </span>
+                                <div class="min-w-0">
                                     <div class="flex items-center gap-2 flex-wrap" data-alert-badges>
-                                        <span class="text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-md {{ $alert->severity === 'emergency' ? 'bg-red-600 text-white' : ($alert->severity === 'critical' ? 'bg-rose-600 text-white' : 'bg-amber-500 text-white') }}">
-                                            {{ strtoupper($alert->severity) }}
-                                        </span>
-                                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">{{ $alert->created_at->diffForHumans() }}</span>
+                                        <span class="sc-chip sc-chip-{{ $alertTone }}">{{ ucfirst($alert->severity) }}</span>
+                                        <span class="text-sm" style="color: var(--sc-muted)">{{ $alert->created_at->diffForHumans() }}</span>
                                         @if($alert->isAcknowledged())
-                                            <span data-ack-badge class="text-xs font-bold bg-green-100 text-green-800 dark:bg-green-900/60 dark:text-green-200 px-2 py-0.5 rounded-md">✓ Acknowledged</span>
+                                            <span data-ack-badge class="sc-mark sc-mark-ok"><i></i>Acknowledged</span>
                                         @endif
                                     </div>
-                                    <h4 class="text-base font-extrabold mt-1 text-slate-900 dark:text-white">{{ $alert->title }}</h4>
-                                    <p class="text-sm font-medium text-slate-700 dark:text-slate-200 mt-0.5">{{ $alert->message }}</p>
+                                    <h3 class="sc-h3 mt-1">{{ $alert->title }}</h3>
+                                    <p class="mt-0.5" style="color: var(--sc-body)">{{ $alert->message }}</p>
                                 </div>
                             </div>
 
@@ -131,7 +146,7 @@
                                         type="button"
                                         data-alert-action="acknowledge"
                                         onclick="acknowledgeAlert({{ $alert->id }})"
-                                        class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow transition-colors disabled:opacity-50"
+                                        class="sc-btn sc-btn-ghost sc-btn-sm"
                                     >
                                         Acknowledge
                                     </button>
@@ -141,8 +156,9 @@
                                         type="button"
                                         data-alert-action="resolve"
                                         onclick="resolveAlert({{ $alert->id }})"
-                                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-xl shadow transition-colors disabled:opacity-50"
+                                        class="sc-btn sc-btn-ghost sc-btn-sm"
                                     >
+                                        <x-lucide-check class="sc-i w-4 h-4" aria-hidden="true" />
                                         Resolve
                                     </button>
                                 @endif
@@ -150,7 +166,7 @@
                         </div>
                     </div>
                 @endforeach
-            </div>
+            </section>
 
             {{-- Acknowledge previously called window.location.reload(), which did
                  not repaint reliably — the caregiver clicked and nothing changed
@@ -195,6 +211,9 @@
                             }
                         } else {
                             markCardAcknowledged(card, data.alert);
+                            // Resolve stays available after an acknowledge, so it
+                            // has to come back from the disabled state set above.
+                            card?.querySelectorAll('button').forEach((b) => { b.disabled = false; });
                         }
 
                         window.Alpine?.store('toast')?.show(data.message || 'Alert updated.', 'success');
@@ -213,8 +232,8 @@
                     if (!card.querySelector('[data-ack-badge]')) {
                         const badge = document.createElement('span');
                         badge.setAttribute('data-ack-badge', '');
-                        badge.className = 'text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-700 text-white';
-                        badge.textContent = 'Acknowledged';
+                        badge.className = 'sc-mark sc-mark-ok';
+                        badge.append(document.createElement('i'), 'Acknowledged');
                         card.querySelector('[data-alert-badges]')?.appendChild(badge);
                     }
 
@@ -232,562 +251,423 @@
         @endif
 
         @if(!empty($briefing))
-            <div class="mb-6 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm">
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+            @php
+                $riskLevel = $briefing['risk']['level'] ?? 'low';
+                $riskTone = match($riskLevel) {
+                    'high'     => 'alert',
+                    'moderate' => 'warn',
+                    default    => 'ok',
+                };
+                $checkin = $briefing['today_checkin'] ?? null;
+            @endphp
+            <section class="sc-card p-5 sm:p-6" aria-labelledby="briefing-title">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 flex items-center justify-center text-blue-600 dark:text-blue-400 font-black text-lg">
-                            📊
-                        </div>
+                        <span class="sc-plate sc-plate-sm">
+                            <x-lucide-stethoscope class="sc-i w-5 h-5" aria-hidden="true" />
+                        </span>
                         <div>
-                            <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Daily Clinical Briefing & Risk Overview</h3>
-                            <p class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">Automated safety telemetry updated just now</p>
+                            <h2 id="briefing-title" class="sc-h3">Daily clinical briefing</h2>
+                            <p class="text-sm mt-0.5" style="color: var(--sc-muted)">Automated safety summary from recorded data</p>
                         </div>
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-2.5">
-                        <!-- Risk Score Badge -->
-                        <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-black {{ $briefing['risk']['level'] === 'high' ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/50 dark:text-red-300 dark:border-red-800' : ($briefing['risk']['level'] === 'moderate' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800' : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800') }}">
-                            <span>Risk Score: {{ $briefing['risk']['score'] }}/100</span>
-                            <span class="uppercase">({{ $briefing['risk']['level'] }})</span>
-                        </div>
+                    <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+                        <span class="sc-mark sc-mark-{{ $riskTone }}"><i></i>Risk score <span class="sc-num">{{ $briefing['risk']['score'] }}/100</span>&nbsp;· {{ ucfirst($riskLevel) }}</span>
 
-                        <!-- 7-Day Adherence -->
-                        <div class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-black">
-                            💊 {{ $briefing['medication_adherence']['rate'] }}% Med Adherence
-                        </div>
+                        <span class="sc-mark sc-mark-brand"><i></i><span class="sc-num">{{ $briefing['medication_adherence']['rate'] }}%</span>&nbsp;medication adherence</span>
 
-                        <!-- Today Check-in -->
-                        @if($briefing['today_checkin'])
-                            <div class="px-3 py-1.5 rounded-xl {{ $briefing['today_checkin']->status === 'need_help' ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-900' }} text-xs font-black">
-                                👋 {{ $briefing['today_checkin']->status === 'need_help' ? 'Needs Help' : 'Checked In' }} ({{ $briefing['today_checkin']->checked_in_at?->format('g:i A') ?? 'Today' }})
-                            </div>
+                        @if($checkin)
+                            <span class="sc-mark {{ $checkin->status === 'need_help' ? 'sc-mark-warn' : 'sc-mark-ok' }}"><i></i>{{ $checkin->status === 'need_help' ? 'Needs help' : 'Checked in' }} <span class="sc-num">({{ $checkin->checked_in_at?->format('g:i A') ?? 'Today' }})</span></span>
                         @else
-                            <div class="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 dark:bg-slate-800 dark:text-slate-400 text-xs font-bold">
-                                ⏳ Check-in Pending
-                            </div>
+                            <span class="sc-mark"><i></i>Check-in pending</span>
                         @endif
                     </div>
                 </div>
 
-                <!-- Highlights List -->
                 @if(!empty($briefing['highlights']))
-                    <div class="mt-3.5 grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <ul class="mt-4 pt-4 sc-hair grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
                         @foreach($briefing['highlights'] as $highlight)
-                            <div class="flex items-start gap-2 text-xs font-medium text-slate-700 dark:text-slate-300">
-                                <span class="text-blue-500 font-bold mt-0.5">•</span>
+                            <li class="flex items-start gap-2.5" style="color: var(--sc-body)">
+                                <span class="sc-dot mt-2 flex-shrink-0" aria-hidden="true"></span>
                                 <span>{{ $highlight }}</span>
-                            </div>
+                            </li>
                         @endforeach
-                    </div>
+                    </ul>
                 @endif
-            </div>
+            </section>
         @endif
 
-        <!-- ============================================ -->
-        <!-- TOP ROW: Elder Profile Card + Management Panel -->
-        <!-- ============================================ -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {{-- ============================================
+             TOP ROW: patient card + today's summary
+             ============================================ --}}
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-            <!-- ELDER PROFILE CARD (2 cols) -->
-            <div class="lg:col-span-2 relative overflow-hidden rounded-[24px] bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl p-6 sm:p-8 shadow-card border border-white dark:border-slate-700/50 transition-all hover:shadow-lg flex flex-col justify-between">
-                <!-- Decorative glass shapes to tint the white glass -->
-                <div class="absolute -top-24 -right-24 w-[28rem] h-[28rem] bg-gradient-to-br from-sky-400/40 to-blue-400/40 rounded-full blur-3xl pointer-events-none"></div>
-                <div class="absolute -bottom-24 -left-24 w-80 h-80 bg-gradient-to-tr from-cyan-400/30 to-sky-300/30 rounded-full blur-3xl pointer-events-none"></div>
+            {{-- Patient card (2 cols). One card, one avatar, no glass. The old
+                 version floated two blurred sky-blue orbs behind a translucent
+                 panel; identity does not need a wash. --}}
+            <section class="lg:col-span-2 sc-card p-6 sm:p-8 flex flex-col justify-between" aria-labelledby="patient-name">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                    <span class="sc-avatar sc-avatar-xl">
+                        @if($elderly->profile_photo)
+                            <img src="{{ Storage::url($elderly->profile_photo) }}" alt="">
+                        @else
+                            <span aria-hidden="true">{{ mb_substr($elderlyUser->name ?? $elderly->username ?? 'E', 0, 1) }}</span>
+                        @endif
+                    </span>
 
-                <div class="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                    <!-- Avatar -->
-                    <div class="relative w-20 h-20 sm:w-28 sm:h-28 flex-shrink-0">
-                        <div class="absolute inset-0 bg-gradient-to-br from-sky-400 to-blue-500 rounded-full shadow-lg opacity-40 blur-md transform translate-y-1"></div>
-                        <div class="relative w-full h-full rounded-full bg-white dark:bg-slate-800 flex items-center justify-center border-4 border-white/90 dark:border-slate-700 shadow-sm overflow-hidden z-10">
-                            @if($elderly->profile_photo)
-                                <img src="{{ Storage::url($elderly->profile_photo) }}" alt="{{ $elderlyUser->name ?? 'Elder' }}" class="w-full h-full object-cover">
-                            @else
-                                <span class="text-4xl sm:text-5xl font-black text-sky-500">{{ mb_substr($elderlyUser->name ?? $elderly->username ?? 'E', 0, 1) }}</span>
-                            @endif
-                        </div>
-                    </div>
+                    <div class="flex-1 min-w-0 w-full">
+                        <p class="sc-eyebrow">Your patient</p>
+                        <h2 id="patient-name" class="sc-page-title mt-1">{{ $elderlyUser->name ?? $elderly->username ?? 'Elder' }}</h2>
 
-                    <!-- Elder Details -->
-                    <div class="flex-1 w-full">
-                        <div class="flex items-center justify-between mb-1">
-                            <p class="text-sky-700/80 dark:text-sky-300/80 text-xs font-bold uppercase tracking-widest">Your Patient</p>
-                        </div>
-                        <h2 class="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white mb-3 tracking-tight">{{ $elderlyUser->name ?? $elderly->username ?? 'Elder' }}</h2>
-                        
-                        <div class="flex flex-wrap items-center gap-3 sm:gap-5 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                        <ul class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 font-medium" style="color: var(--sc-body)">
                             @if($elderly->age)
-                                <div class="flex items-center gap-1.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/60 dark:border-slate-600/50 shadow-sm">
-                                    <svg class="w-4 h-4 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                                    <span>{{ $elderly->age }} yrs</span>
-                                </div>
+                                <li class="inline-flex items-center gap-1.5">
+                                    <x-lucide-cake class="sc-i w-4 h-4" aria-hidden="true" />
+                                    <span class="sc-num">{{ $elderly->age }}</span>&nbsp;yrs
+                                </li>
                             @endif
                             @if($elderly->sex)
-                                <div class="flex items-center gap-1.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/60 dark:border-slate-600/50 shadow-sm">
-                                    <svg class="w-4 h-4 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                                    <span>{{ $elderly->sex }}</span>
-                                </div>
+                                <li class="inline-flex items-center gap-1.5">
+                                    <x-lucide-user-round class="sc-i w-4 h-4" aria-hidden="true" />
+                                    {{ $elderly->sex }}
+                                </li>
                             @endif
                             @if($elderly->phone_number)
-                                <div class="flex items-center gap-1.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/60 dark:border-slate-600/50 shadow-sm">
-                                    <svg class="w-4 h-4 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
-                                    <span>{{ $elderly->phone_number }}</span>
-                                </div>
+                                <li class="inline-flex items-center gap-1.5">
+                                    <x-lucide-phone class="sc-i w-4 h-4" aria-hidden="true" />
+                                    <span class="sc-num">{{ $elderly->phone_number }}</span>
+                                </li>
                             @endif
-                        </div>
+                        </ul>
                     </div>
                 </div>
 
-                <!-- Medical Conditions Badge -->
                 @if(!empty($conditions) || !empty($medications) || !empty($allergies))
-                    <div class="relative z-10 mt-6 pt-6 border-t border-sky-100/50 dark:border-slate-700/50">
-                        <div class="flex flex-col gap-4">
-                            @if(!empty($conditions))
-                            <div>
-                                <p class="text-[10px] font-black uppercase tracking-widest text-sky-600/80 dark:text-sky-400/80 mb-2">Conditions</p>
-                                <div class="flex flex-wrap gap-2">
-                                    @foreach($conditions as $condition)
-                                        <span class="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md text-sky-800 dark:text-sky-200 text-xs font-bold px-3 py-1 rounded-full border border-white/80 dark:border-slate-600/50 shadow-sm">{{ $condition }}</span>
+                    <div class="mt-6 pt-6 sc-hair flex flex-col gap-4">
+                        @if(!empty($conditions))
+                        <div>
+                            <h3 class="sc-eyebrow mb-2">Conditions</h3>
+                            <ul class="flex flex-wrap gap-2">
+                                @foreach($conditions as $condition)
+                                    <li class="sc-badge">{{ $condition }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                        @endif
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            @if(!empty($medications))
+                            <div class="flex-1">
+                                <h3 class="sc-eyebrow mb-2">Medications</h3>
+                                <ul class="flex flex-wrap gap-2">
+                                    @foreach($medications as $med)
+                                        <li class="sc-badge sc-badge-brand">
+                                            <x-lucide-pill class="sc-i w-4 h-4" aria-hidden="true" />
+                                            {{ $med }}
+                                        </li>
                                     @endforeach
-                                </div>
+                                </ul>
                             </div>
                             @endif
-                            <div class="flex flex-col sm:flex-row gap-4">
-                                @if(!empty($medications))
-                                <div class="flex-1">
-                                    <p class="text-[10px] font-black uppercase tracking-widest text-sky-600/80 dark:text-sky-400/80 mb-2">Medications</p>
-                                    <div class="flex flex-wrap gap-2">
-                                        @foreach($medications as $med)
-                                            <span class="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md text-blue-800 dark:text-blue-200 text-xs font-bold px-3 py-1 rounded-full border border-white/80 dark:border-slate-600/50 shadow-sm">💊 {{ $med }}</span>
-                                        @endforeach
-                                    </div>
-                                </div>
-                                @endif
-                                @if(!empty($allergies))
-                                <div class="flex-1">
-                                    <p class="text-[10px] font-black uppercase tracking-widest text-sky-600/80 dark:text-sky-400/80 mb-2">Allergies</p>
-                                    <div class="flex flex-wrap gap-2">
-                                        @foreach($allergies as $allergy)
-                                            <span class="bg-red-50/80 dark:bg-red-500/10 backdrop-blur-md text-red-700 dark:text-red-300 text-xs font-bold px-3 py-1 rounded-full border border-red-100 dark:border-red-500/20 shadow-sm">⚠️ {{ $allergy }}</span>
-                                        @endforeach
-                                    </div>
-                                </div>
-                                @endif
+                            @if(!empty($allergies))
+                            <div class="flex-1">
+                                <h3 class="sc-eyebrow mb-2">Allergies</h3>
+                                <ul class="flex flex-wrap gap-2">
+                                    @foreach($allergies as $allergy)
+                                        <li class="sc-badge sc-badge-alert">
+                                            <x-lucide-triangle-alert class="sc-i w-4 h-4" aria-hidden="true" />
+                                            {{ $allergy }}
+                                        </li>
+                                    @endforeach
+                                </ul>
                             </div>
+                            @endif
                         </div>
                     </div>
                 @endif
-            </div>
+            </section>
 
-            <!-- TODAY'S STATS CARD (1 col) -->
-            <div class="bg-white dark:bg-slate-900 rounded-[24px] p-6 sm:p-8 shadow-card border border-slate-100 dark:border-slate-800 flex flex-col justify-between transition-all hover:shadow-lg">
+            {{-- Today's summary (1 col). A bar always has its number beside it. --}}
+            <section class="sc-card p-6 sm:p-8 flex flex-col" aria-labelledby="summary-title">
                 <div class="flex items-center gap-3 mb-6">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                    </div>
-                    <h3 class="font-black text-xl text-slate-900 dark:text-white tracking-tight">Today's Summary</h3>
+                    <span class="sc-plate sc-plate-sm">
+                        <x-lucide-chart-column class="sc-i w-5 h-5" aria-hidden="true" />
+                    </span>
+                    <h2 id="summary-title" class="sc-h3">Today's summary</h2>
                 </div>
-                
+
                 @if(!empty($stats))
+                @php
+                    $vitalsPercent = $stats['vitals_total'] > 0 ? ($stats['vitals_recorded'] / $stats['vitals_total']) * 100 : 0;
+                    $summaryRows = [
+                        [
+                            'label'   => 'Medication adherence',
+                            'value'   => $stats['medication_adherence'] !== null ? $stats['medication_adherence'] . '%' : 'N/A',
+                            'percent' => $stats['medication_adherence'] ?? 0,
+                            'foot'    => $stats['doses_taken'] . ' of ' . $stats['doses_total'] . ' doses taken',
+                            'done'    => $stats['medication_adherence'] === 100,
+                        ],
+                        [
+                            'label'   => 'Daily tasks',
+                            'value'   => $stats['task_completion'] !== null ? $stats['task_completion'] . '%' : 'N/A',
+                            'percent' => $stats['task_completion'] ?? 0,
+                            'foot'    => $stats['tasks_completed'] . ' of ' . $stats['tasks_total'] . ' tasks completed',
+                            'done'    => $stats['task_completion'] === 100,
+                        ],
+                        [
+                            'label'   => 'Vitals recorded',
+                            'value'   => $stats['vitals_recorded'] . '/' . $stats['vitals_total'],
+                            'percent' => $vitalsPercent,
+                            'foot'    => 'Metrics logged today',
+                            'done'    => $stats['vitals_recorded'] === $stats['vitals_total'],
+                        ],
+                    ];
+                @endphp
                 <div class="space-y-5 flex-1">
-                    <!-- Medication Stat -->
-                    <div class="group">
-                        <div class="flex justify-between items-end mb-2">
-                            <span class="text-sm font-bold text-slate-600 dark:text-slate-300">Medication Adherence</span>
-                            <div class="text-right">
-                                <span class="text-lg font-black {{ $stats['medication_adherence'] === 100 ? 'text-emerald-500' : ($stats['medication_adherence'] >= 50 ? 'text-amber-500' : 'text-slate-400') }}">
-                                    @if($stats['medication_adherence'] !== null) {{ $stats['medication_adherence'] }}% @else N/A @endif
-                                </span>
+                    @foreach($summaryRows as $row)
+                        <div>
+                            <div class="flex justify-between items-baseline gap-3 mb-2">
+                                <span class="font-medium" style="color: var(--sc-body)">{{ $row['label'] }}</span>
+                                <span class="sc-num font-bold" style="color: var(--sc-ink)">{{ $row['value'] }}</span>
                             </div>
-                        </div>
-                        <div class="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
-                            <div class="h-full rounded-full transition-all duration-1000 ease-out {{ $stats['medication_adherence'] === 100 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : ($stats['medication_adherence'] >= 50 ? 'bg-gradient-to-r from-amber-400 to-amber-500' : 'bg-slate-300 dark:bg-slate-600') }}" style="width: {{ $stats['medication_adherence'] ?? 0 }}%"></div>
-                        </div>
-                        <p class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mt-1.5 uppercase tracking-wider">{{ $stats['doses_taken'] }} of {{ $stats['doses_total'] }} doses taken</p>
-                    </div>
-                    
-                    <!-- Task Stat -->
-                    <div class="group">
-                        <div class="flex justify-between items-end mb-2">
-                            <span class="text-sm font-bold text-slate-600 dark:text-slate-300">Daily Tasks</span>
-                            <div class="text-right">
-                                <span class="text-lg font-black {{ $stats['task_completion'] === 100 ? 'text-blue-500' : ($stats['task_completion'] >= 50 ? 'text-indigo-500' : 'text-slate-400') }}">
-                                    @if($stats['task_completion'] !== null) {{ $stats['task_completion'] }}% @else N/A @endif
-                                </span>
+                            <div class="sc-progress" role="progressbar" aria-label="{{ $row['label'] }}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ (int) round($row['percent']) }}">
+                                <div class="sc-progress-fill {{ $row['done'] ? 'sc-progress-fill-ok' : '' }}" style="width: {{ $row['percent'] }}%"></div>
                             </div>
+                            <p class="text-sm mt-1.5 sc-num" style="color: var(--sc-muted)">{{ $row['foot'] }}</p>
                         </div>
-                        <div class="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
-                            <div class="h-full rounded-full transition-all duration-1000 ease-out {{ $stats['task_completion'] === 100 ? 'bg-gradient-to-r from-blue-400 to-blue-500' : ($stats['task_completion'] >= 50 ? 'bg-gradient-to-r from-indigo-400 to-indigo-500' : 'bg-slate-300 dark:bg-slate-600') }}" style="width: {{ $stats['task_completion'] ?? 0 }}%"></div>
-                        </div>
-                        <p class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mt-1.5 uppercase tracking-wider">{{ $stats['tasks_completed'] }} of {{ $stats['tasks_total'] }} tasks completed</p>
-                    </div>
-                    
-                    <!-- Vitals Stat -->
-                    <div class="group">
-                        <div class="flex justify-between items-end mb-2">
-                            <span class="text-sm font-bold text-slate-600 dark:text-slate-300">Vitals Recorded</span>
-                            <div class="text-right">
-                                <span class="text-lg font-black {{ $stats['vitals_recorded'] === $stats['vitals_total'] ? 'text-purple-500' : 'text-pink-500' }}">
-                                    {{ $stats['vitals_recorded'] }}/{{ $stats['vitals_total'] }}
-                                </span>
-                            </div>
-                        </div>
-                        <div class="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
-                            @php $vp = $stats['vitals_total'] > 0 ? ($stats['vitals_recorded'] / $stats['vitals_total']) * 100 : 0; @endphp
-                            <div class="h-full rounded-full transition-all duration-1000 ease-out {{ $vp === 100 ? 'bg-gradient-to-r from-purple-400 to-purple-500' : 'bg-gradient-to-r from-pink-400 to-pink-500' }}" style="width: {{ $vp }}%"></div>
-                        </div>
-                        <p class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mt-1.5 uppercase tracking-wider">Metrics logged today</p>
-                    </div>
+                    @endforeach
                 </div>
                 @else
-                    <div class="flex-1 flex flex-col items-center justify-center py-8 text-center">
-                        <div class="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-3">
-                            <svg class="w-8 h-8 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
-                        </div>
-                        <p class="text-sm font-bold text-slate-500 dark:text-slate-400">No stats available</p>
-                        <p class="text-xs font-semibold text-slate-400 dark:text-slate-500 mt-1">Check back later today</p>
+                    <div class="sc-empty flex-1 py-8">
+                        <x-lucide-chart-column class="sc-i w-8 h-8" style="color: var(--sc-muted)" aria-hidden="true" />
+                        <p class="font-semibold" style="color: var(--sc-ink)">No stats available</p>
+                        <p class="text-sm">Check back later today</p>
                     </div>
                 @endif
-            </div>
+            </section>
 
         </div>
 
-        <!-- ============================================ -->
-        <!-- CARE MANAGEMENT PANEL (Action Buttons) -->
-        <!-- ============================================ -->
+        {{-- ============================================
+             CARE MANAGEMENT — six destinations, one shape
+             ============================================
+             These were six full-bleed gradient tiles, each with a blurred
+             white orb. They are links: one calm card each and an icon. --}}
         @php
             $careRouteParams = $selectedElderlyId ? ['elderly' => $selectedElderlyId] : [];
+            $careLinks = [
+                ['href' => route('caregiver.medications.index', $careRouteParams), 'icon' => 'pill',            'title' => 'Medications', 'desc' => 'Manage schedules'],
+                ['href' => route('caregiver.checklists.index', $careRouteParams),  'icon' => 'clipboard-check', 'title' => 'Checklists',  'desc' => 'Daily tasks'],
+                ['href' => route('caregiver.analytics', $careRouteParams),         'icon' => 'chart-column',    'title' => 'Analytics',   'desc' => 'View insights'],
+                ['href' => route('caregiver.messages.index', $careRouteParams),    'icon' => 'message-square',  'title' => 'Messages',    'desc' => 'Chat with patient'],
+                ['href' => route('caregiver.patients.index'),                      'icon' => 'users',           'title' => 'My patients', 'desc' => 'Manage patients'],
+                ['href' => route('profile.edit'),                                  'icon' => 'user',            'title' => 'My profile',  'desc' => 'Edit your info'],
+            ];
         @endphp
-        <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
-            
-            <!-- Manage Medications -->
-            <a href="{{ route('caregiver.medications.index', $careRouteParams) }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
-                <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl"></div>
-                <div class="relative p-5 flex flex-col justify-between h-full z-10">
-                    <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                    </div>
-                    <div>
-                        <h3 class="text-lg font-[900] text-white leading-tight">Medications</h3>
-                        <p class="text-blue-100 text-xs font-medium mt-0.5">Manage schedules</p>
-                    </div>
-                    <div class="absolute bottom-4 right-4 h-8 w-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-blue-600 transition-all">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
-                    </div>
-                </div>
-            </a>
+        <section aria-labelledby="manage-title">
+            <h2 id="manage-title" class="sc-eyebrow mb-3">Manage care</h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+                @foreach($careLinks as $link)
+                    <a href="{{ $link['href'] }}"
+                       class="sc-card sc-lift group p-5 flex flex-col gap-3 min-h-[8rem] no-underline">
+                        <span class="flex items-start justify-between gap-2">
+                            <span class="sc-plate sc-plate-sm">
+                                <x-dynamic-component :component="'lucide-' . $link['icon']" class="sc-i w-5 h-5" aria-hidden="true" />
+                            </span>
+                            <x-lucide-chevron-right class="sc-i w-5 h-5 mt-2 transition-transform group-hover:translate-x-0.5" style="color: var(--sc-muted)" aria-hidden="true" />
+                        </span>
+                        <span class="mt-auto">
+                            <span class="font-semibold block" style="color: var(--sc-ink)">{{ $link['title'] }}</span>
+                            <span class="text-sm block mt-0.5" style="color: var(--sc-muted)">{{ $link['desc'] }}</span>
+                        </span>
+                    </a>
+                @endforeach
+            </div>
+        </section>
 
-            <!-- Manage Checklists -->
-            <a href="{{ route('caregiver.checklists.index', $careRouteParams) }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg shadow-green-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
-                <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl"></div>
-                <div class="relative p-5 flex flex-col justify-between h-full z-10">
-                    <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-                    </div>
-                    <div>
-                        <h3 class="text-lg font-[900] text-white leading-tight">Checklists</h3>
-                        <p class="text-green-100 text-xs font-medium mt-0.5">Daily tasks</p>
-                    </div>
-                    <div class="absolute bottom-4 right-4 h-8 w-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-green-600 transition-all">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
-                    </div>
-                </div>
-            </a>
+        {{-- ============================================
+             MAIN CONTENT: mood + vitals | activity
+             ============================================ --}}
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
 
-            <!-- Health Analytics -->
-            <a href="{{ route('caregiver.analytics', $careRouteParams) }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 shadow-lg shadow-purple-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
-                <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl"></div>
-                <div class="relative p-5 flex flex-col justify-between h-full z-10">
-                    <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                    </div>
-                    <div>
-                        <h3 class="text-lg font-[900] text-white leading-tight">Analytics</h3>
-                        <p class="text-purple-100 text-xs font-medium mt-0.5">View insights</p>
-                    </div>
-                    <div class="absolute bottom-4 right-4 h-8 w-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-purple-600 transition-all">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
-                    </div>
-                </div>
-            </a>
+            <div class="lg:col-span-8 sc-stack">
 
-            <!-- Messages -->
-            <a href="{{ route('caregiver.messages.index', $careRouteParams) }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-sky-600 shadow-lg shadow-indigo-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
-                <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl"></div>
-                <div class="relative p-5 flex flex-col justify-between h-full z-10">
-                    <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h8m-8 4h5m-7 6l-3-3H3a2 2 0 01-2-2V7a2 2 0 012-2h18a2 2 0 012 2v8a2 2 0 01-2 2h-8l-5 5z"></path></svg>
-                    </div>
-                    <div>
-                        <h3 class="text-lg font-[900] text-white leading-tight">Messages</h3>
-                        <p class="text-indigo-100 text-xs font-medium mt-0.5">Chat with patient</p>
-                    </div>
-                    <div class="absolute bottom-4 right-4 h-8 w-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-indigo-600 transition-all">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
-                    </div>
-                </div>
-            </a>
-
-<!-- My Patients -->
-            <a href="{{ route('caregiver.patients.index') }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 shadow-lg shadow-teal-200/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
-                <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/20 blur-xl"></div>
-                <div class="relative p-5 flex flex-col justify-between h-full z-10">
-                    <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                    </div>
-                    <div>
-                        <h3 class="text-lg font-[900] text-white leading-tight">My Patients</h3>
-                        <p class="text-teal-100 text-xs font-medium mt-0.5">Manage patients</p>
-                    </div>
-                    <div class="absolute bottom-4 right-4 h-8 w-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-teal-600 transition-all">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
-                    </div>
-                </div>
-            </a>
-
-            <!-- My Profile -->
-            <a href="{{ route('profile.edit') }}" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-600 to-gray-800 shadow-lg shadow-gray-400/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 min-h-[120px]">
-                <div class="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full bg-white/10 blur-xl"></div>
-                <div class="relative p-5 flex flex-col justify-between h-full z-10">
-                    <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm w-fit">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                    </div>
-                    <div>
-                        <h3 class="text-lg font-[900] text-white leading-tight">My Profile</h3>
-                        <p class="text-gray-300 text-xs font-medium mt-0.5">Edit your info</p>
-                    </div>
-                    <div class="absolute bottom-4 right-4 h-8 w-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-gray-700 transition-all">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <!-- ============================================ -->
-        <!-- MAIN CONTENT: 2-Column Layout -->
-        <!-- ============================================ -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-            <!-- LEFT COLUMN (8/12): Mood + Vitals -->
-            <div class="lg:col-span-8 space-y-6">
-                
-                <!-- MOOD TRACKER (Elder's Mood) -->
-                <div class="bg-gradient-to-br from-amber-50 to-orange-100 rounded-2xl p-6 md:p-8 shadow-lg border border-amber-200 dark:from-slate-900 dark:to-slate-800 dark:border-slate-700 dark:shadow-[0_24px_60px_-30px_rgba(2,6,23,0.8)]">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-[800] text-lg text-gray-900 dark:text-slate-100 flex items-center gap-2">
-                            <span class="text-2xl">😊</span> {{ $elderlyUser->name ?? 'Elder' }}'s Mood Today
-                        </h3>
+                {{-- Mood. The face is the same Lucide set the senior's tracker
+                     uses, coloured from the shared --sc-mood-N scale, so what
+                     Arthur tapped is exactly what Sarah sees. --}}
+                <section class="sc-card p-6" aria-labelledby="mood-title">
+                    <div class="flex items-center justify-between gap-4 mb-4">
+                        <h2 id="mood-title" class="sc-h3">{{ $elderlyUser->name ?? 'Elder' }}'s mood today</h2>
                         @if($mood)
-                            <span class="text-xs text-gray-500 dark:text-slate-400 font-medium">{{ $mood->measured_at->diffForHumans() }}</span>
+                            <span class="text-sm whitespace-nowrap" style="color: var(--sc-muted)">{{ $mood->measured_at->diffForHumans() }}</span>
                         @endif
                     </div>
-                    
+
                     @if($mood)
                         @php
-                            $moodEmojis = [1 => '😢', 2 => '😕', 3 => '😐', 4 => '🙂', 5 => '😊'];
-                            $moodLabels = [1 => 'Very Sad', 2 => 'Sad', 3 => 'Neutral', 4 => 'Happy', 5 => 'Very Happy'];
-                            $moodColors = [1 => 'text-red-600', 2 => 'text-orange-500', 3 => 'text-gray-600', 4 => 'text-green-500', 5 => 'text-green-600'];
-                            $moodValue = (int)$mood->value;
+                            $moodValue = (int) $mood->value;
+                            $moodLabels = [1 => 'Very sad', 2 => 'Sad', 3 => 'Neutral', 4 => 'Happy', 5 => 'Very happy'];
+                            $moodIcons  = [1 => 'frown', 2 => 'frown', 3 => 'meh', 4 => 'smile', 5 => 'laugh'];
+                            $moodIcon   = $moodIcons[$moodValue] ?? 'meh';
+                            $moodColor  = 'var(--sc-mood-' . (($moodValue >= 1 && $moodValue <= 5) ? $moodValue : 3) . ')';
                         @endphp
-                        <div class="flex items-center gap-6">
-                            <div class="text-6xl">{{ $moodEmojis[$moodValue] ?? '😐' }}</div>
-                            <div>
-                                <p class="font-[900] text-2xl {{ $moodColors[$moodValue] ?? 'text-gray-600' }}">{{ $moodLabels[$moodValue] ?? 'Unknown' }}</p>
+                        <div class="flex items-center gap-5">
+                            <span class="sc-card-quiet w-20 h-20 flex-shrink-0 flex items-center justify-center">
+                                <x-dynamic-component :component="'lucide-' . $moodIcon" class="sc-i w-11 h-11" style="color: {{ $moodColor }}" aria-hidden="true" />
+                            </span>
+                            <div class="min-w-0">
+                                <p class="sc-h3">{{ $moodLabels[$moodValue] ?? 'Unknown' }}</p>
                                 @if($mood->notes)
-                                    <p class="text-gray-500 dark:text-slate-400 text-sm mt-1">{{ $mood->notes }}</p>
+                                    <p class="text-sm mt-1" style="color: var(--sc-muted)">{{ $mood->notes }}</p>
                                 @endif
                             </div>
                         </div>
-                        <!-- Mood Scale Indicator -->
-                        <div class="mt-4 flex items-center space-x-2">
-                            @foreach($moodEmojis as $level => $emoji)
-                                <div class="flex-1 h-2.5 rounded-full {{ $moodValue >= $level ? 'bg-amber-400' : 'bg-gray-200 dark:bg-slate-700' }}"></div>
+                        {{-- Scale: five segments, the number spoken alongside. --}}
+                        <div class="mt-4 flex items-center gap-2" role="img" aria-label="Mood {{ $moodValue }} out of 5">
+                            @foreach($moodLabels as $level => $label)
+                                <div class="sc-progress flex-1">
+                                    <div class="sc-progress-fill" style="width: {{ $moodValue >= $level ? 100 : 0 }}%; background: {{ $moodColor }}"></div>
+                                </div>
                             @endforeach
                         </div>
                     @else
-                        <div class="text-center py-4">
-                            <span class="text-5xl mb-2 block opacity-50">😶</span>
-                            <p class="text-slate-600 dark:text-slate-300 italic font-semibold">No mood recorded today</p>
+                        <div class="sc-empty py-8">
+                            <x-lucide-meh class="sc-i w-8 h-8" style="color: var(--sc-muted)" aria-hidden="true" />
+                            <p class="font-semibold" style="color: var(--sc-ink)">No mood recorded today</p>
                         </div>
                     @endif
-                </div>
+                </section>
 
-                <!-- HEALTH VITALS GRID -->
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="font-[800] text-xl text-gray-900">Health Vitals</h3>
-                    <span class="text-xs font-bold text-gray-400 bg-white px-3 py-1.5 rounded-full border border-gray-200">Today's Records</span>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Vital Card: Heart Rate -->
-                    <div class="bg-white rounded-[24px] p-6 shadow-md border border-gray-100 hover:shadow-lg transition-all h-44 flex flex-col justify-between group">
-                        <div class="flex justify-between items-start">
-                            <div class="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-                            </div>
-                            @if($vitals['heart_rate'])
-                                <span class="text-[10px] font-bold {{ $vitals['heart_rate']['status']['bg'] }} {{ $vitals['heart_rate']['status']['text'] }} px-2 py-1 rounded-full">{{ $vitals['heart_rate']['status']['label'] }}</span>
-                            @endif
-                        </div>
-                        <div>
-                            <h4 class="font-[800] text-gray-500 text-sm uppercase tracking-wide mb-1">Heart Rate</h4>
-                            @if($vitals['heart_rate'])
-                                <div class="flex items-baseline gap-2">
-                                    <span class="text-3xl font-[900] text-gray-900">{{ intval($vitals['heart_rate']['metric']->value) }}</span>
-                                    <span class="text-base font-[700] text-gray-400">bpm</span>
-                                </div>
-                                <p class="text-sm font-[700] text-gray-400 mt-1">{{ $vitals['heart_rate']['metric']->measured_at->format('g:i A') }}</p>
-                            @else
-                                <span class="text-lg text-gray-300 font-medium">No record today</span>
-                            @endif
-                        </div>
+                {{-- Vitals. Status is a word with a dot beside it, never a fill;
+                     the presenter's colour is folded into one of three tones. --}}
+                @php
+                    $vitalTone = fn ($color) => match($color) {
+                        'red'   => 'alert',
+                        'green' => 'ok',
+                        'gray'  => '',
+                        default => 'warn',
+                    };
+                    $vitalTiles = [
+                        ['key' => 'heart_rate',     'title' => 'Heart rate',     'icon' => 'heart-pulse', 'unit' => 'bpm',   'value' => fn ($m) => intval($m->value)],
+                        ['key' => 'blood_pressure', 'title' => 'Blood pressure', 'icon' => 'activity',    'unit' => 'mmHg',  'value' => fn ($m) => $m->value_text],
+                        ['key' => 'sugar_level',    'title' => 'Sugar level',    'icon' => 'droplet',     'unit' => 'mg/dL', 'value' => fn ($m) => intval($m->value)],
+                        ['key' => 'temperature',    'title' => 'Temperature',    'icon' => 'thermometer', 'unit' => '°C',    'value' => fn ($m) => number_format($m->value, 1)],
+                    ];
+                @endphp
+                <section aria-labelledby="vitals-title">
+                    <div class="flex justify-between items-center gap-4 mb-3">
+                        <h2 id="vitals-title" class="sc-h3">Health vitals</h2>
+                        <span class="sc-mark"><i></i>Today's records</span>
                     </div>
-
-                    <!-- Vital Card: Blood Pressure -->
-                    <div class="bg-white rounded-[24px] p-6 shadow-md border border-gray-100 hover:shadow-lg transition-all h-44 flex flex-col justify-between group">
-                        <div class="flex justify-between items-start">
-                            <div class="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-500 group-hover:scale-110 transition-transform">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                            </div>
-                            @if($vitals['blood_pressure'])
-                                <span class="text-[10px] font-bold {{ $vitals['blood_pressure']['status']['bg'] }} {{ $vitals['blood_pressure']['status']['text'] }} px-2 py-1 rounded-full">{{ $vitals['blood_pressure']['status']['label'] }}</span>
-                            @endif
-                        </div>
-                        <div>
-                            <h4 class="font-[800] text-gray-500 text-sm uppercase tracking-wide mb-1">Blood Pressure</h4>
-                            @if($vitals['blood_pressure'])
-                                <div class="flex items-baseline gap-2">
-                                    <span class="text-3xl font-[900] text-gray-900">{{ $vitals['blood_pressure']['metric']->value_text }}</span>
-                                    <span class="text-base font-[700] text-gray-400">mmHg</span>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        @foreach($vitalTiles as $tile)
+                            @php $reading = $vitals[$tile['key']] ?? null; @endphp
+                            <div class="sc-stat flex flex-col min-h-[11rem]">
+                                <div class="flex justify-between items-start gap-3">
+                                    <span class="sc-plate sc-plate-sm">
+                                        <x-dynamic-component :component="'lucide-' . $tile['icon']" class="sc-i w-5 h-5" aria-hidden="true" />
+                                    </span>
+                                    @if($reading)
+                                        @php $tone = $vitalTone($reading['status']['color'] ?? 'gray'); @endphp
+                                        <span class="sc-mark {{ $tone ? 'sc-mark-' . $tone : '' }}"><i></i>{{ $reading['status']['label'] }}</span>
+                                    @endif
                                 </div>
-                                <p class="text-sm font-[700] text-gray-400 mt-1">{{ $vitals['blood_pressure']['metric']->measured_at->format('g:i A') }}</p>
-                            @else
-                                <span class="text-lg text-gray-300 font-medium">No record today</span>
-                            @endif
-                        </div>
-                    </div>
-
-                    <!-- Vital Card: Sugar Level -->
-                    <div class="bg-white rounded-[24px] p-6 shadow-md border border-gray-100 hover:shadow-lg transition-all h-44 flex flex-col justify-between group">
-                        <div class="flex justify-between items-start">
-                            <div class="w-12 h-12 bg-pink-50 rounded-2xl flex items-center justify-center text-pink-500 group-hover:scale-110 transition-transform">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                            </div>
-                            @if($vitals['sugar_level'])
-                                <span class="text-[10px] font-bold {{ $vitals['sugar_level']['status']['bg'] }} {{ $vitals['sugar_level']['status']['text'] }} px-2 py-1 rounded-full">{{ $vitals['sugar_level']['status']['label'] }}</span>
-                            @endif
-                        </div>
-                        <div>
-                            <h4 class="font-[800] text-gray-500 text-sm uppercase tracking-wide mb-1">Sugar Level</h4>
-                            @if($vitals['sugar_level'])
-                                <div class="flex items-baseline gap-2">
-                                    <span class="text-3xl font-[900] text-gray-900">{{ intval($vitals['sugar_level']['metric']->value) }}</span>
-                                    <span class="text-base font-[700] text-gray-400">mg/dL</span>
+                                <div class="mt-auto pt-4">
+                                    <h3 class="sc-stat-label">{{ $tile['title'] }}</h3>
+                                    @if($reading)
+                                        <div class="flex items-baseline gap-2 flex-wrap">
+                                            <span class="sc-stat-value sc-num">{{ $tile['value']($reading['metric']) }}</span>
+                                            <span class="font-semibold" style="color: var(--sc-muted)">{{ $tile['unit'] }}</span>
+                                        </div>
+                                        <p class="flex items-center gap-1.5 text-sm mt-2" style="color: var(--sc-muted)">
+                                            <x-lucide-clock class="sc-i w-4 h-4" aria-hidden="true" />
+                                            <span class="sc-num">{{ $reading['metric']->measured_at->format('g:i A') }}</span>
+                                        </p>
+                                    @else
+                                        <p class="mt-2 font-medium" style="color: var(--sc-muted)">No record today</p>
+                                    @endif
                                 </div>
-                                <p class="text-sm font-[700] text-gray-400 mt-1">{{ $vitals['sugar_level']['metric']->measured_at->format('g:i A') }}</p>
-                            @else
-                                <span class="text-lg text-gray-300 font-medium">No record today</span>
-                            @endif
-                        </div>
-                    </div>
-
-                    <!-- Vital Card: Temperature -->
-                    <div class="bg-white rounded-[24px] p-6 shadow-md border border-gray-100 hover:shadow-lg transition-all h-44 flex flex-col justify-between group">
-                        <div class="flex justify-between items-start">
-                            <div class="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                             </div>
-                            @if($vitals['temperature'])
-                                <span class="text-[10px] font-bold {{ $vitals['temperature']['status']['bg'] }} {{ $vitals['temperature']['status']['text'] }} px-2 py-1 rounded-full">{{ $vitals['temperature']['status']['label'] }}</span>
-                            @endif
-                        </div>
-                        <div>
-                            <h4 class="font-[800] text-gray-500 text-sm uppercase tracking-wide mb-1">Temperature</h4>
-                            @if($vitals['temperature'])
-                                <div class="flex items-baseline gap-2">
-                                    <span class="text-3xl font-[900] text-gray-900">{{ number_format($vitals['temperature']['metric']->value, 1) }}</span>
-                                    <span class="text-base font-[700] text-gray-400">°C</span>
-                                </div>
-                                <p class="text-sm font-[700] text-gray-400 mt-1">{{ $vitals['temperature']['metric']->measured_at->format('g:i A') }}</p>
-                            @else
-                                <span class="text-lg text-gray-300 font-medium">No record today</span>
-                            @endif
-                        </div>
+                        @endforeach
                     </div>
-                </div>
+                </section>
             </div>
 
-            <!-- RIGHT COLUMN (4/12): Recent Activity -->
-            <div class="lg:col-span-4 space-y-6">
-                
-                <!-- Recent Activity -->
-                <div class="bg-white rounded-[24px] shadow-md border border-gray-100 p-6 flex flex-col dark:bg-slate-900 dark:border-slate-800 dark:shadow-[0_24px_60px_-30px_rgba(2,6,23,0.8)]" style="height: 490px;">
-                    <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                        <h3 class="font-[800] text-lg text-gray-900 dark:text-slate-100">Recent Activity</h3>
-                        <span class="text-xs text-gray-400 dark:text-slate-400 font-bold">Last 7 days</span>
+            <div class="lg:col-span-4 sc-stack">
+
+                {{-- Recent activity. The presenter still hands over an emoji per
+                     row; the view maps the notification type to a Lucide glyph
+                     and its colour to a plate tone, so the list reads in one
+                     weight and survives high contrast. --}}
+                @php
+                    $activityIcons = [
+                        'notification_medication_taken'            => 'pill',
+                        'notification_medication_taken_late'       => 'clock',
+                        'notification_medication_missed'           => 'circle-x',
+                        'notification_medication_refill'           => 'pill',
+                        'notification_medication_refill_caregiver' => 'pill',
+                        'notification_caregiver_unlinked'          => 'link',
+                        'notification_task_completed'              => 'circle-check',
+                        'notification_vitals_recorded'             => 'activity',
+                        'notification_daily_reminder'              => 'bell',
+                        'notification_appointment_reminder'        => 'calendar',
+                        'notification_caregiver_message'           => 'message-square',
+                        'notification_health_alert'                => 'triangle-alert',
+                        'notification_refill_request'              => 'pill',
+                    ];
+                    $activityTone = fn ($severity, $color) => match($severity ?? $color) {
+                        'positive', 'green'  => 'ok',
+                        'warning', 'amber'   => 'warn',
+                        'negative', 'red'    => 'alert',
+                        default              => '',
+                    };
+                @endphp
+                <section class="sc-card p-6 flex flex-col" aria-labelledby="activity-title">
+                    <div class="flex items-center justify-between gap-4 mb-4 flex-shrink-0">
+                        <h2 id="activity-title" class="sc-h3">Recent activity</h2>
+                        <span class="text-sm whitespace-nowrap" style="color: var(--sc-muted)">Last 7 days</span>
                     </div>
-                    
+
                     @if($recentActivity->count() > 0)
-                        <ul class="space-y-3 flex-1 overflow-y-auto pr-2" style="scrollbar-width: thin; scrollbar-color: #64748b transparent;">
+                        <ul class="sc-divide flex-1 overflow-y-auto max-h-[30rem] -mx-2 px-2">
                             @foreach($recentActivity as $activity)
-                                @php
-                                    // Determine border color based on severity or color
-                                    $severity = $activity['severity'] ?? null;
-                                    $color = $activity['color'] ?? 'gray';
-                                    
-                                    $borderClass = match($severity ?? $color) {
-                                        'positive', 'green' => 'border-l-green-400',
-                                        'warning', 'amber' => 'border-l-amber-400',
-                                        'negative', 'red' => 'border-l-red-400',
-                                        'reminder', 'blue' => 'border-l-blue-400',
-                                        default => 'border-l-slate-300 dark:border-l-slate-600',
-                                    };
-                                @endphp
-                                <li class="flex items-start gap-3 py-3 px-3 border-l-4 {{ $borderClass }} bg-gray-50/80 rounded-r-xl transition-colors hover:bg-gray-100 dark:bg-slate-800/70 dark:hover:bg-slate-800">
-                                    <div class="text-xl mr-1 flex-shrink-0">{{ $activity['icon'] }}</div>
+                                @php $tone = $activityTone($activity['severity'] ?? null, $activity['color'] ?? 'gray'); @endphp
+                                <li class="flex items-start gap-3 py-3">
+                                    <span class="sc-plate sc-plate-sm {{ $tone ? 'sc-plate-' . $tone : '' }} flex-shrink-0">
+                                        <x-dynamic-component :component="'lucide-' . ($activityIcons[$activity['type']] ?? 'bell')" class="sc-i w-5 h-5" aria-hidden="true" />
+                                    </span>
                                     <div class="flex-1 min-w-0">
-                                        <p class="text-sm text-gray-800 dark:text-slate-100 font-[700] truncate">{{ $activity['title'] }}</p>
-                                        <p class="text-xs text-gray-500 dark:text-slate-400 font-medium">{{ $activity['subtitle'] }}</p>
+                                        <p class="font-semibold" style="color: var(--sc-ink)">{{ $activity['title'] }}</p>
+                                        <p class="text-sm" style="color: var(--sc-muted)">{{ $activity['subtitle'] }}</p>
                                     </div>
-                                    <div class="text-[10px] text-gray-400 dark:text-slate-500 ml-2 whitespace-nowrap font-bold">
+                                    <span class="text-sm sc-num whitespace-nowrap flex-shrink-0" style="color: var(--sc-muted)">
                                         {{ \Carbon\Carbon::parse($activity['timestamp'])->diffForHumans(null, true, true) }}
-                                    </div>
+                                    </span>
                                 </li>
                             @endforeach
                         </ul>
                     @else
-                        <div class="text-center py-8">
-                            <div class="text-4xl mb-2 opacity-30">📭</div>
-                            <p class="text-gray-400 dark:text-slate-400 text-sm font-medium">No recent activity</p>
-                            <p class="text-gray-300 dark:text-slate-500 text-xs mt-1">Activity will appear here as it happens</p>
+                        <div class="sc-empty py-8">
+                            <x-lucide-bell class="sc-i w-8 h-8" style="color: var(--sc-muted)" aria-hidden="true" />
+                            <p class="font-semibold" style="color: var(--sc-ink)">No recent activity</p>
+                            <p class="text-sm">Activity will appear here as it happens</p>
                         </div>
                     @endif
-                </div>
+                </section>
 
-                <!-- Quick Health Legend -->
-                <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 dark:bg-slate-900 dark:border-slate-800">
-                    <h4 class="text-sm font-[800] text-gray-700 dark:text-slate-200 mb-3">Health Status Legend</h4>
-                    <div class="grid grid-cols-2 gap-2 text-xs">
-                        <div class="flex items-center">
-                            <span class="w-3 h-3 rounded-full bg-green-500 mr-2"></span>
-                            <span class="text-gray-600 dark:text-slate-300 font-medium">Normal</span>
-                        </div>
-                        <div class="flex items-center">
-                            <span class="w-3 h-3 rounded-full bg-yellow-500 mr-2"></span>
-                            <span class="text-gray-600 dark:text-slate-300 font-medium">Elevated</span>
-                        </div>
-                        <div class="flex items-center">
-                            <span class="w-3 h-3 rounded-full bg-orange-500 mr-2"></span>
-                            <span class="text-gray-600 dark:text-slate-300 font-medium">High/Fever</span>
-                        </div>
-                        <div class="flex items-center">
-                            <span class="w-3 h-3 rounded-full bg-red-500 mr-2"></span>
-                            <span class="text-gray-600 dark:text-slate-300 font-medium">Critical</span>
-                        </div>
-                        <div class="flex items-center">
-                            <span class="w-3 h-3 rounded-full bg-blue-500 mr-2"></span>
-                            <span class="text-gray-600 dark:text-slate-300 font-medium">Low</span>
-                        </div>
-                    </div>
-                </div>
+                {{-- Legend. Three tones, not five colours: every status mark on
+                     this page already says its word, so the legend only has to
+                     explain what the dot's tone adds. --}}
+                <section class="sc-card-quiet p-4" aria-labelledby="legend-title">
+                    <h2 id="legend-title" class="sc-stat-label mb-3">Health status legend</h2>
+                    <ul class="grid grid-cols-2 gap-2">
+                        <li><span class="sc-mark sc-mark-ok"><i></i>Normal</span></li>
+                        <li><span class="sc-mark sc-mark-warn"><i></i>Elevated</span></li>
+                        <li><span class="sc-mark sc-mark-warn"><i></i>High / Fever</span></li>
+                        <li><span class="sc-mark sc-mark-alert"><i></i>Critical</span></li>
+                        <li><span class="sc-mark sc-mark-warn"><i></i>Low</span></li>
+                    </ul>
+                </section>
 
             </div>
         </div>
