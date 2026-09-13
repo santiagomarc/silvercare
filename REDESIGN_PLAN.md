@@ -206,19 +206,20 @@ Suggested order — cheapest first, so the pattern is proven before the big ones
 
 ## 4b. Known blockers
 
-- **`php artisan test` empties `silvercare_db` — your dev database.**
-  `phpunit.xml` sets `DB_DATABASE=silvercare_testing`, but that value loses
-  to `.env` at boot: inside a test, `config('database.connections.pgsql.database')`
-  reads `silvercare_db`, so `RefreshDatabase` truncates the data you were
-  looking at. §6 tells you to run the suite, so this bites on every file.
-  Seed the accounts you check pages with *after* the test run, or fix it
-  once with a `.env.testing` containing `DB_DATABASE=silvercare_testing`
-  (Laravel prefers that file when `APP_ENV=testing`).
+- ~~**`php artisan test` empties `silvercare_db`.**~~ **Not reproducible as of
+  2026-09-13.** Both `php artisan test` and `vendor/bin/phpunit` boot with
+  `config('database.connections.pgsql.database') === 'silvercare_testing'`,
+  as `phpunit.xml` intends. The likeliest cause at the time was a stale
+  `bootstrap/cache/config.php` — a cached config freezes `.env` values and
+  ignores `phpunit.xml`. If it happens again, run `php artisan config:clear`
+  before the suite; do not add a `.env.testing` (it replaces `.env` wholesale,
+  so it would need every secret duplicated).
 
-- **`caregiver/analytics` returns a 500** before any of this work started:
-  `CaregiverAnalyticsController.php:84` compacts `$sourceAttribution`, which is
-  never assigned. It is a controller bug, not a view bug. Phase 3 cannot check
-  that page until someone fixes it.
+- ~~**`caregiver/analytics` returns a 500.**~~ **Fixed 2026-09-13.**
+  `index()` compacted four variables (`sourceAttribution`, `doseLateness`,
+  `alertHistory`, `reportGeneratedAt`) that only `exportPdf()` assigns and only
+  `analytics_pdf` renders. They are gone from `index()`; the page is a 200
+  and Phase 3 can check it.
 
 ## 5. Do not convert these
 

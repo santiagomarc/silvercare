@@ -96,11 +96,7 @@ class CaregiverAnalyticsController extends Controller
             'readingsThisWeek',
             'medicationSummary',
             'taskSummary',
-            'briefing',
-            'sourceAttribution',
-            'doseLateness',
-            'alertHistory',
-            'reportGeneratedAt'
+            'briefing'
         ));
     }
 
