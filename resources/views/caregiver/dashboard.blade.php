@@ -548,8 +548,8 @@
                         default => 'warn',
                     };
                     $vitalTiles = [
-                        ['key' => 'heart_rate',     'title' => 'Heart rate',     'icon' => 'heart-pulse', 'unit' => 'bpm',   'value' => fn ($m) => intval($m->value)],
-                        ['key' => 'blood_pressure', 'title' => 'Blood pressure', 'icon' => 'activity',    'unit' => 'mmHg',  'value' => fn ($m) => $m->value_text],
+                        ['key' => 'heart_rate',     'title' => 'Heart rate',     'icon' => 'activity',    'unit' => 'bpm',   'value' => fn ($m) => intval($m->value)],
+                        ['key' => 'blood_pressure', 'title' => 'Blood pressure', 'icon' => 'heart-pulse', 'unit' => 'mmHg',  'value' => fn ($m) => $m->value_text],
                         ['key' => 'sugar_level',    'title' => 'Sugar level',    'icon' => 'droplet',     'unit' => 'mg/dL', 'value' => fn ($m) => intval($m->value)],
                         ['key' => 'temperature',    'title' => 'Temperature',    'icon' => 'thermometer', 'unit' => '°C',    'value' => fn ($m) => number_format($m->value, 1)],
                     ];

@@ -1,34 +1,23 @@
 {{-- ============================================================
-     Health Analytics — SilverCare
-     Nav updated to match dashboard-nav pattern (consistent with
-     other pages). Period selector + Export moved to toolbar row
-     below nav. Old sticky header removed.
+     HEALTH ANALYTICS — every vital over a week, a month, a quarter.
+
+     The charts read their palette from the --sc-chart-* tokens at draw
+     time and again whenever the theme changes, so a chart follows dark
+     mode and high contrast instead of freezing one set of colours.
+     Series order is fixed across the app (FRONTEND_DESIGN_SYSTEM §9b):
+     blood pressure is series 1, heart rate 2, sugar 3, temperature 4.
+     Out-of-range points are drawn as triangles as well as tinted, and
+     every chart has its numbers in text beside it.
+
+     Every route, id, data hook and JavaScript function is unchanged.
      ============================================================ --}}
 
-<x-dashboard-layout>
+<x-dashboard-layout sc>
     <x-slot:title>Health Analytics - SilverCare</x-slot:title>
-    <x-slot:bodyClass>bg-gray-100 min-h-screen</x-slot:bodyClass>
+    <x-slot:bodyClass>sc-page min-h-screen</x-slot:bodyClass>
 
-    @push('head-scripts')
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    @endpush
+    {{-- Chart.js ships in the app bundle (window.Chart); the CDN copy is gone. --}}
 
-    @push('styles')
-    <style>
-        .period-btn.active { background: white; color: #1f2937; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .card-filter.active { background: white; color: #1f2937; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .insights-card { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 1; } 100% { transform: scale(1.3); opacity: 0; } }
-        .pulse-ring { animation: pulse-ring 1.5s ease-out infinite; }
-        .modal-backdrop { backdrop-filter: blur(4px); }
-        .drawer-slide { transition: transform 0.3s ease-out; }
-        .drawer-slide.hidden { transform: translateX(100%); }
-        .health-ring { transition: stroke-dashoffset 1s ease-out; }
-    </style>
-    @endpush
-
-    {{-- ── Nav (consistent with medications page) ── --}}
     <x-dashboard-nav
         title="Health Analytics"
         subtitle="Your vitals insights & trends"
@@ -41,13 +30,13 @@
     $healthScore = 0;
     $healthFactors = [];
     $totalFactors = 0;
-    
+
     foreach($analyticsData as $type => $data) {
         if (($data['7days']['count'] ?? 0) > 0) {
             $totalFactors++;
             $score = 0;
             $status = 'unknown';
-            
+
             if ($type === 'blood_pressure') {
                 $sys = $data['7days']['systolic_avg'] ?? 120;
                 $dia = $data['7days']['diastolic_avg'] ?? 80;
@@ -71,194 +60,161 @@
                 elseif ($sugar >= 60 && $sugar <= 125) { $score = 80; $status = 'Normal'; }
                 else { $score = 60; $status = 'Attention'; }
             }
-            
+
             $healthScore += $score;
             $healthFactors[$type] = ['score' => $score, 'status' => $status];
         }
     }
-    
+
     $healthScore = $totalFactors > 0 ? round($healthScore / $totalFactors) : 0;
     $healthLabel = $healthScore >= 90 ? 'Excellent' : ($healthScore >= 75 ? 'Good' : ($healthScore >= 60 ? 'Fair' : 'Needs Attention'));
-    $healthColor = $healthScore >= 90 ? 'emerald' : ($healthScore >= 75 ? 'blue' : ($healthScore >= 60 ? 'amber' : 'red'));
+    $healthTone  = $healthScore >= 75 ? 'ok' : ($healthScore >= 60 ? 'warn' : 'alert');
+
+    // One icon per vital, everywhere — the same map App\View\Components\VitalCard uses.
     $vitalIconMap = [
         'blood_pressure' => 'heart-pulse',
-        'sugar_level'    => 'droplets',
+        'sugar_level'    => 'droplet',
         'temperature'    => 'thermometer',
         'heart_rate'     => 'activity',
     ];
+    // The detail drawer is built in JavaScript, which cannot render a Blade
+    // component, so the four glyphs are rendered once here and handed over.
+    $vitalIconSvg = collect($vitalIconMap)
+        ->map(fn ($icon) => svg('lucide-' . $icon, 'sc-i w-5 h-5', ['aria-hidden' => 'true'])->toHtml())
+        ->all();
+
+    $factorTone = fn ($status) => match ($status) {
+        'Optimal', 'Normal' => 'ok',
+        'Elevated', 'Mild'  => 'warn',
+        default             => 'alert',
+    };
 @endphp
 
-<div class="min-h-screen pb-24">
+<main id="main-content" class="sc-app-main">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-6">
 
-    {{-- ── Toolbar: period selector (left) + Export & Back (right) ── --}}
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        {{-- Toolbar: period selector + Export, and the way back --}}
         <div class="flex items-center justify-between gap-3 flex-wrap">
-
-            {{-- Left: period pills + Export --}}
             <div class="flex items-center gap-3 flex-wrap">
-                <div class="flex bg-white border border-gray-200 rounded-xl p-1 shadow-sm">
-                    <button onclick="changePeriod('7days')"  class="period-btn active px-4 py-2 rounded-lg text-sm font-[700] transition-all" data-period="7days">Week</button>
-                    <button onclick="changePeriod('30days')" class="period-btn px-4 py-2 rounded-lg text-sm font-[700] transition-all" data-period="30days">Month</button>
-                    <button onclick="changePeriod('90days')" class="period-btn px-4 py-2 rounded-lg text-sm font-[700] transition-all" data-period="90days">3 Months</button>
+                {{-- Period selection is a tablist: one of three, always one. --}}
+                <div class="sc-tablist" role="tablist" aria-label="Time period">
+                    <button type="button" role="tab" onclick="changePeriod('7days')"  class="period-btn sc-tab" aria-selected="true"  data-period="7days">Week</button>
+                    <button type="button" role="tab" onclick="changePeriod('30days')" class="period-btn sc-tab" aria-selected="false" data-period="30days">Month</button>
+                    <button type="button" role="tab" onclick="changePeriod('90days')" class="period-btn sc-tab" aria-selected="false" data-period="90days">3 Months</button>
                 </div>
 
-                <a href="{{ route('elderly.vitals.export') }}"
-                   class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#000080] to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
+                <a href="{{ route('elderly.vitals.export') }}" class="sc-btn sc-btn-ghost sc-btn-sm">
+                    <x-lucide-download class="sc-i w-4 h-4" aria-hidden="true" />
                     <span>Export</span>
                 </a>
             </div>
 
-            {{-- Right: back button (same back-nav-pill class as medications page) --}}
-            <a href="{{ route('dashboard') }}" class="back-nav-pill">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                </svg>
-                Back to Dashboard
+            <a href="{{ route('dashboard') }}" class="sc-btn sc-btn-ghost sc-btn-sm">
+                <x-lucide-arrow-left class="sc-i w-4 h-4" aria-hidden="true" />
+                <span>Back to Dashboard</span>
             </a>
-
         </div>
-    </div>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 space-y-6">
-        
-        <!-- Health Score + Quick Stats Row -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            <!-- Health Score Card -->
-            <div class="lg:col-span-1 bg-gradient-to-br from-{{ $healthColor }}-500 to-{{ $healthColor }}-600 rounded-3xl p-6 text-white relative overflow-hidden shadow-xl">
-                <div class="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full"></div>
-                <div class="absolute -bottom-8 -left-8 w-32 h-32 bg-white/5 rounded-full"></div>
-                
-                <div class="relative">
-                    <div class="flex items-center gap-2 mb-4">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+        {{-- Health score + quick stats --}}
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+            <section class="sc-card p-6" aria-labelledby="score-title">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="sc-plate sc-plate-sm sc-plate-{{ $healthTone }}">
+                        <x-lucide-heart class="sc-i w-5 h-5" aria-hidden="true" />
+                    </span>
+                    <h2 id="score-title" class="sc-h3">Health score</h2>
+                </div>
+
+                <div class="flex items-center gap-6">
+                    {{-- Ring: the track is a hairline, the arc is the score's tone.
+                         The number sits in the middle, so the ring is decoration. --}}
+                    <div class="relative w-28 h-28 flex-shrink-0" aria-hidden="true">
+                        <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="42" stroke="var(--sc-line)" stroke-width="8" fill="none"/>
+                            <circle cx="50" cy="50" r="42" stroke="var(--sc-{{ $healthTone }})" stroke-width="8" fill="none"
+                                stroke-dasharray="264"
+                                stroke-dashoffset="{{ 264 - (264 * $healthScore / 100) }}"
+                                stroke-linecap="round"/>
                         </svg>
-                        <h3 class="text-sm font-[800] uppercase tracking-wider text-white/80">Health Score</h3>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <span class="sc-stat-value sc-num" style="margin-top:0">{{ $healthScore }}</span>
+                        </div>
                     </div>
-                    
-                    <div class="flex items-center gap-6">
-                        <!-- Ring Chart -->
-                        <div class="relative w-28 h-28 flex-shrink-0">
-                            <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                                <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.2)" stroke-width="8" fill="none"/>
-                                <circle cx="50" cy="50" r="42" stroke="white" stroke-width="8" fill="none" 
-                                    stroke-dasharray="{{ 264 }}" 
-                                    stroke-dashoffset="{{ 264 - (264 * $healthScore / 100) }}"
-                                    stroke-linecap="round"
-                                    class="health-ring"/>
-                            </svg>
-                            <div class="absolute inset-0 flex items-center justify-center">
-                                <span class="text-3xl font-[900]">{{ $healthScore }}</span>
-                            </div>
-                        </div>
-                        
-                        <div class="flex-grow">
-                            <p class="text-2xl font-[900] mb-1">{{ $healthLabel }}</p>
-                            <p class="text-sm font-[600] text-white/70 mb-3">Based on {{ $totalFactors }} tracked vitals</p>
-                            
-                            @if($totalFactors > 0)
-                            <div class="flex flex-wrap gap-2">
-                                @foreach($healthFactors as $type => $factor)
-                                @php $factorIcon = $vitalIconMap[$type] ?? 'stethoscope'; @endphp
-                                <span class="px-2 py-1 bg-white/20 rounded-lg text-xs font-[700] inline-flex items-center gap-1.5">
-                                    <x-dynamic-component :component="'lucide-' . $factorIcon" class="w-3.5 h-3.5" aria-hidden="true" />
-                                    {{ $factor['status'] }}
-                                </span>
-                                @endforeach
-                            </div>
-                            @endif
-                        </div>
+
+                    <div class="flex-grow min-w-0">
+                        <p class="sc-h3">{{ $healthLabel }}</p>
+                        <p class="text-sm mt-1 mb-3" style="color: var(--sc-muted)">
+                            <span class="sr-only">Score {{ $healthScore }} out of 100. </span>Based on <span class="sc-num">{{ $totalFactors }}</span> tracked vitals
+                        </p>
+
+                        @if($totalFactors > 0)
+                        <ul class="flex flex-wrap gap-x-4 gap-y-1.5">
+                            @foreach($healthFactors as $type => $factor)
+                            <li class="sc-mark sc-mark-{{ $factorTone($factor['status']) }}"><i></i>
+                                <x-dynamic-component :component="'lucide-' . ($vitalIconMap[$type] ?? 'stethoscope')" class="sc-i w-4 h-4" aria-hidden="true" />
+                                <span class="sr-only">{{ $analyticsData[$type]['config']['name'] ?? $type }}: </span>{{ $factor['status'] }}
+                            </li>
+                            @endforeach
+                        </ul>
+                        @endif
                     </div>
                 </div>
-            </div>
-            
-            <!-- Quick Stats -->
+            </section>
+
+            @php
+                $consistencyScore = $totalReadings > 0 ? min(100, round(($readingsThisWeek / 28) * 100)) : 0;
+                $quickStats = [
+                    ['icon' => 'chart-column', 'label' => 'Total readings', 'value' => $totalReadings],
+                    ['icon' => 'trending-up',  'label' => 'This week',      'value' => $readingsThisWeek],
+                    ['icon' => 'circle-check', 'label' => 'Consistency',    'value' => $consistencyScore . '%'],
+                    ['icon' => 'clock',        'label' => 'Vitals tracked', 'value' => $totalFactors . '/4'],
+                ];
+            @endphp
             <div class="lg:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="bg-white rounded-2xl p-5 shadow-lg border border-gray-100">
-                    <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center mb-3">
-                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                        </svg>
+                @foreach($quickStats as $stat)
+                    <div class="sc-stat">
+                        <span class="sc-plate sc-plate-sm mb-3">
+                            <x-dynamic-component :component="'lucide-' . $stat['icon']" class="sc-i w-5 h-5" aria-hidden="true" />
+                        </span>
+                        <p class="sc-stat-label">{{ $stat['label'] }}</p>
+                        <p class="sc-stat-value sc-num">{{ $stat['value'] }}</p>
                     </div>
-                    <p class="text-xs font-[700] text-gray-500 uppercase">Total Readings</p>
-                    <p class="text-2xl font-[900] text-gray-900 mt-1">{{ $totalReadings }}</p>
-                </div>
-                
-                <div class="bg-white rounded-2xl p-5 shadow-lg border border-gray-100">
-                    <div class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center mb-3">
-                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                        </svg>
-                    </div>
-                    <p class="text-xs font-[700] text-gray-500 uppercase">This Week</p>
-                    <p class="text-2xl font-[900] text-gray-900 mt-1">{{ $readingsThisWeek }}</p>
-                </div>
-                
-                @php
-                    $consistencyScore = $totalReadings > 0 ? min(100, round(($readingsThisWeek / 28) * 100)) : 0;
-                @endphp
-                <div class="bg-white rounded-2xl p-5 shadow-lg border border-gray-100">
-                    <div class="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center mb-3">
-                        <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </div>
-                    <p class="text-xs font-[700] text-gray-500 uppercase">Consistency</p>
-                    <p class="text-2xl font-[900] text-gray-900 mt-1">{{ $consistencyScore }}%</p>
-                </div>
-                
-                <div class="bg-white rounded-2xl p-5 shadow-lg border border-gray-100">
-                    <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center mb-3">
-                        <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </div>
-                    <p class="text-xs font-[700] text-gray-500 uppercase">Vitals Tracked</p>
-                    <p class="text-2xl font-[900] text-gray-900 mt-1">{{ $totalFactors }}/4</p>
-                </div>
+                @endforeach
             </div>
         </div>
 
-        <!-- AI Vitals Trend Analyzer -->
+        {{-- AI vitals trend analyzer --}}
         @if($totalFactors > 0)
-        <div x-data="vitalsAiAnalyzer()" class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-xl overflow-hidden">
-            <div class="p-6">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3 text-white">
-                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                        </div>
-                        <div>
-                            <h3 class="text-lg font-[900]">AI Vitals Trend Analyzer</h3>
-                            <p class="text-sm font-[600] text-white/70">Powered by Gemini AI</p>
-                        </div>
+        <section x-data="vitalsAiAnalyzer()" class="sc-card p-6" aria-labelledby="ai-title">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <span class="sc-plate sc-plate-sm">
+                        <x-lucide-sparkles class="sc-i w-5 h-5" aria-hidden="true" />
+                    </span>
+                    <div>
+                        <h2 id="ai-title" class="sc-h3">AI vitals trend analyzer</h2>
+                        <p class="text-sm mt-0.5" style="color: var(--sc-muted)">Reads your last week of readings and explains them in plain words</p>
                     </div>
-                    <button @click="analyze()" :disabled="loading"
-                        class="px-6 py-3 bg-white text-indigo-700 rounded-xl font-[800] text-sm hover:bg-indigo-50 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg">
-                        <template x-if="loading">
-                            <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-                        </template>
-                        <span x-text="loading ? 'Analyzing...' : (analysis ? 'Re-Analyze' : 'Analyze My Trends')"></span>
-                    </button>
                 </div>
-
-                <div x-show="analysis" x-transition class="mt-5 bg-white/10 backdrop-blur rounded-xl p-5 text-white">
-                    <div class="prose prose-invert prose-sm max-w-none" x-html="renderMarkdown(analysis)"></div>
-                    <p class="text-xs text-white/50 mt-3 font-[600] inline-flex items-center gap-1.5">
-                        <x-lucide-stethoscope class="w-3.5 h-3.5" aria-hidden="true" />
-                        <span>This is AI-generated insight, not medical advice.</span>
-                    </p>
-                </div>
-
-                <div x-show="error" x-transition class="mt-4 bg-red-500/20 rounded-xl p-4 text-white text-sm font-[600]">
-                    <span x-text="error"></span>
-                </div>
+                <button type="button" @click="analyze()" :disabled="loading" class="sc-btn sc-btn-primary flex-shrink-0">
+                    <template x-if="loading">
+                        <x-lucide-loader-circle class="sc-i w-5 h-5 animate-spin" aria-hidden="true" />
+                    </template>
+                    <span x-text="loading ? 'Analyzing...' : (analysis ? 'Re-analyze' : 'Analyze my trends')">Analyze my trends</span>
+                </button>
             </div>
-        </div>
+
+            <div x-show="analysis" x-cloak x-transition class="sc-card-quiet p-5 mt-5" aria-live="polite">
+                <div class="max-w-none space-y-2" style="color: var(--sc-body)" x-html="renderMarkdown(analysis)"></div>
+                <p class="sc-mark mt-4">
+                    <x-lucide-stethoscope class="sc-i w-4 h-4" aria-hidden="true" />
+                    <span>This is AI-generated insight, not medical advice.</span>
+                </p>
+            </div>
+
+            <p x-show="error" x-cloak x-transition x-text="error" role="alert" class="sc-error mt-4"></p>
+        </section>
 
         <script>
         function vitalsAiAnalyzer() {
@@ -300,9 +256,9 @@
                     return text
                         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                         .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                        .replace(/^### (.*$)/gm, '<h4 class="font-bold text-base mt-3 mb-1">$1</h4>')
-                        .replace(/^## (.*$)/gm, '<h3 class="font-bold text-lg mt-3 mb-1">$1</h3>')
-                        .replace(/^- (.*$)/gm, '<li class="ml-4">$1</li>')
+                        .replace(/^### (.*$)/gm, '<h4 class="font-semibold mt-3 mb-1">$1</h4>')
+                        .replace(/^## (.*$)/gm, '<h3 class="sc-h3 mt-3 mb-1">$1</h3>')
+                        .replace(/^- (.*$)/gm, '<li class="ml-5">$1</li>')
                         .replace(/(<li.*<\/li>)/gs, '<ul class="list-disc space-y-1">$1</ul>')
                         .replace(/\n{2,}/g, '<br><br>')
                         .replace(/\n/g, '<br>');
@@ -312,328 +268,322 @@
         </script>
         @endif
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            <!-- Personalized Insights -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+            {{-- Personalised insights --}}
             @if($totalFactors > 0)
-            <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-                <div class="bg-gradient-to-r from-indigo-50 to-purple-100 p-5 border-b border-indigo-100">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                            <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-lg font-[900] text-gray-900">Personalized Insights</h3>
-                            <p class="text-sm font-[600] text-gray-500">Based on your vitals</p>
-                        </div>
+            <section class="sc-card p-6" aria-labelledby="insights-title">
+                <div class="flex items-center gap-3 mb-5">
+                    <span class="sc-plate sc-plate-sm">
+                        <x-lucide-lightbulb class="sc-i w-5 h-5" aria-hidden="true" />
+                    </span>
+                    <div>
+                        <h2 id="insights-title" class="sc-h3">Personalised insights</h2>
+                        <p class="text-sm mt-0.5" style="color: var(--sc-muted)">Based on your vitals</p>
                     </div>
                 </div>
-                <div class="p-5">
-                    <div class="space-y-3">
-                        @foreach($analyticsData as $type => $data)
-                            @if(($data['7days']['count'] ?? 0) > 0)
-                                @php
-                                    $insight = '';
-                                    $insightType = 'info';
-                                    
-                                    if ($type === 'blood_pressure') {
-                                        $sys = $data['7days']['systolic_avg'] ?? 120;
-                                        if ($sys < 120) { $insight = 'Your blood pressure is in the optimal range. Keep up the good work!'; $insightType = 'success'; }
-                                        elseif ($sys < 130) { $insight = 'Blood pressure is normal. Consider reducing salt intake for even better results.'; $insightType = 'info'; }
-                                        else { $insight = 'Blood pressure is elevated. Regular exercise and stress management can help.'; $insightType = 'warning'; }
-                                    } elseif ($type === 'heart_rate') {
-                                        $hr = $data['7days']['avg'] ?? 72;
-                                        if ($hr >= 60 && $hr <= 80) { $insight = 'Your resting heart rate indicates good cardiovascular health!'; $insightType = 'success'; }
-                                        elseif ($hr < 60) { $insight = 'Low heart rate detected. This may be normal if you\'re athletic.'; $insightType = 'info'; }
-                                        else { $insight = 'Slightly elevated heart rate. Try relaxation techniques.'; $insightType = 'warning'; }
-                                    } elseif ($type === 'temperature') {
-                                        $temp = $data['7days']['avg'] ?? 36.5;
-                                        if ($temp >= 36.1 && $temp <= 37.2) { $insight = 'Body temperature is perfectly normal.'; $insightType = 'success'; }
-                                        else { $insight = 'Temperature variations detected. Monitor for any symptoms.'; $insightType = 'warning'; }
-                                    } elseif ($type === 'sugar_level') {
-                                        $sugar = $data['7days']['avg'] ?? 100;
-                                        if ($sugar >= 70 && $sugar <= 100) { $insight = 'Blood sugar levels are in the healthy range!'; $insightType = 'success'; }
-                                        elseif ($sugar < 70) { $insight = 'Blood sugar may be low. Ensure regular, balanced meals.'; $insightType = 'warning'; }
-                                        else { $insight = 'Blood sugar is slightly elevated. Consider dietary adjustments.'; $insightType = 'warning'; }
-                                    }
-                                    
-                                    $insightColors = [
-                                        'success' => 'bg-green-50 border-green-200 text-green-800',
-                                        'info'    => 'bg-blue-50 border-blue-200 text-blue-800',
-                                        'warning' => 'bg-amber-50 border-amber-200 text-amber-800',
-                                    ];
-                                @endphp
-                                <div class="{{ $insightColors[$insightType] }} rounded-xl p-3 border">
-                                    <div class="flex items-start gap-3">
-                                        @php $insightIcon = $vitalIconMap[$type] ?? 'stethoscope'; @endphp
-                                        <div class="w-8 h-8 rounded-lg bg-white/80 flex items-center justify-center flex-shrink-0">
-                                            <x-dynamic-component :component="'lucide-' . $insightIcon" class="w-4.5 h-4.5 text-{{ $data['config']['color'] }}-600" aria-hidden="true" />
-                                        </div>
-                                        <div>
-                                            <h4 class="font-[800] text-sm mb-0.5">{{ $data['config']['name'] }}</h4>
-                                            <p class="text-xs font-[600] leading-relaxed">{{ $insight }}</p>
-                                        </div>
+                <ul class="space-y-3">
+                    @foreach($analyticsData as $type => $data)
+                        @if(($data['7days']['count'] ?? 0) > 0)
+                            @php
+                                $insight = '';
+                                $insightType = 'info';
+
+                                if ($type === 'blood_pressure') {
+                                    $sys = $data['7days']['systolic_avg'] ?? 120;
+                                    if ($sys < 120) { $insight = 'Your blood pressure is in the optimal range. Keep up the good work!'; $insightType = 'success'; }
+                                    elseif ($sys < 130) { $insight = 'Blood pressure is normal. Consider reducing salt intake for even better results.'; $insightType = 'info'; }
+                                    else { $insight = 'Blood pressure is elevated. Regular exercise and stress management can help.'; $insightType = 'warning'; }
+                                } elseif ($type === 'heart_rate') {
+                                    $hr = $data['7days']['avg'] ?? 72;
+                                    if ($hr >= 60 && $hr <= 80) { $insight = 'Your resting heart rate indicates good cardiovascular health!'; $insightType = 'success'; }
+                                    elseif ($hr < 60) { $insight = 'Low heart rate detected. This may be normal if you\'re athletic.'; $insightType = 'info'; }
+                                    else { $insight = 'Slightly elevated heart rate. Try relaxation techniques.'; $insightType = 'warning'; }
+                                } elseif ($type === 'temperature') {
+                                    $temp = $data['7days']['avg'] ?? 36.5;
+                                    if ($temp >= 36.1 && $temp <= 37.2) { $insight = 'Body temperature is perfectly normal.'; $insightType = 'success'; }
+                                    else { $insight = 'Temperature variations detected. Monitor for any symptoms.'; $insightType = 'warning'; }
+                                } elseif ($type === 'sugar_level') {
+                                    $sugar = $data['7days']['avg'] ?? 100;
+                                    if ($sugar >= 70 && $sugar <= 100) { $insight = 'Blood sugar levels are in the healthy range!'; $insightType = 'success'; }
+                                    elseif ($sugar < 70) { $insight = 'Blood sugar may be low. Ensure regular, balanced meals.'; $insightType = 'warning'; }
+                                    else { $insight = 'Blood sugar is slightly elevated. Consider dietary adjustments.'; $insightType = 'warning'; }
+                                }
+
+                                $insightTone = ['success' => 'ok', 'warning' => 'warn', 'info' => ''][$insightType];
+                                $insightWord = ['success' => 'Good', 'warning' => 'Watch', 'info' => 'Note'][$insightType];
+                            @endphp
+                            <li class="sc-card-quiet p-4 flex items-start gap-3">
+                                <span class="sc-plate sc-plate-sm flex-shrink-0 {{ $insightTone ? 'sc-plate-' . $insightTone : '' }}">
+                                    <x-dynamic-component :component="'lucide-' . ($vitalIconMap[$type] ?? 'stethoscope')" class="sc-i w-5 h-5" aria-hidden="true" />
+                                </span>
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <h3 class="font-semibold" style="color: var(--sc-ink)">{{ $data['config']['name'] }}</h3>
+                                        <span class="sc-mark {{ $insightTone ? 'sc-mark-' . $insightTone : '' }}"><i></i>{{ $insightWord }}</span>
                                     </div>
+                                    <p class="text-sm mt-0.5" style="color: var(--sc-body)">{{ $insight }}</p>
                                 </div>
-                            @endif
-                        @endforeach
-                    </div>
-                </div>
-            </div>
+                            </li>
+                        @endif
+                    @endforeach
+                </ul>
+            </section>
             @endif
 
-            <!-- BMI Card -->
-            <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-                <div class="bg-gradient-to-r from-purple-50 to-violet-100 p-5 border-b border-purple-100">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                            <x-lucide-scale class="w-6 h-6 text-violet-600" aria-hidden="true" />
-                        </div>
-                        <div>
-                            <h3 class="text-lg font-[900] text-gray-900">Body Metrics</h3>
-                            <p class="text-sm font-[600] text-gray-500">Weight, Height & BMI</p>
-                        </div>
+            {{-- Body metrics --}}
+            <section class="sc-card p-6" aria-labelledby="bmi-title">
+                <div class="flex items-center gap-3 mb-5">
+                    <span class="sc-plate sc-plate-sm">
+                        <x-lucide-scale class="sc-i w-5 h-5" aria-hidden="true" />
+                    </span>
+                    <div>
+                        <h2 id="bmi-title" class="sc-h3">Body metrics</h2>
+                        <p class="text-sm mt-0.5" style="color: var(--sc-muted)">Weight, height &amp; BMI</p>
                     </div>
                 </div>
-                <div class="p-5">
-                    @if($bmiData['bmi'])
-                        <div class="text-center mb-6">
-                            <div class="inline-flex items-center justify-center w-28 h-28 rounded-full bg-{{ $bmiData['color'] }}-100 mb-3">
-                                <div class="text-center">
-                                    <p class="text-3xl font-[900] text-{{ $bmiData['color'] }}-600">{{ $bmiData['bmi'] }}</p>
-                                    <p class="text-xs font-[700] text-{{ $bmiData['color'] }}-500">BMI</p>
-                                </div>
-                            </div>
-                            <p class="text-lg font-[900] text-gray-900">{{ $bmiData['category'] }}</p>
-                        </div>
 
-                        <div class="grid grid-cols-2 gap-3 mb-4">
-                            <div class="bg-gray-50 rounded-xl p-4 text-center">
-                                <div class="mb-1 flex justify-center">
-                                    <x-lucide-ruler class="w-6 h-6 text-indigo-600" aria-hidden="true" />
-                                </div>
-                                <p class="text-xs font-[700] text-gray-500 uppercase">Height</p>
-                                <p class="text-xl font-[900] text-gray-900">{{ $bmiData['height'] }} <span class="text-sm font-[600] text-gray-500">cm</span></p>
-                            </div>
-                            <div class="bg-gray-50 rounded-xl p-4 text-center">
-                                <div class="mb-1 flex justify-center">
-                                    <x-lucide-scale class="w-6 h-6 text-violet-600" aria-hidden="true" />
-                                </div>
-                                <p class="text-xs font-[700] text-gray-500 uppercase">Weight</p>
-                                <p class="text-xl font-[900] text-gray-900">{{ $bmiData['weight'] }} <span class="text-sm font-[600] text-gray-500">kg</span></p>
-                            </div>
+                @if($bmiData['bmi'])
+                    @php
+                        $bmiTone = match ($bmiData['category']) {
+                            'Normal' => 'ok',
+                            'Obese'  => 'alert',
+                            default  => 'warn',
+                        };
+                    @endphp
+                    <div class="text-center mb-6">
+                        <div class="sc-card-quiet inline-flex flex-col items-center justify-center w-28 h-28 rounded-full mb-3">
+                            <span class="sc-stat-value sc-num" style="margin-top:0">{{ $bmiData['bmi'] }}</span>
+                            <span class="sc-stat-label">BMI</span>
                         </div>
+                        <p><span class="sc-mark sc-mark-{{ $bmiTone }} text-base"><i></i>{{ $bmiData['category'] }}</span></p>
+                    </div>
 
-                        <div class="bg-gray-50 rounded-xl p-3">
-                            <p class="text-xs font-[700] text-gray-500 mb-2 text-center">BMI Categories</p>
-                            <div class="flex justify-between text-xs font-[600]">
-                                <span class="text-blue-600">Under 18.5</span>
-                                <span class="text-green-600">18.5–24.9</span>
-                                <span class="text-amber-600">25–29.9</span>
-                                <span class="text-red-600">30+</span>
-                            </div>
-                            <div class="flex h-2 mt-1 rounded-full overflow-hidden">
-                                <div class="bg-blue-400 flex-1"></div>
-                                <div class="bg-green-400 flex-1"></div>
-                                <div class="bg-amber-400 flex-1"></div>
-                                <div class="bg-red-400 flex-1"></div>
-                            </div>
+                    <dl class="grid grid-cols-2 gap-3 mb-4">
+                        <div class="sc-stat text-center">
+                            <x-lucide-ruler class="sc-i w-5 h-5 mx-auto mb-1" style="color: var(--sc-muted)" aria-hidden="true" />
+                            <dt class="sc-stat-label">Height</dt>
+                            <dd class="sc-num font-bold text-xl" style="color: var(--sc-ink)">{{ $bmiData['height'] }} <span class="sc-stat-unit">cm</span></dd>
                         </div>
-                    @else
-                        <div class="text-center py-8">
-                            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 opacity-50">
-                                <x-lucide-scale class="w-8 h-8 text-gray-500" aria-hidden="true" />
-                            </div>
-                            <h4 class="text-base font-[800] text-gray-400 mb-1">No Body Metrics</h4>
-                            <p class="text-xs text-gray-400 font-[600] mb-4">Update your profile with weight & height</p>
-                            <a href="{{ route('profile.edit') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-xl text-sm font-[700] hover:bg-purple-600 transition-colors">
-                                Update Profile
-                            </a>
+                        <div class="sc-stat text-center">
+                            <x-lucide-scale class="sc-i w-5 h-5 mx-auto mb-1" style="color: var(--sc-muted)" aria-hidden="true" />
+                            <dt class="sc-stat-label">Weight</dt>
+                            <dd class="sc-num font-bold text-xl" style="color: var(--sc-ink)">{{ $bmiData['weight'] }} <span class="sc-stat-unit">kg</span></dd>
                         </div>
-                    @endif
-                </div>
-            </div>
+                    </dl>
+
+                    {{-- The scale: four bands, each named, each toned. --}}
+                    <div class="sc-card-quiet p-3">
+                        <p class="sc-stat-label text-center mb-2">BMI categories</p>
+                        <ul class="grid grid-cols-4 gap-1 text-center text-sm sc-num" style="color: var(--sc-body)">
+                            <li><span class="block h-2 rounded-full mb-1" style="background: var(--sc-warn)"></span>Under 18.5</li>
+                            <li><span class="block h-2 rounded-full mb-1" style="background: var(--sc-ok)"></span>18.5–24.9</li>
+                            <li><span class="block h-2 rounded-full mb-1" style="background: var(--sc-warn)"></span>25–29.9</li>
+                            <li><span class="block h-2 rounded-full mb-1" style="background: var(--sc-alert)"></span>30+</li>
+                        </ul>
+                    </div>
+                @else
+                    <div class="sc-empty py-8">
+                        <x-lucide-scale class="sc-i w-8 h-8" style="color: var(--sc-muted)" aria-hidden="true" />
+                        <p class="font-semibold" style="color: var(--sc-ink)">No body metrics yet</p>
+                        <p class="text-sm">Add your weight and height to your profile to see your BMI.</p>
+                        <a href="{{ route('profile.edit') }}" class="sc-btn sc-btn-ghost sc-btn-sm">Update profile</a>
+                    </div>
+                @endif
+            </section>
         </div>
 
-        <!-- Steps Section -->
-        <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-100 shadow-lg">
-            <div class="flex flex-col md:flex-row items-center gap-6">
-                <div class="flex items-center gap-4 flex-shrink-0">
-                    <div class="w-14 h-14 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                        <x-lucide-footprints class="w-8 h-8 text-emerald-600" aria-hidden="true" />
-                    </div>
+        {{-- Steps --}}
+        <section class="sc-card p-6" aria-labelledby="steps-title">
+            <div class="flex flex-col md:flex-row md:items-center gap-6">
+                <div class="flex items-center gap-3 flex-shrink-0">
+                    <span class="sc-plate sc-plate-sm">
+                        <x-lucide-footprints class="sc-i w-5 h-5" aria-hidden="true" />
+                    </span>
                     <div>
-                        <h3 class="text-lg font-[900] text-gray-900">Daily Steps</h3>
-                        <p class="text-sm font-[600] text-gray-500">Track your activity</p>
+                        <h2 id="steps-title" class="sc-h3">Daily steps</h2>
+                        <p class="text-sm mt-0.5" style="color: var(--sc-muted)">Track your activity</p>
                     </div>
                 </div>
-                
+
                 @if($stepsData['today'])
+                    @php
+                        $stepsPercent = min(100, ($stepsData['today']['value'] / $stepsData['today']['goal']) * 100);
+                        $strokeOffset = 264 - (264 * $stepsPercent / 100);
+                    @endphp
                     <div class="flex-shrink-0">
-                        <div class="relative w-20 h-20">
-                            <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                                <circle cx="50" cy="50" r="42" stroke="#E5E7EB" stroke-width="8" fill="none"/>
-                                @php
-                                    $stepsPercent = min(100, ($stepsData['today']['value'] / $stepsData['today']['goal']) * 100);
-                                    $strokeOffset = 264 - (264 * $stepsPercent / 100);
-                                @endphp
-                                <circle cx="50" cy="50" r="42" stroke="#22C55E" stroke-width="8" fill="none" 
-                                    stroke-dasharray="264" 
+                        <div class="relative w-20 h-20" role="img" aria-label="{{ round($stepsPercent) }} percent of today's step goal">
+                            <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100" aria-hidden="true">
+                                <circle cx="50" cy="50" r="42" stroke="var(--sc-line)" stroke-width="8" fill="none"/>
+                                <circle cx="50" cy="50" r="42" stroke="var(--sc-ok)" stroke-width="8" fill="none"
+                                    stroke-dasharray="264"
                                     stroke-dashoffset="{{ $strokeOffset }}"
-                                    stroke-linecap="round"
-                                    class="transition-all duration-1000"/>
+                                    stroke-linecap="round"/>
                             </svg>
-                            <div class="absolute inset-0 flex flex-col items-center justify-center">
-                                <span class="text-sm font-[900] text-gray-900">{{ round($stepsPercent) }}%</span>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <span class="sc-num font-bold" style="color: var(--sc-ink)">{{ round($stepsPercent) }}%</span>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="flex-1 grid grid-cols-3 gap-4">
-                        <div class="bg-white/80 rounded-xl p-3 text-center">
-                            <p class="text-xs font-[700] text-gray-500 uppercase">Today</p>
-                            <p class="text-xl font-[900] text-gray-900">{{ number_format($stepsData['today']['value']) }}</p>
+
+                    <dl class="flex-1 grid grid-cols-3 gap-3">
+                        <div class="sc-stat text-center">
+                            <dt class="sc-stat-label">Today</dt>
+                            <dd class="sc-num font-bold text-xl" style="color: var(--sc-ink)">{{ number_format($stepsData['today']['value']) }}</dd>
                         </div>
-                        <div class="bg-white/80 rounded-xl p-3 text-center">
-                            <p class="text-xs font-[700] text-gray-500 uppercase">Weekly</p>
-                            <p class="text-xl font-[900] text-gray-900">{{ number_format($stepsData['weeklyTotal']) }}</p>
+                        <div class="sc-stat text-center">
+                            <dt class="sc-stat-label">Weekly</dt>
+                            <dd class="sc-num font-bold text-xl" style="color: var(--sc-ink)">{{ number_format($stepsData['weeklyTotal']) }}</dd>
                         </div>
-                        <div class="bg-white/80 rounded-xl p-3 text-center">
-                            <p class="text-xs font-[700] text-gray-500 uppercase">Daily Avg</p>
-                            <p class="text-xl font-[900] text-gray-900">{{ number_format($stepsData['weeklyAvg']) }}</p>
+                        <div class="sc-stat text-center">
+                            <dt class="sc-stat-label">Daily avg</dt>
+                            <dd class="sc-num font-bold text-xl" style="color: var(--sc-ink)">{{ number_format($stepsData['weeklyAvg']) }}</dd>
                         </div>
-                    </div>
-                    
+                    </dl>
+
                     @if($stepsData['today']['source'] === 'google_fit')
                     <div class="flex-shrink-0">
-                        <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-[700] text-xs inline-flex items-center gap-1.5">
-                            <x-lucide-link class="w-3.5 h-3.5" aria-hidden="true" />
+                        <span class="sc-badge sc-badge-brand">
+                            <x-lucide-link class="sc-i w-4 h-4" aria-hidden="true" />
                             Google Fit
                         </span>
                     </div>
                     @endif
                 @else
-                    <div class="flex-1 flex items-center justify-center py-4">
-                        <div class="text-center">
-                            <p class="text-gray-400 font-[700]">No steps data available</p>
-                            <p class="text-xs text-gray-400 font-[600]">Connect Google Fit to track steps</p>
-                        </div>
+                    <div class="flex-1 sc-empty py-6">
+                        <p class="font-semibold" style="color: var(--sc-ink)">No steps data available</p>
+                        <p class="text-sm">Connect Google Fit to track steps</p>
                     </div>
                 @endif
             </div>
-        </div>
+        </section>
 
-        <!-- Vitals Analytics Cards -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {{-- Per-vital analytics --}}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
             @foreach($analyticsData as $type => $data)
-            <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden" id="card-{{ $type }}">
-                <div class="bg-gradient-to-r from-{{ $data['config']['color'] }}-50 to-{{ $data['config']['color'] }}-100/50 p-5 border-b border-{{ $data['config']['color'] }}-100">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            @php $cardIcon = $vitalIconMap[$type] ?? 'stethoscope'; @endphp
-                            <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                                <x-dynamic-component :component="'lucide-' . $cardIcon" class="w-6 h-6 text-{{ $data['config']['color'] }}-600" aria-hidden="true" />
-                            </div>
-                            <div>
-                                <h3 class="text-lg font-[900] text-gray-900">{{ $data['config']['name'] }}</h3>
-                                <p class="text-sm font-[600] text-gray-500">{{ $data['config']['unit'] }}</p>
-                            </div>
+            <section class="sc-card overflow-hidden" id="card-{{ $type }}" aria-labelledby="card-title-{{ $type }}">
+                <div class="p-5 flex items-center justify-between gap-3 flex-wrap" style="border-bottom: 1px solid var(--sc-line)">
+                    <div class="flex items-center gap-3">
+                        <span class="sc-plate sc-plate-sm flex-shrink-0">
+                            <x-dynamic-component :component="'lucide-' . ($vitalIconMap[$type] ?? 'stethoscope')" class="sc-i w-5 h-5" aria-hidden="true" />
+                        </span>
+                        <div>
+                            <h2 id="card-title-{{ $type }}" class="sc-h3 whitespace-nowrap">{{ $data['config']['name'] }}</h2>
+                            <p class="text-sm" style="color: var(--sc-muted)">{{ $data['config']['unit'] }}</p>
                         </div>
-                        
-                        <button onclick="openDetailModal('{{ $type }}')" class="px-4 py-2 bg-white rounded-xl text-sm font-[700] text-{{ $data['config']['color'] }}-600 hover:bg-{{ $data['config']['color'] }}-50 transition-all flex items-center gap-2 shadow-sm border border-{{ $data['config']['color'] }}-200">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
-                            </svg>
-                            Details
-                        </button>
                     </div>
+
+                    <button type="button" onclick="openDetailModal('{{ $type }}')" class="sc-btn sc-btn-ghost sc-btn-sm flex-shrink-0">
+                        <x-lucide-maximize-2 class="sc-i w-4 h-4" aria-hidden="true" />
+                        Details<span class="sr-only"> for {{ $data['config']['name'] }}</span>
+                    </button>
                 </div>
 
                 <div class="p-5">
                     @foreach(['7days', '30days', '90days'] as $period)
+                    @php
+                        $p = $data[$period] ?? [];
+                        $periodWords = ['7days' => 'last 7 days', '30days' => 'last 30 days', '90days' => 'last 90 days'][$period];
+                        $chartSummary = ($p['count'] ?? 0) > 0
+                            ? ($type === 'blood_pressure'
+                                ? 'Line chart of blood pressure over the ' . $periodWords . ': ' . $p['count'] . ' readings, systolic average ' . ($p['systolic_avg'] ?? '-') . ', diastolic average ' . ($p['diastolic_avg'] ?? '-') . ' ' . $data['config']['unit'] . '.'
+                                : 'Line chart of ' . strtolower($data['config']['name']) . ' over the ' . $periodWords . ': ' . $p['count'] . ' readings, average ' . ($p['avg'] ?? '-') . ', lowest ' . ($p['min'] ?? '-') . ', highest ' . ($p['max'] ?? '-') . ' ' . $data['config']['unit'] . '.')
+                            : '';
+                    @endphp
                     <div class="period-data {{ $period !== '7days' ? 'hidden' : '' }}" data-period="{{ $period }}" data-type="{{ $type }}">
-                        @if(($data[$period]['count'] ?? 0) > 0)
-                            <div class="mb-4 bg-gray-50 rounded-xl p-3 h-[140px]">
-                                <canvas id="chart-{{ $type }}-{{ $period }}" class="w-full h-full"></canvas>
+                        @if(($p['count'] ?? 0) > 0)
+                            <div class="sc-chart sc-chart-sm mb-4">
+                                <canvas id="chart-{{ $type }}-{{ $period }}" role="img" aria-label="{{ $chartSummary }}"></canvas>
                             </div>
 
-                            <div class="grid grid-cols-3 gap-3 mb-4">
+                            <dl class="grid grid-cols-3 gap-3 mb-4">
                                 @if($type === 'blood_pressure')
-                                    <div class="text-center bg-gray-50 rounded-xl p-3">
-                                        <p class="text-xs font-[700] text-gray-500 uppercase">Systolic Avg</p>
-                                        <p class="text-xl font-[900] text-gray-900">{{ $data[$period]['systolic_avg'] ?? '-' }}</p>
+                                    <div class="sc-card-quiet p-3 text-center">
+                                        <dt class="sc-stat-label">Systolic avg</dt>
+                                        <dd class="sc-num font-bold text-xl" style="color: var(--sc-ink)">{{ $p['systolic_avg'] ?? '-' }}</dd>
                                     </div>
-                                    <div class="text-center bg-gray-50 rounded-xl p-3">
-                                        <p class="text-xs font-[700] text-gray-500 uppercase">Diastolic Avg</p>
-                                        <p class="text-xl font-[900] text-gray-900">{{ $data[$period]['diastolic_avg'] ?? '-' }}</p>
+                                    <div class="sc-card-quiet p-3 text-center">
+                                        <dt class="sc-stat-label">Diastolic avg</dt>
+                                        <dd class="sc-num font-bold text-xl" style="color: var(--sc-ink)">{{ $p['diastolic_avg'] ?? '-' }}</dd>
                                     </div>
-                                    <div class="text-center bg-gray-50 rounded-xl p-3">
-                                        <p class="text-xs font-[700] text-gray-500 uppercase">Readings</p>
-                                        <p class="text-xl font-[900] text-gray-900">{{ $data[$period]['count'] }}</p>
+                                    <div class="sc-card-quiet p-3 text-center">
+                                        <dt class="sc-stat-label">Readings</dt>
+                                        <dd class="sc-num font-bold text-xl" style="color: var(--sc-ink)">{{ $p['count'] }}</dd>
                                     </div>
                                 @else
-                                    <div class="text-center bg-gray-50 rounded-xl p-3">
-                                        <p class="text-xs font-[700] text-gray-500 uppercase">Average</p>
-                                        <p class="text-xl font-[900] text-gray-900">{{ $data[$period]['avg'] ?? '-' }}</p>
+                                    @php
+                                        $trend = $p['trend'] ?? 'stable';
+                                        [$trendIcon, $trendWord, $trendTone] = match ($trend) {
+                                            'increasing' => ['trending-up',   'Rising',  'warn'],
+                                            'decreasing' => ['trending-down', 'Falling', 'ok'],
+                                            default      => ['minus',         'Stable',  ''],
+                                        };
+                                    @endphp
+                                    <div class="sc-card-quiet p-3 text-center">
+                                        <dt class="sc-stat-label">Average</dt>
+                                        <dd class="sc-num font-bold text-xl" style="color: var(--sc-ink)">{{ $p['avg'] ?? '-' }}</dd>
                                     </div>
-                                    <div class="text-center bg-gray-50 rounded-xl p-3">
-                                        <p class="text-xs font-[700] text-gray-500 uppercase">Min / Max</p>
-                                        <p class="text-lg font-[900] text-gray-900">{{ $data[$period]['min'] ?? '-' }}<span class="text-gray-400">/</span>{{ $data[$period]['max'] ?? '-' }}</p>
+                                    <div class="sc-card-quiet p-3 text-center">
+                                        <dt class="sc-stat-label">Min / Max</dt>
+                                        <dd class="sc-num font-bold text-lg" style="color: var(--sc-ink)">{{ $p['min'] ?? '-' }}<span style="color: var(--sc-muted)">/</span>{{ $p['max'] ?? '-' }}</dd>
                                     </div>
-                                    <div class="text-center bg-gray-50 rounded-xl p-3">
-                                        <p class="text-xs font-[700] text-gray-500 uppercase">Trend</p>
-                                        @php
-                                            $trend = $data[$period]['trend'] ?? 'stable';
-                                            $trendIcon = $trend === 'increasing' ? '↗' : ($trend === 'decreasing' ? '↘' : '→');
-                                            $trendColor = $trend === 'stable' ? 'text-gray-600' : ($trend === 'increasing' ? 'text-red-600' : 'text-green-600');
-                                        @endphp
-                                        <p class="text-xl font-[900] {{ $trendColor }}">{{ $trendIcon }}</p>
+                                    <div class="sc-card-quiet p-3 text-center">
+                                        <dt class="sc-stat-label">Trend</dt>
+                                        {{-- An arrow and a word: the direction is never colour alone. --}}
+                                        <dd class="sc-mark {{ $trendTone ? 'sc-mark-' . $trendTone : '' }} justify-center text-base mt-1">
+                                            <x-dynamic-component :component="'lucide-' . $trendIcon" class="sc-i w-5 h-5" aria-hidden="true" />
+                                            {{ $trendWord }}
+                                        </dd>
                                     </div>
                                 @endif
-                            </div>
+                            </dl>
 
-                            @if($data[$period]['metrics']->count() > 0)
-                            <div class="flex items-center justify-between py-3 px-4 bg-{{ $data['config']['color'] }}-50 rounded-xl border border-{{ $data['config']['color'] }}-100">
+                            @if($p['metrics']->count() > 0)
+                            @php $latestMetric = $p['metrics']->sortByDesc('measured_at')->first(); @endphp
+                            <div class="sc-card-quiet flex items-center justify-between gap-3 py-3 px-4">
                                 <div>
-                                    <p class="text-xs font-[700] text-{{ $data['config']['color'] }}-600 uppercase">Latest Reading</p>
-                                    <p class="text-lg font-[900] text-gray-900">
+                                    <p class="sc-stat-label">Latest reading</p>
+                                    <p class="sc-num font-bold text-lg" style="color: var(--sc-ink)">
                                         @if($type === 'blood_pressure')
-                                            {{ $data[$period]['metrics']->first()->value_text }}
+                                            {{ $latestMetric->value_text }}
                                         @else
-                                            {{ number_format($data[$period]['metrics']->first()->value, $type === 'temperature' ? 1 : 0) }} {{ $data['config']['unit'] }}
+                                            {{ number_format($latestMetric->value, $type === 'temperature' ? 1 : 0) }} {{ $data['config']['unit'] }}
                                         @endif
                                     </p>
                                 </div>
-                                <p class="text-xs font-[600] text-gray-500">{{ $data[$period]['metrics']->first()->measured_at->diffForHumans() }}</p>
+                                <p class="text-sm whitespace-nowrap" style="color: var(--sc-muted)">{{ $latestMetric->measured_at->diffForHumans() }}</p>
                             </div>
                             @endif
                         @else
-                            <div class="text-center py-10">
-                                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl opacity-50 grayscale">
-                                    {{ $data['config']['icon'] }}
-                                </div>
-                                <h4 class="text-base font-[800] text-gray-400 mb-1">No Data Yet</h4>
-                                <p class="text-xs text-gray-400 font-[600] mb-4">Start recording to see analytics</p>
-                                <a href="{{ route('elderly.vitals.' . $type) }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-{{ $data['config']['color'] }}-500 text-white rounded-xl text-sm font-[700] hover:bg-{{ $data['config']['color'] }}-600 transition-colors">
-                                    <span>+</span> Add Reading
+                            <div class="sc-empty py-8">
+                                <x-dynamic-component :component="'lucide-' . ($vitalIconMap[$type] ?? 'stethoscope')" class="sc-i w-8 h-8" style="color: var(--sc-muted)" aria-hidden="true" />
+                                <p class="font-semibold" style="color: var(--sc-ink)">No data yet</p>
+                                <p class="text-sm">Start recording to see analytics</p>
+                                <a href="{{ route('elderly.vitals.' . $type) }}" class="sc-btn sc-btn-ghost sc-btn-sm">
+                                    <x-lucide-plus class="sc-i w-4 h-4" aria-hidden="true" />
+                                    Add reading
                                 </a>
                             </div>
                         @endif
                     </div>
                     @endforeach
                 </div>
-            </div>
+            </section>
             @endforeach
         </div>
     </div>
-</div>
+</main>
 
-<!-- Detail Modal/Drawer -->
+{{-- Detail drawer. The scrim is the backdrop; the panel slides in from the
+     right with a transform, which is one of the two things we animate. --}}
 <div id="detailModal" class="fixed inset-0 z-[60] hidden">
-    <div class="absolute inset-0 bg-black/40 modal-backdrop" onclick="closeDetailModal()"></div>
-    <div class="absolute right-0 top-0 bottom-0 w-full max-w-xl bg-white shadow-2xl drawer-slide overflow-y-auto" id="detailDrawer">
+    <div class="sc-scrim" onclick="closeDetailModal()"></div>
+    <div class="absolute right-0 top-0 bottom-0 w-full max-w-xl z-[70] overflow-y-auto translate-x-full transition-transform duration-300 ease-out"
+         style="background: var(--sc-surface); border-left: 1px solid var(--sc-line); box-shadow: var(--sc-sh-lg)"
+         id="detailDrawer"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="detailModalTitle">
         <div id="detailModalContent"></div>
     </div>
 </div>
@@ -642,7 +592,76 @@
 <script>
     const charts = {};
     const analyticsData = @json($analyticsData);
+    const vitalIconSvg = @json($vitalIconSvg);
     let currentPeriod = '7days';
+
+    /* ── Theme ─────────────────────────────────────────────────────
+       Read the palette from CSS so the chart follows light, dark and
+       high contrast. Series order is fixed across the app. */
+    const SERIES_INDEX = { blood_pressure: 1, heart_rate: 2, sugar_level: 3, temperature: 4 };
+
+    function chartTheme(type) {
+        const css = getComputedStyle(document.documentElement);
+        const v = (name) => css.getPropertyValue(name).trim();
+        const hc = document.documentElement.classList.contains('high-contrast');
+        return {
+            line:  v(`--sc-chart-${SERIES_INDEX[type] || 5}`),
+            alert: v('--sc-chart-3'),
+            grid:  v('--sc-chart-grid'),
+            axis:  v('--sc-chart-axis'),
+            band:  v('--sc-chart-band'),
+            surface: v('--sc-surface'),
+            ink:   v('--sc-ink'),
+            highContrast: hc,
+        };
+    }
+
+    /* ── Range rules ───────────────────────────────────────────────
+       The same thresholds config/vitals.php uses, evaluated in order:
+       the first rule that matches wins, the default is "Normal". */
+    function scalarStatus(value, config) {
+        const rules = Array.isArray(config.status_thresholds) ? config.status_thresholds : [];
+        for (const r of rules) {
+            if (r.default) continue;
+            if ('min' in r && value >= r.min) return r;
+            if ('max' in r && value <= r.max) return r;
+        }
+        return rules.find(r => r.default) || { label: 'Normal', tone: 'green' };
+    }
+    function isOutOfRange(type, value, config, part) {
+        if (type === 'blood_pressure') {
+            const t = config.status_thresholds || {};
+            const lo = t.low?.[part], hi = t.elevated?.[part];
+            return (lo !== undefined && value < lo) || (hi !== undefined && value >= hi);
+        }
+        return scalarStatus(value, config).tone !== 'green';
+    }
+    // The healthy range behind a scalar series: above the highest "low"
+    // rule, below the lowest "high" rule.
+    function normalBand(config) {
+        const rules = Array.isArray(config.status_thresholds) ? config.status_thresholds : [];
+        const mins = rules.filter(r => 'min' in r).map(r => r.min);
+        const maxs = rules.filter(r => 'max' in r).map(r => r.max);
+        if (!mins.length || !maxs.length) return null;
+        return { from: Math.max(...maxs), to: Math.min(...mins) };
+    }
+
+    // Paints the healthy range as a soft band behind the line.
+    const healthyBandPlugin = {
+        id: 'healthyBand',
+        beforeDatasetsDraw(chart, _args, opts) {
+            if (!opts || !opts.band || !opts.color) return;
+            const { ctx, chartArea, scales: { y } } = chart;
+            if (!chartArea || !y) return;
+            const top = Math.max(chartArea.top, Math.min(y.getPixelForValue(opts.band.to), chartArea.bottom));
+            const bottom = Math.min(chartArea.bottom, Math.max(y.getPixelForValue(opts.band.from), chartArea.top));
+            if (bottom <= top) return;
+            ctx.save();
+            ctx.fillStyle = opts.color;
+            ctx.fillRect(chartArea.left, top, chartArea.right - chartArea.left, bottom - top);
+            ctx.restore();
+        },
+    };
 
     function initCharts() {
         Object.keys(analyticsData).forEach(type => {
@@ -652,7 +671,7 @@
                 if (periodData && periodData.count > 0) {
                     const canvasId = `chart-${type}-${period}`;
                     const ctx = document.getElementById(canvasId);
-                    if (ctx) {
+                    if (ctx && !charts[canvasId]) {
                         charts[canvasId] = createChart(ctx, type, periodData, data.config);
                     }
                 }
@@ -661,19 +680,21 @@
     }
 
     function createChart(ctx, type, periodData, config) {
-        const metrics = periodData.metrics || [];
+        // Oldest to newest, left to right.
+        const metrics = [...(periodData.metrics || [])].sort((a, b) => new Date(a.measured_at) - new Date(b.measured_at));
         const labels = metrics.map(m => {
             const d = new Date(m.measured_at);
             return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         });
-        
-        const colorMap = {
-            'red':    { bg: 'rgba(239, 68, 68, 0.15)',  border: 'rgb(239, 68, 68)' },
-            'blue':   { bg: 'rgba(59, 130, 246, 0.15)', border: 'rgb(59, 130, 246)' },
-            'orange': { bg: 'rgba(249, 115, 22, 0.15)', border: 'rgb(249, 115, 22)' },
-            'rose':   { bg: 'rgba(244, 63, 94, 0.15)',  border: 'rgb(244, 63, 94)' },
-        };
-        const colors = colorMap[config.color] || colorMap.blue;
+        const theme = chartTheme(type);
+
+        // Out-of-range points get a triangle and a larger radius as well as
+        // the alert hue, so the shape carries the meaning on its own.
+        const pointStyles = (flags) => ({
+            pointStyle: flags.map(f => f ? 'triangle' : 'circle'),
+            pointRadius: flags.map(f => f ? 6 : 3),
+            pointHoverRadius: flags.map(f => f ? 8 : 5),
+        });
 
         let datasets = [];
 
@@ -686,42 +707,102 @@
                     diastolic.push(parseInt(parts[1]));
                 }
             });
+            const sysFlags = systolic.map(v => isOutOfRange(type, v, config, 'systolic'));
+            const diaFlags = diastolic.map(v => isOutOfRange(type, v, config, 'diastolic'));
+            // Same hue, different dash: the two lines are one vital.
             datasets = [
-                { label: 'Sys', data: systolic, borderColor: colors.border, backgroundColor: colors.bg, borderWidth: 2, fill: true, tension: 0.4, pointRadius: 3 },
-                { label: 'Dia', data: diastolic, borderColor: 'rgb(147, 51, 234)', backgroundColor: 'rgba(147, 51, 234, 0.15)', borderWidth: 2, fill: true, tension: 0.4, pointRadius: 3 }
+                { label: 'Systolic',  data: systolic,  borderWidth: 2, fill: false, tension: 0.35, _flags: sysFlags, ...pointStyles(sysFlags) },
+                { label: 'Diastolic', data: diastolic, borderWidth: 2, fill: false, tension: 0.35, borderDash: [6, 4], _flags: diaFlags, ...pointStyles(diaFlags) },
             ];
         } else {
             const values = metrics.map(m => parseFloat(m.value));
-            datasets = [{ label: config.name, data: values, borderColor: colors.border, backgroundColor: colors.bg, borderWidth: 2, fill: true, tension: 0.4, pointRadius: 3 }];
+            const flags = values.map(v => isOutOfRange(type, v, config));
+            datasets = [{ label: config.name, data: values, borderWidth: 2, fill: false, tension: 0.35, _flags: flags, ...pointStyles(flags) }];
         }
 
-        return new Chart(ctx, {
+        const chart = new Chart(ctx, {
             type: 'line',
             data: { labels, datasets },
+            plugins: [healthyBandPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
                 plugins: {
-                    legend: { display: type === 'blood_pressure', position: 'top', labels: { font: { weight: 'bold', size: 10 }, usePointStyle: true, padding: 8 } },
-                    tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', padding: 10, titleFont: { size: 12, weight: 'bold' }, bodyFont: { size: 11 }, cornerRadius: 8 }
+                    healthyBand: { band: type === 'blood_pressure' ? null : normalBand(config) },
+                    legend: { display: type === 'blood_pressure', position: 'top', labels: { usePointStyle: false, boxWidth: 28, boxHeight: 2, padding: 12, font: { size: 13 } } },
+                    tooltip: {
+                        padding: 10,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label(item) {
+                                const flag = item.dataset._flags?.[item.dataIndex];
+                                return `${item.dataset.label}: ${item.formattedValue} ${config.unit}${flag ? ' — out of range' : ''}`;
+                            },
+                        },
+                    },
                 },
                 scales: {
-                    y: { beginAtZero: false, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { weight: '600', size: 10 } } },
-                    x: { grid: { display: false }, ticks: { font: { weight: '600', size: 9 }, maxRotation: 45, minRotation: 45 } }
-                }
-            }
+                    y: {
+                        beginAtZero: false,
+                        title: { display: true, text: config.unit, font: { size: 12 } },
+                        ticks: { font: { size: 12 } },
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 12 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 },
+                    },
+                },
+            },
         });
+
+        chart._scType = type;
+        chart._scConfig = config;
+        applyChartTheme(chart);
+        return chart;
     }
+
+    function applyChartTheme(chart) {
+        const theme = chartTheme(chart._scType);
+        chart.data.datasets.forEach(ds => {
+            ds.borderColor = theme.line;
+            ds.backgroundColor = theme.surface;
+            ds.pointBackgroundColor = ds._flags.map(f => f ? theme.alert : theme.surface);
+            ds.pointBorderColor = ds._flags.map(f => f ? theme.alert : theme.line);
+            ds.pointBorderWidth = 2;
+        });
+        const y = chart.options.scales.y, x = chart.options.scales.x;
+        y.grid.color = theme.grid;
+        y.ticks.color = theme.axis;
+        y.title.color = theme.axis;
+        x.ticks.color = theme.axis;
+        chart.options.plugins.legend.labels.color = theme.ink;
+        chart.options.plugins.healthyBand.color = theme.highContrast ? null : theme.band;
+        chart.options.plugins.tooltip.backgroundColor = theme.ink;
+        chart.options.plugins.tooltip.titleColor = theme.surface;
+        chart.options.plugins.tooltip.bodyColor = theme.surface;
+        chart.update('none');
+    }
+
+    // Re-read the palette when the Display menu changes the theme.
+    new MutationObserver(() => {
+        Object.values(charts).forEach(applyChartTheme);
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
     function changePeriod(period) {
         currentPeriod = period;
         document.querySelectorAll('.period-btn').forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.dataset.period === period) btn.classList.add('active');
+            btn.setAttribute('aria-selected', btn.dataset.period === period ? 'true' : 'false');
         });
         document.querySelectorAll('.period-data').forEach(el => {
             el.classList.toggle('hidden', el.dataset.period !== period);
         });
+        // A canvas that was hidden at draw time has no size; give it one now.
+        Object.entries(charts).forEach(([id, chart]) => { if (id.endsWith(`-${period}`)) chart.resize(); });
+    }
+
+    function escapeHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
 
     function openDetailModal(type) {
@@ -729,112 +810,102 @@
         const periodData = data[currentPeriod];
         const modal = document.getElementById('detailModal');
         const content = document.getElementById('detailModalContent');
-        
+        const icon = vitalIconSvg[type] || '';
+
         let historyHtml = '';
         if (periodData && periodData.metrics && periodData.metrics.length > 0) {
-            historyHtml = periodData.metrics.map(m => {
+            const rows = [...periodData.metrics].sort((a, b) => new Date(b.measured_at) - new Date(a.measured_at));
+            historyHtml = rows.map(m => {
                 const value = type === 'blood_pressure' ? m.value_text : `${parseFloat(m.value).toFixed(type === 'temperature' ? 1 : 0)} ${data.config.unit}`;
                 const date = new Date(m.measured_at);
                 const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                 const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-                const source = m.source === 'google_fit' ? '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">Google Fit</span>' : '';
+                const source = m.source === 'google_fit' ? '<span class="sc-badge sc-badge-brand">Google Fit</span>' : '<span class="sc-badge">Manual</span>';
                 return `
-                    <div class="flex items-center justify-between py-4 border-b border-gray-100 last:border-0">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-${data.config.color}-50 rounded-xl flex items-center justify-center text-xl">${data.config.icon}</div>
-                            <div>
-                                <p class="text-lg font-[900] text-gray-900">${value}</p>
-                                <p class="text-xs text-gray-500 font-[600]">${dateStr} • ${timeStr}</p>
+                    <li class="flex items-center justify-between gap-3 py-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <span class="sc-plate sc-plate-sm flex-shrink-0">${icon}</span>
+                            <div class="min-w-0">
+                                <p class="sc-num font-bold text-lg" style="color: var(--sc-ink)">${escapeHtml(value)}</p>
+                                <p class="text-sm sc-num" style="color: var(--sc-muted)">${escapeHtml(dateStr)} · ${escapeHtml(timeStr)}</p>
                             </div>
                         </div>
-                        <div class="text-right">${source}</div>
-                    </div>
+                        ${source}
+                    </li>
                 `;
             }).join('');
         } else {
-            historyHtml = '<div class="text-center py-12 text-gray-400"><p class="text-lg font-bold">No readings found</p><p class="text-sm">for this period</p></div>';
+            historyHtml = '<li class="sc-empty py-8"><p class="font-semibold" style="color: var(--sc-ink)">No readings found</p><p class="text-sm">for this period</p></li>';
         }
 
+        const cell = (label, value, sub) => `
+            <div class="sc-card-quiet p-4 text-center">
+                <dt class="sc-stat-label">${label}</dt>
+                <dd class="sc-num font-bold text-2xl" style="color: var(--sc-ink)">${escapeHtml(value ?? '-')}</dd>
+                ${sub ? `<dd class="text-sm sc-num mt-1" style="color: var(--sc-muted)">${escapeHtml(sub)}</dd>` : ''}
+            </div>`;
+
         const statsHtml = type === 'blood_pressure' ? `
-            <div class="grid grid-cols-2 gap-3">
-                <div class="bg-red-50 rounded-xl p-4 text-center">
-                    <p class="text-xs font-[700] text-red-600 uppercase mb-1">Systolic Avg</p>
-                    <p class="text-2xl font-[900] text-gray-900">${periodData?.systolic_avg || '-'}</p>
-                    <p class="text-xs text-gray-500 mt-1">${periodData?.systolic_min || '-'} - ${periodData?.systolic_max || '-'}</p>
-                </div>
-                <div class="bg-purple-50 rounded-xl p-4 text-center">
-                    <p class="text-xs font-[700] text-purple-600 uppercase mb-1">Diastolic Avg</p>
-                    <p class="text-2xl font-[900] text-gray-900">${periodData?.diastolic_avg || '-'}</p>
-                    <p class="text-xs text-gray-500 mt-1">${periodData?.diastolic_min || '-'} - ${periodData?.diastolic_max || '-'}</p>
-                </div>
-            </div>
+            <dl class="grid grid-cols-2 gap-3">
+                ${cell('Systolic avg', periodData?.systolic_avg || '-', `${periodData?.systolic_min || '-'} – ${periodData?.systolic_max || '-'}`)}
+                ${cell('Diastolic avg', periodData?.diastolic_avg || '-', `${periodData?.diastolic_min || '-'} – ${periodData?.diastolic_max || '-'}`)}
+            </dl>
         ` : `
-            <div class="grid grid-cols-3 gap-3">
-                <div class="bg-gray-50 rounded-xl p-4 text-center">
-                    <p class="text-xs font-[700] text-gray-500 uppercase mb-1">Average</p>
-                    <p class="text-2xl font-[900] text-gray-900">${periodData?.avg || '-'}</p>
-                </div>
-                <div class="bg-gray-50 rounded-xl p-4 text-center">
-                    <p class="text-xs font-[700] text-gray-500 uppercase mb-1">Minimum</p>
-                    <p class="text-2xl font-[900] text-gray-900">${periodData?.min || '-'}</p>
-                </div>
-                <div class="bg-gray-50 rounded-xl p-4 text-center">
-                    <p class="text-xs font-[700] text-gray-500 uppercase mb-1">Maximum</p>
-                    <p class="text-2xl font-[900] text-gray-900">${periodData?.max || '-'}</p>
-                </div>
-            </div>
+            <dl class="grid grid-cols-3 gap-3">
+                ${cell('Average', periodData?.avg || '-')}
+                ${cell('Minimum', periodData?.min || '-')}
+                ${cell('Maximum', periodData?.max || '-')}
+            </dl>
         `;
 
-        const periodLabel = currentPeriod === '7days' ? 'Last 7 Days' : (currentPeriod === '30days' ? 'Last 30 Days' : 'Last 90 Days');
+        const periodLabel = currentPeriod === '7days' ? 'Last 7 days' : (currentPeriod === '30days' ? 'Last 30 days' : 'Last 90 days');
 
         content.innerHTML = `
-            <div class="sticky top-0 bg-white border-b border-gray-200 z-10">
-                <div class="flex items-center justify-between p-5">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 bg-${data.config.color}-100 rounded-xl flex items-center justify-center text-2xl">${data.config.icon}</div>
-                        <div>
-                            <h2 class="text-xl font-[900] text-gray-900">${data.config.name}</h2>
-                            <p class="text-sm text-gray-500 font-[600]">${periodLabel} • ${periodData?.count || 0} readings</p>
-                        </div>
+            <div class="sticky top-0 z-10 p-5 flex items-center justify-between gap-3" style="background: var(--sc-surface); border-bottom: 1px solid var(--sc-line)">
+                <div class="flex items-center gap-3 min-w-0">
+                    <span class="sc-plate flex-shrink-0">${icon}</span>
+                    <div class="min-w-0">
+                        <h2 id="detailModalTitle" class="sc-dialog-title">${escapeHtml(data.config.name)}</h2>
+                        <p class="text-sm" style="color: var(--sc-muted)">${periodLabel} · <span class="sc-num">${periodData?.count || 0}</span> readings</p>
                     </div>
-                    <button onclick="closeDetailModal()" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors">
-                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
                 </div>
+                <button type="button" onclick="closeDetailModal()" class="sc-icon-btn flex-shrink-0">
+                    <svg class="sc-i w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    <span class="sr-only">Close</span>
+                </button>
             </div>
-            
+
             <div class="p-5 space-y-6">
-                <div>
-                    <h3 class="text-sm font-[800] text-gray-500 uppercase mb-3">Statistics</h3>
+                <section aria-labelledby="detail-stats-title">
+                    <h3 id="detail-stats-title" class="sc-eyebrow mb-3">Statistics</h3>
                     ${statsHtml}
-                </div>
-                
-                <a href="${window.location.origin}/my-vitals/${type}" class="flex items-center justify-center gap-2 w-full py-4 bg-${data.config.color}-500 text-white rounded-xl font-[800] hover:bg-${data.config.color}-600 transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
-                    Add New Reading
+                </section>
+
+                <a href="${window.location.origin}/my-vitals/${type}" class="sc-btn sc-btn-primary w-full">
+                    <svg class="sc-i w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Add new reading
                 </a>
-                
-                <div>
-                    <h3 class="text-sm font-[800] text-gray-500 uppercase mb-3">All Readings</h3>
-                    <div class="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 max-h-[400px] overflow-y-auto">
+
+                <section aria-labelledby="detail-history-title">
+                    <h3 id="detail-history-title" class="sc-eyebrow mb-3">All readings</h3>
+                    <ul class="sc-divide max-h-[400px] overflow-y-auto">
                         ${historyHtml}
-                    </div>
-                </div>
+                    </ul>
+                </section>
             </div>
         `;
 
         modal.classList.remove('hidden');
         setTimeout(() => {
-            document.getElementById('detailDrawer').classList.remove('hidden');
+            document.getElementById('detailDrawer').classList.remove('translate-x-full');
+            content.querySelector('button')?.focus();
         }, 10);
     }
 
     function closeDetailModal() {
         const modal = document.getElementById('detailModal');
         const drawer = document.getElementById('detailDrawer');
-        drawer.classList.add('hidden');
+        drawer.classList.add('translate-x-full');
         setTimeout(() => { modal.classList.add('hidden'); }, 300);
     }
 

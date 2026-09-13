@@ -17,9 +17,10 @@
     <x-slot:bodyClass>sc-page min-h-screen</x-slot:bodyClass>
 
     @php
+        // One icon per vital, everywhere — the same map App\View\Components\VitalCard uses.
         $vitalIcons = [
-            'blood_pressure' => 'activity',
-            'heart_rate'     => 'heart-pulse',
+            'blood_pressure' => 'heart-pulse',
+            'heart_rate'     => 'activity',
             'sugar_level'    => 'droplet',
             'temperature'    => 'thermometer',
         ];

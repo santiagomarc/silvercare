@@ -139,11 +139,13 @@ self-contained views. See §4.
 `elderly/dashboard` and `caregiver/dashboard` are both converted. Remaining:
 the three chart pages in Phase 3, then the deletion in Phase 4.
 
-### Phase 3 — charts (Claude)
+### Phase 3 — charts (Claude) — in progress
 
-`elderly/vitals/show`, `elderly/vitals/analytics`, `caregiver/analytics`.
-These need the `--sc-chart-*` tokens and the fixed series order — see
-`FRONTEND_DESIGN_SYSTEM.md` §9b.
+`elderly/vitals/show` and `elderly/vitals/analytics` are done;
+`caregiver/analytics` remains. `elderly/vitals/analytics` is the worked
+example for a chart page: palette from `--sc-chart-*` re-read on theme
+change, fixed series order, out-of-range points as triangles, the
+healthy band plugin, and a text summary on every canvas. Copy it.
 
 ### Phase 4 — deletion (Claude)
 
@@ -172,8 +174,8 @@ Shared layer, anything with charts, anything the whole app depends on.
 | 1 | `components/dropdown.blade.php` + `nav-link` + `responsive-nav-link` + `dropdown-link` | 58 |
 | 2 | `elderly/dashboard.blade.php` — **done** | 619 |
 | 2 | `caregiver/dashboard.blade.php` — **done** | 801 |
-| 3 | `elderly/vitals/show.blade.php` | 817 |
-| 3 | `elderly/vitals/analytics.blade.php` | 852 |
+| 3 | `elderly/vitals/show.blade.php` — **done** | 817 |
+| 3 | `elderly/vitals/analytics.blade.php` — **done** | 852 |
 | 3 | `caregiver/analytics.blade.php` | 646 |
 | 1 | `profile/edit.blade.php` — **done** | 842 |
 | 4 | all deletions | — |
