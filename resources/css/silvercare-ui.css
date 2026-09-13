@@ -311,8 +311,12 @@ html.high-contrast .sc-card-glow { background: var(--sc-surface); }
     .sc-btn { padding-inline: 1rem; font-size: 1rem; }
 }
 
-/* Every icon-only control keeps a 48px hit area regardless of glyph size. */
+/* Every icon-only control keeps a 48px hit area regardless of glyph size.
+   `position: relative` so the sr-only label inside (position: absolute)
+   is contained by the button — otherwise a hundred of them in a scrolling
+   list escape the scroll container and stretch the page to 12,000px. */
 .sc-icon-btn {
+    position: relative;
     display: inline-flex; align-items: center; justify-content: center;
     min-width: 3rem; min-height: 3rem; border-radius: 999px;
     color: var(--sc-body); cursor: pointer;
