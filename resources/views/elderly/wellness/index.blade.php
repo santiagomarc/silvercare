@@ -1,4 +1,4 @@
-<x-dashboard-layout sc>
+<x-dashboard-layout>
     <x-slot:title>Wellness Center - SilverCare</x-slot:title>
 
     <x-dashboard-nav

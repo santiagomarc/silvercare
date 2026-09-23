@@ -1,4 +1,4 @@
-<x-dashboard-layout sc>
+<x-dashboard-layout>
     <x-slot:title>Morning Stretch - SilverCare</x-slot:title>
 
     <div id="main-content" x-data="stretchGuide()" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">

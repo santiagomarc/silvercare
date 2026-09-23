@@ -1,7 +1,7 @@
 {{-- Converted to the SilverCare design system. The `sc` flag is all the
      layout needs; everything below is plain design-system classes.
      See FRONTEND_DESIGN_SYSTEM.md §3. --}}
-<x-guest-layout sc>
+<x-guest-layout>
     <h1 class="sc-h3">Reset your password</h1>
 
     <p class="mt-3" style="color:var(--sc-body)">

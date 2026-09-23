@@ -23,7 +23,7 @@
     ];
 @endphp
 
-<x-dashboard-layout sc>
+<x-dashboard-layout>
     <x-slot:title>Alert Thresholds - SilverCare</x-slot:title>
 
     <x-dashboard-nav

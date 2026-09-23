@@ -12,7 +12,7 @@
      Every id, route, form field and JavaScript function is unchanged.
      ============================================================ --}}
 
-<x-dashboard-layout sc>
+<x-dashboard-layout>
     <x-slot:title>{{ $config['name'] }} - SilverCare</x-slot:title>
     <x-slot:bodyClass>sc-page min-h-screen</x-slot:bodyClass>
 

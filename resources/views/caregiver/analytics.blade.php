@@ -10,7 +10,7 @@
      - Semantic colour is restricted to icon scale (sc-mark, sc-plate).
      ============================================================ --}}
 
-<x-dashboard-layout sc>
+<x-dashboard-layout>
     <x-slot:title>Health Analytics - SilverCare</x-slot:title>
     <x-slot:bodyClass>sc-page min-h-screen</x-slot:bodyClass>
 

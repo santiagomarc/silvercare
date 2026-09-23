@@ -1,10 +1,6 @@
-{{-- Guest layout — every page that uses it is on the SilverCare design system,
-     so there is no longer an opt-in flag or a legacy branch here.
-
-     The `sc` prop is still accepted (and ignored) purely so an old
-     `<x-guest-layout sc>` call site keeps working; drop it from call sites
-     when convenient. See FRONTEND_DESIGN_SYSTEM.md. --}}
-@props(['sc' => true])
+{{-- Guest layout. Every page that uses it is on the SilverCare design system:
+     there is no opt-in flag and no legacy branch. See
+     FRONTEND_DESIGN_SYSTEM.md. --}}
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth">
     <head>

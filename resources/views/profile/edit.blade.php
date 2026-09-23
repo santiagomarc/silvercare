@@ -8,7 +8,7 @@
      and reads as a record, not a greyed-out form.
 
      The app bar owns the <h1>, so sections start at <h2>. --}}
-<x-dashboard-layout sc>
+<x-dashboard-layout>
     <x-slot:title>My Profile - SilverCare</x-slot:title>
 
     @php

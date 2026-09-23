@@ -1,4 +1,4 @@
-<x-dashboard-layout sc>
+<x-dashboard-layout>
     <x-slot:title>Schedule - SilverCare</x-slot:title>
 
     <div id="main-content" x-data="calendarSchedulerForm()" x-init="initDateTimePicker()">

@@ -1,5 +1,5 @@
 {{-- Converted to the SilverCare design system. See FRONTEND_DESIGN_SYSTEM.md §3. --}}
-<x-guest-layout sc>
+<x-guest-layout>
     <h1 class="sc-h3">{{ __('Choose a new password') }}</h1>
 
     <p class="mt-3" style="color:var(--sc-body)">

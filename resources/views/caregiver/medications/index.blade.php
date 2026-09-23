@@ -1,4 +1,4 @@
-<x-dashboard-layout sc>
+<x-dashboard-layout>
     <x-slot:title>Manage Medications - SilverCare</x-slot:title>
 
     <x-dashboard-nav

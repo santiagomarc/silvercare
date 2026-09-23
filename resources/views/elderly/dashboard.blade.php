@@ -6,7 +6,7 @@
      All interactivity via extracted Alpine.data() components.
      ============================================================ --}}
 
-<x-dashboard-layout sc>
+<x-dashboard-layout>
     <x-slot:title>Dashboard - SilverCare</x-slot:title>
     <x-slot:bodyClass>sc-page min-h-screen</x-slot:bodyClass>
 
@@ -205,29 +205,29 @@
                             <p class="font-semibold" style="color: var(--sc-ink)">Complete your health profile</p>
                             <p class="text-sm mt-1 flex flex-wrap items-center gap-x-3 gap-y-1" style="color: var(--sc-muted)">
                                 Complete your profile:
-                                <span class="inline-flex items-center gap-1 font-bold {{ $personalStepComplete ? 'text-emerald-700' : 'text-gray-500' }}">
+                                <span class="sc-mark @if($personalStepComplete) sc-mark-ok @endif">
                                     @if($personalStepComplete)
-                                        <x-lucide-check class="w-4 h-4" aria-hidden="true" />
+                                        <x-lucide-check class="sc-i w-4 h-4" aria-hidden="true" />
                                     @else
-                                        <x-lucide-square class="w-4 h-4" aria-hidden="true" />
+                                        <x-lucide-square class="sc-i w-4 h-4" aria-hidden="true" />
                                     @endif
-                                    Personal
+                                    Personal<span class="sr-only">@if($personalStepComplete) — done @else — not done yet @endif</span>
                                 </span>
-                                <span class="inline-flex items-center gap-1 font-bold {{ $emergencyStepComplete ? 'text-emerald-700' : 'text-gray-500' }}">
+                                <span class="sc-mark @if($emergencyStepComplete) sc-mark-ok @endif">
                                     @if($emergencyStepComplete)
-                                        <x-lucide-check class="w-4 h-4" aria-hidden="true" />
+                                        <x-lucide-check class="sc-i w-4 h-4" aria-hidden="true" />
                                     @else
-                                        <x-lucide-square class="w-4 h-4" aria-hidden="true" />
+                                        <x-lucide-square class="sc-i w-4 h-4" aria-hidden="true" />
                                     @endif
-                                    Emergency
+                                    Emergency<span class="sr-only">@if($emergencyStepComplete) — done @else — not done yet @endif</span>
                                 </span>
-                                <span class="inline-flex items-center gap-1 font-bold {{ $medicalStepComplete ? 'text-emerald-700' : 'text-gray-500' }}">
+                                <span class="sc-mark @if($medicalStepComplete) sc-mark-ok @endif">
                                     @if($medicalStepComplete)
-                                        <x-lucide-check class="w-4 h-4" aria-hidden="true" />
+                                        <x-lucide-check class="sc-i w-4 h-4" aria-hidden="true" />
                                     @else
-                                        <x-lucide-square class="w-4 h-4" aria-hidden="true" />
+                                        <x-lucide-square class="sc-i w-4 h-4" aria-hidden="true" />
                                     @endif
-                                    Medical
+                                    Medical<span class="sr-only">@if($medicalStepComplete) — done @else — not done yet @endif</span>
                                 </span>
                             </p>
                         </div>
@@ -279,7 +279,7 @@
 
             {{-- TAB PANEL: TODAY --}}
             <div x-show="isActive('today')"
-                 class="col-start-1 row-start-1 panel-shell panel-shell-today p-4 md:p-5"
+                 class="col-start-1 row-start-1"
                  x-transition:enter="transition duration-500 delay-100 ease-out"
                  x-transition:enter-start="opacity-0 translate-y-4 scale-[0.98]"
                  x-transition:enter-end="opacity-100 translate-y-0 scale-100"
@@ -335,7 +335,7 @@
 
             {{-- TAB PANEL: HEALTH --}}
             <div x-show="isActive('health')"
-                 class="col-start-1 row-start-1 panel-shell panel-shell-health p-4 md:p-5"
+                 class="col-start-1 row-start-1"
                  x-cloak
                  x-transition:enter="transition duration-500 delay-100 ease-out"
                  x-transition:enter-start="opacity-0 translate-y-4 scale-[0.98]"
@@ -386,7 +386,7 @@
 
             {{-- TAB PANEL: ACTIVITY --}}
             <div x-show="isActive('activity')"
-                 class="col-start-1 row-start-1 panel-shell panel-shell-activity p-4 md:p-5"
+                 class="col-start-1 row-start-1"
                  x-cloak
                  x-transition:enter="transition duration-500 delay-100 ease-out"
                  x-transition:enter-start="opacity-0 translate-y-4 scale-[0.98]"
@@ -429,22 +429,23 @@
 
             {{-- Upcoming Events --}}
             @if(!empty($upcomingEvents) && count($upcomingEvents) > 0)
-                <div class="relative z-10 mt-6">
-                    <h3 class="font-extrabold text-lg text-gray-900 mb-3">Upcoming Events</h3>
-                    <div class="space-y-3">
+                <section class="relative z-10 mt-6" aria-labelledby="upcoming-events-title">
+                    <h3 id="upcoming-events-title" class="sc-h3 mb-3">Upcoming events</h3>
+                    <ul class="space-y-3">
                         @foreach($upcomingEvents as $event)
-                            <div class="card-glass p-4 flex items-center gap-4">
-                                <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 font-extrabold text-sm flex-shrink-0">
-                                    {{ $event->start_time->format('M') }}<br>{{ $event->start_time->format('d') }}
-                                </div>
-                                <div class="min-w-0">
-                                    <p class="font-bold text-gray-900 text-sm truncate">{{ $event->title }}</p>
-                                    <p class="text-xs text-gray-500">{{ $event->start_time->format('g:i A') }}</p>
-                                </div>
-                            </div>
+                            <li class="sc-card p-4 flex items-center gap-4">
+                                <span class="sc-plate flex-shrink-0 flex-col leading-tight">
+                                    <span class="sc-num text-xs">{{ $event->start_time->format('M') }}</span>
+                                    <span class="sc-num font-bold">{{ $event->start_time->format('d') }}</span>
+                                </span>
+                                <span class="min-w-0">
+                                    <span class="block font-semibold truncate" style="color: var(--sc-ink)">{{ $event->title }}</span>
+                                    <span class="block text-sm sc-num" style="color: var(--sc-muted)">{{ $event->start_time->format('g:i A') }}</span>
+                                </span>
+                            </li>
                         @endforeach
-                    </div>
-                </div>
+                    </ul>
+                </section>
             @endif
         </div>
 

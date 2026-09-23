@@ -11,7 +11,7 @@
      fills on the page are the severity chips on open alerts.
      ============================================================ --}}
 
-<x-dashboard-layout sc>
+<x-dashboard-layout>
     <x-slot:title>Caregiver Dashboard - SilverCare</x-slot:title>
     <x-slot:bodyClass>sc-page min-h-screen</x-slot:bodyClass>
 

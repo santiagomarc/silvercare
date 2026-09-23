@@ -1,4 +1,4 @@
-<x-dashboard-layout sc>
+<x-dashboard-layout>
     <x-slot:title>Breathing Exercise - SilverCare</x-slot:title>
 
     <div x-data="breathingApp()">

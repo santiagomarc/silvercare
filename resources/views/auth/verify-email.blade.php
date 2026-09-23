@@ -1,5 +1,5 @@
 {{-- Converted to the SilverCare design system. See FRONTEND_DESIGN_SYSTEM.md §3. --}}
-<x-guest-layout sc>
+<x-guest-layout>
     <span class="sc-plate sc-plate-sm mb-5">
         <svg class="sc-i w-5 h-5" aria-hidden="true" focusable="false"><use href="#i-bell"/></svg>
     </span>

@@ -1,4 +1,4 @@
-<x-dashboard-layout sc>
+<x-dashboard-layout>
     <x-slot:title>Memory Match - SilverCare</x-slot:title>
 
     <div x-data="memoryGame()">

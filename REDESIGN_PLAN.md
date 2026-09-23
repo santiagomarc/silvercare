@@ -21,11 +21,20 @@ schedule and the ownership map.
 | `profile/edit.blade.php` | done — the first converted dashboard **view** |
 | Gemini's 17 self-contained views | done |
 | Phase 2 — both dashboards | done |
-| Signed-in app | **~11,900 lines across 48 files — this plan** |
+| Phase 3 — the three chart pages | done |
+| Phase 4 — deleting the old design | **done — see §7** |
 
-`layouts/dashboard.blade.php` still carries two bodies: the new design, and a
-legacy Montserrat/grey branch for the 25 views not yet converted. That branch
-is scaffolding. It gets deleted in Phase 4 — see §7.
+**The rollout is complete.** Every view is on the SilverCare design system,
+`layouts/dashboard.blade.php` has one body, and the Montserrat/grey design no
+longer exists in the repository.
+
+Two things were deliberately left out of it, and only these remain:
+
+- `components/ai-chat-widget.blade.php` (733) — still written in raw Tailwind
+  utilities with no `dark:` variants. It is the sole reason the `html.dark`
+  utility overrides survive in `app.css`; §5 gives it its own conversation.
+- `caregiver/analytics_pdf.blade.php` and `emails/*` — must stay on inline CSS.
+  See §5.
 
 ---
 
@@ -102,7 +111,7 @@ came first):
 3. **Nothing else changed** — every prop, route, link, button and the SOS
    script are exactly as they were.
 
-Phase 1 is open.
+Phase 1 is done.
 
 ### Phase 1 note — the worked example
 
@@ -110,7 +119,7 @@ Phase 1 is open.
 dashboard view that follows. Copy its shape:
 
 ```blade
-<x-dashboard-layout sc>
+<x-dashboard-layout>
     <x-slot:title>…</x-slot:title>
     <x-dashboard-nav title="…" subtitle="…" … />
     <main id="main-content" class="sc-app-main">
@@ -268,31 +277,61 @@ Two failure modes it will not catch, so check them by hand:
 
 ---
 
-## 7. Phase 4 — deleting the old design
+## 7. Phase 4 — deleting the old design — **DONE**
 
-Only when the last dashboard view is converted. Check with:
+The gate (bare `<x-dashboard-layout>` count reaching 0) was met once
+`caregiver/analytics` landed. What that step actually involved, since parts of
+the original checklist turned out to be stale:
+
+1. **`layouts/dashboard.blade.php`** — `@if/@else` stripped, Montserrat
+   `<link>` removed, `sc` prop gone from the layout and from all 33 call sites
+   (26 dashboard + 7 guest). `guest.blade.php` lost its compatibility `sc` prop
+   at the same time.
+2. **Dead files deleted** — the four the plan listed, plus one it missed:
+   `app/View/Components/AppLayout.php`, which was the only thing referencing
+   `layouts/app.blade.php`. The whole chain was dead.
+3. **`resources/css/app.css`: 904 → 499 lines.** The entire component layer
+   went except the toast.
+
+**Three corrections to the original checklist — read these before trusting a
+similar list again:**
+
+- **`.dose-*` was never in `app.css`.** Those rules live in
+  `silvercare-ui.css`, are built at runtime by `medication-tracker.js`
+  (`dose-${status}`), and are live. Deleting "`.dose-*`" as listed would have
+  broken the medication tracker.
+- **The `html.dark .bg-white` overrides had to stay.** The plan called them
+  scaffolding for the legacy component classes, but `ai-chat-widget` — which §5
+  excludes from this plan — is written entirely in `bg-white/80`,
+  `text-slate-600` and friends with no `dark:` variants of its own. Deleting
+  them would have broken the widget in dark mode. They are now commented with
+  the condition for their removal.
+- **Four classes on the "delete" list were still in the markup.** `.card-glass`
+  and `.panel-shell*` survived inside the *converted* `elderly/dashboard` — a
+  glass slab behind panels whose content already carried its own `sc-card`
+  surfaces. They were converted, not deleted around.
+
+**Two pre-existing bugs surfaced while verifying, and were fixed:**
+
+- `.toast-border-*` is only ever built as `'toast-border-' + t.type`, so
+  Tailwind's content scanner never saw it and purged all four rules out of
+  `@layer components`. The toast's outcome stripe had never rendered in a
+  production build. The rules now sit outside the layer.
+- `flatpickr` and `tom-select` pinned `font-family: 'Montserrat'`. With that
+  face no longer loaded they fell back to the system sans, rendering a date
+  picker in a different typeface from the form around it. Both now carry the
+  body stack.
+
+**How to check the state is still clean:**
 
 ```bash
+# every view on the design system (expect only "<x-dashboard-layout>")
 grep -rho "<x-dashboard-layout[^>]*>" resources/views | sort | uniq -c
+
+# no markup references a deleted class
+grep -rnE 'class="[^"]*(card-glass|panel-shell|back-nav-pill|empty-state)' resources/views
 ```
 
-When the bare `<x-dashboard-layout>` count reaches **0**:
-
-1. **`layouts/dashboard.blade.php`** — strip the `@if/@else`, drop the `sc`
-   prop, remove the Montserrat `<link>`. `layouts/guest.blade.php` is the
-   worked example of the end state.
-2. **`resources/css/app.css`** — delete the 55 legacy component rules
-   (`.card`, `.card-glass`, `.panel-shell`, `.badge-*`, `.notif-card`,
-   `.chat-*`, `.dose-*`, `.profile-*`, `.hero-*`, `.empty-state`,
-   `.progress-*`, `.ambient-orb`, `.back-nav-pill`, `.tab-bar`, `.tab-btn`)
-   **and** the `html.dark .bg-white { … !important }` overrides, which exist
-   only to prop those up.
-3. **Dead files** — delete outright, do not convert:
-   - `layouts/app.blade.php` (57) — no view uses `x-app-layout`
-   - `layouts/navigation.blade.php` (138) — only included by the above
-   - `components/medication-dose-button.blade.php` (47) — no view, no JS
-   - `components/vital-record-modal.blade.php` (183) — no view, no JS
-4. Remove `sc` from every call site — the layout no longer takes it.
-5. `php artisan test` and a pass of `check-ui.mjs` over the main pages.
-
-After this, the Montserrat/grey design does not exist in the repository.
+`public/build` is gitignored, so **run `npm run build` after pulling this** —
+otherwise arbitrary Tailwind classes in the converted views are missing from
+the stylesheet.

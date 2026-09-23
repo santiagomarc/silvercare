@@ -37,6 +37,13 @@
         border-color: rgba(148, 163, 184, 0.22) !important;
     }
 
+    /* These !important overrides repaint raw Tailwind utilities in dark mode.
+       They are scaffolding, not design: a converted view uses tokens and needs
+       none of them. They survive only for components/ai-chat-widget.blade.php,
+       which is the last view still written in raw utilities (bg-white/80,
+       text-slate-600 …) with no dark: variants of its own. REDESIGN_PLAN.md §5
+       gives that widget its own conversation; when it lands, delete this whole
+       html.dark block and the html.high-contrast text overrides below it. */
     html.dark .bg-white {
         background-color: rgba(15, 23, 42, 0.92) !important;
     }
@@ -73,26 +80,6 @@
     html.dark .text-gray-500,
     html.dark .text-gray-400 { color: #94a3b8 !important; }
 
-    html.dark .card,
-    html.dark .card-glass,
-    html.dark .surface-warm,
-    html.dark .surface-sky,
-    html.dark .surface-mint,
-    html.dark .panel-shell,
-    html.dark .surface-accent {
-        border-color: rgba(148, 163, 184, 0.24) !important;
-        box-shadow: 0 22px 48px -30px rgba(2, 6, 23, 0.82) !important;
-    }
-
-    html.dark .surface-warm,
-    html.dark .surface-sky,
-    html.dark .surface-mint,
-    html.dark .panel-shell-today,
-    html.dark .panel-shell-health,
-    html.dark .panel-shell-activity {
-        background: linear-gradient(145deg, rgba(15, 23, 42, 0.94), rgba(30, 41, 59, 0.9)) !important;
-    }
-
     /* Enforce visible focus rings globally */
     :focus-visible {
         @apply outline-2 outline-offset-2 outline-navy;
@@ -111,146 +98,18 @@
     }
 }
 
-/* ── Component Layer: Reusable design patterns ───────────────────── */
+/* ── Component Layer ──────────────────────────────────────────────
+   What remains here is the toast, and only because the toast markup in
+   elderly/dashboard.blade.php still uses it.
+
+   Everything else this layer held — .card, .card-glass, .surface-*,
+   .panel-shell*, .card-gradient, .badge*, .progress-*, .chart-*, .chat-*,
+   .notif-*, .empty-state*, .hero-*, .profile-*, .back-nav-pill, .tab-bar,
+   .tab-btn, .ambient-orb, .skip-nav — was the Montserrat/grey design. Every
+   view is on the SilverCare design system now (resources/css/silvercare-ui.css),
+   so those rules were deleted rather than left to rot. Do not add to this
+   layer; add to silvercare-ui.css. */
 @layer components {
-
-    /* Card — standard surface container */
-    .card {
-        @apply bg-white/90 backdrop-blur-md rounded-card border border-white/70;
-        @apply shadow-card;
-    }
-
-    .card-glass {
-        @apply rounded-card border border-white/70 bg-white/80 backdrop-blur-xl;
-        box-shadow: 0 22px 44px -28px rgba(15, 23, 42, 0.34), 0 16px 28px -24px rgba(99, 102, 241, 0.22);
-    }
-
-    .surface-warm {
-        @apply rounded-card border border-amber-100/80 bg-gradient-to-br from-amber-50/95 via-orange-50/90 to-rose-50/90 backdrop-blur-md;
-        box-shadow: 0 24px 50px -32px rgba(251, 146, 60, 0.45), 0 20px 28px -24px rgba(244, 63, 94, 0.2);
-    }
-
-    .surface-sky {
-        @apply rounded-card border border-sky-100/80 bg-gradient-to-br from-sky-50/95 via-blue-50/90 to-indigo-100/80 backdrop-blur-md;
-        box-shadow: 0 24px 50px -32px rgba(59, 130, 246, 0.34), 0 18px 26px -24px rgba(99, 102, 241, 0.24);
-    }
-
-    .surface-mint {
-        @apply rounded-card border border-emerald-100/80 bg-gradient-to-br from-emerald-50/95 via-green-50/90 to-teal-100/80 backdrop-blur-md;
-        box-shadow: 0 24px 50px -32px rgba(16, 185, 129, 0.32), 0 18px 26px -24px rgba(20, 184, 166, 0.22);
-    }
-
-    .surface-accent {
-        @apply rounded-card border border-white/20 bg-white/15 backdrop-blur-md;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 24px 48px -30px rgba(15, 23, 42, 0.45);
-    }
-
-    .panel-shell {
-        @apply relative overflow-hidden rounded-[2rem] border border-white/70 backdrop-blur-xl;
-        box-shadow: 0 28px 60px -36px rgba(15, 23, 42, 0.36), 0 20px 32px -28px rgba(59, 130, 246, 0.16);
-    }
-
-    .panel-shell-today {
-        background: linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(255, 251, 235, 0.62) 42%, rgba(239, 246, 255, 0.68));
-    }
-
-    .panel-shell-health {
-        background: linear-gradient(145deg, rgba(255, 255, 255, 0.76), rgba(224, 242, 254, 0.76) 44%, rgba(224, 231, 255, 0.68));
-    }
-
-    .panel-shell-activity {
-        background: linear-gradient(145deg, rgba(255, 255, 255, 0.76), rgba(254, 242, 242, 0.7) 38%, rgba(238, 242, 255, 0.7));
-    }
-
-    .shadow-depth {
-        box-shadow: 0 26px 52px -32px rgba(15, 23, 42, 0.38), 0 18px 32px -26px rgba(79, 70, 229, 0.2);
-    }
-
-    /* Card with gradient (action buttons, hero cards) */
-    .card-gradient {
-        @apply rounded-card relative overflow-hidden transition-all duration-300;
-        box-shadow: 0 28px 56px -32px rgba(15, 23, 42, 0.42), 0 18px 30px -24px rgba(255, 255, 255, 0.1);
-    }
-    .card-gradient:hover {
-        transform: translateY(-4px) scale(1.01);
-        box-shadow: 0 34px 64px -34px rgba(15, 23, 42, 0.46), 0 22px 34px -24px rgba(255, 255, 255, 0.16);
-    }
-
-    /* Badge — small status indicator */
-    .badge {
-        @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold;
-    }
-    .badge-success { @apply bg-green-100 text-green-700; }
-    .badge-warning { @apply bg-amber-100 text-amber-900; }
-    .badge-danger  { @apply bg-red-100 text-red-700; }
-    .badge-info    { @apply bg-blue-100 text-blue-900; }
-    .badge-neutral { @apply bg-gray-100 text-gray-600; }
-
-    /* Progress bar */
-    .progress-track {
-        @apply h-2.5 rounded-full overflow-hidden;
-        background: rgba(0, 0, 0, 0.08);
-    }
-    .progress-fill {
-        @apply h-full rounded-full transition-all duration-700 ease-out;
-    }
-
-    /* Chart Containers — Premium Canvas Styling */
-    .chart-container {
-        @apply relative rounded-2xl bg-gradient-to-br from-white/95 to-gray-50/90 p-6 shadow-xl border border-gray-100/80 backdrop-blur-sm;
-        box-shadow: 0 20px 40px -20px rgba(15, 23, 42, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.8);
-    }
-
-    .chart-container canvas {
-        @apply rounded-lg;
-    }
-
-    .chart-wrapper {
-        @apply relative h-64 md:h-72 lg:h-80 w-full;
-    }
-
-    .doughnut-chart-wrapper {
-        @apply relative h-72 md:h-80 w-full flex items-center justify-center;
-    }
-
-    /* Chart grid styling */
-    .chart-grid {
-        @apply grid grid-cols-1 lg:grid-cols-2 gap-6;
-    }
-
-    /* Tab bar (elderly dashboard) */
-    .tab-bar {
-        @apply flex rounded-[2.5rem] p-2 gap-2 border border-white/60 bg-white/40 backdrop-blur-2xl;
-        box-shadow: 0 20px 40px -24px rgba(15, 23, 42, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.6);
-    }
-    .tab-btn {
-        @apply relative z-10 flex-1 py-3.5 px-6 rounded-[2rem] text-sm font-bold text-slate-500
-               text-center cursor-pointer
-               min-h-touch flex items-center justify-center gap-2.5 border border-transparent;
-        transition-property: transform, background-color, color, box-shadow, border-color;
-        transition-duration: 280ms;
-        transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-        will-change: transform, background-color, box-shadow;
-    }
-    .tab-btn:hover {
-        transform: translateY(-1px);
-    }
-    .tab-btn:active {
-        transform: translateY(0) scale(0.97);
-    }
-    .tab-btn[aria-selected="true"] {
-        @apply text-white;
-        transform: translateY(-2px) scale(1.05); /* Added subtle scale-up */
-        filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1)); /* Added subtle shadow to selected text and icon */
-    }
-    .tab-btn svg {
-        transition: transform 350ms cubic-bezier(0.22, 1, 0.36, 1), opacity 350ms ease, color 350ms ease;
-    }
-    .tab-btn[aria-selected="true"] svg {
-        transform: scale(1.15); /* Increased scale of active icon */
-    }
-
-    /* Medication dose states now live in silvercare-ui.css, on tokens. */
 
     /* Toast notification container */
     .toast-container {
@@ -268,256 +127,20 @@
         background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 100%);
         pointer-events: none;
     }
-    .toast-border-success { border-bottom: 3px solid #10b981; }
-    .toast-border-error   { border-bottom: 3px solid #ef4444; }
-    .toast-border-info    { border-bottom: 3px solid #3b82f6; }
-    .toast-border-warning { border-bottom: 3px solid #f59e0b; }
-
-    /* Skip navigation — accessibility */
-    .skip-nav {
-        @apply sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4
-               focus:z-[9999] focus:bg-navy focus:text-white focus:px-6 focus:py-3
-               focus:rounded-xl focus:font-bold focus:shadow-lg;
-    }
-
-    /* Hero action card */
-    .hero-action {
-        @apply card-gradient p-4 md:p-5 text-white min-h-[120px]
-               flex flex-col justify-between border border-white/35 backdrop-blur-2xl;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34), 0 26px 48px -34px rgba(15, 23, 42, 0.52), 0 14px 30px -24px rgba(59, 130, 246, 0.3);
-    }
-
-    .hero-action::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        border-radius: inherit;
-        padding: 2px;
-        background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%, rgba(255,255,255,0.5) 100%);
-        background-size: 200% 200%;
-        animation: shimmer-border 4s ease-in-out infinite;
-        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-        mask-composite: exclude;
-        -webkit-mask-composite: xor;
-        pointer-events: none;
-    }
-
-    .hero-glass-chip {
-        @apply rounded-full backdrop-blur-md border border-white/35;
-        background: rgba(255, 255, 255, 0.2);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
-    }
-
-    .hero-glass-row {
-        @apply rounded-xl border border-white/30 backdrop-blur-md;
-        background: rgba(255, 255, 255, 0.12);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
-    }
-
-    .hero-action-cta {
-        @apply rounded-xl min-h-touch px-5 py-3 text-sm font-bold transition-all duration-200 active:scale-95;
-        background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.96));
-        box-shadow: 0 16px 30px -22px rgba(15, 23, 42, 0.58), inset 0 1px 0 rgba(255, 255, 255, 0.7);
-        position: relative;
-    }
-
-    .hero-action-cta::after {
-        content: '';
-        position: absolute;
-        inset: -4px;
-        border-radius: 16px;
-        border: 2px solid rgba(255,255,255,0.4);
-        animation: pulse-ring 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        pointer-events: none;
-    }
-
-    .hero-action-cta:hover {
-        transform: translateY(-1px) scale(1.03);
-    }
-
-    .hero-action-ghost {
-        @apply rounded-xl min-h-touch px-4 py-3 text-sm font-bold text-white transition-all duration-200 active:scale-95 border border-white/40 backdrop-blur-md;
-        background: rgba(255, 255, 255, 0.16);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    }
-
-    .hero-action-ghost:hover {
-        transform: translateY(-1px) scale(1.03);
-        background: rgba(255, 255, 255, 0.25);
-    }
-
-    .ambient-orb {
-        @apply absolute rounded-full blur-3xl pointer-events-none;
-    }
-
-    /* ── Chat UI ─────────────────────────────────────────────────── */
-    .chat-container {
-        @apply flex flex-col rounded-3xl border border-white/70 bg-white/85 shadow-card overflow-hidden;
-    }
-
-    .chat-header {
-        @apply flex items-center gap-3 px-5 py-4 border-b border-slate-100 bg-white/90 backdrop-blur-lg;
-    }
-
-    .chat-scroll-area {
-        @apply flex-1 overflow-y-auto px-5 py-4 space-y-1 no-scrollbar;
-        min-height: 380px;
-        max-height: 520px;
-        background: linear-gradient(180deg, rgba(248,250,252,0.6) 0%, rgba(255,255,255,0.4) 100%);
-    }
-
-    .chat-bubble {
-        @apply max-w-[80%] rounded-2xl px-4 py-3 text-base font-semibold leading-relaxed;
-        transition: transform 0.15s ease, opacity 0.15s ease;
-    }
-
-    .chat-bubble-outgoing {
-        @apply bg-navy-500 text-white rounded-br-md;
-        box-shadow: 0 4px 12px -4px rgba(52, 81, 209, 0.3);
-    }
-
-    .chat-bubble-incoming {
-        @apply bg-white text-slate-800 border border-slate-100 rounded-bl-md;
-        box-shadow: 0 2px 8px -3px rgba(15, 23, 42, 0.06);
-    }
-
-    .chat-input-bar {
-        @apply flex items-end gap-3 px-4 py-3 border-t border-slate-100 bg-white/95 backdrop-blur-lg;
-    }
-
-    .chat-send-btn {
-        @apply flex-shrink-0 w-12 h-12 rounded-full bg-navy-500 text-white flex items-center justify-center
-               transition-all duration-200 hover:bg-navy-600 hover:scale-105 active:scale-95
-               focus:outline-none focus:ring-2 focus:ring-navy-300 focus:ring-offset-2
-               disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100;
-        box-shadow: 0 4px 14px -4px rgba(52, 81, 209, 0.4);
-    }
-
-    .chat-date-separator {
-        @apply flex items-center justify-center py-3;
-    }
-
-    .chat-date-separator span {
-        @apply text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1 rounded-full;
-    }
-
-    /* ── Notification Feed ───────────────────────────────────────── */
-    .notif-card {
-        @apply bg-white rounded-2xl px-5 py-4 transition-all duration-200;
-        box-shadow: 0 2px 12px -4px rgba(15, 23, 42, 0.06);
-    }
-
-    .notif-card:hover {
-        box-shadow: 0 4px 20px -6px rgba(15, 23, 42, 0.10);
-        transform: translateY(-1px);
-    }
-
-    .notif-card-unread {
-        @apply bg-navy-50/30;
-    }
-
-    .notif-card-read {
-        @apply opacity-70;
-    }
-
-    .notif-avatar {
-        @apply flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center;
-    }
-
-    .notif-action-btn {
-        @apply inline-flex items-center gap-1.5 min-h-touch px-3 py-2 rounded-xl
-               text-sm font-bold transition-colors;
-    }
-
-    /* ── Empty States ────────────────────────────────────────────── */
-    .empty-state {
-        @apply flex flex-col items-center justify-center text-center py-16 px-6;
-    }
-
-    .empty-state-icon {
-        @apply w-20 h-20 rounded-full flex items-center justify-center mb-5;
-        background: linear-gradient(145deg, rgba(248,250,252,1), rgba(241,245,249,1));
-        box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255,255,255,0.9);
-    }
-
-    .empty-state h3 {
-        @apply text-xl font-extrabold text-slate-800 mb-2;
-    }
-
-    .empty-state p {
-        @apply text-base text-slate-500 font-medium max-w-sm;
-    }
-
-    
-    /* Force dark-mode error input text to be readable — overrides Tailwind !important */
-    html.dark .profile-field-input {
-        color-scheme: dark;
-    }
-    html.dark .profile-field-input.\!bg-rose-50,
-    html.dark .profile-field-input.\!border-rose-500 {
-        background-color: rgb(30 8 16) !important;
-        color: rgb(252 165 165) !important;
-        border-color: rgb(239 68 68) !important;
-    }
-
-    /* ── Back Navigation Pill ────────────────────────────────────── */
-    .back-nav-pill {
-        @apply inline-flex items-center gap-2 min-h-touch px-4 py-2.5 rounded-xl
-               text-sm font-bold text-slate-600 bg-white/80 border border-slate-200/60
-               backdrop-blur-sm transition-all duration-200
-               hover:bg-white hover:shadow-card hover:text-navy-500
-               active:scale-95
-               focus:outline-none focus:ring-2 focus:ring-navy-200 focus:ring-offset-2
-               dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700
-               dark:hover:bg-slate-800 dark:hover:text-sky-300;
-    }
-
-
-
-    .profile-field-label {
-        @apply mb-2 block text-sm font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500;
-    }
-
-    .profile-field-value {
-        @apply px-4 py-3 text-lg font-bold text-slate-800 dark:text-slate-100;
-    }
-
-    .profile-field-input {
-        @apply w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-4 py-3.5
-               text-lg font-bold text-slate-800
-               transition-all focus:border-navy-400 focus:bg-white focus:ring-0 outline-none
-               dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:bg-slate-900;
-    }
-
-    /* Ensure profile cards adapt to theme and force vertical stacking of fields */
-    .profile-card {
-        @apply bg-white;
-    }
-
-    html.dark .profile-card {
-        background-color: rgba(15, 23, 42, 0.94) !important;
-        color: #e6eef8;
-        border-color: rgba(148, 163, 184, 0.18) !important;
-    }
-
-    .profile-grid-vertical {
-        display: grid;
-        grid-template-columns: 1fr !important;
-        gap: 1.5rem;
-    }
 }
 
-@keyframes shimmer-border {
-    0%, 100% { background-position: 0% 0%; }
-    50% { background-position: 100% 100%; }
-}
+/* The toast's outcome stripe. These four live OUTSIDE @layer components on
+   purpose: the class is only ever built at runtime (`'toast-border-' + t.type`
+   in elderly/dashboard.blade.php), so Tailwind's content scanner cannot see it
+   and purged all four out of the layer — the stripe has never rendered in a
+   production build. Outside the layer the rules are emitted verbatim.
+   Colour is not the only signal: each toast also carries an icon and its
+   type in the accessible name. */
+.toast-border-success { border-bottom: 3px solid #10b981; }
+.toast-border-error   { border-bottom: 3px solid #ef4444; }
+.toast-border-info    { border-bottom: 3px solid #3b82f6; }
+.toast-border-warning { border-bottom: 3px solid #f59e0b; }
 
-@keyframes pulse-ring {
-    0%   { transform: scale(1); opacity: 0.6; }
-    50%  { transform: scale(1.08); opacity: 0; }
-    100% { transform: scale(1); opacity: 0; }
-}
 
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -713,11 +336,15 @@ body.swal2-toast-shown .swal2-container {
 }
 
 /* ── Flatpickr (Phase 3 advanced date/time inputs) ─────────────── */
+/* These two third-party skins used to pin Montserrat. That face is no longer
+   loaded — it went with the legacy design — so they fell back to the system
+   sans and rendered a date picker in a different typeface from the form around
+   it. Both now carry the body stack. */
 .flatpickr-calendar {
     border: 1px solid #d8e1f0;
     border-radius: 0.95rem;
     box-shadow: 0 24px 42px -30px rgba(15, 23, 42, 0.55);
-    font-family: 'Montserrat', sans-serif;
+    font-family: 'Valley Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .flatpickr-months {
@@ -786,7 +413,7 @@ body.swal2-toast-shown .swal2-container {
     border: 2px solid #f3f4f6 !important;
     border-radius: 0.75rem !important;
     padding: 1rem 1.25rem !important;
-    font-family: 'Montserrat', sans-serif !important;
+    font-family: 'Valley Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
     font-weight: 600 !important;
     background-color: #f9fafb !important;
     box-shadow: none !important;
@@ -803,7 +430,7 @@ body.swal2-toast-shown .swal2-container {
     border: 1px solid #e2e8f0 !important;
     border-radius: 0.75rem !important;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
-    font-family: 'Montserrat', sans-serif !important;
+    font-family: 'Valley Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
     margin-top: 4px !important;
     overflow: hidden !important;
 }
@@ -826,18 +453,6 @@ body.swal2-toast-shown .swal2-container {
         -ms-overflow-style: none;
         scrollbar-width: none;
     }
-
-    /* Minimum touch target helper */
-    .touch-target {
-        @apply min-w-touch min-h-touch;
-    }
-
-    /* Stagger animation delay helpers */
-    .stagger-1 { animation-delay: 50ms; }
-    .stagger-2 { animation-delay: 100ms; }
-    .stagger-3 { animation-delay: 150ms; }
-    .stagger-4 { animation-delay: 200ms; }
-    .stagger-5 { animation-delay: 250ms; }
 }
 
 /* ── Senior High Contrast Mode Utilities (WCAG 2.1 AA) ───────────── */
@@ -854,14 +469,6 @@ body.swal2-toast-shown .swal2-container {
  */
 html.high-contrast body {
     background-color: #000000 !important;
-    color: #ffffff !important;
-}
-
-html.high-contrast .card,
-html.high-contrast .card-glass,
-html.high-contrast .panel-shell {
-    background-color: #0a0a0a !important;
-    border: 2px solid #ffffff !important;
     color: #ffffff !important;
 }
 

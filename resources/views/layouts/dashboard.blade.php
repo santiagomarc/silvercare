@@ -1,26 +1,12 @@
-{{-- MIGRATION SCAFFOLD — this file has two bodies, and that is temporary.
+{{-- Dashboard layout. Every page that uses it is on the SilverCare design
+     system: there is no opt-in flag and no legacy branch. The Montserrat/grey
+     body this file used to carry alongside the real one is gone, along with
+     the `sc` prop that chose between them.
 
-     Pass `sc` to put a page on the SilverCare design system:
-
-         <x-dashboard-layout sc>
-
-     Pages that do not pass it fall through to the legacy Montserrat/grey
-     body below, so the 25 dashboard views can be converted one at a time
-     without breaking the ones not done yet.
-
-     WHEN THE LAST DASHBOARD VIEW IS CONVERTED, DELETE THE LEGACY BRANCH.
-     Check whether that moment has arrived with:
-
-         grep -rho "<x-dashboard-layout[^>]*>" resources/views | sort | uniq -c
-
-     When the count for the bare `<x-dashboard-layout>` reaches 0, remove the
-     @if/@else, drop the `sc` prop, and delete the Montserrat <link> — the way
-     layouts/guest.blade.php was cleaned up once all its pages were done.
-
-     See FRONTEND_DESIGN_SYSTEM.md §3. --}}
-@props(['title' => null, 'bodyClass' => null, 'sc' => false])
+     See FRONTEND_DESIGN_SYSTEM.md. --}}
+@props(['title' => null, 'bodyClass' => null])
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @class(['scroll-smooth' => $sc])>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -42,21 +28,11 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    {{-- The SilverCare faces load on EVERY dashboard page, converted or not.
-         The app bar (x-dashboard-nav) is already on the new design system and
-         renders on all 25 views, so gating these behind `$sc` left the wordmark
-         and the page <h1> asking for Prompt on a page that never fetched it —
-         they fell through Valley Sans to the system sans and rendered as
-         Helvetica. Montserrat stays only for the legacy body below; it goes
-         when that branch does. --}}
     {{-- IBM Plex Mono carries measurements only — dose, time, unit — so a
          column of readings lines up and reads as instrument output rather
          than prose. Two weights, nothing more. --}}
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
     @include('partials.sc-fonts')
-    @unless ($sc)
-        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    @endunless
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -80,22 +56,17 @@
     </script>
     @endif
 </head>
-@if ($sc)
 <body class="sc-page antialiased min-h-screen {{ $bodyClass }}">
-@else
-<body class="{{ $bodyClass ?? 'bg-gradient-to-br from-slate-100 via-sky-50 to-rose-50 min-h-screen dark:bg-slate-950 dark:bg-none dark:text-slate-100' }}" style="font-family: 'Montserrat', sans-serif;">
-@endif
 
     {{-- Root Page Back Button Interceptor --}}
     @if(request()->routeIs('caregiver.dashboard') || request()->routeIs('dashboard'))
         <x-logout-confirm-modal />
     @endif
 
-    <a href="#main-content" class="{{ $sc ? 'sc-skip' : 'skip-nav' }}">Skip to main content</a>
+    <a href="#main-content" class="sc-skip">Skip to main content</a>
 
-    {{-- Unconditional: the shared components (x-input-error and friends)
-         reference sprite icons, so the sprite must exist even on pages that
-         have not been converted yet. It renders nothing on its own. --}}
+    {{-- The shared components (x-input-error and friends) reference sprite
+         icons, so the sprite must be present. It renders nothing on its own. --}}
     @include('partials.sc-icons')
 
     {{ $slot }}

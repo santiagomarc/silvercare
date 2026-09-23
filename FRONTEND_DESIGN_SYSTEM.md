@@ -122,22 +122,18 @@ to `silvercare-ui.css` with a comment saying what it's for.
 
 ## 3. How to convert a page
 
-### If the page uses a layout (25 pages do)
+### If the page uses a layout
 
-Just add `sc` to the layout tag. That's it — the layout does the rest.
+Nothing to opt into — both layouts are on the design system unconditionally:
 
 ```blade
-{{-- before --}}
 <x-dashboard-layout>
-
-{{-- after --}}
-<x-dashboard-layout sc>
+<x-guest-layout>
 ```
 
-Same for `<x-guest-layout sc>`.
-
-Pages without the `sc` flag keep the old look, so you can go one page at a
-time without breaking anything.
+The `sc` flag that used to choose between the new design and the legacy one is
+gone, along with the legacy body. If you find `<x-dashboard-layout sc>` in an
+old branch, drop the `sc`.
 
 ### If the page is standalone (has its own `<html>`)
 
@@ -564,23 +560,19 @@ the page twice.
 Then the two dashboards and their cards, then the long tail (vitals, wellness,
 medications, checklists, messages, notifications, calendar, profile).
 
-### The layout is a migration scaffold
+### The layout is no longer a scaffold
 
-`layouts/dashboard.blade.php` currently holds **two** bodies: the new one, and
-the legacy Montserrat/grey one for pages not yet converted. That is deliberate
-and temporary — it is what lets you convert one page at a time.
+`layouts/dashboard.blade.php` used to hold two bodies — the new one and a
+legacy Montserrat/grey one — so views could be converted one at a time. That is
+finished: it has one body, no `sc` prop, and the legacy design is out of the
+repository. `layouts/guest.blade.php` went through the same cleanup earlier.
 
-**It is not the finished state.** When the last dashboard view passes `sc`,
-delete the legacy branch. Check whether that moment has arrived:
-
-```bash
-grep -rho "<x-dashboard-layout[^>]*>" resources/views | sort | uniq -c
-```
-
-When the bare `<x-dashboard-layout>` count reaches 0, strip the `@if/@else`,
-drop the `sc` prop and remove the Montserrat `<link>`.
-`layouts/guest.blade.php` has already been through this and is a clean example
-of the end state.
+`resources/css/app.css` is what is left of the old stylesheet: Tailwind base,
+the third-party skins (SweetAlert2, flatpickr, tom-select), the toast, and a
+block of `html.dark` overrides that repaint raw Tailwind utilities. That block
+exists for exactly one file — `components/ai-chat-widget.blade.php`, the last
+view still written in raw utilities — and goes when that widget is converted.
+**Add new component CSS to `silvercare-ui.css`, never to `app.css`.**
 
 ### Three files that must NOT be converted
 
