@@ -33,23 +33,24 @@ class AiAssistantService
     ];
 
     /**
-     * Suggested prompts for elderly users.
+     * Suggested prompts for elderly users. Shown as buttons in the companion
+     * panel, which follows the no-emoji rule of the design system.
      */
     public const ELDERLY_SUGGESTED_PROMPTS = [
-        '💊 What medications do I have today?',
-        '📋 What tasks should I do today?',
-        '❤️ How is my health this week?',
-        '🌤️ Give me a wellness tip',
+        'What medications do I have today?',
+        'What tasks should I do today?',
+        'How is my health this week?',
+        'Give me a wellness tip',
     ];
 
     /**
      * Suggested prompts for caregiver users.
      */
     public const CAREGIVER_SUGGESTED_PROMPTS = [
-        '📊 Summarize my patient\'s health this week',
-        '💊 Any missed medications recently?',
-        '📈 Are there any concerning health trends?',
-        '📋 What tasks are pending for my patient?',
+        'Summarize my patient\'s health this week',
+        'Any missed medications recently?',
+        'Are there any concerning health trends?',
+        'What tasks are pending for my patient?',
     ];
 
     protected DoseAdministrationService $doseService;

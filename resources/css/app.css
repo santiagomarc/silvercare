@@ -25,56 +25,6 @@
         @apply font-sans text-gray-900 antialiased;
     }
 
-    html.dark body {
-        background-image: none;
-        background-color: #0b1220;
-        color: #e2e8f0;
-        color-scheme: dark;
-    }
-
-    /* These !important overrides repaint raw Tailwind utilities in dark mode.
-       They are scaffolding, not design: a converted view uses tokens and needs
-       none of them. They survive only for components/ai-chat-widget.blade.php,
-       which is the last view still written in raw utilities (bg-white/80,
-       text-slate-600 …) with no dark: variants of its own. REDESIGN_PLAN.md §5
-       gives that widget its own conversation; when it lands, delete this whole
-       html.dark block and the html.high-contrast text overrides below it. */
-    html.dark .bg-white {
-        background-color: rgba(15, 23, 42, 0.92) !important;
-    }
-
-    html.dark .bg-white\/70 {
-        background-color: rgba(15, 23, 42, 0.72) !important;
-    }
-
-    html.dark .bg-white\/80 {
-        background-color: rgba(15, 23, 42, 0.8) !important;
-    }
-
-    html.dark .bg-white\/90,
-    html.dark .bg-white\/95 {
-        background-color: rgba(15, 23, 42, 0.92) !important;
-    }
-
-    html.dark .bg-gray-50,
-    html.dark .bg-gray-100 {
-        background-color: rgba(30, 41, 59, 0.78) !important;
-    }
-
-    html.dark .border-gray-100,
-    html.dark .border-gray-200,
-    html.dark .border-white\/60,
-    html.dark .border-white\/70 {
-        border-color: rgba(148, 163, 184, 0.2) !important;
-    }
-
-    html.dark .text-gray-900 { color: #f1f5f9 !important; }
-    html.dark .text-gray-800 { color: #e2e8f0 !important; }
-    html.dark .text-gray-700 { color: #cbd5e1 !important; }
-    html.dark .text-gray-600,
-    html.dark .text-gray-500,
-    html.dark .text-gray-400 { color: #94a3b8 !important; }
-
     /* Enforce visible focus rings globally */
     :focus-visible {
         @apply outline-2 outline-offset-2 outline-navy;
@@ -477,16 +427,6 @@ html.high-contrast button {
 html.high-contrast a {
     color: #7dd3fc !important;
     text-decoration: underline !important;
-}
-
-/* Muted greys fail contrast against black; lift every low-emphasis text token. */
-html.high-contrast .text-slate-400,
-html.high-contrast .text-slate-500,
-html.high-contrast .text-slate-600,
-html.high-contrast .text-gray-400,
-html.high-contrast .text-gray-500,
-html.high-contrast .text-gray-600 {
-    color: #e5e7eb !important;
 }
 
 /* Keyboard focus must remain obvious against a black ground. */

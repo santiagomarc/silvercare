@@ -70,7 +70,7 @@ export default function medicationTracker(takenDoses = 0, totalDoses = 0) {
             if (isTaken) {
                 const confirmed = await window.Swal.fire({
                     title: 'Unmark Medication?',
-                    html: '<p class="text-lg text-slate-600 mt-2">Are you sure you want to unmark this dose? Only do this if you clicked it by mistake.</p>',
+                    html: '<p class="text-lg mt-2">Are you sure you want to unmark this dose? Only do this if you clicked it by mistake.</p>',
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonColor: '#e11d48', // Tailwind rose-600

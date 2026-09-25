@@ -79,7 +79,7 @@ export default function checklistTracker(completedCount = 0, totalCount = 0) {
             if (isCompleted) {
                 const confirmed = await window.Swal.fire({
                     title: 'Unmark Task?',
-                    html: '<p class="text-lg text-slate-600 mt-2">Are you sure you want to unmark this task? Only do this if you checked it by mistake.</p>',
+                    html: '<p class="text-lg mt-2">Are you sure you want to unmark this task? Only do this if you checked it by mistake.</p>',
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonColor: '#e11d48', // Tailwind rose-600

@@ -28,13 +28,10 @@ schedule and the ownership map.
 `layouts/dashboard.blade.php` has one body, and the Montserrat/grey design no
 longer exists in the repository.
 
-Two things were deliberately left out of it, and only these remain:
-
-- `components/ai-chat-widget.blade.php` (733) — still written in raw Tailwind
-  utilities with no `dark:` variants. It is the sole reason the `html.dark`
-  utility overrides survive in `app.css`; §5 gives it its own conversation.
-- `caregiver/analytics_pdf.blade.php` and `emails/*` — must stay on inline CSS.
-  See §5.
+The AI companion widget, which §5 originally held back for its own
+conversation, is converted too (see §8). What stays off the design system is
+off it on purpose: `caregiver/analytics_pdf.blade.php` and `emails/*` must keep
+inline CSS — see §5.
 
 ---
 
@@ -241,7 +238,7 @@ Suggested order — cheapest first, so the pattern is proven before the big ones
 | --- | --- |
 | `caregiver/analytics_pdf.blade.php` (454) | Rendered by **dompdf**, which supports no CSS custom properties, no flexbox, no grid, no `:has()`. Converting it breaks PDF generation *silently* — you find out when a weekly health report goes out looking like plain text. Inline CSS and tables only. |
 | `resources/views/emails/*` (3 files) | Email clients strip `<style>` and ignore custom properties. Inline styles only. |
-| `components/ai-chat-widget.blade.php` (733) | Bigger than either dashboard. Gets its own dedicated conversation, not squeezed into this plan. |
+| ~~`components/ai-chat-widget.blade.php` (733)~~ | ~~Its own conversation.~~ **Converted — see §8.** |
 
 ---
 
@@ -304,8 +301,8 @@ similar list again:**
   scaffolding for the legacy component classes, but `ai-chat-widget` — which §5
   excludes from this plan — is written entirely in `bg-white/80`,
   `text-slate-600` and friends with no `dark:` variants of its own. Deleting
-  them would have broken the widget in dark mode. They are now commented with
-  the condition for their removal.
+  them would have broken the widget in dark mode. They stayed until the widget
+  was converted, and are now gone — see §8.
 - **Four classes on the "delete" list were still in the markup.** `.card-glass`
   and `.panel-shell*` survived inside the *converted* `elderly/dashboard` — a
   glass slab behind panels whose content already carried its own `sc-card`
@@ -335,3 +332,43 @@ grep -rnE 'class="[^"]*(card-glass|panel-shell|back-nav-pill|empty-state)' resou
 `public/build` is gitignored, so **run `npm run build` after pulling this** —
 otherwise arbitrary Tailwind classes in the converted views are missing from
 the stylesheet.
+
+---
+
+## 8. After the rollout — the widget, and what verifying turned up
+
+**The AI companion widget is converted.** It was the last view on the old
+visual language: a frosted-glass panel over a drifting aurora, a breathing
+orb to open it, three swappable colour themes, and a `<style>` block of its
+own. It is now `.sc-fab` / `.sc-companion` / `.sc-bubble` / `.sc-md` in
+`silvercare-ui.css`. Its script is unchanged apart from presentation: routes,
+streaming and its fallback, sessions, and the `ai-medication-logged` event three
+other components listen for. Two controls were removed: "Switch style" (colour
+as decoration) and "Voice mode (coming soon)", which had no click handler.
+
+With it gone, the `html.dark` utility overrides were deleted from `app.css`;
+`color-scheme: dark`, which lived only inside that block, moved to the dark
+token set in `silvercare-ui.css` so native date pickers and scrollbars still
+darken.
+
+**Found while verifying, and fixed:**
+
+- **No vital was ever flagged stale.** `ClinicalInsightService` computed
+  `now()->diffInHours($past)`, which is *negative* on Carbon 3, so
+  `> 48 hours` was never true. The caregiver briefing's "Missing recent
+  readings" warning never fired, and the AI was told readings were
+  "-480 hours ago". Regression test in `Wave4IntelligenceTest`.
+- **Eight undefined tokens across 12 converted views** (`--sc-border`,
+  `--sc-paper`, `--sc-radius`, `--sc-ink-muted` …). Worst case: the *selected*
+  days on the medication form measured 2.5:1 in light and 1.4:1 in dark —
+  effectively invisible. They are now 17.9:1 and 17.1:1. The check that would
+  have caught it is in FRONTEND_DESIGN_SYSTEM.md §9b.
+- Server-written emoji in alert titles, notification titles, the refill
+  request and the assistant's suggested prompts — see `App\Support\PlainText`.
+- `/caregiver/profile` and `/ai-assistant` returned a 500; both now redirect.
+
+**Still open:** the SweetAlert2, flatpickr and tom-select skins in `app.css`
+carry about 60 raw colours with no dark variant, so confirm dialogs and the
+date picker open light in dark mode. They are third-party markup, so they need
+their skins remapped onto the tokens rather than a view conversion.
+

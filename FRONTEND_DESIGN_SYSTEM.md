@@ -569,11 +569,25 @@ finished: it has one body, no `sc` prop, and the legacy design is out of the
 repository. `layouts/guest.blade.php` went through the same cleanup earlier.
 
 `resources/css/app.css` is what is left of the old stylesheet: Tailwind base,
-the third-party skins (SweetAlert2, flatpickr, tom-select), the toast, and a
-block of `html.dark` overrides that repaint raw Tailwind utilities. That block
-exists for exactly one file — `components/ai-chat-widget.blade.php`, the last
-view still written in raw utilities — and goes when that widget is converted.
+the third-party skins (SweetAlert2, flatpickr, tom-select) and the toast. There
+are no `html.dark` utility overrides any more — nothing is written in raw
+Tailwind colours, so nothing needs repainting. Dark mode is the tokens alone.
 **Add new component CSS to `silvercare-ui.css`, never to `app.css`.**
+
+**Tokens are checked by nobody but you.** A misspelt or invented token —
+`var(--sc-border)`, `var(--sc-paper)` — does not error: it silently resolves
+to nothing, so text inherits its parent's colour and borders take the text
+colour. `check-ui.mjs` only measures what is rendered, so it misses the cases
+that matter most (a selected chip, a state behind a toggle). Before shipping,
+confirm every token you use is defined:
+
+```bash
+comm -13 <(grep -rhoE -- '--sc-[a-z0-9-]+[[:space:]]*:' resources/css | sed -E 's/[[:space:]]*:$//' | sort -u) \
+         <(grep -rhoE 'var\(--sc-[a-z0-9-]+' resources/views resources/js | sed 's/var(//' | sort -u)
+```
+
+It should print only `--sc-mood-`, which is built at runtime as `--sc-mood-${n}`.
+(Keep `[[:space:]]`: macOS `sed` reads `\s` as a literal `s`.)
 
 ### Three files that must NOT be converted
 
