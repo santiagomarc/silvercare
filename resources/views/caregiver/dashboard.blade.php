@@ -135,7 +135,7 @@
                                             <span data-ack-badge class="sc-mark sc-mark-ok"><i></i>Acknowledged</span>
                                         @endif
                                     </div>
-                                    <h3 class="sc-h3 mt-1">{{ $alert->title }}</h3>
+                                    <h3 class="sc-h3 mt-1">{{ \App\Support\PlainText::title($alert->title) }}</h3>
                                     <p class="mt-0.5" style="color: var(--sc-body)">{{ $alert->message }}</p>
                                 </div>
                             </div>

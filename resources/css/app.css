@@ -32,11 +32,6 @@
         color-scheme: dark;
     }
 
-    html.dark nav {
-        background-color: rgba(15, 23, 42, 0.86) !important;
-        border-color: rgba(148, 163, 184, 0.22) !important;
-    }
-
     /* These !important overrides repaint raw Tailwind utilities in dark mode.
        They are scaffolding, not design: a converted view uses tokens and needs
        none of them. They survive only for components/ai-chat-widget.blade.php,

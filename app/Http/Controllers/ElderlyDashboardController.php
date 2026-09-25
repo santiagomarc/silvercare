@@ -239,7 +239,7 @@ class ElderlyDashboardController extends Controller
             return response()->json(['error' => 'No linked caregiver found.'], 422);
         }
 
-        $messageText = "🚨 REFILL REQUEST: I need a refill for my medication: {$medication->name}. Current stock: {$medication->current_stock} {$medication->dosage_unit}.";
+        $messageText = "REFILL REQUEST: I need a refill for my medication: {$medication->name}. Current stock: {$medication->current_stock} {$medication->dosage_unit}.";
 
         // Create CareMessage
         \App\Models\CareMessage::create([

@@ -29,13 +29,24 @@ function severityType(severity) {
 }
 
 /**
+ * The alert title is stored with an emoji prefix for push and email; the toast
+ * already signals severity with its own icon. Mirrors App\Support\PlainText.
+ */
+function plainTitle(text) {
+    return String(text ?? '')
+        .replace(/[\p{Extended_Pictographic}\u2600-\u27BF\uFE0F\u200D]/gu, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+}
+
+/**
  * Caregiver channel: alerts, dose confirmations, check-ins, status changes.
  */
 function subscribeCaregiver(profileId) {
     const channel = window.Echo.private(`caregiver.${profileId}`);
 
     channel.listen('.critical.alert.fired', (data) => {
-        toast(`${data.title ?? 'New alert'} — ${data.patient_name ?? 'your patient'}`, severityType(data.severity));
+        toast(`${plainTitle(data.title) || 'New alert'} — ${data.patient_name ?? 'your patient'}`, severityType(data.severity));
 
         // Ask the page to refresh its alert list rather than hand-building a
         // card here: the Blade template owns that markup, and duplicating it in

@@ -72,8 +72,8 @@
                                 @php
                                     $type = $notification->type;
                                     $severity = $notification->severity;
-                                    $cleanTitle = trim(preg_replace('/[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]/u', '', $notification->title));
-                                    $cleanMessage = trim(preg_replace('/[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]/u', '', $notification->message));
+                                    $cleanTitle = \App\Support\PlainText::title($notification->title);
+                                    $cleanMessage = \App\Support\PlainText::title($notification->message);
                                 @endphp
 
                                 <div data-notification-card class="sc-card sc-lift p-3.5 sm:p-5 transition-all {{ $notification->is_read ? 'opacity-80' : 'border-l-4 border-l-[var(--sc-brand)]' }}"

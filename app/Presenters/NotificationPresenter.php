@@ -77,7 +77,7 @@ class NotificationPresenter
             'caregiver_message'     => "New message for {$firstName}",
             'health_alert'          => "Health alert for {$firstName}",
             'refill_request'        => "{$firstName} requested a refill for " . ($meta['medication_name'] ?? 'medication'),
-            default                 => "{$firstName}: " . $notification->title,
+            default                 => "{$firstName}: " . \App\Support\PlainText::title($notification->title),
         };
     }
 

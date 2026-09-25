@@ -372,9 +372,10 @@ another one, and note what it already does for you:
 - **It folds into a drawer** below 1024px *and* whenever `sc-text-scaled` is on.
   Use `sc-appbar-desktop` / `sc-appbar-toggle` if you ever add an item to it;
   a media query alone cannot see the raised-text case.
-- **It is a `<header>`, not a `<nav>`.** `app.css` paints every `<nav>` a slate
-  slab in dark mode with `!important`. Anything that draws its own surface has
-  to stay out of that selector.
+- **It is a `<header>`, not a `<nav>`.** That is the correct element for a
+  site bar, and it holds a `<nav>` for the account links inside the drawer.
+  (An old `html.dark nav` rule in `app.css` used to paint every `<nav>` a
+  slate slab; it went with the legacy design.)
 - **It does not blur its backdrop.** `backdrop-filter` makes an element a
   containing block for `position: fixed` descendants, which pins a drawer or a
   popover inside the 81px bar instead of the viewport. A solid bar is also the

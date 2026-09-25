@@ -141,13 +141,6 @@ html.dark {
     --sc-bloom:  rgba(99, 134, 255, .17);
 }
 
-/* The global `html.dark nav` rule in app.css paints a slate slab behind
-   any <nav>. This page draws its own header surface, so opt out. */
-html.dark .sc-page nav {
-    background-color: transparent !important;
-    border-color: transparent !important;
-}
-
 /* ── Typography ──────────────────────────────────────────────── */
 .sc-page h1, .sc-page h2, .sc-page h3, .sc-page h4, .sc-display {
     font-family: 'Prompt', 'Valley Sans', sans-serif;
