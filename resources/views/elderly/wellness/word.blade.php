@@ -43,7 +43,7 @@
                             </div>
 
                             {{-- Quote text: Newsreader serif for warmth and editorial reflection --}}
-                            <blockquote class="sc-quote text-2xl sm:text-3xl md:text-4xl text-center leading-relaxed tracking-tight" style="color:var(--sc-title)" x-text="current.quote"></blockquote>
+                            <blockquote class="sc-quote text-2xl sm:text-3xl md:text-4xl text-center leading-relaxed tracking-tight" style="color:var(--sc-ink)" x-text="current.quote"></blockquote>
 
                             {{-- Author --}}
                             <cite class="not-italic text-base sm:text-lg font-medium" style="color:var(--sc-muted)" x-text="'- ' + current.author"></cite>
@@ -54,7 +54,7 @@
                                     <x-lucide-sparkles class="sc-i w-4 h-4" aria-hidden="true" />
                                     <span>Today's Action</span>
                                 </div>
-                                <p class="text-lg sm:text-xl font-bold" style="color:var(--sc-title)" x-text="current.action"></p>
+                                <p class="text-lg sm:text-xl font-bold" style="color:var(--sc-ink)" x-text="current.action"></p>
                             </div>
                         </div>
                     </div>

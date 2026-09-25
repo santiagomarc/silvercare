@@ -30,10 +30,10 @@
                         {{-- Date + Quick Tip card --}}
                         <div class="sc-card p-6 sm:p-7 flex flex-col justify-between gap-6">
                             <div>
-                                <span class="text-xs font-bold uppercase tracking-wider text-[var(--sc-ink-muted)]">{{ __('TODAY') }}</span>
+                                <span class="text-xs font-bold uppercase tracking-wider text-[var(--sc-muted)]">{{ __('TODAY') }}</span>
                                 <div class="text-5xl sm:text-6xl font-bold tracking-tight text-[var(--sc-ink)] mt-2 sc-num">{{ now()->format('d') }}</div>
                                 <p class="text-xl font-bold text-[var(--sc-ink)] mt-1">{{ now()->format('l') }}</p>
-                                <p class="text-sm font-semibold text-[var(--sc-ink-muted)] mt-0.5">{{ now()->format('F Y') }}</p>
+                                <p class="text-sm font-semibold text-[var(--sc-muted)] mt-0.5">{{ now()->format('F Y') }}</p>
                             </div>
 
                             <div class="sc-card-quiet rounded-2xl p-4 sm:p-5 w-full text-left">
@@ -42,7 +42,7 @@
                                         <x-lucide-info class="sc-i w-4 h-4 text-[var(--sc-brand)]" aria-hidden="true" />
                                     </div>
                                     <div>
-                                        <p class="text-xs font-bold uppercase tracking-wider text-[var(--sc-ink-muted)] mb-1">{{ __('Quick Tip') }}</p>
+                                        <p class="text-xs font-bold uppercase tracking-wider text-[var(--sc-muted)] mb-1">{{ __('Quick Tip') }}</p>
                                         <p class="text-xs sm:text-sm font-medium text-[var(--sc-ink)] leading-relaxed">
                                             {{ __('Staying organized helps reduce stress. Check your schedule and tasks daily!') }}
                                         </p>
@@ -64,12 +64,12 @@
                                     </div>
                                     <div class="text-left">
                                         <p class="text-sm font-bold text-[var(--sc-ink)]">{{ __('Past Events') }}</p>
-                                        <p class="text-xs font-semibold text-[var(--sc-ink-muted)] sc-num">
+                                        <p class="text-xs font-semibold text-[var(--sc-muted)] sc-num">
                                             {{ $pastEvents->count() }} {{ Str::plural('event', $pastEvents->count()) }} {{ __('completed') }}
                                         </p>
                                     </div>
                                 </div>
-                                <x-lucide-chevron-right class="sc-i w-4 h-4 text-[var(--sc-ink-muted)]" aria-hidden="true" />
+                                <x-lucide-chevron-right class="sc-i w-4 h-4 text-[var(--sc-muted)]" aria-hidden="true" />
                             </button>
                         @endif
                     </div>
@@ -82,7 +82,7 @@
                                     <x-lucide-calendar class="sc-i w-6 h-6" aria-hidden="true" />
                                 </div>
                                 <h2 class="sc-h3 mb-2">{{ __('No Upcoming Events') }}</h2>
-                                <p class="text-sm text-[var(--sc-ink-muted)] max-w-sm mb-6">
+                                <p class="text-sm text-[var(--sc-muted)] max-w-sm mb-6">
                                     {{ __('Your schedule is clear for now. Add an entry to plan ahead.') }}
                                 </p>
                                 <button
@@ -96,7 +96,7 @@
                             </div>
                         @else
                             <div class="sc-card p-5 sm:p-7">
-                                <div class="flex items-center justify-between gap-4 mb-6 pb-4 border-b border-[var(--sc-border)]">
+                                <div class="flex items-center justify-between gap-4 mb-6 pb-4 border-b border-[var(--sc-line)]">
                                     <h2 class="text-xl font-bold text-[var(--sc-ink)]">
                                         {{ __('Upcoming Events') }}
                                     </h2>
@@ -116,7 +116,7 @@
                                             <div class="flex items-center gap-4 min-w-0 flex-1">
                                                 {{-- Date badge --}}
                                                 <div class="sc-plate sc-plate-sm flex-col rounded-xl flex-shrink-0 text-center">
-                                                    <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--sc-ink-muted)] leading-none">{{ \Carbon\Carbon::parse($event->start_time)->format('M') }}</span>
+                                                    <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--sc-muted)] leading-none">{{ \Carbon\Carbon::parse($event->start_time)->format('M') }}</span>
                                                     <span class="text-base font-bold text-[var(--sc-ink)] leading-none mt-1 sc-num">{{ \Carbon\Carbon::parse($event->start_time)->format('d') }}</span>
                                                 </div>
 
@@ -129,14 +129,14 @@
                                                         @else
                                                             <span class="sc-mark sc-mark-brand"><i></i>{{ $event->type }}</span>
                                                         @endif
-                                                        <span class="text-xs font-semibold text-[var(--sc-ink-muted)] flex items-center gap-1 sc-num">
+                                                        <span class="text-xs font-semibold text-[var(--sc-muted)] flex items-center gap-1 sc-num">
                                                             <x-lucide-clock class="sc-i w-3.5 h-3.5" aria-hidden="true" />
                                                             <span>{{ \Carbon\Carbon::parse($event->start_time)->format('h:i A') }}</span>
                                                         </span>
                                                     </div>
                                                     <h3 class="text-base font-bold text-[var(--sc-ink)] truncate">{{ $event->title }}</h3>
                                                     @if($event->description)
-                                                        <p class="text-sm text-[var(--sc-ink-muted)] truncate mt-0.5">{{ $event->description }}</p>
+                                                        <p class="text-sm text-[var(--sc-muted)] truncate mt-0.5">{{ $event->description }}</p>
                                                     @endif
                                                 </div>
                                             </div>
@@ -157,7 +157,7 @@
                                                 @method('DELETE')
                                                 <button
                                                     type="submit"
-                                                    class="sc-btn sc-btn-ghost !p-2 text-[var(--sc-ink-muted)] hover:text-[var(--sc-alert)]"
+                                                    class="sc-btn sc-btn-ghost !p-2 text-[var(--sc-muted)] hover:text-[var(--sc-alert)]"
                                                     title="{{ __('Delete event') }}"
                                                     aria-label="{{ __('Delete event') }}: {{ $event->title }}"
                                                 >
@@ -192,7 +192,7 @@
                 x-transition:leave-start="opacity-100 scale-100"
                 x-transition:leave-end="opacity-0 scale-95"
             >
-                <div class="flex items-center justify-between pb-4 mb-6 border-b border-[var(--sc-border)]">
+                <div class="flex items-center justify-between pb-4 mb-6 border-b border-[var(--sc-line)]">
                     <h3 class="text-2xl font-bold text-[var(--sc-ink)] tracking-tight">{{ __('New Entry') }}</h3>
                     <button
                         type="button"
@@ -288,7 +288,7 @@
                 x-transition:leave-end="opacity-0 scale-95"
             >
                 {{-- Header --}}
-                <div class="flex items-center justify-between pb-4 mb-4 border-b border-[var(--sc-border)]">
+                <div class="flex items-center justify-between pb-4 mb-4 border-b border-[var(--sc-line)]">
                     <div class="flex items-center gap-3">
                         <div class="sc-plate sc-plate-sm flex-shrink-0">
                             <x-lucide-history class="sc-i w-4 h-4 text-[var(--sc-ink)]" aria-hidden="true" />
@@ -314,8 +314,8 @@
                     @forelse($grouped as $monthYear => $monthEvents)
                         <div>
                             <div class="flex items-center gap-3 mb-3">
-                                <span class="text-xs font-bold uppercase tracking-wider text-[var(--sc-ink-muted)] sc-num">{{ $monthYear }}</span>
-                                <div class="flex-1 h-px bg-[var(--sc-border)]"></div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-[var(--sc-muted)] sc-num">{{ $monthYear }}</span>
+                                <div class="flex-1 h-px bg-[var(--sc-line)]"></div>
                             </div>
 
                             <div class="space-y-2.5">
@@ -323,7 +323,7 @@
                                     <div class="sc-card-quiet flex items-start gap-3.5 p-3.5 rounded-xl">
                                         {{-- Date badge --}}
                                         <div class="sc-plate sc-plate-sm flex-col rounded-lg flex-shrink-0 text-center">
-                                            <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--sc-ink-muted)] leading-none">{{ \Carbon\Carbon::parse($event->start_time)->format('M') }}</span>
+                                            <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--sc-muted)] leading-none">{{ \Carbon\Carbon::parse($event->start_time)->format('M') }}</span>
                                             <span class="text-sm font-bold text-[var(--sc-ink)] leading-none mt-0.5 sc-num">{{ \Carbon\Carbon::parse($event->start_time)->format('d') }}</span>
                                         </div>
 
@@ -337,14 +337,14 @@
                                                 @else
                                                     <span class="sc-mark sc-mark-brand"><i></i>{{ $event->type }}</span>
                                                 @endif
-                                                <span class="text-xs font-semibold text-[var(--sc-ink-muted)] flex items-center gap-1 sc-num">
+                                                <span class="text-xs font-semibold text-[var(--sc-muted)] flex items-center gap-1 sc-num">
                                                     <x-lucide-clock class="sc-i w-3 h-3" aria-hidden="true" />
                                                     <span>{{ \Carbon\Carbon::parse($event->start_time)->format('h:i A') }}</span>
                                                 </span>
                                             </div>
                                             <p class="font-bold text-sm text-[var(--sc-ink)] leading-snug">{{ $event->title }}</p>
                                             @if($event->description)
-                                                <p class="text-xs text-[var(--sc-ink-muted)] mt-0.5 leading-normal">{{ $event->description }}</p>
+                                                <p class="text-xs text-[var(--sc-muted)] mt-0.5 leading-normal">{{ $event->description }}</p>
                                             @endif
                                         </div>
                                     </div>
@@ -352,7 +352,7 @@
                             </div>
                         </div>
                     @empty
-                        <div class="text-center py-8 text-sm text-[var(--sc-ink-muted)]">
+                        <div class="text-center py-8 text-sm text-[var(--sc-muted)]">
                             {{ __('No past events yet.') }}
                         </div>
                     @endforelse

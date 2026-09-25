@@ -97,7 +97,7 @@
                                     </form>
                                 </div>
                             </div>
-                            <h3 class="sc-h3 text-lg mt-3" style="color:var(--sc-title)">{{ $medication->name }}</h3>
+                            <h3 class="sc-h3 text-lg mt-3" style="color:var(--sc-ink)">{{ $medication->name }}</h3>
                             <p class="sc-num font-semibold text-sm mt-0.5" style="color:var(--sc-body)">
                                 {{ $medication->dosage }} {{ $medication->dosage_unit }}
                             </p>

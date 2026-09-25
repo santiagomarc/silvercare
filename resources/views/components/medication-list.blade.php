@@ -174,7 +174,7 @@
                                 <x-lucide-chevron-down class="sc-i w-5 h-5" x-show="!expanded" aria-hidden="true" />
                                 <x-lucide-chevron-up class="sc-i w-5 h-5" x-show="expanded" x-cloak aria-hidden="true" />
                             </button>
-                            <div x-show="expanded" x-collapse class="sc-card-quiet mt-2 p-4 leading-relaxed space-y-3" style="color:var(--sc-body)">
+                            <div x-show="expanded" class="sc-card-quiet mt-2 p-4 leading-relaxed space-y-3" style="color:var(--sc-body)">
                                 @if($medication->instructions)
                                     <div>
                                         <p class="sc-eyebrow mb-1">Instructions</p>

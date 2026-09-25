@@ -31,7 +31,7 @@
                 <div class="sc-card-quiet p-4 border border-[var(--sc-line)] flex items-center justify-between gap-3">
                     <div>
                         <p class="text-sm font-semibold text-[var(--sc-ink)]">Creating medication for {{ $selectedElderly->user?->name ?? 'selected patient' }}</p>
-                        <p class="text-xs text-[var(--sc-ink-muted)]">Switch patient from the medications list if needed.</p>
+                        <p class="text-xs text-[var(--sc-muted)]">Switch patient from the medications list if needed.</p>
                     </div>
                     <a href="{{ route('caregiver.medications.index') }}" class="sc-btn sc-btn-ghost text-xs font-semibold">Change</a>
                 </div>
@@ -49,7 +49,7 @@
                         </div>
                         <div>
                             <h2 class="text-lg font-serif font-bold text-[var(--sc-ink)]">Medication Details</h2>
-                            <p class="text-xs text-[var(--sc-ink-muted)]">Name, dosage, and date range</p>
+                            <p class="text-xs text-[var(--sc-muted)]">Name, dosage, and date range</p>
                         </div>
                     </div>
 
@@ -100,7 +100,7 @@
                         </div>
                         <div>
                             <h2 class="text-lg font-serif font-bold text-[var(--sc-ink)]">Schedule</h2>
-                            <p class="text-xs text-[var(--sc-ink-muted)]">When and how often doses are taken</p>
+                            <p class="text-xs text-[var(--sc-muted)]">When and how often doses are taken</p>
                         </div>
                     </div>
 
@@ -126,7 +126,7 @@
                             @foreach($days as $day)
                                 <label class="cursor-pointer">
                                     <input type="checkbox" name="days_of_week[]" value="{{ $day }}" class="peer sr-only" {{ in_array($day, $oldDays) ? 'checked' : '' }}>
-                                    <span class="inline-flex items-center justify-center min-w-touch min-h-touch px-3.5 py-2 rounded-[var(--sc-radius)] text-sm font-semibold border transition-colors peer-checked:bg-[var(--sc-ink)] peer-checked:text-[var(--sc-paper)] peer-checked:border-[var(--sc-ink)] bg-[var(--sc-canvas)] text-[var(--sc-ink-muted)] border-[var(--sc-line)] hover:border-[var(--sc-ink)]">
+                                    <span class="inline-flex items-center justify-center min-w-touch min-h-touch px-3.5 py-2 rounded-xl text-sm font-semibold border transition-colors peer-checked:bg-[var(--sc-ink)] peer-checked:text-[var(--sc-canvas)] peer-checked:border-[var(--sc-ink)] bg-[var(--sc-canvas)] text-[var(--sc-muted)] border-[var(--sc-line)] hover:border-[var(--sc-ink)]">
                                         {{ substr($day, 0, 3) }}
                                     </span>
                                 </label>
@@ -137,7 +137,7 @@
                             <span class="text-[var(--sc-line)]" aria-hidden="true">|</span>
                             <button type="button" onclick="selectWeekdays()" class="text-xs font-semibold text-[var(--sc-ink)] hover:underline min-h-touch flex items-center">Weekdays</button>
                             <span class="text-[var(--sc-line)]" aria-hidden="true">|</span>
-                            <button type="button" onclick="clearDays()" class="text-xs font-semibold text-[var(--sc-ink-muted)] hover:underline min-h-touch flex items-center">Clear</button>
+                            <button type="button" onclick="clearDays()" class="text-xs font-semibold text-[var(--sc-muted)] hover:underline min-h-touch flex items-center">Clear</button>
                         </div>
                     </div>
 
@@ -152,7 +152,7 @@
                                 <span>Add Date</span>
                             </button>
                         </div>
-                        <p class="sc-help text-xs text-[var(--sc-ink-muted)]">Use this for one-off or limited-date medication plans.</p>
+                        <p class="sc-help text-xs text-[var(--sc-muted)]">Use this for one-off or limited-date medication plans.</p>
                     </div>
 
                     <!-- Time Slots -->
@@ -166,7 +166,7 @@
                                 <span>Add Time</span>
                             </button>
                         </div>
-                        <p class="sc-help text-xs text-[var(--sc-ink-muted)]">Examples: 08:00 (morning), 14:00 (afternoon), 21:00 (night)</p>
+                        <p class="sc-help text-xs text-[var(--sc-muted)]">Examples: 08:00 (morning), 14:00 (afternoon), 21:00 (night)</p>
                     </div>
                 </div>
 
@@ -178,7 +178,7 @@
                         </div>
                         <div>
                             <h2 class="text-lg font-serif font-bold text-[var(--sc-ink)]">Additional Info</h2>
-                            <p class="text-xs text-[var(--sc-ink-muted)]">Instructions and stock tracking</p>
+                            <p class="text-xs text-[var(--sc-muted)]">Instructions and stock tracking</p>
                         </div>
                     </div>
 
@@ -189,11 +189,11 @@
                     </div>
 
                     <!-- Inventory Tracking -->
-                    <div class="sc-card-quiet p-5 rounded-[var(--sc-radius)] border border-[var(--sc-line)]">
+                    <div class="sc-card-quiet p-5 border border-[var(--sc-line)]">
                         <div class="flex items-center justify-between mb-4">
                             <div>
                                 <h3 class="text-sm font-semibold text-[var(--sc-ink)]">Inventory Tracking</h3>
-                                <p class="text-xs text-[var(--sc-ink-muted)]">Track pills remaining and get low-stock reminders</p>
+                                <p class="text-xs text-[var(--sc-muted)]">Track pills remaining and get low-stock reminders</p>
                             </div>
                             <label class="sc-check m-0 p-0 min-h-touch flex items-center gap-2 cursor-pointer">
                                 <input type="checkbox" name="track_inventory" id="track_inventory" value="1" {{ old('track_inventory') ? 'checked' : '' }}>
@@ -245,7 +245,7 @@
                     customClass: {
                         popup: 'sc-card !p-6',
                         title: 'text-lg font-serif font-bold text-[var(--sc-ink)]',
-                        htmlContainer: 'text-sm text-[var(--sc-ink-muted)]'
+                        htmlContainer: 'text-sm text-[var(--sc-muted)]'
                     }
                 });
             } else {
@@ -319,18 +319,18 @@
             container.innerHTML = '';
             
             if (timeSlots.length === 0) {
-                container.innerHTML = '<p class="text-sm text-[var(--sc-ink-muted)] italic">No time slots added yet</p>';
+                container.innerHTML = '<p class="text-sm text-[var(--sc-muted)] italic">No time slots added yet</p>';
                 return;
             }
             
             timeSlots.forEach(time => {
                 const div = document.createElement('div');
-                div.className = 'inline-flex items-center gap-2 px-3 py-1.5 rounded-[var(--sc-radius)] bg-[var(--sc-canvas)] border border-[var(--sc-line)] text-sm text-[var(--sc-ink)] font-medium';
+                div.className = 'inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--sc-canvas)] border border-[var(--sc-line)] text-sm text-[var(--sc-ink)] font-medium';
                 div.innerHTML = `
-                    <svg class="w-4 h-4 text-[var(--sc-ink-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <svg class="w-4 h-4 text-[var(--sc-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     <span class="font-semibold">${formatTime(time)}</span>
                     <input type="hidden" name="times_of_day[]" value="${time}">
-                    <button type="button" onclick="removeTimeSlot('${time}')" class="min-h-touch min-w-touch inline-flex items-center justify-center p-1 text-[var(--sc-ink-muted)] hover:text-[var(--sc-alert)] transition-colors" aria-label="Remove time ${formatTime(time)}">
+                    <button type="button" onclick="removeTimeSlot('${time}')" class="min-h-touch min-w-touch inline-flex items-center justify-center p-1 text-[var(--sc-muted)] hover:text-[var(--sc-alert)] transition-colors" aria-label="Remove time ${formatTime(time)}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
                 `;
@@ -343,19 +343,19 @@
             container.innerHTML = '';
 
             if (specificDates.length === 0) {
-                container.innerHTML = '<p class="text-sm text-[var(--sc-ink-muted)] italic">No specific dates added yet</p>';
+                container.innerHTML = '<p class="text-sm text-[var(--sc-muted)] italic">No specific dates added yet</p>';
                 return;
             }
 
             specificDates.forEach(dateValue => {
                 const formatted = new Date(dateValue + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
                 const div = document.createElement('div');
-                div.className = 'inline-flex items-center gap-2 px-3 py-1.5 rounded-[var(--sc-radius)] bg-[var(--sc-canvas)] border border-[var(--sc-line)] text-sm text-[var(--sc-ink)] font-medium';
+                div.className = 'inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--sc-canvas)] border border-[var(--sc-line)] text-sm text-[var(--sc-ink)] font-medium';
                 div.innerHTML = `
-                    <svg class="w-4 h-4 text-[var(--sc-ink-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <svg class="w-4 h-4 text-[var(--sc-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                     <span class="font-semibold">${formatted}</span>
                     <input type="hidden" name="specific_dates[]" value="${dateValue}">
-                    <button type="button" onclick="removeSpecificDate('${dateValue}')" class="min-h-touch min-w-touch inline-flex items-center justify-center p-1 text-[var(--sc-ink-muted)] hover:text-[var(--sc-alert)] transition-colors" aria-label="Remove date ${formatted}">
+                    <button type="button" onclick="removeSpecificDate('${dateValue}')" class="min-h-touch min-w-touch inline-flex items-center justify-center p-1 text-[var(--sc-muted)] hover:text-[var(--sc-alert)] transition-colors" aria-label="Remove date ${formatted}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
                 `;

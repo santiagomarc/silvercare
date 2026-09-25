@@ -48,7 +48,7 @@
                                 <x-lucide-pill class="sc-i w-5 h-5" aria-hidden="true" />
                             </div>
                             <div>
-                                <h2 id="medication-{{ $medication->id }}-heading" class="sc-h3 text-xl" style="color:var(--sc-title)">
+                                <h2 id="medication-{{ $medication->id }}-heading" class="sc-h3 text-xl" style="color:var(--sc-ink)">
                                     {{ $medication->name }}
                                 </h2>
                                 <p class="sc-num font-semibold text-base mt-0.5" style="color:var(--sc-body)">

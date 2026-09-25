@@ -38,14 +38,14 @@
                 <section class="sc-card p-5 sm:p-7" aria-labelledby="convo-heading" x-data="chatApp()" x-init="scrollToBottom()">
 
                     {{-- Chat Header --}}
-                    <div class="mb-5 pb-4 flex items-center justify-between gap-3 border-b border-[var(--sc-border)]">
+                    <div class="mb-5 pb-4 flex items-center justify-between gap-3 border-b border-[var(--sc-line)]">
                         <div class="flex items-center gap-3 min-w-0">
-                            <div class="w-11 h-11 rounded-full bg-[var(--sc-surface-quiet)] border border-[var(--sc-border)] flex items-center justify-center text-[var(--sc-ink)] font-bold text-base flex-shrink-0">
+                            <div class="w-11 h-11 rounded-full bg-[var(--sc-surface-2)] border border-[var(--sc-line)] flex items-center justify-center text-[var(--sc-ink)] font-bold text-base flex-shrink-0">
                                 {{ strtoupper(substr($caregiver->user?->name ?? 'C', 0, 1)) }}
                             </div>
                             <div class="min-w-0">
                                 <h2 id="convo-heading" class="text-lg font-bold text-[var(--sc-ink)] truncate">{{ $caregiver->user?->name ?? 'Your Caregiver' }}</h2>
-                                <p class="text-xs font-semibold text-[var(--sc-ink-muted)] flex items-center gap-1.5">
+                                <p class="text-xs font-semibold text-[var(--sc-muted)] flex items-center gap-1.5">
                                     <x-lucide-lock class="sc-i w-3.5 h-3.5" aria-hidden="true" />
                                     <span>{{ __('Secure SilverCare messaging') }}</span>
                                 </p>
@@ -70,7 +70,7 @@
                             {{-- Date Separator --}}
                             @if($showDate)
                                 <div class="flex items-center justify-center my-4">
-                                    <span class="px-3 py-1 rounded-full text-xs font-semibold bg-[var(--sc-surface)] border border-[var(--sc-border)] text-[var(--sc-ink-muted)] shadow-xs sc-num">
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold bg-[var(--sc-surface)] border border-[var(--sc-line)] text-[var(--sc-muted)] shadow-xs sc-num">
                                         @if($message->created_at->isToday())
                                             {{ __('Today') }}
                                         @elseif($message->created_at->isYesterday())
@@ -89,10 +89,10 @@
                             <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} mb-2">
                                 <div class="max-w-[85%] sm:max-w-[75%]">
                                     <div class="px-4 py-3 shadow-xs {{ $isMine ? 'rounded-2xl rounded-br-sm' : 'rounded-2xl rounded-bl-sm border' }}"
-                                         style="{{ $isMine ? 'background:var(--sc-brand); color:var(--sc-brand-on);' : 'background:var(--sc-surface); color:var(--sc-ink); border-color:var(--sc-border);' }}">
+                                         style="{{ $isMine ? 'background:var(--sc-brand); color:var(--sc-brand-on);' : 'background:var(--sc-surface); color:var(--sc-ink); border-color:var(--sc-line);' }}">
                                         <p class="text-base font-normal leading-relaxed whitespace-pre-wrap break-words">{{ $displayMessage }}</p>
                                         <p class="mt-1.5 text-xs font-semibold sc-num {{ $isMine ? 'text-right' : '' }}"
-                                           style="{{ $isMine ? 'color:var(--sc-brand-tint); opacity:0.85;' : 'color:var(--sc-ink-muted);' }}">
+                                           style="{{ $isMine ? 'color:var(--sc-brand-tint); opacity:0.85;' : 'color:var(--sc-muted);' }}">
                                             {{ $message->created_at->format('g:i A') }}
                                         </p>
                                     </div>
@@ -105,7 +105,7 @@
                                     <x-lucide-message-circle class="sc-i w-6 h-6" aria-hidden="true" />
                                 </div>
                                 <h3 class="text-lg font-bold text-[var(--sc-ink)] mb-1">{{ __('Start a conversation') }}</h3>
-                                <p class="text-sm text-[var(--sc-ink-muted)] max-w-sm">
+                                <p class="text-sm text-[var(--sc-muted)] max-w-sm">
                                     {{ __("Send a message to your caregiver — they'd love to hear from you!") }}
                                 </p>
                             </div>
@@ -113,7 +113,7 @@
                     </div>
 
                     {{-- Sticky Input Bar --}}
-                    <div class="flex items-end gap-3 mt-4 pt-4 border-t border-[var(--sc-border)]">
+                    <div class="flex items-end gap-3 mt-4 pt-4 border-t border-[var(--sc-line)]">
                         <div class="flex-1 relative">
                             <label for="chat-message-input" class="sr-only">{{ __('Type a message') }}</label>
                             <textarea
@@ -129,7 +129,7 @@
                                 style="max-height: 120px; overflow-y: auto;"
                             ></textarea>
                             {{-- Character Counter --}}
-                            <span class="absolute bottom-2 right-3 text-xs text-[var(--sc-ink-muted)] font-semibold pointer-events-none sc-num"
+                            <span class="absolute bottom-2 right-3 text-xs text-[var(--sc-muted)] font-semibold pointer-events-none sc-num"
                                   x-show="messageText.length > 100"
                                   x-text="messageText.length + '/1200'"
                                   x-transition></span>

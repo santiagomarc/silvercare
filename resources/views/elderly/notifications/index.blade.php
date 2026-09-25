@@ -40,7 +40,7 @@
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div class="flex flex-wrap items-center gap-3 sc-num text-sm sm:text-base font-semibold text-[var(--sc-ink)]">
                         <span><span id="totalCount">{{ $totalCount }}</span> {{ __('Total') }}</span>
-                        <span class="w-1 h-1 rounded-full bg-[var(--sc-border)]" aria-hidden="true"></span>
+                        <span class="w-1 h-1 rounded-full bg-[var(--sc-line)]" aria-hidden="true"></span>
                         <span class="font-bold text-[var(--sc-ink)]"><span id="unreadCount">{{ $unreadCount }}</span> {{ __('Unread') }}</span>
                     </div>
                     <div class="flex items-center gap-2 flex-wrap">
@@ -63,7 +63,7 @@
                         {{-- Date Header --}}
                         <div class="flex items-center gap-3 mb-3">
                             <h3 class="text-xs font-bold text-[var(--sc-muted)] uppercase tracking-wider sc-num">{{ $dateLabel }}</h3>
-                            <div class="flex-1 h-px bg-[var(--sc-border)]"></div>
+                            <div class="flex-1 h-px bg-[var(--sc-line)]"></div>
                         </div>
 
                         {{-- Notification Cards --}}
@@ -109,7 +109,7 @@
                                             <p class="text-sm sm:text-base text-[var(--sc-body)] mb-3 leading-relaxed break-words">{{ $cleanMessage }}</p>
 
                                             {{-- Severity & Actions Row --}}
-                                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-[var(--sc-border-subtle)]">
+                                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-[var(--sc-line)]">
                                                 {{-- Severity --}}
                                                 <div>
                                                     @if($severity === 'negative' || $severity === 'high')

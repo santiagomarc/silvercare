@@ -11,11 +11,11 @@
 
         {{-- Top bar: routine tabs LEFT, back button RIGHT --}}
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div class="inline-flex p-1 rounded-xl bg-[var(--sc-surface-quiet)] border border-[var(--sc-border-subtle)] self-start max-w-full overflow-x-auto">
+            <div class="inline-flex p-1 rounded-xl bg-[var(--sc-surface-2)] border border-[var(--sc-line)] self-start max-w-full overflow-x-auto">
                 <button
                     type="button"
                     @click="setLevel(0)"
-                    :class="level === 0 ? 'bg-[var(--sc-surface)] text-[var(--sc-ink)] shadow-xs border border-[var(--sc-border)] font-semibold' : 'text-[var(--sc-ink-muted)] hover:text-[var(--sc-ink)] font-medium'"
+                    :class="level === 0 ? 'bg-[var(--sc-surface)] text-[var(--sc-ink)] shadow-xs border border-[var(--sc-line)] font-semibold' : 'text-[var(--sc-muted)] hover:text-[var(--sc-ink)] font-medium'"
                     class="px-3.5 py-1.5 sm:px-5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap"
                 >
                     {{ __('Seated') }}
@@ -23,7 +23,7 @@
                 <button
                     type="button"
                     @click="setLevel(1)"
-                    :class="level === 1 ? 'bg-[var(--sc-surface)] text-[var(--sc-ink)] shadow-xs border border-[var(--sc-border)] font-semibold' : 'text-[var(--sc-ink-muted)] hover:text-[var(--sc-ink)] font-medium'"
+                    :class="level === 1 ? 'bg-[var(--sc-surface)] text-[var(--sc-ink)] shadow-xs border border-[var(--sc-line)] font-semibold' : 'text-[var(--sc-muted)] hover:text-[var(--sc-ink)] font-medium'"
                     class="px-3.5 py-1.5 sm:px-5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap"
                 >
                     {{ __('Standing') }}
@@ -31,7 +31,7 @@
                 <button
                     type="button"
                     @click="setLevel(2)"
-                    :class="level === 2 ? 'bg-[var(--sc-surface)] text-[var(--sc-ink)] shadow-xs border border-[var(--sc-border)] font-semibold' : 'text-[var(--sc-ink-muted)] hover:text-[var(--sc-ink)] font-medium'"
+                    :class="level === 2 ? 'bg-[var(--sc-surface)] text-[var(--sc-ink)] shadow-xs border border-[var(--sc-line)] font-semibold' : 'text-[var(--sc-muted)] hover:text-[var(--sc-ink)] font-medium'"
                     class="px-3.5 py-1.5 sm:px-5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap"
                 >
                     {{ __('Balance') }}
@@ -57,7 +57,7 @@
                 {{-- Title & meta --}}
                 <div>
                     <h2 class="text-2xl sm:text-3xl font-bold text-[var(--sc-ink)] tracking-tight" x-text="current.title"></h2>
-                    <p class="text-sm font-semibold text-[var(--sc-ink-muted)] mt-1.5 flex items-center justify-center gap-2">
+                    <p class="text-sm font-semibold text-[var(--sc-muted)] mt-1.5 flex items-center justify-center gap-2">
                         <span x-text="current.duration" class="sc-num"></span>
                         <span aria-hidden="true">&bull;</span>
                         <span x-text="current.difficulty"></span>
@@ -66,13 +66,13 @@
 
                 {{-- Benefits --}}
                 <div class="sc-card-quiet rounded-2xl p-4 sm:p-5 w-full text-left">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-[var(--sc-ink-muted)] mb-3">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-[var(--sc-muted)] mb-3">
                         {{ __('Benefits') }}
                     </h3>
                     <ul class="space-y-2.5">
                         <template x-for="b in current.benefits" :key="b">
                             <li class="flex items-start gap-2.5 text-sm font-medium text-[var(--sc-ink)]">
-                                <x-lucide-check class="sc-i w-4 h-4 text-[var(--sc-emerald)] flex-shrink-0 mt-0.5" aria-hidden="true" />
+                                <x-lucide-check class="sc-i w-4 h-4 text-[var(--sc-ok)] flex-shrink-0 mt-0.5" aria-hidden="true" />
                                 <span x-text="b"></span>
                             </li>
                         </template>
@@ -80,7 +80,7 @@
                 </div>
 
                 {{-- Caution --}}
-                <div class="w-full rounded-xl p-3.5 bg-[var(--sc-surface-quiet)] border border-[var(--sc-border-subtle)] flex items-start gap-3 text-left">
+                <div class="w-full rounded-xl p-3.5 bg-[var(--sc-surface-2)] border border-[var(--sc-line)] flex items-start gap-3 text-left">
                     <x-lucide-triangle-alert class="sc-i w-4 h-4 text-[var(--sc-warn)] flex-shrink-0 mt-0.5" aria-hidden="true" />
                     <p class="text-xs font-semibold text-[var(--sc-ink)] leading-relaxed" x-text="current.caution"></p>
                 </div>
@@ -95,7 +95,7 @@
                         <h3 class="text-xl sm:text-2xl font-bold text-[var(--sc-ink)]">
                             {{ __('Steps Checklist') }}
                         </h3>
-                        <span class="text-xs font-bold text-[var(--sc-ink-muted)] uppercase tracking-wider sc-num">
+                        <span class="text-xs font-bold text-[var(--sc-muted)] uppercase tracking-wider sc-num">
                             <span x-text="current.steps.filter(s => s.completed).length"></span> / <span x-text="current.steps.length"></span> {{ __('done') }}
                         </span>
                     </div>
@@ -129,7 +129,7 @@
 
                                 {{-- Step label + text --}}
                                 <div class="flex items-baseline gap-2.5 sm:gap-3 flex-1 min-w-0">
-                                    <span class="text-xs font-bold text-[var(--sc-ink-muted)] uppercase tracking-wider flex-shrink-0 sc-num" x-text="'Step ' + (idx + 1)"></span>
+                                    <span class="text-xs font-bold text-[var(--sc-muted)] uppercase tracking-wider flex-shrink-0 sc-num" x-text="'Step ' + (idx + 1)"></span>
                                     <p class="text-sm sm:text-base font-semibold transition-colors leading-snug break-words"
                                        :class="step.completed ? 'line-through sc-task-text-done' : 'text-[var(--sc-ink)]'"
                                        x-text="step.text"></p>
@@ -139,7 +139,7 @@
                     </div>
 
                     {{-- Bottom navigation controls --}}
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-6 pt-6 border-t border-[var(--sc-border)]">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-6 pt-6 border-t border-[var(--sc-line)]">
                         <div class="flex items-center justify-between sm:justify-start gap-4">
                             <button
                                 type="button"
@@ -151,7 +151,7 @@
                                 <span>{{ __('Previous') }}</span>
                             </button>
 
-                            <div class="text-xs font-bold text-[var(--sc-ink-muted)] uppercase tracking-wider sc-num">
+                            <div class="text-xs font-bold text-[var(--sc-muted)] uppercase tracking-wider sc-num">
                                 {{ __('Exercise') }} <span x-text="currentIndex + 1"></span> {{ __('of') }} <span x-text="exercises[level].length"></span>
                             </div>
                         </div>
@@ -191,12 +191,12 @@
                     x-transition:leave-end="opacity-0 scale-95"
                 >
                     <div class="sc-plate sc-plate-ok w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center">
-                        <x-lucide-party-popper class="sc-i w-8 h-8 text-[var(--sc-emerald)]" aria-hidden="true" />
+                        <x-lucide-party-popper class="sc-i w-8 h-8 text-[var(--sc-ok)]" aria-hidden="true" />
                     </div>
                     <h3 class="text-2xl sm:text-3xl font-bold text-[var(--sc-ink)] tracking-tight mb-2">
                         {{ __('Session Complete!') }}
                     </h3>
-                    <p class="text-sm sm:text-base text-[var(--sc-ink-muted)] mb-6 leading-relaxed">
+                    <p class="text-sm sm:text-base text-[var(--sc-muted)] mb-6 leading-relaxed">
                         {{ __("You've completed the") }} <span class="font-semibold text-[var(--sc-ink)]" x-text="levelNames[level]"></span> {{ __("routine. Excellent work keeping your body moving.") }}
                     </p>
 
