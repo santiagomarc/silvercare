@@ -153,7 +153,11 @@ class ClinicalInsightService
                 continue;
             }
 
-            $hoursAgo = (int) Carbon::now()->diffInHours($latest->measured_at);
+            // Past first: Carbon 3's diffIn* methods are signed, so
+            // now()->diffInHours($past) is NEGATIVE, and `> 48` below was
+            // never true — no vital was ever flagged stale however old its
+            // last reading. TelemetryMonitorService uses this same order.
+            $hoursAgo = (int) $latest->measured_at->diffInHours(Carbon::now());
             $isStale = $hoursAgo > 48; // stale if > 48 hours without measurement
 
             $freshness[$type] = [

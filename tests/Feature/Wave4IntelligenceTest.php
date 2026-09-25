@@ -62,6 +62,35 @@ class Wave4IntelligenceTest extends TestCase
         return [$elderlyUser, $elderly, $caregiverUser, $caregiver];
     }
 
+    public function test_a_vital_with_only_old_readings_is_flagged_stale(): void
+    {
+        // Regression: Carbon 3's diffIn* is signed. now()->diffInHours($past)
+        // came out negative, so "> 48 hours" was never true and no vital was
+        // ever flagged stale — the caregiver briefing never said a reading was
+        // overdue, however old it was.
+        [, $elderly] = $this->createLinkedPair();
+
+        HealthMetric::create([
+            'elderly_id' => $elderly->id, 'type' => 'heart_rate', 'value' => 72,
+            'unit' => 'bpm', 'measured_at' => now()->subDays(5), 'source' => 'manual',
+        ]);
+        HealthMetric::create([
+            'elderly_id' => $elderly->id, 'type' => 'temperature', 'value' => 36.6,
+            'unit' => '°C', 'measured_at' => now()->subHours(3), 'source' => 'manual',
+        ]);
+
+        $insights = app(\App\Services\ClinicalInsightService::class);
+        $freshness = $insights->getDataFreshness($elderly);
+
+        $this->assertSame(120, $freshness['heart_rate']['hours_ago']);
+        $this->assertTrue($freshness['heart_rate']['is_stale']);
+        $this->assertSame(3, $freshness['temperature']['hours_ago']);
+        $this->assertFalse($freshness['temperature']['is_stale']);
+
+        $highlights = implode(' ', $insights->getDailyBriefing($elderly)['highlights']);
+        $this->assertStringContainsString('heart rate', $highlights);
+    }
+
     // ── M1 ───────────────────────────────────────────────────────────
 
     public function test_the_caregiver_prompt_carries_computed_facts_and_forbids_invention(): void
