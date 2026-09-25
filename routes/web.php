@@ -5,7 +5,6 @@ use App\Http\Controllers\ProfileCompletionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CaregiverDashboardController;
-use App\Http\Controllers\CaregiverProfileController;
 use App\Http\Controllers\CaregiverAnalyticsController;
 use App\Http\Controllers\MedicationController;
 use App\Http\Controllers\ChecklistController;
@@ -102,7 +101,8 @@ Route::middleware(['auth', 'verified', 'elderly', 'profile.complete', 'prevent.b
     // AI ASSISTANT ROUTES (rate-limited: 30 requests per minute)
     // ---------------------------------------------------------------------
     Route::middleware('throttle:30,1')->group(function () {
-        Route::get('/ai-assistant', [AiAssistantController::class, 'index'])->name('elderly.ai-assistant.index');
+        // The assistant is the widget on the dashboard; there is no standalone page.
+        Route::redirect('/ai-assistant', '/dashboard')->name('elderly.ai-assistant.index');
         Route::post('/ai-assistant/chat', [AiAssistantController::class, 'chat'])->name('elderly.ai-assistant.chat');
         Route::post('/ai-assistant/stream', [AiAssistantController::class, 'stream'])->name('elderly.ai-assistant.stream');
         Route::get('/ai-assistant/history', [AiAssistantController::class, 'history'])->name('elderly.ai-assistant.history');
@@ -154,8 +154,9 @@ Route::middleware(['auth', 'verified', 'caregiver', 'profile.complete', 'prevent
     // H5: holding a dose is a clinical instruction, so it is caregiver-only.
     Route::post('/doses/{doseInstance}/hold', [\App\Http\Controllers\DoseInstanceController::class, 'hold'])->name('doses.hold');
 
-    Route::get('/profile', [CaregiverProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [CaregiverProfileController::class, 'update'])->name('profile.update');
+    // Caregivers edit their profile at the shared /profile page. This URL
+    // pointed at an empty controller and returned a 500; it now forwards there.
+    Route::redirect('/profile', '/profile')->name('profile.redirect');
     
     Route::get('/analytics', [CaregiverAnalyticsController::class, 'index'])->name('analytics');
     Route::get('/analytics/export', [CaregiverAnalyticsController::class, 'exportPdf'])->name('analytics.export');

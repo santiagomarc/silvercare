@@ -22,14 +22,6 @@ class AiAssistantController extends Controller
     }
 
     /**
-     * Show the AI assistant page (optional standalone view).
-     */
-    public function index()
-    {
-        return view('elderly.dashboard'); // Widget is on the dashboard
-    }
-
-    /**
      * Handle chat requests — non-streaming fallback.
      */
     public function chat(AiChatRequest $request)
